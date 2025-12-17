@@ -26,9 +26,14 @@ import com.eventmanager.app.data.sync.SyncErrorManager
 import com.eventmanager.app.data.sync.AppLogger
 import com.eventmanager.app.data.update.UpdateChecker
 import com.eventmanager.app.data.update.UpdateCheckResult
+import com.eventmanager.app.data.update.UpdateDownloader
+import com.eventmanager.app.data.update.DownloadState
+import java.io.File
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import android.content.Context
 
 fun getRankDisplayName(rank: VolunteerRank?): String {
@@ -110,6 +115,12 @@ class EventManagerViewModel(
     val updateCheckState: StateFlow<UpdateCheckResult?> = _updateCheckState.asStateFlow()
 
     private val updateChecker: UpdateChecker? = context?.let { UpdateChecker(it) }
+    
+    // Update download state
+    private val _updateDownloadState = MutableStateFlow<DownloadState>(DownloadState.Idle)
+    val updateDownloadState: StateFlow<DownloadState> = _updateDownloadState.asStateFlow()
+    
+    private val updateDownloader: UpdateDownloader? = context?.let { UpdateDownloader(it) }
 
     init {
         loadData()
@@ -141,6 +152,26 @@ class EventManagerViewModel(
             val result = checker.checkForUpdates()
             _updateCheckState.value = result
         }
+    }
+    
+    /**
+     * Download an update APK from the given URL.
+     * Progress is exposed via [updateDownloadState].
+     */
+    fun downloadUpdate(downloadUrl: String) {
+        val downloader = updateDownloader ?: return
+        viewModelScope.launch {
+            downloader.downloadUpdate(downloadUrl).collect { state ->
+                _updateDownloadState.value = state
+            }
+        }
+    }
+    
+    /**
+     * Install a downloaded APK file.
+     */
+    fun installUpdate(apkFile: File) {
+        updateDownloader?.installUpdate(apkFile)
     }
     
     override fun onCleared() {
@@ -2073,26 +2104,26 @@ class EventManagerViewModel(
         }
     }
 
-    suspend fun recalcAndUploadVolunteerGuestList() {
+    suspend fun recalcAndUploadVolunteerGuestList() = withContext(Dispatchers.IO) {
         try {
             println("Starting volunteer guest list recalculation...")
-            
+
             // Compute volunteer entries locally
             val volunteerGuests = computeVolunteerGuestEntries()
             println("Computed ${volunteerGuests.size} volunteer guest entries")
-            
+
             // Update local guest table: remove stale volunteer benefit entries, then re-add current
             val existingVolunteerGuests = repository.getVolunteerBenefitGuests()
             println("Found ${existingVolunteerGuests.size} existing volunteer benefit guests to remove")
-            
+
             // Remove old ones
             existingVolunteerGuests.forEach { repository.deleteGuest(it) }
             println("Removed ${existingVolunteerGuests.size} old volunteer benefit guests")
-            
+
             // Insert current list
             volunteerGuests.forEach { repository.insertGuest(it) }
             println("Inserted ${volunteerGuests.size} new volunteer benefit guests")
-            
+
             // Upload-only to Volunteer Guest List sheet
             if (isGoogleSheetsConfigured()) {
                 println("Uploading volunteer guest list to Google Sheets...")
@@ -2102,9 +2133,11 @@ class EventManagerViewModel(
             } else {
                 println("Google Sheets not configured, skipping upload")
             }
-            
-            // Refresh UI state
-            refreshGuestData()
+
+            // Refresh UI state on main thread
+            withContext(Dispatchers.Main) {
+                refreshGuestData()
+            }
             println("Volunteer guest list recalculation completed successfully")
         } catch (e: Exception) {
             println("Failed to recalc/upload volunteer guest list: ${e.message}")
@@ -2113,14 +2146,16 @@ class EventManagerViewModel(
     }
 
     // Startup-only variant: recalc volunteer guest list locally without uploading
-    private suspend fun recalcVolunteerGuestListNoUpload() {
+    private suspend fun recalcVolunteerGuestListNoUpload() = withContext(Dispatchers.IO) {
         try {
             println("Startup: recalculating volunteer guest list locally without upload...")
             val volunteerGuests = computeVolunteerGuestEntries()
             val existingVolunteerGuests = repository.getVolunteerBenefitGuests()
             existingVolunteerGuests.forEach { repository.deleteGuest(it) }
             volunteerGuests.forEach { repository.insertGuest(it) }
-            refreshGuestData()
+            withContext(Dispatchers.Main) {
+                refreshGuestData()
+            }
             println("Startup: volunteer guest list recalculation done (no upload)")
         } catch (e: Exception) {
             println("Startup: failed to recalc volunteer guest list: ${e.message}")
@@ -2507,16 +2542,25 @@ class EventManagerViewModel(
      * Updates volunteer activity when jobs are loaded
      */
     private fun updateVolunteerActivityFromCurrentJobs() {
-        val currentVolunteers = _volunteers.value
-        val currentJobs = _jobs.value
-        if (currentVolunteers.isNotEmpty() && currentJobs.isNotEmpty()) {
-            val updatedVolunteers = VolunteerActivityManager.updateVolunteerActivityFromJobs(currentVolunteers, currentJobs)
-            _volunteers.value = updatedVolunteers
-            println("Updated volunteer activity for ${updatedVolunteers.size} volunteers based on ${currentJobs.size} jobs")
-        } else if (currentVolunteers.isNotEmpty() && currentJobs.isEmpty()) {
-            // If no jobs are loaded yet, just set volunteers without activity calculation
-            // Activity will be calculated when jobs are loaded
-            println("Volunteers loaded but no jobs yet - activity will be calculated when jobs are available")
+        // Run computation off the main thread to avoid blocking the UI
+        viewModelScope.launch(Dispatchers.Default) {
+            val currentVolunteers = _volunteers.value
+            val currentJobs = _jobs.value
+
+            if (currentVolunteers.isNotEmpty() && currentJobs.isNotEmpty()) {
+                val updatedVolunteers =
+                    VolunteerActivityManager.updateVolunteerActivityFromJobs(currentVolunteers, currentJobs)
+
+                // Switch back to main thread only for state update
+                withContext(Dispatchers.Main) {
+                    _volunteers.value = updatedVolunteers
+                    println("Updated volunteer activity for ${updatedVolunteers.size} volunteers based on ${currentJobs.size} jobs")
+                }
+            } else if (currentVolunteers.isNotEmpty() && currentJobs.isEmpty()) {
+                // If no jobs are loaded yet, just set volunteers without activity calculation
+                // Activity will be calculated when jobs are loaded
+                println("Volunteers loaded but no jobs yet - activity will be calculated when jobs are available")
+            }
         }
     }
     

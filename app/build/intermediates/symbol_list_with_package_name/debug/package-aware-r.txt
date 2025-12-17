@@ -1169,6 +1169,11 @@ string delete_guest
 string delete_volunteer_button
 string delete_volunteers
 string developed_by
+string download_complete
+string download_error_message
+string download_error_title
+string download_progress
+string downloading_update
 string drink_tokens
 string dropdown_menu
 string edit
@@ -1255,6 +1260,7 @@ string inactive_volunteers
 string inactive_volunteers_count
 string inactive_volunteers_label
 string indeterminate
+string install_update
 string invalid_qr_code_format
 string invitations
 string invitations_count

@@ -446,7 +446,7 @@ fun AddVolunteerDialog(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxSize()
+                .fillMaxHeight(0.9f)
                 .padding(16.dp)
         ) {
             Card(
@@ -643,7 +643,7 @@ fun EditVolunteerDialog(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxSize()
+                .fillMaxHeight(0.9f)
                 .padding(16.dp),
             shape = RoundedCornerShape(16.dp)
         ) {

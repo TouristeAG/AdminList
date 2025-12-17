@@ -821,7 +821,7 @@ fun AddGuestDialog(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxSize()
+                .fillMaxHeight(0.9f)
                 .padding(16.dp)
         ) {
             Card(
@@ -982,7 +982,7 @@ fun EditGuestDialog(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxSize()
+                .fillMaxHeight(0.9f)
                 .padding(16.dp)
         ) {
             Card(

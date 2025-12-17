@@ -1,8 +1,8 @@
 package com.eventmanager.app.ui.components
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Clear
@@ -10,7 +10,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -27,14 +26,14 @@ fun <T> SearchableDropdown(
     searchText: (T) -> String = itemText
 ) {
     var expanded by remember { mutableStateOf(false) }
-    var searchQuery by remember { mutableStateOf(TextFieldValue("")) }
+    var searchQuery by remember { mutableStateOf("") }
     
-    val filteredItems = remember(items, searchQuery.text) {
-        if (searchQuery.text.isEmpty()) {
+    val filteredItems = remember(items, searchQuery) {
+        if (searchQuery.isEmpty()) {
             items
         } else {
             items.filter { item ->
-                searchText(item).contains(searchQuery.text, ignoreCase = true)
+                searchText(item).contains(searchQuery, ignoreCase = true)
             }
         }
     }
@@ -45,10 +44,10 @@ fun <T> SearchableDropdown(
         modifier = modifier
     ) {
         OutlinedTextField(
-            value = if (expanded) searchQuery else TextFieldValue(selectedItem?.let { itemText(it) } ?: ""),
-            onValueChange = { 
+            value = if (expanded) searchQuery else (selectedItem?.let { itemText(it) } ?: ""),
+            onValueChange = { newValue ->
                 if (expanded) {
-                    searchQuery = it
+                    searchQuery = newValue
                 }
             },
             readOnly = !expanded,
@@ -56,10 +55,10 @@ fun <T> SearchableDropdown(
             placeholder = { Text(placeholder) },
             trailingIcon = {
                 Row {
-                    if (expanded && searchQuery.text.isNotEmpty()) {
+                    if (expanded && searchQuery.isNotEmpty()) {
                         IconButton(
                             onClick = { 
-                                searchQuery = TextFieldValue("")
+                                searchQuery = ""
                             }
                         ) {
                             Icon(
@@ -82,8 +81,9 @@ fun <T> SearchableDropdown(
             expanded = expanded,
             onDismissRequest = { 
                 expanded = false
-                searchQuery = TextFieldValue("")
-            }
+                searchQuery = ""
+            },
+            modifier = Modifier.heightIn(max = 200.dp)
         ) {
             if (filteredItems.isEmpty()) {
                 DropdownMenuItem(
@@ -91,17 +91,20 @@ fun <T> SearchableDropdown(
                     onClick = { }
                 )
             } else {
-                LazyColumn(
+                // Use regular Column with verticalScroll instead of LazyColumn to avoid intrinsic measurement issues
+                Column(
                     modifier = Modifier
+                        .fillMaxWidth()
                         .heightIn(max = 200.dp)
+                        .verticalScroll(rememberScrollState())
                 ) {
-                    items(filteredItems) { item ->
+                    filteredItems.forEach { item ->
                         DropdownMenuItem(
                             text = { Text(itemText(item)) },
                             onClick = {
                                 onItemSelected(item)
                                 expanded = false
-                                searchQuery = TextFieldValue("")
+                                searchQuery = ""
                             }
                         )
                     }

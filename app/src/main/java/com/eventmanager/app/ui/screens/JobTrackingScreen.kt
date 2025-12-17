@@ -556,7 +556,7 @@ fun AddJobDialog(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxSize()
+                .fillMaxHeight(0.9f)
                 .padding(16.dp),
             shape = RoundedCornerShape(16.dp)
         ) {
@@ -832,7 +832,7 @@ fun EditJobDialog(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxSize()
+                .fillMaxHeight(0.9f)
                 .padding(16.dp),
             shape = RoundedCornerShape(16.dp)
         ) {
