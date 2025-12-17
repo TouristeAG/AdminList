@@ -1101,6 +1101,9 @@ string camera_not_available
 string camera_permission_required
 string camera_permission_title
 string cancel
+string check_for_updates
+string checking_for_updates_message
+string checking_for_updates_title
 string choose_export_format
 string cleanup_inactive_volunteers
 string cleanup_warning
@@ -1270,6 +1273,7 @@ string last_name_abbreviation_placeholder
 string last_shift
 string last_sync
 string last_synced
+string later
 string latest_guest_phone
 string latest_guest_tablet
 string latest_job_phone
@@ -1585,8 +1589,16 @@ string total_shifts_description
 string unknown
 string unknown_volunteer
 string unspecified
+string up_to_date_message
+string up_to_date_title
+string update_available_message
+string update_available_title
+string update_error_message
+string update_error_title
 string update_guest
 string update_job
+string update_now
+string update_required_message
 string update_venue
 string update_volunteer
 string upload_failed

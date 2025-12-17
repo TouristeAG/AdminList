@@ -426,6 +426,9 @@
     <string name="camera_permission_required">Camera permission is required to scan QR codes</string>
     <string name="camera_permission_title">Camera permission required</string>
     <string name="cancel">Cancel</string>
+    <string name="check_for_updates">Check for updates</string>
+    <string name="checking_for_updates_message">Contacting update server…</string>
+    <string name="checking_for_updates_title">Checking for updates</string>
     <string name="choose_export_format">Choose export format:</string>
     <string name="cleanup_inactive_volunteers">Cleanup Inactive Volunteers</string>
     <string formatted="false" name="cleanup_warning">This action will permanently delete %d volunteer%s and all their associated job records. This cannot be undone!</string>
@@ -595,6 +598,7 @@
     <string name="last_shift">Last Shift</string>
     <string name="last_sync">Last sync: %s</string>
     <string name="last_synced">Last synced:</string>
+    <string name="later">Later</string>
     <string name="latest_guest_phone">Guest: %s</string>
     <string name="latest_guest_tablet">Latest Guest: %s</string>
     <string name="latest_job_phone">Job: %s</string>
@@ -914,8 +918,16 @@
     <string name="unknown">Unknown</string>
     <string name="unknown_volunteer">Unknown Volunteer</string>
     <string name="unspecified">Unspecified</string>
+    <string name="up_to_date_message">You already have the latest version installed.</string>
+    <string name="up_to_date_title">You’re up to date</string>
+    <string name="update_available_message">A newer version of this app is available. Would you like to update now?</string>
+    <string name="update_available_title">Update available: %s</string>
+    <string name="update_error_message">Could not check for updates: %s</string>
+    <string name="update_error_title">Update check failed</string>
     <string name="update_guest">Update Guest</string>
     <string name="update_job">Update Job</string>
+    <string name="update_now">Update now</string>
+    <string name="update_required_message">A newer version of this app is required to continue. Please update to the latest version.</string>
     <string name="update_venue">Update Venue</string>
     <string name="update_volunteer">Update Volunteer</string>
     <string name="upload_failed">Upload failed: %s</string>

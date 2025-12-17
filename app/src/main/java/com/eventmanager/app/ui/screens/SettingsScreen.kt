@@ -46,6 +46,7 @@ import com.eventmanager.app.R
 import com.eventmanager.app.ui.theme.ThemeMode
 import com.eventmanager.app.ui.components.ResolutionScaleSlider
 import com.eventmanager.app.ui.components.AppRestartDialog
+import com.eventmanager.app.BuildConfig
 
 // Data class for icon options
 private data class IconOption(
