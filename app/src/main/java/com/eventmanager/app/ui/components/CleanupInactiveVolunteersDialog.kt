@@ -119,7 +119,9 @@ fun CleanupInactiveVolunteersDialog(
                             Spacer(modifier = Modifier.height(8.dp))
                             
                             LazyColumn(
-                                modifier = Modifier.heightIn(max = 200.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 200.dp),
                                 verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 items(volunteersToDelete) { volunteer ->

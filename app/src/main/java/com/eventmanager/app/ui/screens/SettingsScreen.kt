@@ -20,7 +20,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.BorderStroke
@@ -43,10 +42,10 @@ import com.eventmanager.app.ui.components.CleanupInactiveVolunteersDialog
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 import com.eventmanager.app.R
+import com.eventmanager.app.BuildConfig
 import com.eventmanager.app.ui.theme.ThemeMode
 import com.eventmanager.app.ui.components.ResolutionScaleSlider
 import com.eventmanager.app.ui.components.AppRestartDialog
-import com.eventmanager.app.BuildConfig
 
 // Data class for icon options
 private data class IconOption(
@@ -2144,7 +2143,7 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 Text(
-                    text = context.getString(R.string.app_version),
+                    text = "${context.getString(R.string.app_name)} ${BuildConfig.VERSION_NAME}",
                     style = MaterialTheme.typography.titleMedium
                 )
                 
@@ -2190,45 +2189,122 @@ fun SettingsScreen(
     // Update result dialog
     if (showUpdateResultDialog) {
         val updateResult = viewModel.updateCheckState.collectAsState().value
+        val downloadState = viewModel.updateDownloadState.collectAsState().value
+        
         when (updateResult) {
             is com.eventmanager.app.data.update.UpdateCheckResult.UpdateAvailable -> {
                 val manifest = updateResult.manifest
                 val isRequired = updateResult.isRequired
-                AlertDialog(
-                    onDismissRequest = { showUpdateResultDialog = false },
-                    title = {
-                        Text(text = context.getString(R.string.update_available_title, manifest.latestVersionName))
-                    },
-                    text = {
-                        Text(
-                            text = manifest.changelogShort
-                                ?: if (isRequired) {
-                                    context.getString(R.string.update_required_message)
-                                } else {
-                                    context.getString(R.string.update_available_message)
+                
+                // Show download progress if downloading
+                when (downloadState) {
+                    is com.eventmanager.app.data.update.DownloadState.Downloading -> {
+                        AlertDialog(
+                            onDismissRequest = { },
+                            title = {
+                                Text(text = context.getString(R.string.downloading_update))
+                            },
+                            text = {
+                                Column {
+                                    LinearProgressIndicator(
+                                        progress = downloadState.progress / 100f,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = context.getString(R.string.download_progress, downloadState.progress),
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
                                 }
+                            },
+                            confirmButton = {}
                         )
-                    },
-                    confirmButton = {
-                        TextButton(onClick = {
-                            val targetUrl = manifest.storeUrl
-                                ?: manifest.downloadUrl
-                                ?: BuildConfig.UPDATE_FALLBACK_STORE_URL
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(targetUrl))
-                            context.startActivity(intent)
-                            showUpdateResultDialog = false
-                        }) {
-                            Text(context.getString(R.string.update_now))
-                        }
-                    },
-                    dismissButton = {
-                        if (!isRequired) {
-                            TextButton(onClick = { showUpdateResultDialog = false }) {
-                                Text(context.getString(R.string.later))
-                            }
-                        }
                     }
-                )
+                    is com.eventmanager.app.data.update.DownloadState.Downloaded -> {
+                        AlertDialog(
+                            onDismissRequest = { showUpdateResultDialog = false },
+                            title = {
+                                Text(text = context.getString(R.string.download_complete))
+                            },
+                            text = {
+                                Text(text = context.getString(R.string.update_available_message))
+                            },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    viewModel.installUpdate(downloadState.file)
+                                    showUpdateResultDialog = false
+                                }) {
+                                    Text(context.getString(R.string.install_update))
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { showUpdateResultDialog = false }) {
+                                    Text(context.getString(R.string.later))
+                                }
+                            }
+                        )
+                    }
+                    is com.eventmanager.app.data.update.DownloadState.Error -> {
+                        AlertDialog(
+                            onDismissRequest = { showUpdateResultDialog = false },
+                            title = {
+                                Text(text = context.getString(R.string.download_error_title))
+                            },
+                            text = {
+                                Text(text = context.getString(R.string.download_error_message, downloadState.message))
+                            },
+                            confirmButton = {
+                                TextButton(onClick = { showUpdateResultDialog = false }) {
+                                    Text(context.getString(R.string.ok))
+                                }
+                            }
+                        )
+                    }
+                    else -> {
+                        // Show update available dialog
+                        AlertDialog(
+                            onDismissRequest = { showUpdateResultDialog = false },
+                            title = {
+                                Text(text = context.getString(R.string.update_available_title, manifest.latestVersionName))
+                            },
+                            text = {
+                                Text(
+                                    text = manifest.changelogShort
+                                        ?: if (isRequired) {
+                                            context.getString(R.string.update_required_message)
+                                        } else {
+                                            context.getString(R.string.update_available_message)
+                                        }
+                                )
+                            },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    // Start download instead of opening browser
+                                    val downloadUrl = manifest.downloadUrl
+                                    if (downloadUrl != null) {
+                                        viewModel.downloadUpdate(downloadUrl)
+                                    } else {
+                                        // Fallback to browser if no download URL
+                                        val targetUrl = manifest.storeUrl
+                                            ?: BuildConfig.UPDATE_FALLBACK_STORE_URL
+                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(targetUrl))
+                                        context.startActivity(intent)
+                                        showUpdateResultDialog = false
+                                    }
+                                }) {
+                                    Text(context.getString(R.string.update_now))
+                                }
+                            },
+                            dismissButton = {
+                                if (!isRequired) {
+                                    TextButton(onClick = { showUpdateResultDialog = false }) {
+                                        Text(context.getString(R.string.later))
+                                    }
+                                }
+                            }
+                        )
+                    }
+                }
             }
             is com.eventmanager.app.data.update.UpdateCheckResult.NoUpdate -> {
                 AlertDialog(
@@ -2613,7 +2689,9 @@ fun ActiveVolunteersDialog(
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 LazyColumn(
-                    modifier = Modifier.heightIn(max = 300.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 300.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     items(activeVolunteers) { volunteer ->

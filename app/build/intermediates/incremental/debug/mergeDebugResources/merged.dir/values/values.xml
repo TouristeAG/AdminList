@@ -494,6 +494,11 @@
     <string name="delete_volunteer_button">Delete Volunteer</string>
     <string formatted="false" name="delete_volunteers">Delete %d Volunteer%s</string>
     <string name="developed_by">Developed for the </string>
+    <string name="download_complete">Download complete</string>
+    <string name="download_error_message">Could not download update: %s</string>
+    <string name="download_error_title">Download failed</string>
+    <string name="download_progress">Downloading: %d%%</string>
+    <string name="downloading_update">Downloading update…</string>
     <string name="drink_tokens">🍺 %d Drink Tokens</string>
     <string name="dropdown_menu">"Dropdown menu"</string>
     <string name="edit">Edit</string>
@@ -580,6 +585,7 @@
     <string name="inactive_volunteers_count">Inactive Volunteers: %d</string>
     <string name="inactive_volunteers_label">Inactive Volunteers:</string>
     <string name="indeterminate">Partially checked</string>
+    <string name="install_update">Install update</string>
     <string name="invalid_qr_code_format">Invalid QR code format: %s</string>
     <string name="invitations">Invitations</string>
     <string name="invitations_count">Invitations</string>

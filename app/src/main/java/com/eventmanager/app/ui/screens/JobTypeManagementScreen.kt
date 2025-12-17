@@ -422,7 +422,7 @@ fun AddJobTypeConfigDialog(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxSize()
+                .fillMaxHeight(0.9f)
                 .padding(16.dp),
             shape = RoundedCornerShape(16.dp)
         ) {
@@ -808,7 +808,7 @@ fun EditJobTypeConfigDialog(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxSize()
+                .fillMaxHeight(0.9f)
                 .padding(16.dp),
             shape = RoundedCornerShape(16.dp)
         ) {

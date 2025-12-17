@@ -84,6 +84,12 @@
     <string name="update_error_message">Could not check for updates: %s</string>
     <string name="checking_for_updates_title">Checking for updates</string>
     <string name="checking_for_updates_message">Contacting update server…</string>
+    <string name="downloading_update">Downloading update…</string>
+    <string name="download_progress">Downloading: %d%%</string>
+    <string name="download_complete">Download complete</string>
+    <string name="install_update">Install update</string>
+    <string name="download_error_title">Download failed</string>
+    <string name="download_error_message">Could not download update: %s</string>
 
     <!-- Language Settings -->
     <string name="language_title">Language</string>

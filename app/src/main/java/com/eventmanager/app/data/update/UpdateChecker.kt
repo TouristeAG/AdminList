@@ -13,7 +13,8 @@ import java.net.URL
 data class UpdateManifest(
     val latestVersionCode: Int,
     val latestVersionName: String,
-    val minSupportedVersionCode: Int? = null,
+    // Allow decimals/strings like "0.9" instead of requiring an int
+    val minSupportedVersionCode: String? = null,
     val changelogShort: String? = null,
     val downloadUrl: String? = null,
     val storeUrl: String? = null
@@ -59,8 +60,12 @@ class UpdateChecker(
                 if (manifest.latestVersionCode <= currentVersionCode) {
                     UpdateCheckResult.NoUpdate
                 } else {
-                    val isRequired = manifest.minSupportedVersionCode?.let { min ->
-                        currentVersionCode < min
+                    val isRequired = manifest.minSupportedVersionCode?.let { minString ->
+                        // Try to interpret the minSupportedVersionCode as a number (supports decimals)
+                        val min = minString.toDoubleOrNull()
+                        min?.let {
+                            currentVersionCode.toDouble() < it
+                        } ?: false
                     } ?: false
                     UpdateCheckResult.UpdateAvailable(manifest, isRequired)
                 }

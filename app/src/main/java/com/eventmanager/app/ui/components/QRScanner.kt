@@ -786,7 +786,9 @@ fun ManualVolunteerInputDialog(
                     )
                     
                     LazyColumn(
-                        modifier = Modifier.height(150.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(150.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         items(volunteers.take(10)) { volunteer ->
