@@ -1,0 +1,605 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App Name -->
+    <string name="app_name">AdminList</string>
+    
+    <!-- Settings Screen -->
+    <string name="settings_title">Paramètres &amp; Configuration</string>
+    <string name="settings_subtitle">Configurer la synchronisation Google Sheets et les paramètres de l\'application</string>
+    
+    <!-- Google Sheets Configuration -->
+    <string name="google_sheets_config_title">Configuration Google Sheets</string>
+    <string name="view_setup_instructions">Voir les instructions de configuration</string>
+    <string name="spreadsheet_id_label">ID de la feuille de calcul</string>
+    <string name="spreadsheet_id_hint">Obtenez ceci depuis l\'URL de votre Google Sheets : https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit</string>
+    <string name="guest_list_sheet_label">Feuille liste des invité·e·s</string>
+    <string name="volunteer_sheet_label">Feuille des bénévoles</string>
+    <string name="shifts_sheet_label">Feuille des Shifts</string>
+    <string name="volunteer_guest_list_sheet_label">Feuille liste invité·e·s bénévoles</string>
+    <string name="shift_types_sheet_label">Feuille types de Shifts</string>
+    <string name="venues_sheet_label">Feuille Lieux</string>
+    <string name="save_settings">Enregistrer les paramètres</string>
+    <string name="test_connection">Tester la connexion</string>
+    
+    <!-- Service Account Configuration -->
+    <string name="service_account_config_title">Configuration du compte de service</string>
+    <string name="service_account_key_found">Clé de compte de service trouvée</string>
+    <string name="service_account_key_required">Clé de compte de service requise</string>
+    <string name="email_label">Email : %s</string>
+    <string name="project_label">Projet : %s</string>
+    <string name="email_colon">Email : %s</string>
+    <string name="project_colon">Projet : %s</string>
+    <string name="upload_key_file_description">Téléchargez votre fichier de clé JSON du compte de service Google</string>
+    <string name="upload_key_description">Téléchargez votre fichier de clé JSON du compte de service Google</string>
+    <string name="replace_key_file">Remplacer le fichier de clé</string>
+    <string name="upload_key_file">Télécharger le fichier de clé</string>
+    
+    <!-- Sync Configuration -->
+    <string name="sync_config_title">Configuration de synchronisation</string>
+    <string name="sync_interval_label">Intervalle de synchronisation (minutes)</string>
+    <string name="sync_interval_hint">À quelle fréquence synchroniser avec Google Sheets (1-60 minutes)</string>
+    <string name="test_sync_status">Tester le statut de synchronisation</string>
+    <string name="sync_status_dialog_title">Statut de synchronisation</string>
+    <string name="sync_status_configured">Google Sheets est configuré et prêt pour la synchronisation</string>
+    <string name="sync_status_not_configured">Google Sheets n\'est pas configuré. Veuillez vérifier vos paramètres.</string>
+    <string name="sync_status_error">Erreur lors du test du statut de synchronisation : %s</string>
+    <string name="manual_sync_now">Synchronisation manuelle maintenant</string>
+    <string name="view_active_volunteers">Voir les bénévoles actif·ve·s</string>
+    <string name="cleanup_inactive_volunteers">Nettoyer les bénévoles inactif·ve·s</string>
+    
+    <!-- Advanced Settings -->
+    <string name="advanced_settings_title">Paramètres avancés</string>
+    <string name="show_advanced_settings">Afficher les paramètres avancés</string>
+    <string name="hide_advanced_settings">Masquer les paramètres avancés</string>
+    <string name="debug_mode_title">Mode de débogage</string>
+    <string name="debug_mode_description">Activer la journalisation détaillée pour le dépannage</string>
+    <string name="debug_logs_title">Journaux de débogage</string>
+    <string name="debug_logs_location">Emplacement : %s</string>
+    <string name="debug_logs_files_size">Fichiers : %1$d | Taille : %2$s Mo</string>
+    <string name="debug_logs_recent_files">Fichiers journaux récents :</string>
+    <string name="debug_logs_view">Voir</string>
+    <string name="debug_logs_share">Partager</string>
+    <string name="debug_logs_view_latest">Voir le plus récent</string>
+    <string name="debug_logs_clear_all">Tout effacer</string>
+    <string name="debug_logs_content">Contenu du journal</string>
+    <string name="debug_logs_no_content">Aucun contenu de journal</string>
+    <string name="debug_logs_error_reading">Erreur lors de la lecture du fichier journal : %s</string>
+    <string name="debug_logs_error_reading_generic">Erreur lors de la lecture du fichier journal</string>
+    <string name="debug_logs_share_file">Partager le fichier journal</string>
+    <string name="animated_background_title">Arrière-plan animé</string>
+    <string name="animated_background_description">Désactiver les arcs animés pour de meilleures performances sur les anciens appareils</string>
+    <string name="page_animations_title">Animations de pages</string>
+    <string name="page_animations_description">Activer les animations de glissement lors du changement de page et d\'onglet</string>
+    <string name="clear_app_cache">Vider le cache de l\'application</string>
+    
+    <!-- Language Settings -->
+    <string name="language_title">Langue</string>
+    <string name="language_description">Sélectionnez votre langue préférée</string>
+    <string name="language_english">English</string>
+    <string name="language_french">Français</string>
+    
+    <!-- Theme Settings -->
+    <string name="theme_title">Thème</string>
+    <string name="theme_description">Choisissez l\'apparence de votre thème préféré</string>
+    <string name="theme_light">Clair</string>
+    <string name="theme_dark">Sombre</string>
+    <string name="theme_default">Système</string>
+    
+    <!-- Color Theme Settings -->
+    <string name="color_theme_title">Thème de couleur</string>
+    <string name="color_theme_description">Choisissez un thème de couleur pour les appareils qui ne prennent pas en charge les couleurs dynamiques</string>
+    <string name="color_theme_system">Couleurs système</string>
+    <string name="color_theme_professional_blue">Bleu professionnel</string>
+    <string name="color_theme_neutral_green">Vert neutre</string>
+    <string name="color_theme_warm_gray">Gris chaud</string>
+    <string name="color_theme_neutral_purple">Violet neutre</string>
+    <string name="color_theme_rich_brown">Brun riche</string>
+    <string name="color_theme_feminist_violet">Violet Féministe</string>
+    
+    <!-- Restart Dialog -->
+    <string name="restart_required_title">Redémarrage requis</string>
+    <string name="restart_required_message">Le thème de couleur a été modifié. Veuillez redémarrer l\'application pour voir le nouveau thème appliqué.</string>
+    <string name="restart_now">Redémarrer maintenant</string>
+    <string name="restart_later">Plus tard</string>
+    
+    <!-- Resolution Scale Settings -->
+    <string name="resolution_scale_title">Échelle de résolution</string>
+    <string name="resolution_scale_description" formatted="false">Ajustez l\'échelle de résolution pour rendre l\'interface plus petite ou plus grande. Faites glisser le curseur pour changer l\'échelle de 80% (GRAND) à 120% (PETIT).</string>
+    <string name="resolution_small">Grand</string>
+    <string name="resolution_medium_small">Moyen petit</string>
+    <string name="resolution_normal">Normal</string>
+    <string name="resolution_medium_large">Moyen grand</string>
+    <string name="resolution_large">Petit</string>
+    <string name="save_resolution_scale">Enregistrer l\'échelle de résolution</string>
+    <string name="system_is_in_dark_mode">Le système est en mode sombre</string>
+    <string name="system_is_in_light_mode">Le système est en mode clair</string>
+    <string name="people_counter_visibility_title">Afficher le Compteur de Personnes</string>
+    <string name="people_counter_visibility_description">Afficher ou masquer le compteur de personnes sur la page d\'accueil</string>
+    <string name="statistics_visibility_title">Afficher les Graphiques de Statistiques</string>
+    <string name="statistics_visibility_description">Afficher ou masquer la section des graphiques de statistiques sur la page d\'accueil</string>
+    <string name="scroll_behavior_title">Comportement du défilement des pages</string>
+    <string name="scroll_behavior_description">Contrôlez comment le bandeau du haut (ajout, filtres, recherche) se comporte lorsque vous faites défiler les pages Bénévoles, Guest List et Shifts.</string>
+    <string name="scroll_behavior_list_only_title">Garder le bandeau fixé en haut</string>
+    <string name="scroll_behavior_list_only_description">Seule la liste défile. Les actions du haut (ajout, filtres, recherche) restent toujours visibles.</string>
+    <string name="scroll_behavior_full_page_title">Faire défiler toute la page</string>
+    <string name="scroll_behavior_full_page_description">Le bandeau du haut et la liste défilent ensemble. Les actions du haut disparaissent lorsque vous descendez.</string>
+    
+    <!-- Shift Type Management -->
+    <string name="shift_type_management_title">Gestion des types de Shifts</string>
+    <string name="shift_type_management_description">Configurer les types de Shifts et leur éligibilité de rang</string>
+    <string name="manage_shift_types">Gérer les types de Shifts</string>
+    <string name="shift_types_title">Types de Shifts</string>
+    <string name="add_shift_type">Ajouter un type de Shift</string>
+    <string name="search_shift_types_placeholder">Rechercher des types de Shifts...</string>
+    <string name="filter_shift_types">Types de Shifts</string>
+    <string name="filter_orion_types">Types Orion</string>
+    <string name="shift_types_count">%1$d sur %2$d types de Shifts</string>
+    <string name="shift_job">Shift</string>
+    <string name="orion_job">Orion</string>
+    <string name="requires_time">Nécessite du temps</string>
+    <string name="stellar_benefits">Avantages Stellar</string>
+    <string name="manual_rewards">Récompenses manuelles</string>
+    <string name="manual_rewards_details">Détails des récompenses manuelles</string>
+    <string name="days_n">%1$d jours</string>
+    <string name="free_drinks_n">%1$d boissons offertes</string>
+    <string name="bar_discount_n">%1$d%% de réduction au bar</string>
+    <string name="invites_n">%1$d invitations</string>
+    <string name="no_rewards_configured">Aucune récompense configurée</string>
+    
+    <!-- Venue Management -->
+    <string name="venue_management_title">Gestion des Lieux</string>
+    <string name="venue_management_description">Configurer les lieux et leurs paramètres</string>
+    <string name="manage_venues">Gérer les Lieux</string>
+    <string name="venues_title">Lieux</string>
+    <string name="add_venue">Ajouter un Lieu</string>
+    <string name="search_venues_placeholder">Rechercher des lieux...</string>
+    <string name="venues_count">%1$d sur %2$d lieux</string>
+    <string name="venue_name">Nom du Lieu</string>
+    <string name="venue_description">Description</string>
+    <string name="venue_active">Actif</string>
+    <string name="venue_inactive">Inactif</string>
+    <string name="update_venue">Mettre à jour le Lieu</string>
+    <string name="cancel">Annuler</string>
+    <string name="venue_name_placeholder">ex., Groove</string>
+    <string name="venue_description_placeholder">Description optionnelle</string>
+    <string name="add_new_venue">Ajouter un Nouveau Lieu</string>
+    <string name="edit_venue_configuration">Modifier la Configuration du Lieu</string>
+    <string name="filter_active">Actif·ve·s</string>
+    <string name="filter_inactive">Inactif·ve·s</string>
+    <string name="venue_all">TOUS</string>
+    <string name="venue_both">LES DEUX</string>
+    
+    <!-- App Information -->
+    <string name="app_info_title">Informations sur l\'application</string>
+    <string name="app_version">AdminList v0.9</string>
+    <string name="app_designed_for">Conçu pour les lieux du Collectif Nocturne</string>
+    <string name="developed_by">Développé pour le </string>
+    <string name="collectif_nocturne"> Collectif Nocturne</string>
+    <string name="leonardo_mondada"> par Leonardo Mondada</string>
+    <string name="last_sync">Dernière synchronisation : %s</string>
+    <string name="never">Jamais</string>
+    
+    <!-- Instructions Dialog -->
+    <string name="google_sheets_setup_instructions">Instructions de configuration Google Sheets</string>
+    <string name="setup_instructions_intro">Suivez ces étapes pour configurer la synchronisation Google Sheets :</string>
+    <string name="got_it">Compris !</string>
+    
+    <!-- Instruction Steps -->
+    <string name="step_1_title">Créer un projet Google Cloud</string>
+    <string name="step_1_description">Allez sur Google Cloud Console et créez un nouveau projet ou sélectionnez un projet existant.</string>
+    <string name="step_2_title">Activer l\'API Google Sheets</string>
+    <string name="step_2_description">Dans votre projet, activez l\'API Google Sheets depuis la section APIs &amp; Services.</string>
+    <string name="step_3_title">Créer un compte de service</string>
+    <string name="step_3_description">Créez un compte de service dans IAM &amp; Admin > Service Accounts. Téléchargez le fichier de clé JSON.</string>
+    <string name="step_4_title">Ajouter la clé à l\'application</string>
+    <string name="step_4_description">Utilisez le bouton \'Télécharger le fichier de clé\' dans les paramètres, ou placez manuellement le fichier JSON dans app/src/main/assets/ sous le nom \'service_account_key.json\'</string>
+    <string name="step_5_title">Créer une feuille de calcul Google</string>
+    <string name="step_5_description">Créez une nouvelle feuille de calcul Google et copiez son ID depuis l\'URL.</string>
+    <string name="step_6_title">Créer les feuilles requises</string>
+    <string name="step_6_description">Créez cinq feuilles : \'Guest List\', \'Volunteers\', \'Shifts\', \'Shift Types\', et \'Volunteer Guest List\'</string>
+    <string name="step_7_title">Configurer les en-têtes des feuilles</string>
+    <string name="step_7_description">Ajoutez des en-têtes à chaque feuille. L\'application les créera automatiquement, mais vous pouvez les configurer manuellement si nécessaire.</string>
+    <string name="step_8_title">Partager avec le compte de service</string>
+    <string name="step_8_description">Partagez la feuille de calcul avec l\'email de votre compte de service (trouvé dans le fichier JSON) avec un accès éditeur·rice.</string>
+    <string name="step_9_title">Configurer les paramètres de l\'application</string>
+    <string name="step_9_description">Entrez l\'ID de la feuille de calcul et les noms des feuilles dans les paramètres ci-dessus.</string>
+    
+    <!-- Test Connection Dialog -->
+    <string name="test_google_sheets_connection">Tester la connexion Google Sheets</string>
+    <string name="testing_connection">Test de connexion en cours...</string>
+    <string name="test_connection_description">Ceci testera la connexion à vos Google Sheets en utilisant les paramètres actuels.</string>
+    <string name="test">Tester</string>
+    <string name="close">Fermer</string>
+    
+    <!-- Active Volunteers Dialog -->
+    <string name="volunteer_activity_status">Statut d\'activité des bénévoles</string>
+    <string name="active_volunteers_count">Bénévoles actif·ve·s : %d</string>
+    <string name="inactive_volunteers_count">Bénévoles inactif·ve·s : %d</string>
+    <string name="inactive_volunteers_label">Bénévoles inactif·ve·s :</string>
+    <string name="active">Actif·ve</string>
+    <string name="inactive">Inactif·ve</string>
+    
+    <!-- Cleanup Dialog -->
+    <string name="warning">⚠️ Attention :</string>
+    <string name="cleanup_warning" formatted="false">Cette action supprimera définitivement %d bénévole%s et tou·te·s leurs enregistrements de Shifts associés. Cela ne peut pas être annulé !</string>
+    <string name="delete_volunteers" formatted="false">Supprimer %d bénévole%s</string>
+    
+    <!-- Upload Status Messages -->
+    <string name="validating_file">Validation du fichier...</string>
+    <string name="file_validated_uploading">Fichier validé ! Téléchargement...</string>
+    <string name="file_uploaded_successfully">Fichier téléchargé avec succès !</string>
+    <string name="upload_failed">Échec du téléchargement : %s</string>
+    <string name="validation_failed">Échec de la validation : %s</string>
+    <string name="key_file_found">Fichier de clé trouvé</string>
+    <string name="unknown">Inconnu</string>
+    
+    <!-- Common Actions -->
+    <string name="save">Enregistrer</string>
+    <string name="delete">Supprimer</string>
+    <string name="edit">Modifier</string>
+    <string name="add">Ajouter</string>
+    <string name="remove">Retirer</string>
+    <string name="confirm">Confirmer</string>
+    <string name="ok">OK</string>
+    <string name="yes">Oui</string>
+    <string name="no">Non</string>
+    
+    <!-- Navigation -->
+    <string name="nav_dashboard">Acceuil</string>
+    <string name="nav_guests">Guest List</string>
+    <string name="nav_volunteers">Bénévoles</string>
+    <string name="nav_shifts">Shifts</string>
+    <string name="nav_benefits">Avantages</string>
+    <string name="nav_settings">Paramètres</string>
+    
+    <!-- Dashboard -->
+    <string name="dashboard_title">Tableau de bord</string>
+    <string name="dashboard_subtitle_phone">Aperçu de la gestion d\'événements</string>
+    <string name="dashboard_subtitle_tablet">Aperçu de votre système de gestion d\'événements</string>
+    <string name="active_volunteers">Bénévoles actif·ve·s</string>
+    <string name="jobs_this_month">Shifts ce mois</string>
+    <string name="venues">Lieux</string>
+    <string name="volunteers_total">Total Bénévoles</string>
+    <string name="plus_one_invites">Invitations +1</string>
+    <string name="total_people">Total Liste</string>
+    <string name="shifts_past_month">Shifts ce mois-ci</string>
+    <string name="inactive_volunteers">Bénévoles inactif·ve·s</string>
+    <string name="free_drinks_today">Boissons gratuites aujourd\'hui</string>
+    <string name="recent_activity">Activité récente</string>
+    <string name="recent_guests">Invité·e·s récents·es</string>
+    <string name="recent_volunteers">Bénévoles récents·es</string>
+    <string name="recent_shifts">Shifts récents·es</string>
+    <string name="latest_guest_phone">Invité·e : %s</string>
+    <string name="latest_guest_tablet">Dernier·ère invité·e : %s</string>
+    <string name="latest_volunteer_phone">Bénévole : %s</string>
+    <string name="latest_volunteer_tablet">Dernier·ère bénévole : %s</string>
+    <string name="latest_job_phone">Shift : %s</string>
+    <string name="latest_job_tablet">Dernier Shift : %s</string>
+    
+    <!-- Sync Status -->
+    <string name="syncing">Synchronisation...</string>
+    <string name="synced_now">Synchronisé maintenant</string>
+    <string name="synced_minutes_ago">%dm il y a</string>
+    <string name="synced_hours_ago">%dh il y a</string>
+    <string name="synced_days_ago">%dj il y a</string>
+    <string name="never_synced">Jamais synchronisé</string>
+    
+    <!-- Welcome Screen -->
+    <string name="start_admin">Lancer en mode Admin</string>
+    
+    <!-- Volunteer Screen -->
+    <string name="volunteers_title">Bénévoles</string>
+    <string name="volunteer_manager">Gestionnaire de bénévoles</string>
+    <string name="add_volunteer">Ajouter un·e bénévole</string>
+    <string name="add_new_volunteer">Ajouter un·e nouveau·elle bénévole</string>
+    <string name="refresh">Actualiser</string>
+    <string name="search_volunteers_placeholder">Rechercher des bénévoles par nom ou email...</string>
+    <string name="filter_all">Tou·te·s</string>
+    <string name="active_status">Actif·ve</string>
+    <string name="inactive_status">Inactif·ve</string>
+    <string name="view_details">Voir les détails</string>
+    <string name="full_name">Nom complet</string>
+    <string name="last_name_abbreviation">Abréviation du nom de famille</string>
+    <string name="last_name_abbreviation_placeholder">ex., MART</string>
+    <string name="email">Email</string>
+    <string name="email_placeholder">nom@exemple.com</string>
+    <string name="phone_number">Numéro de téléphone</string>
+    <string name="date_of_birth">Date de naissance</string>
+    <string name="date_of_birth_placeholder">jj.mm.aaaa</string>
+    <string name="gender">Genre</string>
+    <string name="select_gender">Sélectionner le genre</string>
+    <string name="gender_female">Féminin</string>
+    <string name="gender_male">Masculin</string>
+    <string name="gender_non_binary">Non-binaire</string>
+    <string name="gender_other">Autre</string>
+    <string name="gender_prefer_not_to_disclose">Préfère ne pas préciser</string>
+    <string name="update_volunteer">Mettre à jour le·la bénévole</string>
+    <string name="edit_volunteer">Modifier le·la bénévole</string>
+    <string name="edit_volunteer_details">Modifier les détails du·de la bénévole</string>
+    
+    <!-- Guest List Screen -->
+    <string name="guest_list_title">Guest List</string>
+    <string name="guest_list_management">Gestion Guest List</string>
+    <string name="guest_list_description">Gérer les invité·e·s pour les lieux Groove et Le Terreau</string>
+    <string name="venue_groove">Groove</string>
+    <string name="venue_le_terreau">Le Terreau</string>
+    <string name="add_guest">Ajouter un·e invité·e</string>
+    <string name="add_new_guest">Ajouter un·e nouveau·elle invité·e</string>
+    <string name="last_synced">Dernière synchronisation :</string>
+    <string name="just_now">À l\'instant</string>
+    <string name="minutes_ago">%d minutes il y a</string>
+    <string name="hours_ago">%d heures il y a</string>
+    <string name="days_ago">%d jours il y a</string>
+    <string name="search_guests_placeholder">Rechercher des invité·e·s par nom...</string>
+    <string name="filter_volunteer_benefits">Avantages bénévoles</string>
+    <string name="filter_regular_guests">Invité·e·s régulier·ère·s</string>
+    <string name="guests_count">Invité·e·s</string>
+    <string name="total_guests_count">Total invité·e·s</string>
+    <string name="invitations_count">Invitations</string>
+    <string name="total_invitations_count">Total invitations</string>
+    <string name="volunteer_label">Bénévole</string>
+    <string name="invitations_text" formatted="false">%d invitation%s</string>
+    <string name="view_benefits">Voir les avantages</string>
+    <string name="delete_guest">Supprimer l\'invité·e</string>
+    <string name="edit_guest">Modifier l\'invité·e</string>
+    <string name="edit_guest_details">Modifier les détails de l\'invité·e</string>
+    <string name="update_guest">Mettre à jour l\'invité·e</string>
+    <string name="guest_information">Informations de l\'invité·e</string>
+    <string name="guest_name">Nom de l\'invité·e</string>
+    <string name="number_of_invitations">Nombre d\'invitations</string>
+    <string name="venue">Lieu</string>
+    <string name="notes">Notes</string>
+    
+    <!-- Benefits Screen -->
+    <string name="benefits_title">Avantages</string>
+    <string name="volunteer_benefits_overview">Aperçu des avantages bénévoles</string>
+    <string name="benefits_description">Référence du personnel pour vérifier les avantages bénévoles</string>
+    <string name="search_volunteers_benefits_placeholder">Rechercher des bénévoles par nom ou email...</string>
+    <string name="no_rank">Aucun rang</string>
+    <string name="high_rank">Rang élevé</string>
+    <string name="current_benefits">✨ Avantages actuels</string>
+    <string name="days_left">%d jours restants</string>
+    <string name="expires_soon">Expire bientôt</string>
+    <string name="free_entry">✅ Entrée gratuite</string>
+    <string name="friend_invitation">👥 Invitation d\'ami·e</string>
+    <string name="drink_tokens">🍺 %d jetons de boisson</string>
+    <string name="bar_discount">💰 %d%% de réduction au bar</string>
+    <string name="extraordinary_benefits">💎 Avantages extraordinaires</string>
+    
+    <!-- Shifts Screen -->
+    <string name="shifts_title">Shifts</string>
+    <string name="shift_tracking">Suivi des Shifts</string>
+    <string name="add_shift">Ajouter un Shift</string>
+    <string name="add_new_shift">Ajouter un nouveau Shift</string>
+    <string name="search_shifts_placeholder">Rechercher des Shifts par nom de bénévole ou notes...</string>
+    <string name="unknown_volunteer">Bénévole inconnu·e</string>
+    <string name="volunteer">Bénévole</string>
+    <string name="search_volunteers_shift_placeholder">Rechercher des bénévoles...</string>
+    <string name="shift_type">Type de Shift</string>
+    <string name="select_shift_type">Sélectionner un type de Shift...</string>
+    <string name="shift_time">Heure du Shift</string>
+    <string name="shift_date_time">Date &amp; Heure du Shift</string>
+    <string name="notes_optional">Notes (Optionnel)</string>
+    <string name="add_job">Ajouter un Job</string>
+    <string name="edit_shift">Modifier le Shift</string>
+    <string name="edit_shift_details">Modifier les détails du Shift</string>
+    <string name="update_job">Mettre à jour le Job</string>
+    
+    <!-- QR Code Related -->
+    <string name="qr_code">Code QR</string>
+    <string name="volunteer_qr_code">Code QR du·de la bénévole</string>
+    <string name="edit_volunteer_button">Modifier le·la bénévole</string>
+    <string name="delete_volunteer_button">Supprimer le·la bénévole</string>
+    <string name="camera_permission_required">L\'autorisation de la caméra est requise pour scanner les codes QR</string>
+    <string name="camera_permission_title">Autorisation de la caméra requise</string>
+    <string name="error_processing_qr_code">Erreur lors du traitement du code QR : %s</string>
+    <string name="invalid_qr_code_format">Format de code QR invalide : %s</string>
+    <string name="volunteer_not_found">Bénévole \'%1$s\' (ID : %2$s) introuvable dans la base de données. Veuillez vérifier si les données du·de la bénévole ont été synchronisées depuis Google Sheets.</string>
+    <string name="qr_code_for_volunteer">Code QR pour le·la bénévole : %s</string>
+    <string name="qr_code_subject">Code QR du·de la bénévole - %s</string>
+    <string name="share_qr_code">Partager le code QR</string>
+    <string name="share">Partager</string>
+    <string name="send_by_mail">Envoyer par e-mail</string>
+    <string name="failed_to_generate_qr_code">Échec de la génération du code QR</string>
+    <string name="personal_information">Informations personnelles</string>
+    <string name="name">Nom</string>
+    <string name="abbreviation">Abréviation</string>
+    <string name="female">Féminin</string>
+    <string name="male">Masculin</string>
+    <string name="non_binary">Non-binaire</string>
+    <string name="other">Autre</string>
+    <string name="prefer_not_to_disclose">Préfère ne pas divulguer</string>
+    <string name="not_specified">Non spécifié</string>
+    <string name="birthday">Date de naissance</string>
+    <string name="age">Âge</string>
+    <string name="phone">Téléphone</string>
+    <string name="volunteer_information">Informations du bénévole</string>
+    <string name="current_rank">Rang actuel</string>
+    <string name="status">Statut :</string>
+    <string name="total_shifts">Total shifts</string>
+    <string name="last_shift">Dernier shift</string>
+    <string name="shift_history">Historique des shifts (%d shifts)</string>
+    <string name="no_shifts_recorded">Aucun shift enregistré</string>
+    <string name="actions">Actions</string>
+    <string name="not_provided">Non fourni</string>
+    
+    <!-- Additional Volunteer Panel Strings -->
+    <string name="expired">Expiré</string>
+    <string name="benefit_details">Détails des avantages</string>
+    <string name="more_shifts">... et %d shifts supplémentaires</string>
+    <string name="years_old">%d ans</string>
+    
+    <!-- Date & Time Format Settings -->
+    <string name="date_time_format_title">Format Date &amp; Heure</string>
+    <string name="date_time_format_description">Choisissez comment les dates et heures s\'affichent dans l\'application</string>
+    <string name="date_format_dd_mm_yyyy">25/12/2025 (dd/MM/yyyy)</string>
+    <string name="date_format_mm_dd_yyyy">12/25/2025 (MM/dd/yyyy)</string>
+    <string name="date_format_yyyy_mm_dd">2025-12-25 (yyyy-MM-dd)</string>
+    <string name="time_format_hh_mm">14:30 (HH:mm)</string>
+    <string name="time_format_hh_mm_ss">14:30:45 (HH:mm:ss)</string>
+    <string name="time_format_hh_mm_ss_sss">14:30:45.123 (HH:mm:ss.SSS)</string>
+    <string name="date_change_offset_title">Décalage du Changement de Date</string>
+    <string name="date_change_offset_description">Heures à ajouter avant le changement de date (ex. : +3 heures = 03:00). Les avantages et shifts dureront jusqu\'à cette heure au lieu de minuit.</string>
+    <string name="date_change_offset_hours">%1$d heures</string>
+    <string name="date_change_offset_zero">0 heures (minuit)</string>
+    <string name="date_change_offset_time">%1$02d:00</string>
+    <string name="date_change_offset_previous_day">%1$02d:00 jour précédent</string>
+    <string name="date_change_offset_increase">Augmenter les heures</string>
+    <string name="date_change_offset_decrease">Diminuer les heures</string>
+    
+    <!-- Multiple Benefits -->
+    <string name="active_benefits_multiple_ranks">Avantages actifs de plusieurs rangs :</string>
+    
+    <!-- People Counter -->
+    <string name="people_counter_title">Compteur de Personnes</string>
+    <string name="people_counter_hint">Suivre la présence des invité·e·s</string>
+    <string name="people_counter_hint_tap_plus_minus">Appuyez sur +/- pour ajuster le comptage</string>
+    <string name="people_counter_hint_long_press">Appui long ±10 personnes</string>
+    <string name="people_counter_reset">Réinitialiser le compteur</string>
+    
+    <!-- QR Code Scanner -->
+    <string name="camera_not_available">Le matériel de la caméra n\'est pas disponible ou ne fonctionne pas sur cet appareil</string>
+    <string name="camera_error">Erreur de la caméra</string>
+    <string name="enter_id_manually">Entrer l\'ID manuellement</string>
+    <string name="manual_volunteer_input">Entrer l\'ID du·de la bénévole</string>
+    <string name="enter_volunteer_id_manually">Entrez l\'ID du·de la bénévole manuellement :</string>
+    <string name="volunteer_id">ID du·de la bénévole</string>
+    <string name="find_volunteer">Trouver le·la bénévole</string>
+    <string name="available_volunteers">Bénévoles disponibles :</string>
+    
+    <!-- Statistics and Graphs Labels -->
+    <string name="stats_and_graphs">Statistiques &amp; Tendances</string>
+    <string name="terreau_average">Moyenne Terreau</string>
+    <string name="groove_average">Moyenne Groove</string>
+    <string name="total_average">Moyenne Totale</string>
+    <string name="guest_metrics">Métriques d\'Invité·e·s</string>
+    <string name="invitations">Invitations</string>
+    <string name="volunteers">Bénévoles</string>
+    <string name="permanent_guests">Invité·e·s Permanent·e·s</string>
+    <string name="count">Comptage</string>
+    <string name="shift_statistics">Statistiques des Shifts</string>
+    <string name="guest_list_statistics">Statistiques de la Guest List</string>
+    <string name="free_drinks_statistics">Statistiques des Boissons Gratuites</string>
+    <string name="free_drinks">Boissons Gratuites</string>
+    
+    <!-- Graph Descriptions -->
+    <string name="active_volunteers_description">Nombre de bénévoles qui ont effectué un shift dans la dernière année à chaque moment</string>
+    <string name="active_volunteers_graph_description">Affiche le nombre de bénévoles considérés comme actifs (ayant effectué un shift dans la dernière année) à chaque date</string>
+    <string name="shift_statistics_description">Nombre de shifts effectués par les bénévoles au fil du temps, organisés par lieu</string>
+    <string name="venue_shifts_description">Nombre de shifts effectués à %1$s au fil du temps</string>
+    <string name="total_shifts_description">Nombre total de shifts effectués dans tous les lieux au fil du temps</string>
+    <string name="guest_list_statistics_description">Statistiques de la liste d\'invité·e·s montrant les bénévoles avec accès et leurs invitations disponibles</string>
+    <string name="volunteer_guests_description">Nombre de bénévoles qui avaient accès à la liste d\'invité·e·s à chaque moment</string>
+    <string name="volunteer_invites_description">Nombre total d\'invitations que les bénévoles avec accès à la liste d\'invité·e·s pouvaient donner à chaque moment</string>
+    <string name="total_guests_description">Nombre total de personnes sur la liste d\'invité·e·s (bénévoles avec accès + leurs invitations disponibles) à chaque moment</string>
+    <string name="free_drinks_statistics_description">Nombre de boissons gratuites disponibles au fil du temps</string>
+    <string name="gender_parity">Parité des Genres</string>
+    <string name="gender_parity_description">Répartition des genres parmi les bénévoles actif·ve·s</string>
+    <string name="gender_distribution">Répartition des Genres</string>
+    <string name="unspecified">Non spécifié</string>
+    <string name="no_gender_data">Aucune donnée de genre disponible</string>
+    <string name="age_distribution">Répartition par Âge</string>
+    <string name="age_distribution_description">Répartition des âges parmi les bénévoles actif·ve·s</string>
+    <string name="age_distribution_title">Répartition par Âge</string>
+    <string name="age_under_18">Moins de 18 ans</string>
+    <string name="age_18_20">18-20 ans</string>
+    <string name="age_21_23">21-23 ans</string>
+    <string name="age_24_26">24-26 ans</string>
+    <string name="age_27_30">27-30 ans</string>
+    <string name="age_over_31">Plus de 31 ans</string>
+    <string name="age_unknown">Âge inconnu</string>
+    <string name="no_age_data">Aucune donnée d\'âge disponible pour les bénévoles actif·ve·s</string>
+    <string name="not_enough_data">Pas assez de données</string>
+    <string name="total">Total</string>
+    
+    <!-- Seasonal Fun -->
+    <string name="seasonal_fun_title">Fun Saisonnier</string>
+    <string name="seasonal_fun_description">Activez des fonctionnalités saisonnières spéciales et des décorations</string>
+    
+    <!-- Sync Error Messages -->
+    <string name="sync_error_title">⚠️ Erreur de synchronisation</string>
+    <string name="sync_error_occurred">Une erreur s\'est produite lors de la synchronisation</string>
+    <string name="sync_error_details">Erreur : %s</string>
+    <string name="sync_error_retry">Réessayer</string>
+    <string name="sync_error_dismiss">Fermer</string>
+    <string name="sync_error_dont_tell_today">Ne me le dire plus aujourd\'hui</string>
+    
+    <!-- Device Time/Date Error (French) -->
+    <string name="sync_error_device_time_title">⏰ Date/Heure de l\'appareil incorrecte</string>
+    <string name="sync_error_device_time_message">La date ou l\'heure de votre appareil est incorrecte. L\'API Google Sheets nécessite une synchronisation horaire précise pour fonctionner correctement.</string>
+    <string name="sync_error_device_time_solution">Comment corriger :\n\n1. Allez aux Paramètres\n2. Recherchez « Date &amp; Heure » ou « Système »\n3. Activez « Date &amp; heure automatiques » ou « Définir l\'heure automatiquement »\n4. Si ce n\'est pas disponible, réglez manuellement la date et l\'heure correctes\n5. Redémarrez l\'application et réessayez la synchronisation\n\nFréquent sur les anciennes tablettes - veuillez vérifier les paramètres de votre appareil !</string>
+    <string name="sync_error_device_time_open_settings">Ouvrir les paramètres</string>
+    
+    <!-- Specific Sync Error Types -->
+    <string name="sync_error_rate_limit">Limite de débit dépassée. Veuillez attendre 1-2 minutes avant de réessayer.</string>
+    <string name="sync_error_authentication">Authentification échouée. Veuillez vérifier votre configuration Google Sheets.</string>
+    <string name="sync_error_permission">Permission refusée. Assurez-vous que votre compte de service a un accès éditeur à la feuille de calcul.</string>
+    <string name="sync_error_network">Erreur réseau. Veuillez vérifier votre connexion Internet.</string>
+    <string name="sync_error_invalid_config">Configuration invalide. Veuillez vérifier vos paramètres.</string>
+    <string name="sync_error_spreadsheet_not_found">Feuille de calcul non trouvée. Veuillez vérifier l\'ID de la feuille de calcul.</string>
+    <string name="sync_error_sheet_not_found">Feuille non trouvée. Veuillez vérifier les noms des feuilles dans votre configuration.</string>
+    <string name="sync_error_invalid_data">Format de données invalide. Veuillez vérifier la structure de votre Google Sheets.</string>
+    <string name="sync_error_unknown">Une erreur inconnue s\'est produite. Veuillez réessayer plus tard.</string>
+    
+    <!-- Full Sync Errors -->
+    <string name="sync_error_full_sync_failed">Échec de la synchronisation complète</string>
+    <string name="sync_error_page_change_failed">Échec de la synchronisation du changement de page</string>
+    <string name="sync_error_volunteer_sync_failed">Échec de la synchronisation des bénévoles</string>
+    <string name="sync_error_guest_sync_failed">Échec de la synchronisation des invité·e·s</string>
+    <string name="sync_error_job_sync_failed">Échec de la synchronisation des shifts</string>
+    <string name="sync_error_job_type_sync_failed">Échec de la synchronisation des types de shifts</string>
+    <string name="sync_error_venue_sync_failed">Échec de la synchronisation des lieux</string>
+    <string name="sync_error_backup_failed">Échec de la sauvegarde</string>
+    
+    <!-- Settings Categories (French) -->
+    <string name="settings_category_sync">Synchronisation &amp; Données</string>
+    <string name="settings_category_appearance">Apparence &amp; Affichage</string>
+    <string name="settings_category_localization">Localisation</string>
+    <string name="settings_category_animations">Animations &amp; Effets</string>
+    <string name="settings_category_developer">Développeur &amp; Débogage</string>
+    <string name="settings_category_maintenance">Maintenance</string>
+    
+    <!-- App Icon Settings (French) -->
+    <string name="app_icon_title">Icône de l\'Application</string>
+    <string name="app_icon_description">Sélectionnez votre style d\'icône préféré</string>
+    <string name="app_icon_light">Clair</string>
+    <string name="app_icon_dark">Sombre</string>
+    <string name="app_icon_deep_blue">Bleu Profond</string>
+    <string name="app_icon_blue_ocean">Océan Bleu</string>
+    <string name="app_icon_braun">Brun</string>
+    <string name="app_icon_purple">Violet</string>
+    <string name="app_icon_violet">Violette</string>
+    <string name="app_icon_selected">✓ Sélectionné</string>
+    <string name="app_icon_auto_adapt_title">Adapter l\'Icône au Thème Système</string>
+    <string name="app_icon_auto_adapt_description">Basculez automatiquement entre les icônes claires et sombres en fonction de votre thème système</string>
+    <string name="app_icon_light_applied">Icône claire appliquée.</string>
+    <string name="app_icon_dark_applied">Icône sombre appliquée.</string>
+    <string name="app_icon_deep_blue_applied">Icône bleu profond appliquée.</string>
+    <string name="app_icon_blue_ocean_applied">Icône océan bleu appliquée.</string>
+    <string name="app_icon_braun_applied">Icône brune appliquée.</string>
+    <string name="app_icon_purple_applied">Icône violette appliquée.</string>
+    <string name="app_icon_violet_applied">Icône violette appliquée.</string>
+    <string name="app_icon_auto_adapt_enabled">Adaptation automatique activée. L\'icône se mettra à jour en fonction de votre thème système.</string>
+    <string name="app_icon_restart_title">Redémarrer l\'Application</string>
+    <string name="app_icon_restart_message">Veuillez redémarrer l\'application pour que le changement d\'icône prenne effet.</string>
+    <string name="app_icon_restart_now">Redémarrer maintenant</string>
+    <string name="app_icon_restart_later">Plus tard</string>
+    
+    <!-- Graph Export -->
+    <string name="exporting">Exportation en cours...</string>
+    <string name="export_graph">Exporter le graphique</string>
+    <string name="choose_export_format">Choisir le format d\'exportation :</string>
+    <string name="export_as_xlsx">Exporter en XLSX</string>
+    <string name="export_xlsx_description">Inclut toutes les données et le graphique</string>
+    <string name="export_as_jpg">Exporter en JPG</string>
+    <string name="export_jpg_description">Image du graphique uniquement</string>
+    <string name="export_complete">Exportation terminée</string>
+    <string name="xlsx_export_complete">Exportation XLSX terminée</string>
+    <string name="xlsx_export_success_message">Votre feuille de calcul a été créée avec succès et est prête à être partagée</string>
+    <string name="file_name">Nom du fichier</string>
+    <string name="file_size">Taille : %s</string>
+    <string name="graph_preview">Aperçu du graphique</string>
+    <string name="share_graph">Partager le graphique</string>
+    <string name="open_with">Ouvrir avec</string>
+    <string name="active_volunteers_graph">Graphique des bénévoles actif·ve·s</string>
+</resources>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.EventManagerApp" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/purple_500</item>
+        <item name="colorPrimaryDark">@color/purple_700</item>
+        <item name="colorAccent">@color/teal_200</item>
+        
+        <item name="android:statusBarColor">@color/purple_700</item>
+        
+        <!-- Large tablet-specific window sizing -->
+        <item name="android:windowMinWidthMajor">720dp</item>
+        <item name="android:windowMinWidthMinor">720dp</item>
+    </style>
+</resources>

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dashboard_subtitle_tablet">Complete event management dashboard with enhanced visibility</string>
+    <string name="enhanced_touch_targets">Enhanced touch targets for better interaction</string>
+    <string name="guest_list_management_tablet">Comprehensive guest list management for Groove and Le Terreau venues</string>
+    <string name="large_screen_experience">Premium experience designed for large screens</string>
+    <string name="latest_guest_tablet">Most Recent Guest Registration: %s</string>
+    <string name="latest_job_tablet">Most Recent Job Completion: %s</string>
+    <string name="latest_volunteer_tablet">Most Recent Volunteer Activity: %s</string>
+    <string name="nav_benefits_tablet">Benefits Management</string>
+    <string name="nav_dashboard_tablet">Dashboard Overview</string>
+    <string name="nav_guests_tablet">Guest Management System</string>
+    <string name="nav_settings_tablet">Settings &amp; Configuration</string>
+    <string name="nav_shifts_tablet">Shift Tracking System</string>
+    <string name="nav_volunteers_tablet">Volunteer Management System</string>
+    <string name="shield_optimized">Optimized for NVIDIA Shield tablets</string>
+    <string name="shift_tracking_tablet">Advanced shift tracking and job management system</string>
+    <string name="tablet_optimized">Optimized for large tablet displays</string>
+    <string name="volunteer_benefits_overview_tablet">Complete volunteer benefits tracking and management system</string>
+    <string name="volunteer_manager_tablet">Advanced volunteer management with detailed tracking</string>
+    <style name="Theme.EventManagerApp" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/purple_500</item>
+        <item name="colorPrimaryDark">@color/purple_700</item>
+        <item name="colorAccent">@color/teal_200</item>
+        
+        <item name="android:statusBarColor">@color/purple_700</item>
+        
+        
+        <item name="android:windowMinWidthMajor">720dp</item>
+        <item name="android:windowMinWidthMinor">720dp</item>
+    </style>
+</resources>

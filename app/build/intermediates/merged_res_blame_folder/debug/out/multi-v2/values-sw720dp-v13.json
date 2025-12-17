@@ -1,0 +1,45 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.eventmanager.app-mergeDebugResources-64:/values-sw720dp-v13/values-sw720dp-v13.xml",
+            "map": [
+                {
+                    "source": "/Users/leonardomondada/EventManagerApp/app/src/main/res/values-sw720dp/styles.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endLines": "12",
+                        "endColumns": "12",
+                        "endOffsets": "592"
+                    },
+                    "to": {
+                        "startLines": "20",
+                        "startColumns": "4",
+                        "startOffsets": "1657",
+                        "endLines": "30",
+                        "endColumns": "12",
+                        "endOffsets": "2150"
+                    }
+                },
+                {
+                    "source": "/Users/leonardomondada/EventManagerApp/app/src/main/res/values-sw720dp/strings.xml",
+                    "from": {
+                        "startLines": "2,19,15,7,3,5,4,12,8,9,13,11,10,18,17,6,16,14",
+                        "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
+                        "startOffsets": "55,1560,1131,498,170,340,253,880,596,664,948,812,734,1479,1379,417,1257,1025",
+                        "endColumns": "114,96,125,97,82,76,86,67,67,69,76,67,77,80,99,80,121,105",
+                        "endOffsets": "165,1652,1252,591,248,412,335,943,659,729,1020,875,807,1555,1474,493,1374,1126"
+                    },
+                    "to": {
+                        "startLines": "2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19",
+                        "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
+                        "startOffsets": "55,170,267,393,491,574,651,738,806,874,944,1021,1089,1167,1248,1348,1429,1551",
+                        "endColumns": "114,96,125,97,82,76,86,67,67,69,76,67,77,80,99,80,121,105",
+                        "endOffsets": "165,262,388,486,569,646,733,801,869,939,1016,1084,1162,1243,1343,1424,1546,1652"
+                    }
+                }
+            ]
+        }
+    ]
+}

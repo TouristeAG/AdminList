@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dashboard_subtitle_tablet">Comprehensive overview of your event management system</string>
+    <string name="guest_list_management_tablet">Complete guest list management for both venues</string>
+    <string name="large_screen_experience">Enhanced experience for large screens</string>
+    <string name="latest_guest_tablet">Latest Guest Registration: %s</string>
+    <string name="latest_job_tablet">Latest Job Completion: %s</string>
+    <string name="latest_volunteer_tablet">Latest Volunteer Activity: %s</string>
+    <string name="nav_benefits_tablet">Benefits Overview</string>
+    <string name="nav_dashboard_tablet">Dashboard Overview</string>
+    <string name="nav_guests_tablet">Guest Management</string>
+    <string name="nav_settings_tablet">Settings &amp; Configuration</string>
+    <string name="nav_shifts_tablet">Shift Tracking</string>
+    <string name="nav_volunteers_tablet">Volunteer Management</string>
+    <string name="shift_tracking_tablet">Complete shift tracking and job management</string>
+    <string name="tablet_optimized">Optimized for tablet viewing</string>
+    <string name="volunteer_benefits_overview_tablet">Detailed volunteer benefits and status tracking</string>
+    <string name="volunteer_manager_tablet">Comprehensive volunteer management system</string>
+    <style name="Theme.EventManagerApp" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/purple_500</item>
+        <item name="colorPrimaryDark">@color/purple_700</item>
+        <item name="colorAccent">@color/teal_200</item>
+        
+        <item name="android:statusBarColor">@color/purple_700</item>
+        
+        
+        <item name="android:windowMinWidthMajor">600dp</item>
+        <item name="android:windowMinWidthMinor">600dp</item>
+    </style>
+</resources>

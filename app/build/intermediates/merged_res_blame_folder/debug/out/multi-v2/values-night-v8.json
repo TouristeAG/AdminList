@@ -1,0 +1,45 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.eventmanager.app-mergeDebugResources-64:/values-night-v8/values-night-v8.xml",
+            "map": [
+                {
+                    "source": "/Users/leonardomondada/EventManagerApp/app/src/main/res/values-night/styles.xml",
+                    "from": {
+                        "startLines": "3",
+                        "startColumns": "4",
+                        "startOffsets": "105",
+                        "endLines": "11",
+                        "endColumns": "12",
+                        "endOffsets": "561"
+                    },
+                    "to": {
+                        "startLines": "9",
+                        "startColumns": "4",
+                        "startOffsets": "687",
+                        "endLines": "17",
+                        "endColumns": "12",
+                        "endOffsets": "1056"
+                    }
+                },
+                {
+                    "source": "/Users/leonardomondada/.gradle/caches/8.10/transforms/c9fab00c6a35168cc6ee949a43590418/transformed/appcompat-1.6.1/res/values-night-v8/values-night-v8.xml",
+                    "from": {
+                        "startLines": "2,3,4,5,6,7,8,9",
+                        "startColumns": "4,4,4,4,4,4,4,4",
+                        "startOffsets": "55,125,209,293,389,491,593,687",
+                        "endColumns": "69,83,83,95,101,101,93,88",
+                        "endOffsets": "120,204,288,384,486,588,682,771"
+                    },
+                    "to": {
+                        "startLines": "2,3,4,5,6,7,8,18",
+                        "startColumns": "4,4,4,4,4,4,4,4",
+                        "startOffsets": "55,125,209,293,389,491,593,1061",
+                        "endColumns": "69,83,83,95,101,101,93,88",
+                        "endOffsets": "120,204,288,384,486,588,682,1145"
+                    }
+                }
+            ]
+        }
+    ]
+}
