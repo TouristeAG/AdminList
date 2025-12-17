@@ -1,0 +1,609 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.eventmanager.app"
+4    android:versionCode="1"
+5    android:versionName="1.0" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="21"
+9        android:targetSdkVersion="34" />
+10
+11    <uses-permission android:name="android.permission.INTERNET" />
+11-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:4:5-67
+11-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:4:22-64
+12    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+12-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:5:5-79
+12-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:5:22-76
+13    <uses-permission android:name="android.permission.CAMERA" />
+13-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:6:5-65
+13-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:6:22-62
+14    <uses-permission android:name="android.permission.VIBRATE" />
+14-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:7:5-66
+14-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:7:22-63
+15    <uses-permission android:name="android.permission.WAKE_LOCK" />
+15-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:23:5-68
+15-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:23:22-65
+16    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+16-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:25:5-81
+16-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:25:22-78
+17    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+17-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:26:5-77
+17-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:26:22-74
+18
+19    <permission
+19-->[androidx.core:core:1.13.1] /Users/leonardomondada/.gradle/caches/8.10/transforms/d2faa1972330a806563b8cf294acfe42/transformed/core-1.13.1/AndroidManifest.xml:22:5-24:47
+20        android:name="com.eventmanager.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+20-->[androidx.core:core:1.13.1] /Users/leonardomondada/.gradle/caches/8.10/transforms/d2faa1972330a806563b8cf294acfe42/transformed/core-1.13.1/AndroidManifest.xml:23:9-81
+21        android:protectionLevel="signature" />
+21-->[androidx.core:core:1.13.1] /Users/leonardomondada/.gradle/caches/8.10/transforms/d2faa1972330a806563b8cf294acfe42/transformed/core-1.13.1/AndroidManifest.xml:24:9-44
+22
+23    <uses-permission android:name="com.eventmanager.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" /> <!-- Don't require camera, as this requires a rear camera. This allows it to work on the Nexus 7 -->
+23-->[androidx.core:core:1.13.1] /Users/leonardomondada/.gradle/caches/8.10/transforms/d2faa1972330a806563b8cf294acfe42/transformed/core-1.13.1/AndroidManifest.xml:26:5-97
+23-->[androidx.core:core:1.13.1] /Users/leonardomondada/.gradle/caches/8.10/transforms/d2faa1972330a806563b8cf294acfe42/transformed/core-1.13.1/AndroidManifest.xml:26:22-94
+24    <uses-feature
+24-->[com.journeyapps:zxing-android-embedded:4.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/74add31f5f93ee576989bfed55497870/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:25:5-27:36
+25        android:name="android.hardware.camera"
+25-->[com.journeyapps:zxing-android-embedded:4.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/74add31f5f93ee576989bfed55497870/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:26:9-47
+26        android:required="false" />
+26-->[com.journeyapps:zxing-android-embedded:4.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/74add31f5f93ee576989bfed55497870/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:27:9-33
+27    <uses-feature
+27-->[com.journeyapps:zxing-android-embedded:4.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/74add31f5f93ee576989bfed55497870/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:28:5-30:36
+28        android:name="android.hardware.camera.front"
+28-->[com.journeyapps:zxing-android-embedded:4.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/74add31f5f93ee576989bfed55497870/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:29:9-53
+29        android:required="false" /> <!-- TODO replace above two with next line after Android 4.2 -->
+29-->[com.journeyapps:zxing-android-embedded:4.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/74add31f5f93ee576989bfed55497870/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:30:9-33
+30    <!-- <uses-feature android:name="android.hardware.camera.any"/> -->
+31    <uses-feature
+31-->[com.journeyapps:zxing-android-embedded:4.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/74add31f5f93ee576989bfed55497870/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:33:5-35:36
+32        android:name="android.hardware.camera.autofocus"
+32-->[com.journeyapps:zxing-android-embedded:4.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/74add31f5f93ee576989bfed55497870/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:34:9-57
+33        android:required="false" />
+33-->[com.journeyapps:zxing-android-embedded:4.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/74add31f5f93ee576989bfed55497870/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:35:9-33
+34    <uses-feature
+34-->[com.journeyapps:zxing-android-embedded:4.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/74add31f5f93ee576989bfed55497870/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:36:5-38:36
+35        android:name="android.hardware.camera.flash"
+35-->[com.journeyapps:zxing-android-embedded:4.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/74add31f5f93ee576989bfed55497870/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:37:9-53
+36        android:required="false" />
+36-->[com.journeyapps:zxing-android-embedded:4.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/74add31f5f93ee576989bfed55497870/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:38:9-33
+37    <uses-feature
+37-->[com.journeyapps:zxing-android-embedded:4.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/74add31f5f93ee576989bfed55497870/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:39:5-41:36
+38        android:name="android.hardware.screen.landscape"
+38-->[com.journeyapps:zxing-android-embedded:4.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/74add31f5f93ee576989bfed55497870/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:40:9-57
+39        android:required="false" />
+39-->[com.journeyapps:zxing-android-embedded:4.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/74add31f5f93ee576989bfed55497870/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:41:9-33
+40    <uses-feature
+40-->[com.journeyapps:zxing-android-embedded:4.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/74add31f5f93ee576989bfed55497870/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:42:5-44:36
+41        android:name="android.hardware.wifi"
+41-->[com.journeyapps:zxing-android-embedded:4.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/74add31f5f93ee576989bfed55497870/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:43:9-45
+42        android:required="false" />
+42-->[com.journeyapps:zxing-android-embedded:4.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/74add31f5f93ee576989bfed55497870/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:44:9-33
+43
+44    <application
+44-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:9:5-138:19
+45        android:name="com.eventmanager.app.EventManagerApplication"
+45-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:10:9-48
+46        android:allowBackup="true"
+46-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:11:9-35
+47        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+47-->[androidx.core:core:1.13.1] /Users/leonardomondada/.gradle/caches/8.10/transforms/d2faa1972330a806563b8cf294acfe42/transformed/core-1.13.1/AndroidManifest.xml:28:18-86
+48        android:debuggable="true"
+49        android:enableOnBackInvokedCallback="true"
+49-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:15:9-51
+50        android:extractNativeLibs="false"
+51        android:label="@string/app_name"
+51-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:12:9-41
+52        android:supportsRtl="true"
+52-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:14:9-35
+53        android:theme="@style/Theme.EventManagerApp" >
+53-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:13:9-53
+54        <activity
+54-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:16:9-21:55
+55            android:name="com.eventmanager.app.MainActivity"
+55-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:17:13-41
+56            android:configChanges="orientation|screenSize|keyboardHidden"
+56-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:20:13-74
+57            android:exported="true"
+57-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:18:13-36
+58            android:label="@string/app_name"
+58-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:19:13-45
+59            android:screenOrientation="unspecified" /> <!-- Violet Icon Alias -->
+59-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:21:13-52
+60        <activity-alias
+60-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:115:9-127:26
+61            android:name="com.eventmanager.app.MainActivity.Violet"
+61-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:116:13-48
+62            android:enabled="false"
+62-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:118:13-36
+63            android:exported="true"
+63-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:122:13-36
+64            android:icon="@mipmap/ic_launcher_violet"
+64-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:119:13-54
+65            android:label="@string/app_name"
+65-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:121:13-45
+66            android:roundIcon="@mipmap/ic_launcher_round_violet"
+66-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:120:13-65
+67            android:targetActivity="com.eventmanager.app.MainActivity" >
+67-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:117:13-51
+68            <intent-filter>
+68-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:33:13-36:29
+69                <action android:name="android.intent.action.MAIN" />
+69-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:34:17-69
+69-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:34:25-66
+70
+71                <category android:name="android.intent.category.LAUNCHER" />
+71-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:35:17-77
+71-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:35:27-74
+72            </intent-filter>
+73        </activity-alias> <!-- Purple Icon Alias -->
+74        <activity-alias
+74-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:100:9-112:26
+75            android:name="com.eventmanager.app.MainActivity.Purple"
+75-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:101:13-48
+76            android:enabled="false"
+76-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:103:13-36
+77            android:exported="true"
+77-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:107:13-36
+78            android:icon="@mipmap/ic_launcher_purple"
+78-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:104:13-54
+79            android:label="@string/app_name"
+79-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:106:13-45
+80            android:roundIcon="@mipmap/ic_launcher_round_purple"
+80-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:105:13-65
+81            android:targetActivity="com.eventmanager.app.MainActivity" >
+81-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:102:13-51
+82            <intent-filter>
+82-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:33:13-36:29
+83                <action android:name="android.intent.action.MAIN" />
+83-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:34:17-69
+83-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:34:25-66
+84
+85                <category android:name="android.intent.category.LAUNCHER" />
+85-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:35:17-77
+85-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:35:27-74
+86            </intent-filter>
+87        </activity-alias> <!-- Braun Icon Alias -->
+88        <activity-alias
+88-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:85:9-97:26
+89            android:name="com.eventmanager.app.MainActivity.Braun"
+89-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:86:13-47
+90            android:enabled="false"
+90-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:88:13-36
+91            android:exported="true"
+91-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:92:13-36
+92            android:icon="@mipmap/ic_launcher_braun"
+92-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:89:13-53
+93            android:label="@string/app_name"
+93-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:91:13-45
+94            android:roundIcon="@mipmap/ic_launcher_round_braun"
+94-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:90:13-64
+95            android:targetActivity="com.eventmanager.app.MainActivity" >
+95-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:87:13-51
+96            <intent-filter>
+96-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:33:13-36:29
+97                <action android:name="android.intent.action.MAIN" />
+97-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:34:17-69
+97-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:34:25-66
+98
+99                <category android:name="android.intent.category.LAUNCHER" />
+99-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:35:17-77
+99-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:35:27-74
+100            </intent-filter>
+101        </activity-alias> <!-- Blue Ocean Icon Alias -->
+102        <activity-alias
+102-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:70:9-82:26
+103            android:name="com.eventmanager.app.MainActivity.BlueOcean"
+103-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:71:13-51
+104            android:enabled="false"
+104-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:73:13-36
+105            android:exported="true"
+105-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:77:13-36
+106            android:icon="@mipmap/ic_launcher_blue_ocean"
+106-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:74:13-58
+107            android:label="@string/app_name"
+107-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:76:13-45
+108            android:roundIcon="@mipmap/ic_launcher_round_blue_ocean"
+108-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:75:13-69
+109            android:targetActivity="com.eventmanager.app.MainActivity" >
+109-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:72:13-51
+110            <intent-filter>
+110-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:33:13-36:29
+111                <action android:name="android.intent.action.MAIN" />
+111-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:34:17-69
+111-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:34:25-66
+112
+113                <category android:name="android.intent.category.LAUNCHER" />
+113-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:35:17-77
+113-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:35:27-74
+114            </intent-filter>
+115        </activity-alias> <!-- Deep Blue Icon Alias -->
+116        <activity-alias
+116-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:55:9-67:26
+117            android:name="com.eventmanager.app.MainActivity.DeepBlue"
+117-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:56:13-50
+118            android:enabled="false"
+118-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:58:13-36
+119            android:exported="true"
+119-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:62:13-36
+120            android:icon="@mipmap/ic_launcher_deep_blue"
+120-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:59:13-57
+121            android:label="@string/app_name"
+121-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:61:13-45
+122            android:roundIcon="@mipmap/ic_launcher_round_deep_blue"
+122-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:60:13-68
+123            android:targetActivity="com.eventmanager.app.MainActivity" >
+123-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:57:13-51
+124            <intent-filter>
+124-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:33:13-36:29
+125                <action android:name="android.intent.action.MAIN" />
+125-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:34:17-69
+125-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:34:25-66
+126
+127                <category android:name="android.intent.category.LAUNCHER" />
+127-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:35:17-77
+127-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:35:27-74
+128            </intent-filter>
+129        </activity-alias> <!-- Dark Icon Alias -->
+130        <activity-alias
+130-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:40:9-52:26
+131            android:name="com.eventmanager.app.MainActivity.Dark"
+131-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:41:13-46
+132            android:enabled="false"
+132-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:43:13-36
+133            android:exported="true"
+133-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:47:13-36
+134            android:icon="@mipmap/ic_launcher_dark"
+134-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:44:13-52
+135            android:label="@string/app_name"
+135-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:46:13-45
+136            android:roundIcon="@mipmap/ic_launcher_round_dark"
+136-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:45:13-63
+137            android:targetActivity="com.eventmanager.app.MainActivity" >
+137-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:42:13-51
+138            <intent-filter>
+138-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:33:13-36:29
+139                <action android:name="android.intent.action.MAIN" />
+139-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:34:17-69
+139-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:34:25-66
+140
+141                <category android:name="android.intent.category.LAUNCHER" />
+141-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:35:17-77
+141-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:35:27-74
+142            </intent-filter>
+143        </activity-alias> <!-- Note: Intent filter moved to Light activity-alias below -->
+144        <!-- Light Icon Alias (Default) -->
+145        <activity-alias
+145-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:25:9-37:26
+146            android:name="com.eventmanager.app.MainActivity.Light"
+146-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:26:13-47
+147            android:enabled="true"
+147-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:28:13-35
+148            android:exported="true"
+148-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:32:13-36
+149            android:icon="@mipmap/ic_launcher"
+149-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:29:13-47
+150            android:label="@string/app_name"
+150-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:31:13-45
+151            android:roundIcon="@mipmap/ic_launcher_round"
+151-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:30:13-58
+152            android:targetActivity="com.eventmanager.app.MainActivity" >
+152-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:27:13-51
+153            <intent-filter>
+153-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:33:13-36:29
+154                <action android:name="android.intent.action.MAIN" />
+154-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:34:17-69
+154-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:34:25-66
+155
+156                <category android:name="android.intent.category.LAUNCHER" />
+156-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:35:17-77
+156-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:35:27-74
+157            </intent-filter>
+158        </activity-alias>
+159
+160        <provider
+161            android:name="androidx.core.content.FileProvider"
+161-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:130:13-62
+162            android:authorities="com.eventmanager.app.fileprovider"
+162-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:131:13-64
+163            android:exported="false"
+163-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:132:13-37
+164            android:grantUriPermissions="true" >
+164-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:133:13-47
+165            <meta-data
+165-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:134:13-136:54
+166                android:name="android.support.FILE_PROVIDER_PATHS"
+166-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:135:17-67
+167                android:resource="@xml/file_paths" />
+167-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:136:17-51
+168        </provider>
+169
+170        <activity
+170-->[androidx.compose.ui:ui-tooling-android:1.6.7] /Users/leonardomondada/.gradle/caches/8.10/transforms/6ca36c39b99aedc5f3ca081fd28abfdf/transformed/ui-tooling-release/AndroidManifest.xml:23:9-25:39
+171            android:name="androidx.compose.ui.tooling.PreviewActivity"
+171-->[androidx.compose.ui:ui-tooling-android:1.6.7] /Users/leonardomondada/.gradle/caches/8.10/transforms/6ca36c39b99aedc5f3ca081fd28abfdf/transformed/ui-tooling-release/AndroidManifest.xml:24:13-71
+172            android:exported="true" />
+172-->[androidx.compose.ui:ui-tooling-android:1.6.7] /Users/leonardomondada/.gradle/caches/8.10/transforms/6ca36c39b99aedc5f3ca081fd28abfdf/transformed/ui-tooling-release/AndroidManifest.xml:25:13-36
+173        <activity
+173-->[androidx.compose.ui:ui-test-manifest:1.6.7] /Users/leonardomondada/.gradle/caches/8.10/transforms/4d27da1580916a1652782c72221b2f5a/transformed/ui-test-manifest-1.6.7/AndroidManifest.xml:23:9-25:39
+174            android:name="androidx.activity.ComponentActivity"
+174-->[androidx.compose.ui:ui-test-manifest:1.6.7] /Users/leonardomondada/.gradle/caches/8.10/transforms/4d27da1580916a1652782c72221b2f5a/transformed/ui-test-manifest-1.6.7/AndroidManifest.xml:24:13-63
+175            android:exported="true" />
+175-->[androidx.compose.ui:ui-test-manifest:1.6.7] /Users/leonardomondada/.gradle/caches/8.10/transforms/4d27da1580916a1652782c72221b2f5a/transformed/ui-test-manifest-1.6.7/AndroidManifest.xml:25:13-36
+176
+177        <provider
+177-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:29:9-37:20
+178            android:name="androidx.startup.InitializationProvider"
+178-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:30:13-67
+179            android:authorities="com.eventmanager.app.androidx-startup"
+179-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:31:13-68
+180            android:exported="false" >
+180-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:32:13-37
+181            <meta-data
+181-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:34:13-36:52
+182                android:name="androidx.work.WorkManagerInitializer"
+182-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:35:17-68
+183                android:value="androidx.startup" />
+183-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:36:17-49
+184            <meta-data
+184-->[androidx.emoji2:emoji2:1.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/4e020595e971a5ebeaf02875e2d22d71/transformed/emoji2-1.3.0/AndroidManifest.xml:29:13-31:52
+185                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+185-->[androidx.emoji2:emoji2:1.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/4e020595e971a5ebeaf02875e2d22d71/transformed/emoji2-1.3.0/AndroidManifest.xml:30:17-75
+186                android:value="androidx.startup" />
+186-->[androidx.emoji2:emoji2:1.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/4e020595e971a5ebeaf02875e2d22d71/transformed/emoji2-1.3.0/AndroidManifest.xml:31:17-49
+187            <meta-data
+187-->[androidx.lifecycle:lifecycle-process:2.7.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/e498b620783c6013b42c0c529d23d6e6/transformed/lifecycle-process-2.7.0/AndroidManifest.xml:29:13-31:52
+188                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+188-->[androidx.lifecycle:lifecycle-process:2.7.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/e498b620783c6013b42c0c529d23d6e6/transformed/lifecycle-process-2.7.0/AndroidManifest.xml:30:17-78
+189                android:value="androidx.startup" />
+189-->[androidx.lifecycle:lifecycle-process:2.7.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/e498b620783c6013b42c0c529d23d6e6/transformed/lifecycle-process-2.7.0/AndroidManifest.xml:31:17-49
+190            <meta-data
+190-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/5c8430bbeccbc8beaf76ffe472d25c33/transformed/profileinstaller-1.3.0/AndroidManifest.xml:29:13-31:52
+191                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+191-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/5c8430bbeccbc8beaf76ffe472d25c33/transformed/profileinstaller-1.3.0/AndroidManifest.xml:30:17-85
+192                android:value="androidx.startup" />
+192-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/5c8430bbeccbc8beaf76ffe472d25c33/transformed/profileinstaller-1.3.0/AndroidManifest.xml:31:17-49
+193        </provider>
+194
+195        <service
+195-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:39:9-45:35
+196            android:name="androidx.work.impl.background.systemalarm.SystemAlarmService"
+196-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:40:13-88
+197            android:directBootAware="false"
+197-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:41:13-44
+198            android:enabled="@bool/enable_system_alarm_service_default"
+198-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:42:13-72
+199            android:exported="false" />
+199-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:43:13-37
+200        <service
+200-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:46:9-52:35
+201            android:name="androidx.work.impl.background.systemjob.SystemJobService"
+201-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:47:13-84
+202            android:directBootAware="false"
+202-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:48:13-44
+203            android:enabled="@bool/enable_system_job_service_default"
+203-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:49:13-70
+204            android:exported="true"
+204-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:50:13-36
+205            android:permission="android.permission.BIND_JOB_SERVICE" />
+205-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:51:13-69
+206        <service
+206-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:53:9-59:35
+207            android:name="androidx.work.impl.foreground.SystemForegroundService"
+207-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:54:13-81
+208            android:directBootAware="false"
+208-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:55:13-44
+209            android:enabled="@bool/enable_system_foreground_service_default"
+209-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:56:13-77
+210            android:exported="false" />
+210-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:57:13-37
+211
+212        <receiver
+212-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:61:9-66:35
+213            android:name="androidx.work.impl.utils.ForceStopRunnable$BroadcastReceiver"
+213-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:62:13-88
+214            android:directBootAware="false"
+214-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:63:13-44
+215            android:enabled="true"
+215-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:64:13-35
+216            android:exported="false" />
+216-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:65:13-37
+217        <receiver
+217-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:67:9-77:20
+218            android:name="androidx.work.impl.background.systemalarm.ConstraintProxy$BatteryChargingProxy"
+218-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:68:13-106
+219            android:directBootAware="false"
+219-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:69:13-44
+220            android:enabled="false"
+220-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:70:13-36
+221            android:exported="false" >
+221-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:71:13-37
+222            <intent-filter>
+222-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:73:13-76:29
+223                <action android:name="android.intent.action.ACTION_POWER_CONNECTED" />
+223-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:74:17-87
+223-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:74:25-84
+224                <action android:name="android.intent.action.ACTION_POWER_DISCONNECTED" />
+224-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:75:17-90
+224-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:75:25-87
+225            </intent-filter>
+226        </receiver>
+227        <receiver
+227-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:78:9-88:20
+228            android:name="androidx.work.impl.background.systemalarm.ConstraintProxy$BatteryNotLowProxy"
+228-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:79:13-104
+229            android:directBootAware="false"
+229-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:80:13-44
+230            android:enabled="false"
+230-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:81:13-36
+231            android:exported="false" >
+231-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:82:13-37
+232            <intent-filter>
+232-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:84:13-87:29
+233                <action android:name="android.intent.action.BATTERY_OKAY" />
+233-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:85:17-77
+233-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:85:25-74
+234                <action android:name="android.intent.action.BATTERY_LOW" />
+234-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:86:17-76
+234-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:86:25-73
+235            </intent-filter>
+236        </receiver>
+237        <receiver
+237-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:89:9-99:20
+238            android:name="androidx.work.impl.background.systemalarm.ConstraintProxy$StorageNotLowProxy"
+238-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:90:13-104
+239            android:directBootAware="false"
+239-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:91:13-44
+240            android:enabled="false"
+240-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:92:13-36
+241            android:exported="false" >
+241-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:93:13-37
+242            <intent-filter>
+242-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:95:13-98:29
+243                <action android:name="android.intent.action.DEVICE_STORAGE_LOW" />
+243-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:96:17-83
+243-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:96:25-80
+244                <action android:name="android.intent.action.DEVICE_STORAGE_OK" />
+244-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:97:17-82
+244-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:97:25-79
+245            </intent-filter>
+246        </receiver>
+247        <receiver
+247-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:100:9-109:20
+248            android:name="androidx.work.impl.background.systemalarm.ConstraintProxy$NetworkStateProxy"
+248-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:101:13-103
+249            android:directBootAware="false"
+249-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:102:13-44
+250            android:enabled="false"
+250-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:103:13-36
+251            android:exported="false" >
+251-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:104:13-37
+252            <intent-filter>
+252-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:106:13-108:29
+253                <action android:name="android.net.conn.CONNECTIVITY_CHANGE" />
+253-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:107:17-79
+253-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:107:25-76
+254            </intent-filter>
+255        </receiver>
+256        <receiver
+256-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:110:9-121:20
+257            android:name="androidx.work.impl.background.systemalarm.RescheduleReceiver"
+257-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:111:13-88
+258            android:directBootAware="false"
+258-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:112:13-44
+259            android:enabled="false"
+259-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:113:13-36
+260            android:exported="false" >
+260-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:114:13-37
+261            <intent-filter>
+261-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:116:13-120:29
+262                <action android:name="android.intent.action.BOOT_COMPLETED" />
+262-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:117:17-79
+262-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:117:25-76
+263                <action android:name="android.intent.action.TIME_SET" />
+263-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:118:17-73
+263-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:118:25-70
+264                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+264-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:119:17-81
+264-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:119:25-78
+265            </intent-filter>
+266        </receiver>
+267        <receiver
+267-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:122:9-131:20
+268            android:name="androidx.work.impl.background.systemalarm.ConstraintProxyUpdateReceiver"
+268-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:123:13-99
+269            android:directBootAware="false"
+269-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:124:13-44
+270            android:enabled="@bool/enable_system_alarm_service_default"
+270-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:125:13-72
+271            android:exported="false" >
+271-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:126:13-37
+272            <intent-filter>
+272-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:128:13-130:29
+273                <action android:name="androidx.work.impl.background.systemalarm.UpdateProxies" />
+273-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:129:17-98
+273-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:129:25-95
+274            </intent-filter>
+275        </receiver>
+276        <receiver
+276-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:132:9-142:20
+277            android:name="androidx.work.impl.diagnostics.DiagnosticsReceiver"
+277-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:133:13-78
+278            android:directBootAware="false"
+278-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:134:13-44
+279            android:enabled="true"
+279-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:135:13-35
+280            android:exported="true"
+280-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:136:13-36
+281            android:permission="android.permission.DUMP" >
+281-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:137:13-57
+282            <intent-filter>
+282-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:139:13-141:29
+283                <action android:name="androidx.work.diagnostics.REQUEST_DIAGNOSTICS" />
+283-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:140:17-88
+283-->[androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/6d66139005570a611c048cfd5b7fb214/transformed/work-runtime-2.9.0/AndroidManifest.xml:140:25-85
+284            </intent-filter>
+285        </receiver>
+286
+287        <service
+287-->[androidx.room:room-runtime:2.6.1] /Users/leonardomondada/.gradle/caches/8.10/transforms/3414004e19e68906383290bb2cbc7092/transformed/room-runtime-2.6.1/AndroidManifest.xml:24:9-28:63
+288            android:name="androidx.room.MultiInstanceInvalidationService"
+288-->[androidx.room:room-runtime:2.6.1] /Users/leonardomondada/.gradle/caches/8.10/transforms/3414004e19e68906383290bb2cbc7092/transformed/room-runtime-2.6.1/AndroidManifest.xml:25:13-74
+289            android:directBootAware="true"
+289-->[androidx.room:room-runtime:2.6.1] /Users/leonardomondada/.gradle/caches/8.10/transforms/3414004e19e68906383290bb2cbc7092/transformed/room-runtime-2.6.1/AndroidManifest.xml:26:13-43
+290            android:exported="false" />
+290-->[androidx.room:room-runtime:2.6.1] /Users/leonardomondada/.gradle/caches/8.10/transforms/3414004e19e68906383290bb2cbc7092/transformed/room-runtime-2.6.1/AndroidManifest.xml:27:13-37
+291
+292        <receiver
+292-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/5c8430bbeccbc8beaf76ffe472d25c33/transformed/profileinstaller-1.3.0/AndroidManifest.xml:34:9-52:20
+293            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+293-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/5c8430bbeccbc8beaf76ffe472d25c33/transformed/profileinstaller-1.3.0/AndroidManifest.xml:35:13-76
+294            android:directBootAware="false"
+294-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/5c8430bbeccbc8beaf76ffe472d25c33/transformed/profileinstaller-1.3.0/AndroidManifest.xml:36:13-44
+295            android:enabled="true"
+295-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/5c8430bbeccbc8beaf76ffe472d25c33/transformed/profileinstaller-1.3.0/AndroidManifest.xml:37:13-35
+296            android:exported="true"
+296-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/5c8430bbeccbc8beaf76ffe472d25c33/transformed/profileinstaller-1.3.0/AndroidManifest.xml:38:13-36
+297            android:permission="android.permission.DUMP" >
+297-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/5c8430bbeccbc8beaf76ffe472d25c33/transformed/profileinstaller-1.3.0/AndroidManifest.xml:39:13-57
+298            <intent-filter>
+298-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/5c8430bbeccbc8beaf76ffe472d25c33/transformed/profileinstaller-1.3.0/AndroidManifest.xml:40:13-42:29
+299                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+299-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/5c8430bbeccbc8beaf76ffe472d25c33/transformed/profileinstaller-1.3.0/AndroidManifest.xml:41:17-91
+299-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/5c8430bbeccbc8beaf76ffe472d25c33/transformed/profileinstaller-1.3.0/AndroidManifest.xml:41:25-88
+300            </intent-filter>
+301            <intent-filter>
+301-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/5c8430bbeccbc8beaf76ffe472d25c33/transformed/profileinstaller-1.3.0/AndroidManifest.xml:43:13-45:29
+302                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+302-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/5c8430bbeccbc8beaf76ffe472d25c33/transformed/profileinstaller-1.3.0/AndroidManifest.xml:44:17-85
+302-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/5c8430bbeccbc8beaf76ffe472d25c33/transformed/profileinstaller-1.3.0/AndroidManifest.xml:44:25-82
+303            </intent-filter>
+304            <intent-filter>
+304-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/5c8430bbeccbc8beaf76ffe472d25c33/transformed/profileinstaller-1.3.0/AndroidManifest.xml:46:13-48:29
+305                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+305-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/5c8430bbeccbc8beaf76ffe472d25c33/transformed/profileinstaller-1.3.0/AndroidManifest.xml:47:17-88
+305-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/5c8430bbeccbc8beaf76ffe472d25c33/transformed/profileinstaller-1.3.0/AndroidManifest.xml:47:25-85
+306            </intent-filter>
+307            <intent-filter>
+307-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/5c8430bbeccbc8beaf76ffe472d25c33/transformed/profileinstaller-1.3.0/AndroidManifest.xml:49:13-51:29
+308                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+308-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/5c8430bbeccbc8beaf76ffe472d25c33/transformed/profileinstaller-1.3.0/AndroidManifest.xml:50:17-95
+308-->[androidx.profileinstaller:profileinstaller:1.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/5c8430bbeccbc8beaf76ffe472d25c33/transformed/profileinstaller-1.3.0/AndroidManifest.xml:50:25-92
+309            </intent-filter>
+310        </receiver>
+311
+312        <activity
+312-->[com.journeyapps:zxing-android-embedded:4.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/74add31f5f93ee576989bfed55497870/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:47:9-53:63
+313            android:name="com.journeyapps.barcodescanner.CaptureActivity"
+313-->[com.journeyapps:zxing-android-embedded:4.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/74add31f5f93ee576989bfed55497870/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:48:13-74
+314            android:clearTaskOnLaunch="true"
+314-->[com.journeyapps:zxing-android-embedded:4.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/74add31f5f93ee576989bfed55497870/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:49:13-45
+315            android:screenOrientation="sensorLandscape"
+315-->[com.journeyapps:zxing-android-embedded:4.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/74add31f5f93ee576989bfed55497870/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:50:13-56
+316            android:stateNotNeeded="true"
+316-->[com.journeyapps:zxing-android-embedded:4.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/74add31f5f93ee576989bfed55497870/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:51:13-42
+317            android:theme="@style/zxing_CaptureTheme"
+317-->[com.journeyapps:zxing-android-embedded:4.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/74add31f5f93ee576989bfed55497870/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:52:13-54
+318            android:windowSoftInputMode="stateAlwaysHidden" />
+318-->[com.journeyapps:zxing-android-embedded:4.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/74add31f5f93ee576989bfed55497870/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:53:13-60
+319    </application>
+320
+321</manifest>

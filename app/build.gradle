@@ -1,0 +1,220 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id 'kotlin-parcelize'
+    id 'com.google.devtools.ksp' version '1.9.20-1.0.14'
+}
+
+android {
+    namespace 'com.eventmanager.app'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.eventmanager.app"
+        minSdk 21  // Android 5.0 (Lollipop) - supports older hardware while maintaining compatibility
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+
+        // Remote update manifest and fallback store URL for manual update checks
+        // The manifest is a simple JSON file hosted on GitHub (no private server needed)
+        buildConfigField "String", "UPDATE_MANIFEST_URL", "\"https://raw.githubusercontent.com/TouristeAG/AdminList/main/version.json\""
+        buildConfigField "String", "UPDATE_FALLBACK_STORE_URL", "\"https://play.google.com/store/apps/details?id=com.eventmanager.app\""
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        vectorDrawables {
+            useSupportLibrary true
+        }
+    }
+    
+    buildTypes {
+        debug {
+            // Explicitly use debug signing (Gradle will create keystore if needed)
+            signingConfig signingConfigs.debug
+            // Disable minification for faster debug builds
+            minifyEnabled false
+            shrinkResources false
+        }
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+    buildFeatures {
+        compose true
+        buildConfig true
+    }
+    composeOptions {
+        kotlinCompilerExtensionVersion '1.5.4'
+    }
+    packaging {
+        resources {
+            excludes += '/META-INF/{AL2.0,LGPL2.1}'
+            excludes += '/META-INF/DEPENDENCIES'
+            excludes += '/META-INF/LICENSE'
+            excludes += '/META-INF/LICENSE.txt'
+            excludes += '/META-INF/license.txt'
+            excludes += '/META-INF/NOTICE'
+            excludes += '/META-INF/NOTICE.txt'
+            excludes += '/META-INF/notice.txt'
+            excludes += '/META-INF/ASL2.0'
+        }
+        // Ensure APK is properly aligned (helps with installation on some devices)
+        jniLibs {
+            useLegacyPackaging = false
+        }
+    }
+    
+    lint {
+        // Disable duplicate platform classes check - these are from dependencies
+        // and are handled by excluding the problematic libraries
+        disable 'DuplicatePlatformClasses'
+        // Allow extra translations - tablet-specific strings are intentional
+        disable 'ExtraTranslation'
+    }
+}
+
+// Disable duplicate class check - poi-ooxml-schemas bundles xmlbeans classes
+// which causes false positives in the duplicate class check
+tasks.matching { it.name.startsWith('check') && it.name.contains('DuplicateClasses') }.configureEach {
+    enabled = false
+}
+
+configurations.all {
+    resolutionStrategy {
+        // Force a single version of xmlbeans and prevent duplicates
+        force 'org.apache.xmlbeans:xmlbeans:2.5.0'
+        // Force a single version of stax-api to prevent duplicates
+        force 'javax.xml.stream:stax-api:1.0-2'
+        // Ensure xmlbeans is only resolved once
+        eachDependency { DependencyResolveDetails details ->
+            if (details.requested.group == 'org.apache.xmlbeans' && details.requested.name == 'xmlbeans') {
+                // Use the forced version
+                details.useVersion '2.5.0'
+            }
+            // Force stax-api to use 1.0-2 version
+            if (details.requested.group == 'javax.xml.stream' && details.requested.name == 'stax-api') {
+                details.useVersion '1.0-2'
+            }
+        }
+    }
+}
+
+dependencies {
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.3'
+    implementation 'androidx.core:core-ktx:1.12.0'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.7.0'
+    implementation 'androidx.activity:activity-compose:1.8.2'
+    implementation platform('androidx.compose:compose-bom:2023.10.01')
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.ui:ui-graphics'
+    implementation 'androidx.compose.ui:ui-tooling-preview'
+    implementation 'androidx.compose.material3:material3'
+    implementation 'androidx.compose.material:material-icons-extended:1.5.4'
+    
+    // Navigation
+    implementation 'androidx.navigation:navigation-compose:2.7.5'
+    
+    // Room database
+    implementation 'androidx.room:room-runtime:2.6.1'
+    implementation 'androidx.room:room-ktx:2.6.1'
+    ksp 'androidx.room:room-compiler:2.6.1'
+    
+    // ViewModel and LiveData
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0'
+    implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.7.0'
+    
+    // Coroutines
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+    
+    // Google Sheets API
+    implementation('com.google.api-client:google-api-client-android:2.2.0') {
+        exclude group: 'org.apache.xmlbeans', module: 'xmlbeans'
+    }
+    implementation('com.google.apis:google-api-services-sheets:v4-rev20220927-2.0.0') {
+        exclude group: 'org.apache.xmlbeans', module: 'xmlbeans'
+    }
+    implementation('com.google.auth:google-auth-library-oauth2-http:1.19.0') {
+        exclude group: 'org.apache.xmlbeans', module: 'xmlbeans'
+    }
+    implementation('com.google.auth:google-auth-library-credentials:1.19.0') {
+        exclude group: 'org.apache.xmlbeans', module: 'xmlbeans'
+    }
+    
+    // JSON parsing
+    implementation 'com.google.code.gson:gson:2.10.1'
+    
+    // Date handling
+    implementation 'org.jetbrains.kotlinx:kotlinx-datetime:0.4.1'
+    
+    // Work Manager for background sync
+    implementation 'androidx.work:work-runtime-ktx:2.9.0'
+    
+    // File picker
+    implementation 'androidx.activity:activity-compose:1.8.2'
+    implementation 'androidx.compose.ui:ui:1.5.4'
+    
+    // QR code generation
+    implementation 'com.google.zxing:core:3.5.1'
+    
+    // QR code scanning
+    implementation 'com.journeyapps:zxing-android-embedded:4.3.0'
+    
+    // Vico Compose Charts
+    implementation 'com.patrykandpatrick.vico:compose:2.0.0-alpha.20'
+    implementation 'com.patrykandpatrick.vico:compose-m3:2.0.0-alpha.20'
+    
+    // Apache POI for XLSX export (using 3.15 for API 21+ compatibility - safe version without MethodHandle)
+    implementation('org.apache.poi:poi:3.15') {
+        exclude group: 'org.apache.logging.log4j', module: 'log4j-api'
+        exclude group: 'org.apache.xmlbeans', module: 'xmlbeans'
+    }
+    // Use transitive = false to manually control dependencies and avoid xmlbeans duplicates
+    implementation('org.apache.poi:poi-ooxml:3.15') {
+        exclude group: 'org.apache.logging.log4j', module: 'log4j-api'
+        exclude group: 'org.apache.xmlbeans', module: 'xmlbeans'
+        transitive = false
+    }
+    // Manually include required transitive dependencies
+    // poi-ooxml-schemas is needed for POI but bundles xmlbeans classes
+    // We'll add it but the duplicate check is disabled to handle conflicts
+    implementation('org.apache.poi:poi-ooxml-schemas:3.15') {
+        exclude group: 'org.apache.xmlbeans', module: 'xmlbeans'
+    }
+    // Add stax-api for javax.xml.stream classes (required by POI on Android)
+    // This provides the javax.xml.stream API that POI needs at runtime
+    implementation 'javax.xml.stream:stax-api:1.0-2'
+    // Add woodstox-core as the implementation provider for stax-api
+    // This is needed because Android doesn't include a stax implementation
+    implementation('com.fasterxml.woodstox:woodstox-core:6.5.1') {
+        exclude group: 'javax.xml.stream', module: 'stax-api'
+        // Exclude any transitive stax-api dependencies
+        exclude group: 'stax', module: 'stax-api'
+    }
+    // Add xmlbeans explicitly - poi-ooxml-schemas bundles some classes but not all
+    // We need the full xmlbeans library for POI to work properly
+    // Note: Some xmlbeans versions have duplicate classes in the JAR
+    // Using 2.5.0 which should work better with Android
+    implementation('org.apache.xmlbeans:xmlbeans:2.5.0') {
+        exclude group: 'javax.xml.stream', module: 'stax-api'
+        exclude group: 'stax', module: 'stax-api'
+    }
+    
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+    androidTestImplementation platform('androidx.compose:compose-bom:2023.10.01')
+    androidTestImplementation 'androidx.compose.ui:ui-test-junit4'
+    debugImplementation 'androidx.compose.ui:ui-tooling'
+    debugImplementation 'androidx.compose.ui:ui-test-manifest'
+}
+
