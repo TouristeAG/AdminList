@@ -117,6 +117,29 @@
 # Keep application class
 -keep class com.eventmanager.app.MainActivity { *; }
 
+# Keep Gson classes for JSON deserialization
+-keepattributes Signature
+-keepattributes *Annotation*
+-keepattributes EnclosingMethod
+-keepattributes InnerClasses
+-dontwarn sun.misc.**
+-keep class com.google.gson.** { *; }
+-keep class * implements com.google.gson.TypeAdapter
+-keep class * implements com.google.gson.TypeAdapterFactory
+-keep class * implements com.google.gson.JsonSerializer
+-keep class * implements com.google.gson.JsonDeserializer
+
+# Keep update-related classes for Gson deserialization
+-keep class com.eventmanager.app.data.update.UpdateManifest { *; }
+-keep class com.eventmanager.app.data.update.UpdateCheckResult { *; }
+-keep class com.eventmanager.app.data.update.UpdateCheckResult$* { *; }
+-keep class com.eventmanager.app.data.update.UpdateChecker { *; }
+
+# Keep all data classes used with Gson (prevent obfuscation)
+-keepclassmembers,allowobfuscation class * {
+  @com.google.gson.annotations.SerializedName <fields>;
+}
+
 # Optimization settings
 -optimizationpasses 5
 -dontusemixedcaseclassnames
