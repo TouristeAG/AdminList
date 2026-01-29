@@ -1,5 +1,5 @@
 {
-  "latestVersionCode": 3,
+  "latestVersionCode": 4,
   "latestVersionName": "0.9.3",
   "minSupportedVersionCode": "3",
   "changelogShort": "Options de défilement : En-tête fixe, Défilement complet, Filtres fixes (configurables dans les paramètres)\nÉcran des paramètres : Réorganisation en catégories extensibles avec état persistant\nCorrections de bugs\nOptimisations.",
