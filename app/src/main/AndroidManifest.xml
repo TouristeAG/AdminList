@@ -19,8 +19,14 @@
             android:exported="true"
             android:label="@string/app_name"
             android:configChanges="orientation|screenSize|keyboardHidden"
-            android:screenOrientation="unspecified" />
-            <!-- Note: Intent filter moved to Light activity-alias below -->
+            android:screenOrientation="unspecified">
+            <!-- Intent filter added to allow direct launching for deployment -->
+            <!-- The activity-alias will take precedence when enabled for icon switching -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
 
         <!-- Light Icon Alias (Default) -->
         <activity-alias

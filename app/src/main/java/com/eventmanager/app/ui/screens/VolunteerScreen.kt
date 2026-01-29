@@ -204,8 +204,12 @@ fun VolunteerScreen(
                             .padding(bottom = 8.dp)
                     ) {
                         filterContent()
-                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
+                item(key = "count") { 
+                    Column {
                         countText()
+                        Spacer(modifier = Modifier.height(if (isCompact) 4.dp else 8.dp))
                     }
                 }
                 volunteerItems()

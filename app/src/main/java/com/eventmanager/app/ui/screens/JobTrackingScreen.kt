@@ -340,14 +340,18 @@ fun JobTrackingScreen(
                             selectedFilter = selectedFilter,
                             onFilterChange = { selectedFilter = it }
                         )
-                        
-                        Spacer(modifier = Modifier.height(8.dp))
-                        
+                    }
+                }
+                
+                // Count text - scrolls with content, not sticky
+                item {
+                    Column {
                         Text(
                             text = "${filteredJobs.size} of ${jobs.size} shifts",
                             style = getResponsiveBodyTypography(),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        Spacer(modifier = Modifier.height(if (isCompact) 4.dp else 8.dp))
                     }
                 }
                 
