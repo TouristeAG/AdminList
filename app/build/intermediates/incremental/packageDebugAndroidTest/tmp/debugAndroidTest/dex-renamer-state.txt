@@ -1,4 +1,4 @@
-#Thu Dec 18 02:54:19 CST 2025
+#Fri Jan 30 00:44:30 CET 2026
 base.0=/Users/leonardomondada/EventManagerApp/app/build/intermediates/dex/debugAndroidTest/mergeExtDexDebugAndroidTest/classes.dex
 base.1=/Users/leonardomondada/EventManagerApp/app/build/intermediates/dex/debugAndroidTest/mergeProjectDexDebugAndroidTest/0/classes.dex
 base.2=/Users/leonardomondada/EventManagerApp/app/build/intermediates/dex/debugAndroidTest/mergeProjectDexDebugAndroidTest/13/classes.dex
