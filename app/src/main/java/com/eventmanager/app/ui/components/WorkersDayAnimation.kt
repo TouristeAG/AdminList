@@ -18,6 +18,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
+import com.eventmanager.app.data.sync.SettingsManager
 import kotlin.math.sin
 import kotlin.math.cos
 import kotlin.math.PI
@@ -29,13 +31,18 @@ fun WorkersDayAnimation(
     enabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val settingsManager = remember { SettingsManager(context) }
+    val animationMultiplier = remember { settingsManager.getAnimationIntensityMultiplier() }
+    
     // Check if current date is May 1
     val calendar = Calendar.getInstance()
     val month = calendar.get(Calendar.MONTH) // 0-11
     val day = calendar.get(Calendar.DAY_OF_MONTH)
     
     val isWorkersDayDay = month == Calendar.MAY && day == 1
-    val shouldShowSigns = enabled && isWorkersDayDay
+    // Also check if reduced motion is enabled - if so, don't show animation
+    val shouldShowSigns = enabled && isWorkersDayDay && animationMultiplier > 0f
     
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         if (shouldShowSigns) {
@@ -205,21 +212,20 @@ fun WorkersDayAnimation(
     }
 }
 
+@Suppress("UNUSED_PARAMETER")
 private fun DrawScope.drawProtestSign(
     xPos: Float,
     yPos: Float,
     width: Float,
     height: Float,
-    rotation: Float,
+    rotation: Float, // Kept for potential future use
     color: Color,
-    signType: Int,
+    signType: Int, // Kept for potential future use to draw different sign types
     opacityFactor: Float = 1.0f
 ) {
     val handleWidth = width * 0.12f
     val handleHeight = height * 0.6f
     val signSize = minOf(width * 0.9f, height) // Increased width constraint and removed multiplier
-    val outerBoxBorder = 6f // Thicker outer border
-    val outerBoxPadding = 8f // Space between outer box and sign
     val cornerRadius = signSize * 0.12f // Rounded corners
     
     // The handle position stays fixed at the bottom
@@ -273,7 +279,6 @@ private fun DrawScope.drawFist(
     val handSize = size * 0.6f // Size of the circular hand - define FIRST
     val fistWidth = size * 0.24f // Arm width - restore to original smaller size
     val fistHeight = size * 0.8f // Height of the arm extending downward
-    val armGap = 5f // Fixed gap between circles and arm (doesn't scale)
     
     // Calculate arm rectangle corners before rotation
     // Rectangle starts at about 30% down the circle for overlap effect

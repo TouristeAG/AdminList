@@ -78,6 +78,8 @@ object VolunteerActivityManager {
     /**
      * Calculates volunteer activity based on actual job assignments
      * This is more accurate than relying on lastShiftDate field
+     * 
+     * @deprecated Use calculateActivityFromJobsMap for better performance when processing multiple volunteers
      */
     fun calculateActivityFromJobs(volunteer: Volunteer, allJobs: List<Job>): Volunteer {
         val volunteerJobs = allJobs.filter { it.volunteerId == volunteer.id }
@@ -94,11 +96,42 @@ object VolunteerActivityManager {
     }
     
     /**
+     * Optimized version that uses a pre-grouped map of jobs by volunteerId
+     * This avoids filtering all jobs for each volunteer (O(1) lookup vs O(m) filter)
+     */
+    fun calculateActivityFromJobsMap(volunteer: Volunteer, jobsByVolunteerId: Map<Long, List<Job>>): Volunteer {
+        val volunteerJobs = jobsByVolunteerId[volunteer.id] ?: emptyList()
+        
+        if (volunteerJobs.isEmpty()) {
+            return volunteer.copy(lastShiftDate = null, isActive = false)
+        }
+        
+        // Find the most recent job date
+        val mostRecentJobDate = volunteerJobs.maxOfOrNull { it.date } ?: 0L
+        val isActive = isVolunteerActive(volunteer.copy(lastShiftDate = mostRecentJobDate))
+        
+        return volunteer.copy(lastShiftDate = mostRecentJobDate, isActive = isActive)
+    }
+    
+    /**
+     * Groups jobs by volunteerId for efficient lookup
+     * This is a one-time O(m) operation that enables O(1) lookups
+     */
+    fun groupJobsByVolunteerId(allJobs: List<Job>): Map<Long, List<Job>> {
+        return allJobs.groupBy { it.volunteerId }
+    }
+    
+    /**
      * Updates all volunteers' activity status based on job assignments
+     * OPTIMIZED: Uses grouped jobs map for O(m + n) instead of O(n*m) complexity
      */
     fun updateVolunteerActivityFromJobs(volunteers: List<Volunteer>, allJobs: List<Job>): List<Volunteer> {
+        // Group jobs by volunteerId once (O(m))
+        val jobsByVolunteerId = groupJobsByVolunteerId(allJobs)
+        
+        // Process each volunteer with O(1) lookup (O(n))
         return volunteers.map { volunteer ->
-            calculateActivityFromJobs(volunteer, allJobs)
+            calculateActivityFromJobsMap(volunteer, jobsByVolunteerId)
         }
     }
 }

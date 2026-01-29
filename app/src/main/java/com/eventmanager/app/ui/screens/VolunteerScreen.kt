@@ -1,8 +1,11 @@
 package com.eventmanager.app.ui.screens
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -34,8 +37,9 @@ import com.eventmanager.app.utils.ValidationUtils
 import com.eventmanager.app.ui.utils.*
 import com.eventmanager.app.R
 import androidx.compose.ui.platform.LocalContext
+import com.eventmanager.app.data.sync.SettingsManager
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun VolunteerScreen(
     volunteers: List<Volunteer>,
@@ -45,7 +49,7 @@ fun VolunteerScreen(
     onUpdateVolunteer: (Volunteer) -> Unit,
     onDeleteVolunteer: (Volunteer) -> Unit,
     jobTypeConfigs: List<JobTypeConfig> = emptyList(),
-    headerPinned: Boolean = true
+    scrollBehavior: String = SettingsManager.FULL_SCROLL
 ) {
     val context = LocalContext.current
     var showAddDialog by remember { mutableStateOf(false) }
@@ -58,7 +62,15 @@ fun VolunteerScreen(
     val responsivePadding = getResponsivePadding()
     val responsiveSpacing = getResponsiveSpacing()
 
-    // Compute filtered volunteers once for both layouts
+    // Memoize filter strings to avoid repeated getString() calls inside filter loop
+    val filterAll = remember { context.getString(R.string.filter_all) }
+    val filterActive = remember { context.getString(R.string.filter_active) }
+    val filterInactive = remember { context.getString(R.string.filter_inactive) }
+    
+    // Memoize filter options list to avoid recomputation on every recomposition
+    val filterOptions = remember { listOf(filterActive, filterInactive) + VolunteerRank.values().map { it.name } }
+
+    // Compute filtered volunteers once - memoized to avoid recalculation on recomposition
     val filteredVolunteers = remember(volunteers, searchText, selectedFilter) {
         val lowerSearchText = searchText.lowercase()
         volunteers.filter { volunteer ->
@@ -69,9 +81,9 @@ fun VolunteerScreen(
             
             val matchesFilter = selectedFilter?.let { filter ->
                 when (filter) {
-                    context.getString(R.string.filter_all) -> true
-                    context.getString(R.string.filter_active) -> volunteer.isActive
-                    context.getString(R.string.filter_inactive) -> !volunteer.isActive
+                    filterAll -> true
+                    filterActive -> volunteer.isActive
+                    filterInactive -> !volunteer.isActive
                     else -> volunteer.currentRank?.name == filter
                 }
             } ?: true
@@ -80,192 +92,141 @@ fun VolunteerScreen(
         }
     }
     
-    if (headerPinned) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(responsivePadding)
-        ) {
-            // Header
-            if (isCompact) {
-                // Stack vertically on phones
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(responsiveSpacing)
+    // Pre-compute responsive values to avoid recalculation
+    val itemSpacing = if (isCompact) 6.dp else 8.dp
+    
+    // Extracted header content as a composable lambda to avoid duplication
+    val headerContent: @Composable () -> Unit = {
+        if (isCompact) {
+            Column(verticalArrangement = Arrangement.spacedBy(responsiveSpacing)) {
+                Text(
+                    text = context.getString(R.string.volunteers_title),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Button(
+                    onClick = { showAddDialog = true },
+                    modifier = Modifier.fillMaxWidth().height(getResponsiveButtonHeight())
                 ) {
-                    Text(
-                        text = context.getString(R.string.volunteers_title),
-                        style = getResponsiveTypography(),
-                        fontWeight = FontWeight.Bold
-                    )
-                    
-                    Button(
-                        onClick = { showAddDialog = true },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(getResponsiveButtonHeight())
-                    ) {
-                        Icon(Icons.Default.PersonAdd, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(context.getString(R.string.add_volunteer))
-                    }
-                }
-            } else {
-                // Side by side on tablets
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = context.getString(R.string.volunteer_manager),
-                        style = getResponsiveTypography(),
-                        fontWeight = FontWeight.Bold
-                    )
-                    
-                    Button(
-                        onClick = { showAddDialog = true },
-                        modifier = Modifier.height(getResponsiveButtonHeight())
-                    ) {
-                        Icon(Icons.Default.PersonAdd, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(context.getString(R.string.add_volunteer))
-                    }
+                    Icon(Icons.Default.PersonAdd, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(context.getString(R.string.add_volunteer))
                 }
             }
-            
-            Spacer(modifier = Modifier.height(responsiveSpacing))
-            
-            // Search and Filter Section
-            SearchBarWithFilter(
-                searchText = searchText,
-                onSearchTextChange = { searchText = it },
-                placeholder = context.getString(R.string.search_volunteers_placeholder),
-                filterOptions = listOf(context.getString(R.string.filter_active), context.getString(R.string.filter_inactive)) + VolunteerRank.values().map { it.name },
-                selectedFilter = selectedFilter,
-                onFilterChange = { selectedFilter = it }
-            )
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            Text(
-                text = "${filteredVolunteers.size} of ${volunteers.size} volunteers",
-                style = getResponsiveBodyTypography(),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            
-            Spacer(modifier = Modifier.height(if (isCompact) 4.dp else 8.dp))
-            
-            // Volunteers list - Use LazyColumn for lazy loading and better performance
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(if (isCompact) 6.dp else 8.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                items(
-                    items = filteredVolunteers,
-                    key = { volunteer -> volunteer.id }
-                ) { volunteer ->
-                    VolunteerCard(
-                        volunteer = volunteer,
-                        onClick = { showDetailPanel = volunteer }
-                    )
+                Text(
+                    text = context.getString(R.string.volunteer_manager),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Button(
+                    onClick = { showAddDialog = true },
+                    modifier = Modifier.height(getResponsiveButtonHeight())
+                ) {
+                    Icon(Icons.Default.PersonAdd, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(context.getString(R.string.add_volunteer))
                 }
             }
         }
-    } else {
-        // Whole page (header + list) scrolls together
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(responsivePadding),
-            verticalArrangement = Arrangement.spacedBy(if (isCompact) 6.dp else 8.dp)
-        ) {
-            item {
-                if (isCompact) {
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(responsiveSpacing)
-                    ) {
-                        Text(
-                            text = context.getString(R.string.volunteers_title),
-                            style = getResponsiveTypography(),
-                            fontWeight = FontWeight.Bold
-                        )
-                        
-                        Button(
-                            onClick = { showAddDialog = true },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(getResponsiveButtonHeight())
-                        ) {
-                            Icon(Icons.Default.PersonAdd, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(context.getString(R.string.add_volunteer))
-                        }
-                    }
-                } else {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = context.getString(R.string.volunteer_manager),
-                            style = getResponsiveTypography(),
-                            fontWeight = FontWeight.Bold
-                        )
-                        
-                        Button(
-                            onClick = { showAddDialog = true },
-                            modifier = Modifier.height(getResponsiveButtonHeight())
-                        ) {
-                            Icon(Icons.Default.PersonAdd, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(context.getString(R.string.add_volunteer))
-                        }
-                    }
-                }
-            }
-            
-            item {
+    }
+    
+    // Extracted filter/search content as a composable lambda
+    val filterContent: @Composable () -> Unit = {
+        SearchBarWithFilter(
+            searchText = searchText,
+            onSearchTextChange = { searchText = it },
+            placeholder = context.getString(R.string.search_volunteers_placeholder),
+            filterOptions = filterOptions,
+            selectedFilter = selectedFilter,
+            onFilterChange = { selectedFilter = it }
+        )
+    }
+    
+    // Extracted count text as a composable lambda
+    val countText: @Composable () -> Unit = {
+        Text(
+            text = "${filteredVolunteers.size} of ${volunteers.size} volunteers",
+            style = getResponsiveBodyTypography(),
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+    
+    // Common list item rendering function
+    val volunteerItems: LazyListScope.() -> Unit = {
+        items(
+            items = filteredVolunteers,
+            key = { volunteer -> volunteer.id }
+        ) { volunteer ->
+            VolunteerCard(
+                volunteer = volunteer,
+                onClick = { showDetailPanel = volunteer }
+            )
+        }
+    }
+    
+    when (scrollBehavior) {
+        SettingsManager.HEADER_PINNED -> {
+            Column(
+                modifier = Modifier.fillMaxSize().padding(responsivePadding)
+            ) {
+                headerContent()
                 Spacer(modifier = Modifier.height(responsiveSpacing))
-            }
-            
-            item {
-                SearchBarWithFilter(
-                    searchText = searchText,
-                    onSearchTextChange = { searchText = it },
-                    placeholder = context.getString(R.string.search_volunteers_placeholder),
-                    filterOptions = listOf(context.getString(R.string.filter_active), context.getString(R.string.filter_inactive)) + VolunteerRank.values().map { it.name },
-                    selectedFilter = selectedFilter,
-                    onFilterChange = { selectedFilter = it }
-                )
-            }
-            
-            item {
+                filterContent()
                 Spacer(modifier = Modifier.height(16.dp))
-            }
-            
-            item {
-                Column {
-                    Text(
-                        text = "${filteredVolunteers.size} of ${volunteers.size} volunteers",
-                        style = getResponsiveBodyTypography(),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    
-                    Spacer(modifier = Modifier.height(if (isCompact) 4.dp else 8.dp))
+                countText()
+                Spacer(modifier = Modifier.height(if (isCompact) 4.dp else 8.dp))
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(itemSpacing),
+                    modifier = Modifier.fillMaxWidth().weight(1f)
+                ) {
+                    volunteerItems()
                 }
             }
-            
-            items(
-                items = filteredVolunteers,
-                key = { volunteer -> volunteer.id }
-            ) { volunteer ->
-                VolunteerCard(
-                    volunteer = volunteer,
-                    onClick = { showDetailPanel = volunteer }
-                )
+        }
+        SettingsManager.STICKY_FILTERS -> {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(responsivePadding),
+                verticalArrangement = Arrangement.spacedBy(itemSpacing)
+            ) {
+                item(key = "header") { headerContent() }
+                item(key = "header_spacer") { Spacer(modifier = Modifier.height(responsiveSpacing)) }
+                stickyHeader(key = "sticky_filters") {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surface)
+                            .padding(bottom = 8.dp)
+                    ) {
+                        filterContent()
+                        Spacer(modifier = Modifier.height(8.dp))
+                        countText()
+                    }
+                }
+                volunteerItems()
+            }
+        }
+        else -> {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(responsivePadding),
+                verticalArrangement = Arrangement.spacedBy(itemSpacing)
+            ) {
+                item(key = "header") { headerContent() }
+                item(key = "header_spacer") { Spacer(modifier = Modifier.height(responsiveSpacing)) }
+                item(key = "filters") { filterContent() }
+                item(key = "filter_spacer") { Spacer(modifier = Modifier.height(16.dp)) }
+                item(key = "count") { 
+                    Column {
+                        countText()
+                        Spacer(modifier = Modifier.height(if (isCompact) 4.dp else 8.dp))
+                    }
+                }
+                volunteerItems()
             }
         }
     }
@@ -325,18 +286,6 @@ fun VolunteerScreen(
                 onClose = { showDetailPanel = null }
             )
         }
-    }
-    
-    // Edit Volunteer Dialog
-    if (showEditDialog != null) {
-        EditVolunteerDialog(
-            volunteer = showEditDialog!!,
-            onDismiss = { showEditDialog = null },
-            onConfirm = { updatedVolunteer ->
-                onUpdateVolunteer(updatedVolunteer)
-                showEditDialog = null
-            }
-        )
     }
 }
 

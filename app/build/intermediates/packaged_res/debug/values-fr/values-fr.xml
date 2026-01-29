@@ -37,6 +37,7 @@
     <string name="animated_background_title">Arrière-plan animé</string>
     <string name="app_cache_cleared">Cache des données de l\'application vidé. Les paramètres et les clés ont été conservés.</string>
     <string name="app_designed_for">Conçu pour les lieux du Collectif Nocturne</string>
+    <string name="app_developed_full">Développé pour le Collectif Nocturne par Leonardo Mondada</string>
     <string name="app_icon_auto_adapt_description">Basculer automatiquement entre les icônes claires et sombres en fonction de votre thème système</string>
     <string name="app_icon_auto_adapt_enabled">Adaptation automatique activée. L\'icône sera mise à jour en fonction du thème système.</string>
     <string name="app_icon_auto_adapt_title">Adapter automatiquement l\'icône au thème système</string>
@@ -76,6 +77,7 @@
     <string name="camera_permission_required">L\'autorisation de la caméra est requise pour scanner les QR codes</string>
     <string name="camera_permission_title">Autorisation de caméra requise</string>
     <string name="cancel">Annuler</string>
+    <string name="change_update_sources">Modifier les sources de mise à jour</string>
     <string name="check_for_updates">Rechercher des mises à jour</string>
     <string name="checking_for_updates_message">Connexion au serveur de mise à jour…</string>
     <string name="checking_for_updates_title">Vérification des mises à jour</string>
@@ -84,7 +86,6 @@
     <string formatted="false" name="cleanup_warning">Cette action supprimera définitivement %d bénévole%s et tous leurs enregistrements de travail associés. Cette action ne peut pas être annulée !</string>
     <string name="clear_app_cache">Vider le cache de l\'application</string>
     <string name="close">Fermer</string>
-    <string name="collectif_nocturne"> Collectif Nocturne </string>
     <string name="color_theme_description">Choisissez un thème de couleur pour les appareils qui ne prennent pas en charge les couleurs dynamiques</string>
     <string name="color_theme_feminist_violet">Violet féministe</string>
     <string name="color_theme_neutral_green">Vert neutre</string>
@@ -138,13 +139,14 @@
     <string name="delete_guest">Supprimer l\'invité·e</string>
     <string name="delete_volunteer_button">Supprimer le·la bénévole</string>
     <string formatted="false" name="delete_volunteers">Supprimer %d bénévole%s</string>
-    <string name="developed_by">Développé pour le </string>
     <string name="download_complete">Téléchargement terminé</string>
     <string name="download_error_message">Impossible de télécharger la mise à jour : %s</string>
     <string name="download_error_title">Échec du téléchargement</string>
     <string name="download_progress">Téléchargement : %d%%</string>
     <string name="downloading_update">Téléchargement de la mise à jour…</string>
     <string name="drink_tokens">🍺 %d jetons de boisson</string>
+    <string name="easter_egg_drive_nocturne">Drive Nocturne</string>
+    <string name="easter_egg_flappy_nocturne">Flappy Nocturne</string>
     <string name="edit">Modifier</string>
     <string name="edit_guest">Modifier l\'invité·e</string>
     <string name="edit_guest_details">Modifier les détails de l\'invité·e</string>
@@ -236,9 +238,12 @@
     <string name="jobs_this_month">Jobs ce mois</string>
     <string name="just_now">À l\'instant</string>
     <string name="key_file_found">Fichier de clé trouvé</string>
+    <string name="language_chinese">繁體中文</string>
+    <string name="language_chinese_simplified">简体中文</string>
     <string name="language_description">Sélectionnez votre langue préférée</string>
     <string name="language_english">Anglais</string>
     <string name="language_french">Français</string>
+    <string name="language_spanish">Español</string>
     <string name="language_title">Langue</string>
     <string name="large_screen_experience">Expérience améliorée pour les grands écrans</string>
     <string name="last_name_abbreviation">Abréviation du nom</string>
@@ -253,7 +258,6 @@
     <string name="latest_job_tablet">Dernier job : %s</string>
     <string name="latest_volunteer_phone">Bénévole : %s</string>
     <string name="latest_volunteer_tablet">Dernier·e bénévole : %s</string>
-    <string name="leonardo_mondada"> par Leonardo Mondada</string>
     <string name="male">Homme</string>
     <string name="manage_shift_types">Gérer les types de Shifts</string>
     <string name="manage_venues">Gérer les lieux</string>
@@ -342,6 +346,8 @@
     <string name="scroll_behavior_full_page_title">Faire défiler toute la page</string>
     <string name="scroll_behavior_list_only_description">Seule la liste défile. Les actions du haut (ajouter, filtres, recherche) restent visibles en haut.</string>
     <string name="scroll_behavior_list_only_title">Garder l\'en-tête fixe</string>
+    <string name="scroll_behavior_sticky_filters_description">La barre de filtres reste fixée en haut une fois qu\'elle atteint le haut de l\'écran, tandis que le titre et le bouton d\'ajout défilent.</string>
+    <string name="scroll_behavior_sticky_filters_option">Garder les filtres visibles en défilant</string>
     <string name="scroll_behavior_title">Comportement du défilement pour les pages de gestion</string>
     <string name="search_guests_placeholder">Rechercher des invité·e·s par nom...</string>
     <string name="search_shift_types_placeholder">Rechercher des types de shifts...</string>
@@ -415,10 +421,17 @@
     <string name="step_8_title">Partager avec le compte de service</string>
     <string name="step_9_description">Saisissez l\'ID de la feuille de calcul et les noms des feuilles dans les paramètres ci-dessus.</string>
     <string name="step_9_title">Configurer les paramètres de l\'application</string>
+    <string name="sync_advice_authentication">• Vérifiez votre fichier de clé de compte de service\n• Assurez-vous que la clé est téléchargée dans les Paramètres\n• Rechargez la clé si nécessaire</string>
+    <string name="sync_advice_generic">• Réessayez la synchronisation\n• Vérifiez vos paramètres Google Sheets\n• Consultez les Paramètres pour vérifier votre configuration</string>
+    <string name="sync_advice_network">• Vérifiez votre connexion internet\n• Vérifiez que le Wi-Fi ou les données mobiles sont activés\n• Réessayez quand la connexion est stable\n• Assurez-vous que le mode avion est désactivé</string>
+    <string name="sync_advice_not_found">• Vérifiez l\'ID de la feuille de calcul dans les Paramètres\n• Vérifiez que les noms des feuilles existent\n• Assurez-vous que la feuille de calcul est accessible</string>
+    <string name="sync_advice_permission">• Partagez votre feuille de calcul avec l\'email du compte de service\n• Accordez l\'accès Éditeur au compte de service\n• Vérifiez l\'email du compte dans votre fichier de clé</string>
+    <string name="sync_advice_rate_limit">• Attendez 1–2 minutes avant de réessayer\n• L\'application réessaiera automatiquement\n• Envisagez de réduire la fréquence de synchronisation dans les paramètres</string>
     <string name="sync_config_title">Configuration de synchronisation</string>
     <string name="sync_error_authentication">Échec de l\'authentification. Veuillez vérifier votre configuration Google Sheets.</string>
     <string name="sync_error_backup_failed">Échec de la sauvegarde</string>
     <string name="sync_error_details">Erreur : %s</string>
+    <string name="sync_error_details_label">Détails de l\'erreur :</string>
     <string name="sync_error_device_time_message">L\'heure ou la date de votre appareil est incorrecte. L\'API Google Sheets nécessite une synchronisation horaire précise pour fonctionner correctement.</string>
     <string name="sync_error_device_time_open_settings">Ouvrir les paramètres</string>
     <string name="sync_error_device_time_solution">Comment corriger :\n\n1. Allez dans Paramètres\n2. Recherchez \"Date &amp; heure\" ou \"Système\"\n3. Activez \"Date &amp; heure automatiques\" ou \"Définir l\'heure automatiquement\"\n4. Si non disponible, définissez manuellement la date et l\'heure correctes\n5. Redémarrez l\'application et réessayez la synchronisation\n\nCourant sur les anciennes tablettes - veuillez vérifier les paramètres de votre appareil !</string>
@@ -443,12 +456,16 @@
     <string name="sync_error_unknown">Une erreur inconnue s\'est produite. Veuillez réessayer plus tard.</string>
     <string name="sync_error_venue_sync_failed">Échec de la synchronisation des lieux</string>
     <string name="sync_error_volunteer_sync_failed">Échec de la synchronisation des bénévoles</string>
+    <string name="sync_error_what_to_do">💡 Que faire :</string>
     <string name="sync_interval_hint">À quelle fréquence synchroniser avec Google Sheets (1-60 minutes)</string>
     <string name="sync_interval_label">Intervalle de synchronisation (minutes)</string>
+    <string name="sync_retrying">Nouvelle tentative de synchronisation…</string>
     <string name="sync_status_configured">Google Sheets est configuré et prêt pour la synchronisation</string>
     <string name="sync_status_dialog_title">Statut de synchronisation</string>
     <string name="sync_status_error">Erreur lors du test du statut de synchronisation : %s</string>
     <string name="sync_status_not_configured">Google Sheets n\'est pas configuré. Veuillez vérifier vos paramètres.</string>
+    <string name="sync_success_message">La synchronisation s\'est terminée avec succès</string>
+    <string name="sync_success_title">✓ Synchronisation réussie</string>
     <string name="synced_days_ago">Il y a %d j</string>
     <string name="synced_hours_ago">Il y a %d h</string>
     <string name="synced_minutes_ago">Il y a %d min</string>
@@ -493,6 +510,12 @@
     <string name="update_job">Mettre à jour le job</string>
     <string name="update_now">Mettre à jour</string>
     <string name="update_required_message">Une version plus récente de l\'application est requise pour continuer. Veuillez mettre à jour vers la dernière version.</string>
+    <string name="update_sources_custom_url">URL personnalisée</string>
+    <string name="update_sources_github_label">URL du manifeste GitHub</string>
+    <string name="update_sources_reset">Réinitialiser par défaut</string>
+    <string name="update_sources_store_label">URL du store (secours)</string>
+    <string name="update_sources_title">Sources de mise à jour</string>
+    <string name="update_sources_warning">L\'URL GitHub doit pointer vers un fichier version.json valide pour que les vérifications de mise à jour fonctionnent. Ne modifiez ces paramètres que si vous savez ce que vous faites.</string>
     <string name="update_venue">Mettre à jour le lieu</string>
     <string name="update_volunteer">Mettre à jour le·la bénévole</string>
     <string name="upload_failed">Échec du téléchargement : %s</string>

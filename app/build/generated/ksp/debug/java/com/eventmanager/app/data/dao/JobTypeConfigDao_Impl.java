@@ -188,6 +188,25 @@ public final class JobTypeConfigDao_Impl implements JobTypeConfigDao {
   }
 
   @Override
+  public Object insertJobTypeConfigsAll(final List<JobTypeConfig> configs,
+      final Continuation<? super List<Long>> $completion) {
+    return CoroutinesRoom.execute(__db, true, new Callable<List<Long>>() {
+      @Override
+      @NonNull
+      public List<Long> call() throws Exception {
+        __db.beginTransaction();
+        try {
+          final List<Long> _result = __insertionAdapterOfJobTypeConfig.insertAndReturnIdsList(configs);
+          __db.setTransactionSuccessful();
+          return _result;
+        } finally {
+          __db.endTransaction();
+        }
+      }
+    }, $completion);
+  }
+
+  @Override
   public Object deleteJobTypeConfig(final JobTypeConfig config,
       final Continuation<? super Unit> $completion) {
     return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
@@ -207,6 +226,25 @@ public final class JobTypeConfigDao_Impl implements JobTypeConfigDao {
   }
 
   @Override
+  public Object deleteJobTypeConfigsAll(final List<JobTypeConfig> configs,
+      final Continuation<? super Unit> $completion) {
+    return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
+      @Override
+      @NonNull
+      public Unit call() throws Exception {
+        __db.beginTransaction();
+        try {
+          __deletionAdapterOfJobTypeConfig.handleMultiple(configs);
+          __db.setTransactionSuccessful();
+          return Unit.INSTANCE;
+        } finally {
+          __db.endTransaction();
+        }
+      }
+    }, $completion);
+  }
+
+  @Override
   public Object updateJobTypeConfig(final JobTypeConfig config,
       final Continuation<? super Unit> $completion) {
     return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
@@ -216,6 +254,25 @@ public final class JobTypeConfigDao_Impl implements JobTypeConfigDao {
         __db.beginTransaction();
         try {
           __updateAdapterOfJobTypeConfig.handle(config);
+          __db.setTransactionSuccessful();
+          return Unit.INSTANCE;
+        } finally {
+          __db.endTransaction();
+        }
+      }
+    }, $completion);
+  }
+
+  @Override
+  public Object updateJobTypeConfigsAll(final List<JobTypeConfig> configs,
+      final Continuation<? super Unit> $completion) {
+    return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
+      @Override
+      @NonNull
+      public Unit call() throws Exception {
+        __db.beginTransaction();
+        try {
+          __updateAdapterOfJobTypeConfig.handleMultiple(configs);
           __db.setTransactionSuccessful();
           return Unit.INSTANCE;
         } finally {

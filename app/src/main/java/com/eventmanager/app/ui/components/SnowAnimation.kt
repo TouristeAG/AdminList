@@ -16,6 +16,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.platform.LocalContext
+import com.eventmanager.app.data.sync.SettingsManager
 import kotlin.math.sin
 import kotlin.math.cos
 import kotlin.math.PI
@@ -27,13 +29,18 @@ fun SnowAnimation(
     enabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val settingsManager = remember { SettingsManager(context) }
+    val animationMultiplier = remember { settingsManager.getAnimationIntensityMultiplier() }
+    
     // Check if current date is between Dec 22-25
     val calendar = Calendar.getInstance()
     val month = calendar.get(Calendar.MONTH) // 0-11
     val day = calendar.get(Calendar.DAY_OF_MONTH)
     
     val isSnowSeason = month == Calendar.DECEMBER && day in 22..25
-    val shouldShowSnow = enabled && isSnowSeason
+    // Also check if reduced motion is enabled - if so, don't show animation
+    val shouldShowSnow = enabled && isSnowSeason && animationMultiplier > 0f
     
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         if (shouldShowSnow) {
@@ -49,9 +56,11 @@ fun SnowAnimation(
                 val phaseOffset: Float // Unique offset for each snowflake
             )
             
-            val snowflakes = remember {
+            // PERFORMANCE OPTIMIZATION: Reduce particle count based on performance mode
+            // Normal: 80, Performance Mode: 40, Reduced Motion: 0
+            val snowflakes = remember(animationMultiplier) {
                 val rnd = Random(System.nanoTime())
-                val count = 80 // Number of snowflakes
+                val count = (80 * animationMultiplier).toInt().coerceAtLeast(20)
                 List(count) { _ ->
                     Snowflake(
                         x = rnd.nextFloat(),
@@ -115,14 +124,18 @@ fun SnowAnimation(
                             center = Offset(xPos, yPos)
                         )
                         
-                        // Draw snowflake sparkle/star pattern
-                        drawSnowflakeStar(
-                            centerX = xPos,
-                            centerY = yPos,
-                            size = flake.size * 2f,
-                            alpha = flake.opacity * 0.6f,
-                            rotation = wobbleOffset
-                        )
+                        // PERFORMANCE OPTIMIZATION: Only draw star pattern when not in performance mode
+                        // This reduces draw calls significantly on older hardware
+                        if (animationMultiplier >= 1.0f) {
+                            // Draw snowflake sparkle/star pattern
+                            drawSnowflakeStar(
+                                centerX = xPos,
+                                centerY = yPos,
+                                size = flake.size * 2f,
+                                alpha = flake.opacity * 0.6f,
+                                rotation = wobbleOffset
+                            )
+                        }
                     }
                 }
             }

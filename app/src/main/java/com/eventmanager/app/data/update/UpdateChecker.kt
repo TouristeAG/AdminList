@@ -3,6 +3,7 @@ package com.eventmanager.app.data.update
 import android.content.Context
 import com.eventmanager.app.BuildConfig
 import com.google.gson.Gson
+import com.eventmanager.app.data.sync.SettingsManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.BufferedReader
@@ -38,7 +39,9 @@ class UpdateChecker(
 
     suspend fun checkForUpdates(): UpdateCheckResult = withContext(Dispatchers.IO) {
         try {
-            val url = URL(BuildConfig.UPDATE_MANIFEST_URL)
+            val settingsManager = SettingsManager(context)
+            val manifestUrl = settingsManager.getUpdateManifestUrl()
+            val url = URL(manifestUrl)
             val connection = (url.openConnection() as HttpURLConnection).apply {
                 connectTimeout = 10_000
                 readTimeout = 10_000

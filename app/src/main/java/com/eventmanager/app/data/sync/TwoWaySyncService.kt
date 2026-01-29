@@ -4,6 +4,8 @@ import android.content.Context
 import com.eventmanager.app.data.models.*
 import com.eventmanager.app.data.repository.EventManagerRepository
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
@@ -80,6 +82,8 @@ class TwoWaySyncService(
     /**
      * SYNC MODE: Download entire dataset from Google Sheets and replace local data
      * This is used for manual sync and scheduled sync
+     * 
+     * OPTIMIZED: Uses parallel API calls for downloading data and batch database operations
      */
     suspend fun syncFromGoogleSheets() = withContext(Dispatchers.IO) {
         sheetsOpMutex.withLock {
@@ -92,12 +96,24 @@ class TwoWaySyncService(
             
             println("Starting sync from Google Sheets...")
             
-            // Download all data from sheets
-            val remoteJobTypeConfigs = googleSheetsService.syncJobTypeConfigsFromSheets()
-            val remoteGuests = googleSheetsService.syncGuestsFromSheets()
-            val remoteVolunteers = googleSheetsService.syncVolunteersFromSheets()
+            // OPTIMIZATION: Download data in parallel (except jobs which depends on jobTypeConfigs)
+            val (remoteJobTypeConfigs, remoteGuests, remoteVolunteers, remoteVenues) = coroutineScope {
+                val jobTypeConfigsDeferred = async { googleSheetsService.syncJobTypeConfigsFromSheets() }
+                val guestsDeferred = async { googleSheetsService.syncGuestsFromSheets() }
+                val volunteersDeferred = async { googleSheetsService.syncVolunteersFromSheets() }
+                val venuesDeferred = async { googleSheetsService.syncVenuesFromSheets() }
+                
+                // Await all parallel downloads
+                val jobTypeConfigs = jobTypeConfigsDeferred.await()
+                val guests = guestsDeferred.await()
+                val volunteers = volunteersDeferred.await()
+                val venues = venuesDeferred.await()
+                
+                Quad(jobTypeConfigs, guests, volunteers, venues)
+            }
+            
+            // Jobs depend on job type configs, so download after
             val remoteJobs = googleSheetsService.syncJobsFromSheets(remoteJobTypeConfigs)
-            val remoteVenues = googleSheetsService.syncVenuesFromSheets()
             
             println("Downloaded from sheets: ${remoteGuests.size} guests, ${remoteVolunteers.size} volunteers, ${remoteJobs.size} jobs, ${remoteJobTypeConfigs.size} job types, ${remoteVenues.size} venues")
             
@@ -113,36 +129,50 @@ class TwoWaySyncService(
             
             println("📥 Remote data found - merging with local data...")
             
-            // Merge job type configs
+            // OPTIMIZATION: Use batch database operations instead of individual inserts
+            
+            // Merge job type configs (batch insert)
             repository.clearAllJobTypeConfigs()
-            for (config in remoteJobTypeConfigs) {
-                repository.insertJobTypeConfig(config)
+            if (remoteJobTypeConfigs.isNotEmpty()) {
+                repository.insertJobTypeConfigsAll(remoteJobTypeConfigs)
             }
             
-            // Merge venues
+            // Merge venues (batch insert)
             repository.clearAllVenues()
-            for (venue in remoteVenues) {
-                repository.insertVenue(venue)
+            if (remoteVenues.isNotEmpty()) {
+                repository.insertVenuesAll(remoteVenues)
             }
             
-            // Merge guests
+            // Merge guests (batch insert)
             repository.clearAllGuests()
-            for (guest in remoteGuests) {
-                repository.insertGuest(guest)
+            if (remoteGuests.isNotEmpty()) {
+                repository.insertGuestsAll(remoteGuests)
             }
             
             // Merge volunteers (preserve local volunteers not in remote data)
             val localVolunteers = repository.getAllVolunteers().first()
             val remoteVolunteersMap = remoteVolunteers.associateBy { it.sheetsId }
+            val localVolunteersById = localVolunteers.associateBy { it.sheetsId }
             
-            // Update or insert remote volunteers
+            // Separate into updates and inserts for batch processing
+            val volunteersToUpdate = mutableListOf<Volunteer>()
+            val volunteersToInsert = mutableListOf<Volunteer>()
+            
             for (volunteer in remoteVolunteers) {
-                val existingVolunteer = localVolunteers.find { it.sheetsId == volunteer.sheetsId }
+                val existingVolunteer = localVolunteersById[volunteer.sheetsId]
                 if (existingVolunteer != null) {
-                    repository.updateVolunteer(volunteer)
+                    volunteersToUpdate.add(volunteer.copy(id = existingVolunteer.id))
                 } else {
-                    repository.insertVolunteer(volunteer)
+                    volunteersToInsert.add(volunteer)
                 }
+            }
+            
+            // Batch update and insert volunteers
+            if (volunteersToUpdate.isNotEmpty()) {
+                repository.updateVolunteersAll(volunteersToUpdate)
+            }
+            if (volunteersToInsert.isNotEmpty()) {
+                repository.insertVolunteersAll(volunteersToInsert)
             }
             
             // Keep local volunteers that don't exist in remote data
@@ -150,22 +180,20 @@ class TwoWaySyncService(
                 localVolunteer.sheetsId == null || remoteVolunteersMap[localVolunteer.sheetsId] == null
             }
             
-            // Re-insert local volunteers that weren't in remote data
-            for (volunteer in localVolunteersToKeep) {
+            // Re-insert local volunteers that weren't in remote data (batch)
+            if (localVolunteersToKeep.isNotEmpty()) {
                 try {
-                    repository.insertVolunteer(volunteer)
-                    println("Preserved local volunteer: ${volunteer.name} (ID: ${volunteer.id}, Active: ${volunteer.isActive})")
+                    repository.insertVolunteersAll(localVolunteersToKeep)
+                    println("Preserved ${localVolunteersToKeep.size} local volunteers not found in remote data")
                 } catch (e: Exception) {
-                    println("Failed to preserve local volunteer ${volunteer.name}: ${e.message}")
+                    println("Failed to preserve some local volunteers: ${e.message}")
                 }
             }
             
-            println("Preserved ${localVolunteersToKeep.size} local volunteers not found in remote data")
-            
-            // Merge jobs
+            // Merge jobs (batch insert)
             repository.clearAllJobs()
-            for (job in remoteJobs) {
-                repository.insertJob(job)
+            if (remoteJobs.isNotEmpty()) {
+                repository.insertJobsAll(remoteJobs)
             }
             
             println("✅ Successfully replaced local data with ${remoteGuests.size} guests, ${remoteVolunteers.size} volunteers, ${remoteJobs.size} jobs, ${remoteJobTypeConfigs.size} job types from Google Sheets")
@@ -182,13 +210,16 @@ class TwoWaySyncService(
         }
     }
     
+    // Helper class for parallel downloads (destructuring 4 values)
+    private data class Quad<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
+    
     /**
      * DIFFERENTIAL SYNC MODE: Download from Google Sheets and update only what changed
      * This is the new efficient sync that avoids full-page UI reloads
      * 
      * Steps:
-     * 1. Download all remote data from Google Sheets (TEMP_DB)
-     * 2. Get current local data (MAIN_DB)
+     * 1. Download all remote data from Google Sheets (TEMP_DB) - OPTIMIZED: parallel downloads
+     * 2. Get current local data (MAIN_DB) - OPTIMIZED: parallel reads
      * 3. Compare TEMP_DB vs MAIN_DB to identify changes
      * 4. Return sync result with detailed change information
      * 5. UI will apply only the targeted updates
@@ -207,12 +238,23 @@ class TwoWaySyncService(
             
             println("🔄 Starting differential sync from Google Sheets...")
             
-            // STEP 1: Download all data from sheets (TEMP_DB)
-            val remoteJobTypeConfigs = googleSheetsService.syncJobTypeConfigsFromSheets()
-            val remoteGuests = googleSheetsService.syncGuestsFromSheets()
-            val remoteVolunteers = googleSheetsService.syncVolunteersFromSheets()
+            // STEP 1: Download all data from sheets (TEMP_DB) - OPTIMIZED: parallel downloads
+            val (remoteJobTypeConfigs, remoteGuests, remoteVolunteers, remoteVenues) = coroutineScope {
+                val jobTypeConfigsDeferred = async { googleSheetsService.syncJobTypeConfigsFromSheets() }
+                val guestsDeferred = async { googleSheetsService.syncGuestsFromSheets() }
+                val volunteersDeferred = async { googleSheetsService.syncVolunteersFromSheets() }
+                val venuesDeferred = async { googleSheetsService.syncVenuesFromSheets() }
+                
+                Quad(
+                    jobTypeConfigsDeferred.await(),
+                    guestsDeferred.await(),
+                    volunteersDeferred.await(),
+                    venuesDeferred.await()
+                )
+            }
+            
+            // Jobs depend on job type configs, so download after
             val remoteJobs = googleSheetsService.syncJobsFromSheets(remoteJobTypeConfigs)
-            val remoteVenues = googleSheetsService.syncVenuesFromSheets()
             
             println("📥 Downloaded from sheets: ${remoteGuests.size} guests, ${remoteVolunteers.size} volunteers, ${remoteJobs.size} jobs, ${remoteJobTypeConfigs.size} job types, ${remoteVenues.size} venues")
             
@@ -225,21 +267,41 @@ class TwoWaySyncService(
                 return@withContext DifferentialSyncService.DifferentialSyncResult()
             }
             
-            // STEP 2: Get current local data (MAIN_DB)
-            val mainGuests = repository.getAllGuests().first()
-            val mainVolunteers = repository.getAllVolunteers().first()
-            val mainJobs = repository.getAllJobs().first()
-            val mainJobTypeConfigs = repository.getAllJobTypeConfigs().first()
-            val mainVenues = repository.getAllVenues().first()
+            // STEP 2: Get current local data (MAIN_DB) - OPTIMIZED: parallel reads
+            val (mainGuests, mainVolunteers, mainJobs, mainJobTypeConfigs, mainVenues) = coroutineScope {
+                val guestsDeferred = async { repository.getAllGuests().first() }
+                val volunteersDeferred = async { repository.getAllVolunteers().first() }
+                val jobsDeferred = async { repository.getAllJobs().first() }
+                val jobTypeConfigsDeferred = async { repository.getAllJobTypeConfigs().first() }
+                val venuesDeferred = async { repository.getAllVenues().first() }
+                
+                Quint(
+                    guestsDeferred.await(),
+                    volunteersDeferred.await(),
+                    jobsDeferred.await(),
+                    jobTypeConfigsDeferred.await(),
+                    venuesDeferred.await()
+                )
+            }
             
             println("📊 Current local data: ${mainGuests.size} guests, ${mainVolunteers.size} volunteers, ${mainJobs.size} jobs, ${mainJobTypeConfigs.size} job types, ${mainVenues.size} venues")
             
-            // STEP 3: Compare TEMP_DB vs MAIN_DB
-            val guestChanges = differentialSyncService.compareGuests(remoteGuests, mainGuests)
-            val volunteerChanges = differentialSyncService.compareVolunteers(remoteVolunteers, mainVolunteers)
-            val jobChanges = differentialSyncService.compareJobs(remoteJobs, mainJobs)
-            val jobTypeChanges = differentialSyncService.compareJobTypeConfigs(remoteJobTypeConfigs, mainJobTypeConfigs)
-            val venueChanges = differentialSyncService.compareVenues(remoteVenues, mainVenues)
+            // STEP 3: Compare TEMP_DB vs MAIN_DB - OPTIMIZED: parallel comparisons
+            val (guestChanges, volunteerChanges, jobChanges, jobTypeChanges, venueChanges) = coroutineScope {
+                val guestChangesDeferred = async { differentialSyncService.compareGuests(remoteGuests, mainGuests) }
+                val volunteerChangesDeferred = async { differentialSyncService.compareVolunteers(remoteVolunteers, mainVolunteers) }
+                val jobChangesDeferred = async { differentialSyncService.compareJobs(remoteJobs, mainJobs) }
+                val jobTypeChangesDeferred = async { differentialSyncService.compareJobTypeConfigs(remoteJobTypeConfigs, mainJobTypeConfigs) }
+                val venueChangesDeferred = async { differentialSyncService.compareVenues(remoteVenues, mainVenues) }
+                
+                Quint(
+                    guestChangesDeferred.await(),
+                    volunteerChangesDeferred.await(),
+                    jobChangesDeferred.await(),
+                    jobTypeChangesDeferred.await(),
+                    venueChangesDeferred.await()
+                )
+            }
             
             // STEP 4: Build result with detailed change information
             val result = DifferentialSyncService.DifferentialSyncResult(
@@ -253,9 +315,9 @@ class TwoWaySyncService(
             
             println("📋 Changes detected: ${result.summary()}")
             
-            // STEP 5: Apply changes to database (merge TEMP_DB → MAIN_DB)
+            // STEP 5: Apply changes to database (merge TEMP_DB → MAIN_DB) - OPTIMIZED: batch operations
             if (result.hasAnyChanges()) {
-                differentialSyncService.applyChanges(result)
+                differentialSyncService.applyChangesBatched(result)
                 println("✅ Applied ${result.guests.totalChanges + result.volunteers.totalChanges + result.jobs.totalChanges + result.jobTypeConfigs.totalChanges + result.venues.totalChanges} changes to local database")
             } else {
                 println("ℹ️ No changes detected - data is already in sync")
@@ -276,6 +338,9 @@ class TwoWaySyncService(
         }
         }
     }
+    
+    // Helper class for parallel downloads (destructuring 5 values)
+    private data class Quint<A, B, C, D, E>(val first: A, val second: B, val third: C, val fourth: D, val fifth: E)
     
     /**
      * PAGE CHANGE SYNC: Download only current page and new page data

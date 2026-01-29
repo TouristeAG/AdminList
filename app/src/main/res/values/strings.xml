@@ -90,12 +90,22 @@
     <string name="install_update">Install update</string>
     <string name="download_error_title">Download failed</string>
     <string name="download_error_message">Could not download update: %s</string>
+    <string name="change_update_sources">Change update sources</string>
+    <string name="update_sources_title">Update Sources</string>
+    <string name="update_sources_warning">The GitHub URL must point to a valid version.json file for update checks to work. Only modify these settings if you know what you are doing.</string>
+    <string name="update_sources_github_label">GitHub Manifest URL</string>
+    <string name="update_sources_store_label">App Store URL (Fallback)</string>
+    <string name="update_sources_reset">Reset to default</string>
+    <string name="update_sources_custom_url">Custom URL</string>
 
     <!-- Language Settings -->
     <string name="language_title">Language</string>
     <string name="language_description">Select your preferred language</string>
     <string name="language_english">English</string>
     <string name="language_french">Français</string>
+    <string name="language_spanish">Español</string>
+    <string name="language_chinese">繁體中文</string>
+    <string name="language_chinese_simplified">简体中文</string>
     
     <!-- Theme Settings -->
     <string name="theme_title">Theme</string>
@@ -142,6 +152,8 @@
     <string name="scroll_behavior_list_only_description">Only the list scrolls. The top actions (add, filters, search) stay visible at the top.</string>
     <string name="scroll_behavior_full_page_title">Scroll Whole Page</string>
     <string name="scroll_behavior_full_page_description">The header and the list scroll together. The top actions move away as you scroll down.</string>
+    <string name="scroll_behavior_sticky_filters_option">Keep filters visible when scrolling</string>
+    <string name="scroll_behavior_sticky_filters_description">The filters bar stays fixed at the top once it reaches the top of the screen, while the title and add button scroll away.</string>
 
     <!-- Shift Type Management -->
     <string name="shift_type_management_title">Shift Type Management</string>
@@ -189,9 +201,8 @@
     <string name="app_info_title">App Information</string>
     <string name="app_version">AdminList 0.9</string>
     <string name="app_designed_for">Designed for Collectif Nocturne venues</string>
-    <string name="developed_by">Developed for the </string>
-    <string name="collectif_nocturne"> Collectif Nocturne </string>
-    <string name="leonardo_mondada"> by Leonardo Mondada</string>
+    <!-- Single full sentence to avoid spacing issues across locales -->
+    <string name="app_developed_full">Developed for the Collectif Nocturne by Leonardo Mondada</string>
     <string name="last_sync">Last sync: %s</string>
     <string name="never">Never</string>
     
@@ -567,6 +578,23 @@
     <string name="sync_error_job_type_sync_failed">Job type sync failed</string>
     <string name="sync_error_venue_sync_failed">Venue sync failed</string>
     <string name="sync_error_backup_failed">Backup failed</string>
+    
+    <!-- Sync Success Messages -->
+    <string name="sync_success_title">✓ Sync Successful</string>
+    <string name="sync_success_message">Synchronization completed successfully</string>
+    <string name="sync_retrying">Retrying synchronization…</string>
+    
+    <!-- Sync Error Dialog Labels -->
+    <string name="sync_error_details_label">Error Details:</string>
+    <string name="sync_error_what_to_do">💡 What to do:</string>
+    
+    <!-- Sync Error Advice Messages -->
+    <string name="sync_advice_rate_limit">• Wait 1–2 minutes before retrying\n• The app will automatically retry with backoff\n• Consider reducing sync frequency in settings</string>
+    <string name="sync_advice_authentication">• Check your service account key file\n• Verify the key is uploaded in Settings\n• Re-upload the key if needed</string>
+    <string name="sync_advice_permission">• Share your spreadsheet with the service account email\n• Grant Editor access to the service account\n• Check the account email in your service key file</string>
+    <string name="sync_advice_network">• Check your internet connection\n• Verify Wi-Fi or mobile data is enabled\n• Try again when connection is stable\n• Make sure you\'re not in airplane mode</string>
+    <string name="sync_advice_not_found">• Check the Spreadsheet ID in Settings\n• Verify the sheet names exist\n• Ensure the spreadsheet is accessible</string>
+    <string name="sync_advice_generic">• Try the sync again\n• Check your Google Sheets settings\n• Visit Settings to verify your configuration</string>
 
     <!-- Seasonal Fun -->
     <string name="seasonal_fun_title">Seasonal Fun</string>
@@ -639,4 +667,8 @@
     <string name="shift_tracking_tablet">Complete shift tracking and job management</string>
     <string name="shield_optimized">Optimized for NVIDIA Shield tablets</string>
     <string name="enhanced_touch_targets">Enhanced touch targets for better interaction</string>
+    
+    <!-- Easter Egg Games -->
+    <string name="easter_egg_drive_nocturne">Nocturnal Drive</string>
+    <string name="easter_egg_flappy_nocturne">Nocturnal Flappy</string>
 </resources>

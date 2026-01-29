@@ -18,6 +18,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
+import com.eventmanager.app.data.sync.SettingsManager
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -28,9 +30,16 @@ fun AnimatedBackground(
     enabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val settingsManager = remember { SettingsManager(context) }
+    val animationMultiplier = remember { settingsManager.getAnimationIntensityMultiplier() }
+    
+    // Skip animation entirely if reduced motion is enabled
+    val shouldAnimate = enabled && animationMultiplier > 0f
+    
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
-        // Only show animation if enabled
-        if (enabled) {
+        // Only show animation if enabled and not in reduced motion mode
+        if (shouldAnimate) {
             // Get theme colors
             val colorScheme = MaterialTheme.colorScheme
         
@@ -40,11 +49,12 @@ fun AnimatedBackground(
         val tertiaryColor = colorScheme.tertiary.copy(alpha = 0.10f)
         val surfaceVariantColor = colorScheme.surfaceVariant.copy(alpha = 0.08f)
         
-        // Prepare randomized circle layout once per composition - BALANCED for performance and visual appeal
+        // PERFORMANCE OPTIMIZATION: Reduce circle count based on performance mode
+        // Normal: 28 circles, Performance Mode: 14 circles
         data class CircleParam(val fx: Float, val fy: Float, val theta: Float, val color: Color)
-        val circles = remember {
+        val circles = remember(animationMultiplier) {
             val rnd = Random(System.nanoTime())
-            val count = 28 // Middle ground between original 45 and optimized 15
+            val count = (28 * animationMultiplier).toInt().coerceAtLeast(10)
             List(count) { i ->
                 val fx = rnd.nextFloat() // 0..1 normalized
                 val fy = rnd.nextFloat()

@@ -1,9 +1,12 @@
 package com.eventmanager.app.ui.screens
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.foundation.rememberScrollState
@@ -19,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.eventmanager.app.data.models.*
+import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.ui.components.SearchBarWithFilter
 import com.eventmanager.app.ui.components.VolunteerBenefitsPanel
 import com.eventmanager.app.ui.components.GuestDetailPanel
@@ -26,7 +30,7 @@ import com.eventmanager.app.ui.utils.*
 import com.eventmanager.app.R
 import androidx.compose.ui.platform.LocalContext
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun GuestListScreen(
     guests: List<Guest>,
@@ -39,7 +43,7 @@ fun GuestListScreen(
     onDeleteGuest: (Guest) -> Unit,
     isSyncing: Boolean = false,
     lastSyncTime: Long = 0L,
-    headerPinned: Boolean = true // currently not changing layout, but wired for future
+    scrollBehavior: String = SettingsManager.FULL_SCROLL
 ) {
     val context = LocalContext.current
     var selectedVenue by remember { mutableStateOf<Venue?>(null) }
@@ -61,9 +65,13 @@ fun GuestListScreen(
         volunteers.associateBy { it.id }
     }
 
-    // Optimize filtering with derivedStateOf for better performance
-    // derivedStateOf automatically tracks reads from state, so it will recompute when guests, searchText, selectedVenueName, or selectedFilter change
-    val filteredGuests = remember(guests, selectedVenueName, searchText, selectedFilter) {
+    // Get filter strings once (getString is cheap, no need for remember)
+    val filterVolunteerBenefits = context.getString(R.string.filter_volunteer_benefits)
+    val filterRegularGuests = context.getString(R.string.filter_regular_guests)
+
+    // Optimize filtering with derivedStateOf - let it track dependencies automatically
+    // Removed explicit keys from remember() since derivedStateOf handles dependency tracking
+    val filteredGuests = remember {
         derivedStateOf {
             val lowerSearchText = searchText.lowercase()
             guests.filter { guest ->
@@ -78,8 +86,8 @@ fun GuestListScreen(
                     guest.name.lowercase().contains(lowerSearchText) ||
                     guest.notes.lowercase().contains(lowerSearchText)
                 val matchesFilter = when (selectedFilter) {
-                    context.getString(R.string.filter_volunteer_benefits) -> guest.isVolunteerBenefit
-                    context.getString(R.string.filter_regular_guests) -> !guest.isVolunteerBenefit
+                    filterVolunteerBenefits -> guest.isVolunteerBenefit
+                    filterRegularGuests -> !guest.isVolunteerBenefit
                     else -> true
                 }
                 matchesVenue && matchesSearch && matchesFilter
@@ -92,17 +100,21 @@ fun GuestListScreen(
         filteredGuests.value.sumOf { it.invitations }
     }
     
-    if (headerPinned) {
-        // Original behavior: header fixed, only list scrolls
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(responsivePadding)
-        ) {
+    // Generate venue filter options (composable function, cannot use remember)
+    val venueFilterOptions = generateVenueFilterOptions(venues)
+    
+    when (scrollBehavior) {
+        SettingsManager.HEADER_PINNED -> {
+            // Original behavior: header fixed, only list scrolls
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(responsivePadding)
+            ) {
             // Header
             Text(
                 text = if (isCompact) context.getString(R.string.guest_list_title) else context.getString(R.string.guest_list_management),
-                style = if (isPhone) getPhonePortraitTypography() else getResponsiveTypography(),
+                style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold
             )
             
@@ -117,9 +129,6 @@ fun GuestListScreen(
             }
             
             Spacer(modifier = Modifier.height(responsiveSpacing))
-            
-            // Venue Selection and Stats
-            val venueFilterOptions = generateVenueFilterOptions(venues)
             
             if (isCompact) {
                 // Stack vertically on phones
@@ -201,43 +210,6 @@ fun GuestListScreen(
             
             Spacer(modifier = Modifier.height(16.dp))
             
-            // Last sync time display
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = context.getString(R.string.last_synced),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = if (lastSyncTime > 0) {
-                            val timeAgo = System.currentTimeMillis() - lastSyncTime
-                            when {
-                                timeAgo < 60000 -> context.getString(R.string.just_now)
-                                timeAgo < 3600000 -> context.getString(R.string.minutes_ago, timeAgo / 60000)
-                                timeAgo < 86400000 -> context.getString(R.string.hours_ago, timeAgo / 3600000)
-                                else -> context.getString(R.string.days_ago, timeAgo / 86400000)
-                            }
-                        } else {
-                            context.getString(R.string.never)
-                        },
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
             // Search and Filter Section
             SearchBarWithFilter(
                 searchText = searchText,
@@ -311,7 +283,211 @@ fun GuestListScreen(
             ) {
                 items(
                     items = filteredGuests.value,
-                    key = { guest -> guest.id }
+                    key = { guest -> 
+                        // Use sheetsId if available (unique), otherwise use composite key to handle id=0 cases
+                        guest.sheetsId ?: "${guest.id}_${guest.name}_${guest.venueName}"
+                    }
+                ) { guest ->
+                    GuestCard(
+                        guest = guest,
+                        volunteersMap = volunteersMap,
+                        venues = venues,
+                        onDelete = { onDeleteGuest(guest) },
+                        onVolunteerClick = { volunteer ->
+                            showVolunteerBenefits = volunteer
+                        },
+                        onGuestClick = { clickedGuest ->
+                            showGuestDetailPanel = clickedGuest
+                        }
+                    )
+                }
+            }
+            }
+        }
+        SettingsManager.STICKY_FILTERS -> {
+            // Page scrolls but filters become sticky at the top
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(responsivePadding),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Header section (scrolls away)
+                item {
+                    Text(
+                        text = if (isCompact) context.getString(R.string.guest_list_title) else context.getString(R.string.guest_list_management),
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    Spacer(modifier = Modifier.height(if (isCompact) 4.dp else 8.dp))
+                    
+                    if (!isCompact) {
+                        Text(
+                            text = context.getString(R.string.guest_list_description),
+                            style = getResponsiveBodyTypography(),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.height(responsiveSpacing))
+                }
+                
+                item {
+                    if (isCompact) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(responsiveSpacing)
+                        ) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.horizontalScroll(rememberScrollState())
+                            ) {
+                                venueFilterOptions.forEach { venueOption ->
+                                    FilterChip(
+                                        onClick = { 
+                                            selectedVenueName = if (selectedVenueName == venueOption.venueName) null else venueOption.venueName
+                                        },
+                                        label = { Text(venueOption.displayName) },
+                                        selected = selectedVenueName == venueOption.venueName,
+                                        leadingIcon = {
+                                            Icon(
+                                                Icons.Default.LocationOn,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                            
+                            Button(
+                                onClick = { showAddDialog = true },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(getResponsiveButtonHeight())
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(context.getString(R.string.add_guest))
+                            }
+                        }
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.horizontalScroll(rememberScrollState())
+                            ) {
+                                venueFilterOptions.forEach { venueOption ->
+                                    FilterChip(
+                                        onClick = { 
+                                            selectedVenueName = if (selectedVenueName == venueOption.venueName) null else venueOption.venueName
+                                        },
+                                        label = { Text(venueOption.displayName) },
+                                        selected = selectedVenueName == venueOption.venueName,
+                                        leadingIcon = {
+                                            Icon(
+                                                Icons.Default.LocationOn,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                            
+                            Button(
+                                onClick = { showAddDialog = true },
+                                modifier = Modifier.height(getResponsiveButtonHeight())
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(context.getString(R.string.add_guest))
+                            }
+                        }
+                    }
+                }
+                
+                // Sticky filter section - becomes pinned when scrolled to top
+                stickyHeader {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surface)
+                            .padding(bottom = 8.dp)
+                    ) {
+                        SearchBarWithFilter(
+                            searchText = searchText,
+                            onSearchTextChange = { searchText = it },
+                            placeholder = context.getString(R.string.search_guests_placeholder),
+                            filterOptions = listOf(context.getString(R.string.filter_volunteer_benefits), context.getString(R.string.filter_regular_guests)),
+                            selectedFilter = selectedFilter,
+                            onFilterChange = { selectedFilter = it }
+                        )
+                    }
+                }
+                
+                // Statistics section - scrolls with the list
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(if (isPhone) 8.dp else 16.dp)
+                    ) {
+                        Card(
+                            modifier = Modifier.weight(1f),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                            shape = RoundedCornerShape(if (isPhone) 8.dp else 12.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(if (isPhone) 8.dp else 16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = filteredGuests.value.size.toString(),
+                                    style = if (isPhone) MaterialTheme.typography.titleLarge else getResponsiveTypography(),
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = if (isPhone) context.getString(R.string.guests_count) else context.getString(R.string.total_guests_count),
+                                    style = if (isPhone) getPhonePortraitBodyTypography() else getResponsiveBodyTypography(),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        
+                        Card(
+                            modifier = Modifier.weight(1f),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                            shape = RoundedCornerShape(if (isPhone) 8.dp else 12.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(if (isPhone) 8.dp else 16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = totalInvitations.toString(),
+                                    style = if (isPhone) MaterialTheme.typography.titleLarge else getResponsiveTypography(),
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = if (isPhone) context.getString(R.string.invitations_count) else context.getString(R.string.total_invitations_count),
+                                    style = if (isPhone) getPhonePortraitBodyTypography() else getResponsiveBodyTypography(),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+                
+                items(
+                    items = filteredGuests.value,
+                    key = { guest -> 
+                        // Use sheetsId if available (unique), otherwise use composite key to handle id=0 cases
+                        guest.sheetsId ?: "${guest.id}_${guest.name}_${guest.venueName}"
+                    }
                 ) { guest ->
                     GuestCard(
                         guest = guest,
@@ -328,228 +504,194 @@ fun GuestListScreen(
                 }
             }
         }
-    } else {
-        // New behavior: header and list scroll together
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(responsivePadding),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            item {
-                Text(
-                    text = if (isCompact) context.getString(R.string.guest_list_title) else context.getString(R.string.guest_list_management),
-                    style = if (isPhone) getPhonePortraitTypography() else getResponsiveTypography(),
-                    fontWeight = FontWeight.Bold
-                )
-                
-                Spacer(modifier = Modifier.height(if (isCompact) 4.dp else 8.dp))
-                
-                if (!isCompact) {
+        else -> {
+            // FULL_SCROLL: header and list scroll together
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(responsivePadding),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                item {
                     Text(
-                        text = context.getString(R.string.guest_list_description),
-                        style = getResponsiveBodyTypography(),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = if (isCompact) context.getString(R.string.guest_list_title) else context.getString(R.string.guest_list_management),
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    Spacer(modifier = Modifier.height(if (isCompact) 4.dp else 8.dp))
+                    
+                    if (!isCompact) {
+                        Text(
+                            text = context.getString(R.string.guest_list_description),
+                            style = getResponsiveBodyTypography(),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.height(responsiveSpacing))
+                }
+                
+                item {
+                    if (isCompact) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(responsiveSpacing)
+                        ) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.horizontalScroll(rememberScrollState())
+                            ) {
+                                venueFilterOptions.forEach { venueOption ->
+                                    FilterChip(
+                                        onClick = { 
+                                            selectedVenueName = if (selectedVenueName == venueOption.venueName) null else venueOption.venueName
+                                        },
+                                        label = { Text(venueOption.displayName) },
+                                        selected = selectedVenueName == venueOption.venueName,
+                                        leadingIcon = {
+                                            Icon(
+                                                Icons.Default.LocationOn,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                            
+                            Button(
+                                onClick = { showAddDialog = true },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(getResponsiveButtonHeight())
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(context.getString(R.string.add_guest))
+                            }
+                        }
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.horizontalScroll(rememberScrollState())
+                            ) {
+                                venueFilterOptions.forEach { venueOption ->
+                                    FilterChip(
+                                        onClick = { 
+                                            selectedVenueName = if (selectedVenueName == venueOption.venueName) null else venueOption.venueName
+                                        },
+                                        label = { Text(venueOption.displayName) },
+                                        selected = selectedVenueName == venueOption.venueName,
+                                        leadingIcon = {
+                                            Icon(
+                                                Icons.Default.LocationOn,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                            
+                            Button(
+                                onClick = { showAddDialog = true },
+                                modifier = Modifier.height(getResponsiveButtonHeight())
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(context.getString(R.string.add_guest))
+                            }
+                        }
+                    }
+                }
+                
+                item {
+                    SearchBarWithFilter(
+                        searchText = searchText,
+                        onSearchTextChange = { searchText = it },
+                        placeholder = context.getString(R.string.search_guests_placeholder),
+                        filterOptions = listOf(context.getString(R.string.filter_volunteer_benefits), context.getString(R.string.filter_regular_guests)),
+                        selectedFilter = selectedFilter,
+                        onFilterChange = { selectedFilter = it }
                     )
                 }
                 
-                Spacer(modifier = Modifier.height(responsiveSpacing))
-            }
-            
-            item {
-                val venueFilterOptions = generateVenueFilterOptions(venues)
-                
-                if (isCompact) {
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(responsiveSpacing)
-                    ) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.horizontalScroll(rememberScrollState())
-                        ) {
-                            venueFilterOptions.forEach { venueOption ->
-                                FilterChip(
-                                    onClick = { 
-                                        selectedVenueName = if (selectedVenueName == venueOption.venueName) null else venueOption.venueName
-                                    },
-                                    label = { Text(venueOption.displayName) },
-                                    selected = selectedVenueName == venueOption.venueName,
-                                    leadingIcon = {
-                                        Icon(
-                                            Icons.Default.LocationOn,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    }
-                                )
-                            }
-                        }
-                        
-                        Button(
-                            onClick = { showAddDialog = true },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(getResponsiveButtonHeight())
-                        ) {
-                            Icon(Icons.Default.Add, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(context.getString(R.string.add_guest))
-                        }
-                    }
-                } else {
+                item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        horizontalArrangement = Arrangement.spacedBy(if (isPhone) 8.dp else 16.dp)
                     ) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.horizontalScroll(rememberScrollState())
+                        Card(
+                            modifier = Modifier.weight(1f),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                            shape = RoundedCornerShape(if (isPhone) 8.dp else 12.dp)
                         ) {
-                            venueFilterOptions.forEach { venueOption ->
-                                FilterChip(
-                                    onClick = { 
-                                        selectedVenueName = if (selectedVenueName == venueOption.venueName) null else venueOption.venueName
-                                    },
-                                    label = { Text(venueOption.displayName) },
-                                    selected = selectedVenueName == venueOption.venueName,
-                                    leadingIcon = {
-                                        Icon(
-                                            Icons.Default.LocationOn,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    }
+                            Column(
+                                modifier = Modifier.padding(if (isPhone) 8.dp else 16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = filteredGuests.value.size.toString(),
+                                    style = if (isPhone) MaterialTheme.typography.titleLarge else getResponsiveTypography(),
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = if (isPhone) context.getString(R.string.guests_count) else context.getString(R.string.total_guests_count),
+                                    style = if (isPhone) getPhonePortraitBodyTypography() else getResponsiveBodyTypography(),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
                         
-                        Button(
-                            onClick = { showAddDialog = true },
-                            modifier = Modifier.height(getResponsiveButtonHeight())
+                        Card(
+                            modifier = Modifier.weight(1f),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                            shape = RoundedCornerShape(if (isPhone) 8.dp else 12.dp)
                         ) {
-                            Icon(Icons.Default.Add, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(context.getString(R.string.add_guest))
+                            Column(
+                                modifier = Modifier.padding(if (isPhone) 8.dp else 16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = totalInvitations.toString(),
+                                    style = if (isPhone) MaterialTheme.typography.titleLarge else getResponsiveTypography(),
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = if (isPhone) context.getString(R.string.invitations_count) else context.getString(R.string.total_invitations_count),
+                                    style = if (isPhone) getPhonePortraitBodyTypography() else getResponsiveBodyTypography(),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
                 }
-            }
-            
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = context.getString(R.string.last_synced),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = if (lastSyncTime > 0) {
-                                val timeAgo = System.currentTimeMillis() - lastSyncTime
-                                when {
-                                    timeAgo < 60000 -> context.getString(R.string.just_now)
-                                    timeAgo < 3600000 -> context.getString(R.string.minutes_ago, timeAgo / 60000)
-                                    timeAgo < 86400000 -> context.getString(R.string.hours_ago, timeAgo / 3600000)
-                                    else -> context.getString(R.string.days_ago, timeAgo / 86400000)
-                                }
-                            } else {
-                                context.getString(R.string.never)
-                            },
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium
-                        )
+                
+                items(
+                    items = filteredGuests.value,
+                    key = { guest -> 
+                        // Use sheetsId if available (unique), otherwise use composite key to handle id=0 cases
+                        guest.sheetsId ?: "${guest.id}_${guest.name}_${guest.venueName}"
                     }
-                }
-            }
-            
-            item {
-                SearchBarWithFilter(
-                    searchText = searchText,
-                    onSearchTextChange = { searchText = it },
-                    placeholder = context.getString(R.string.search_guests_placeholder),
-                    filterOptions = listOf(context.getString(R.string.filter_volunteer_benefits), context.getString(R.string.filter_regular_guests)),
-                    selectedFilter = selectedFilter,
-                    onFilterChange = { selectedFilter = it }
-                )
-            }
-            
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(if (isPhone) 8.dp else 16.dp)
-                ) {
-                    Card(
-                        modifier = Modifier.weight(1f),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                        shape = RoundedCornerShape(if (isPhone) 8.dp else 12.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(if (isPhone) 8.dp else 16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = filteredGuests.value.size.toString(),
-                                style = if (isPhone) MaterialTheme.typography.titleLarge else getResponsiveTypography(),
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = if (isPhone) context.getString(R.string.guests_count) else context.getString(R.string.total_guests_count),
-                                style = if (isPhone) getPhonePortraitBodyTypography() else getResponsiveBodyTypography(),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                ) { guest ->
+                    GuestCard(
+                        guest = guest,
+                        volunteersMap = volunteersMap,
+                        venues = venues,
+                        onDelete = { onDeleteGuest(guest) },
+                        onVolunteerClick = { volunteer ->
+                            showVolunteerBenefits = volunteer
+                        },
+                        onGuestClick = { clickedGuest ->
+                            showGuestDetailPanel = clickedGuest
                         }
-                    }
-                    
-                    Card(
-                        modifier = Modifier.weight(1f),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                        shape = RoundedCornerShape(if (isPhone) 8.dp else 12.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(if (isPhone) 8.dp else 16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = totalInvitations.toString(),
-                                style = if (isPhone) MaterialTheme.typography.titleLarge else getResponsiveTypography(),
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = if (isPhone) context.getString(R.string.invitations_count) else context.getString(R.string.total_invitations_count),
-                                style = if (isPhone) getPhonePortraitBodyTypography() else getResponsiveBodyTypography(),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
+                    )
                 }
-            }
-            
-            items(
-                items = filteredGuests.value,
-                key = { guest -> guest.id }
-            ) { guest ->
-                GuestCard(
-                    guest = guest,
-                    volunteersMap = volunteersMap,
-                    venues = venues,
-                    onDelete = { onDeleteGuest(guest) },
-                    onVolunteerClick = { volunteer ->
-                        showVolunteerBenefits = volunteer
-                    },
-                    onGuestClick = { clickedGuest ->
-                        showGuestDetailPanel = clickedGuest
-                    }
-                )
             }
         }
     }
@@ -816,6 +958,9 @@ fun AddGuestDialog(
 
     val isCompact = isCompactScreen()
     val scrollState = rememberScrollState()
+    
+    // Memoize active venues to avoid repeated filtering
+    val activeVenues = remember(venues) { venues.filter { it.isActive } }
 
     Dialog(onDismissRequest = onDismiss) {
         Box(
@@ -898,7 +1043,7 @@ fun AddGuestDialog(
                                 onDismissRequest = { showVenueDropdown = false }
                             ) {
                                 // Add BOTH/ALL option
-                                val allOptionText = if (venues.filter { it.isActive }.size <= 2) {
+                                val allOptionText = if (activeVenues.size <= 2) {
                                     context.getString(R.string.venue_both)
                                 } else {
                                     context.getString(R.string.venue_all)
@@ -911,8 +1056,8 @@ fun AddGuestDialog(
                                     }
                                 )
                                 
-                                // Add individual venues
-                                venues.forEach { venue ->
+                                // Add individual venues (only active ones)
+                                activeVenues.forEach { venue ->
                                     DropdownMenuItem(
                                         text = { Text(venue.name) },
                                         onClick = {
@@ -946,7 +1091,7 @@ fun AddGuestDialog(
                         TextButton(
                             onClick = {
                                 val invitationCount = invitations.toIntOrNull() ?: 1
-                                val defaultVenue = venues.firstOrNull { it.isActive }?.name ?: "GROOVE"
+                                val defaultVenue = activeVenues.firstOrNull()?.name ?: "GROOVE"
                                 onConfirm(name, invitationCount, selectedVenueName ?: defaultVenue, notes)
                             },
                             enabled = name.isNotBlank()
@@ -977,6 +1122,9 @@ fun EditGuestDialog(
 
     val isCompact = isCompactScreen()
     val scrollState = rememberScrollState()
+    
+    // Memoize active venues to avoid repeated filtering
+    val activeVenues = remember(venues) { venues.filter { it.isActive } }
 
     Dialog(onDismissRequest = onDismiss) {
         Box(
@@ -1059,7 +1207,7 @@ fun EditGuestDialog(
                                 onDismissRequest = { showVenueDropdown = false }
                             ) {
                                 // Add BOTH/ALL option
-                                val allOptionText = if (venues.filter { it.isActive }.size <= 2) {
+                                val allOptionText = if (activeVenues.size <= 2) {
                                     context.getString(R.string.venue_both)
                                 } else {
                                     context.getString(R.string.venue_all)
@@ -1072,8 +1220,8 @@ fun EditGuestDialog(
                                     }
                                 )
                                 
-                                // Add individual venues
-                                venues.forEach { venue ->
+                                // Add individual venues (only active ones)
+                                activeVenues.forEach { venue ->
                                     DropdownMenuItem(
                                         text = { Text(venue.name) },
                                         onClick = {
@@ -1107,7 +1255,7 @@ fun EditGuestDialog(
                         TextButton(
                             onClick = {
                                 val invitationCount = invitations.toIntOrNull() ?: 1
-                                val defaultVenue = venues.firstOrNull { it.isActive }?.name ?: "GROOVE"
+                                val defaultVenue = activeVenues.firstOrNull()?.name ?: "GROOVE"
                                 val updatedGuest = guest.copy(
                                     name = name,
                                     lastNameAbbreviation = "", // Permanent guests don't have abbreviations

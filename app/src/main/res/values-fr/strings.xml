@@ -77,6 +77,9 @@
     <string name="language_description">Sélectionnez votre langue préférée</string>
     <string name="language_english">Anglais</string>
     <string name="language_french">Français</string>
+    <string name="language_spanish">Español</string>
+    <string name="language_chinese">繁體中文</string>
+    <string name="language_chinese_simplified">简体中文</string>
     
     <!-- Theme Settings -->
     <string name="theme_title">Thème</string>
@@ -123,6 +126,8 @@
     <string name="scroll_behavior_list_only_description">Seule la liste défile. Les actions du haut (ajouter, filtres, recherche) restent visibles en haut.</string>
     <string name="scroll_behavior_full_page_title">Faire défiler toute la page</string>
     <string name="scroll_behavior_full_page_description">L\'en-tête et la liste défilent ensemble. Les actions du haut disparaissent lorsque vous faites défiler vers le bas.</string>
+    <string name="scroll_behavior_sticky_filters_option">Garder les filtres visibles en défilant</string>
+    <string name="scroll_behavior_sticky_filters_description">La barre de filtres reste fixée en haut une fois qu\'elle atteint le haut de l\'écran, tandis que le titre et le bouton d\'ajout défilent.</string>
 
     <!-- Update flow -->
     <string name="app_cache_cleared">Cache des données de l\'application vidé. Les paramètres et les clés ont été conservés.</string>
@@ -144,6 +149,13 @@
     <string name="install_update">Installer la mise à jour</string>
     <string name="download_error_title">Échec du téléchargement</string>
     <string name="download_error_message">Impossible de télécharger la mise à jour : %s</string>
+    <string name="change_update_sources">Modifier les sources de mise à jour</string>
+    <string name="update_sources_title">Sources de mise à jour</string>
+    <string name="update_sources_warning">L\'URL GitHub doit pointer vers un fichier version.json valide pour que les vérifications de mise à jour fonctionnent. Ne modifiez ces paramètres que si vous savez ce que vous faites.</string>
+    <string name="update_sources_github_label">URL du manifeste GitHub</string>
+    <string name="update_sources_store_label">URL du store (secours)</string>
+    <string name="update_sources_reset">Réinitialiser par défaut</string>
+    <string name="update_sources_custom_url">URL personnalisée</string>
 
     <!-- Cleanup Dialog -->
     <string name="warning">⚠️ Attention :</string>
@@ -405,9 +417,7 @@
     <string name="app_info_title">Informations sur l\'application</string>
     <string name="app_version">AdminList 0.9</string>
     <string name="app_designed_for">Conçu pour les lieux du Collectif Nocturne</string>
-    <string name="developed_by">Développé pour le </string>
-    <string name="collectif_nocturne"> Collectif Nocturne </string>
-    <string name="leonardo_mondada"> par Leonardo Mondada</string>
+    <string name="app_developed_full">Développé pour le Collectif Nocturne par Leonardo Mondada</string>
     <string name="last_sync">Dernière synchronisation : %s</string>
     <string name="never">Jamais</string>
     
@@ -602,6 +612,23 @@
     <string name="sync_error_venue_sync_failed">Échec de la synchronisation des lieux</string>
     <string name="sync_error_backup_failed">Échec de la sauvegarde</string>
     
+    <!-- Sync Success Messages -->
+    <string name="sync_success_title">✓ Synchronisation réussie</string>
+    <string name="sync_success_message">La synchronisation s\'est terminée avec succès</string>
+    <string name="sync_retrying">Nouvelle tentative de synchronisation…</string>
+    
+    <!-- Sync Error Dialog Labels -->
+    <string name="sync_error_details_label">Détails de l\'erreur :</string>
+    <string name="sync_error_what_to_do">💡 Que faire :</string>
+    
+    <!-- Sync Error Advice Messages -->
+    <string name="sync_advice_rate_limit">• Attendez 1–2 minutes avant de réessayer\n• L\'application réessaiera automatiquement\n• Envisagez de réduire la fréquence de synchronisation dans les paramètres</string>
+    <string name="sync_advice_authentication">• Vérifiez votre fichier de clé de compte de service\n• Assurez-vous que la clé est téléchargée dans les Paramètres\n• Rechargez la clé si nécessaire</string>
+    <string name="sync_advice_permission">• Partagez votre feuille de calcul avec l\'email du compte de service\n• Accordez l\'accès Éditeur au compte de service\n• Vérifiez l\'email du compte dans votre fichier de clé</string>
+    <string name="sync_advice_network">• Vérifiez votre connexion internet\n• Vérifiez que le Wi-Fi ou les données mobiles sont activés\n• Réessayez quand la connexion est stable\n• Assurez-vous que le mode avion est désactivé</string>
+    <string name="sync_advice_not_found">• Vérifiez l\'ID de la feuille de calcul dans les Paramètres\n• Vérifiez que les noms des feuilles existent\n• Assurez-vous que la feuille de calcul est accessible</string>
+    <string name="sync_advice_generic">• Réessayez la synchronisation\n• Vérifiez vos paramètres Google Sheets\n• Consultez les Paramètres pour vérifier votre configuration</string>
+    
     <!-- Graph Export -->
     <string name="exporting">Exportation...</string>
     <string name="export_graph">Exporter le graphique</string>
@@ -643,4 +670,8 @@
     <string name="settings_category_animations">Animations &amp; Effets</string>
     <string name="settings_category_developer">Développeur &amp; Débogage</string>
     <string name="settings_category_maintenance">Maintenance</string>
+    
+    <!-- Easter Egg Games -->
+    <string name="easter_egg_drive_nocturne">Drive Nocturne</string>
+    <string name="easter_egg_flappy_nocturne">Flappy Nocturne</string>
 </resources>

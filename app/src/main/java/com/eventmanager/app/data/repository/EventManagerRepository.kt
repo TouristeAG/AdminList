@@ -56,6 +56,11 @@ class EventManagerRepository(
     suspend fun deleteGuest(guest: Guest) = guestDao.deleteGuest(guest)
     suspend fun deleteGuestById(id: Long) = guestDao.deleteGuestById(id)
 
+    // Batch guest operations for optimized sync
+    suspend fun insertGuestsAll(guests: List<Guest>): List<Long> = guestDao.insertGuestsAll(guests)
+    suspend fun updateGuestsAll(guests: List<Guest>) = guestDao.updateGuestsAll(guests)
+    suspend fun deleteGuestsAll(guests: List<Guest>) = guestDao.deleteGuestsAll(guests)
+
     // Volunteer-benefit guest helpers
     suspend fun getVolunteerBenefitGuests(): List<Guest> = guestDao.getVolunteerBenefitGuests()
 
@@ -95,6 +100,11 @@ class EventManagerRepository(
     suspend fun deleteVolunteerById(id: Long) = volunteerDao.deleteVolunteerById(id)
     suspend fun updateVolunteerStatus(id: Long, isActive: Boolean) = volunteerDao.updateVolunteerStatus(id, isActive)
 
+    // Batch volunteer operations for optimized sync
+    suspend fun insertVolunteersAll(volunteers: List<Volunteer>): List<Long> = volunteerDao.insertVolunteersAll(volunteers)
+    suspend fun updateVolunteersAll(volunteers: List<Volunteer>) = volunteerDao.updateVolunteersAll(volunteers)
+    suspend fun deleteVolunteersAll(volunteers: List<Volunteer>) = volunteerDao.deleteVolunteersAll(volunteers)
+
     // Job operations
     fun getAllJobs(): Flow<List<Job>> = jobDao.getAllJobs()
     fun getJobsByVolunteer(volunteerId: Long): Flow<List<Job>> = jobDao.getJobsByVolunteer(volunteerId)
@@ -106,6 +116,11 @@ class EventManagerRepository(
     suspend fun updateJob(job: Job) = jobDao.updateJob(job)
     suspend fun deleteJob(job: Job) = jobDao.deleteJob(job)
     suspend fun deleteJobById(id: Long) = jobDao.deleteJobById(id)
+
+    // Batch job operations for optimized sync
+    suspend fun insertJobsAll(jobs: List<Job>): List<Long> = jobDao.insertJobsAll(jobs)
+    suspend fun updateJobsAll(jobs: List<Job>) = jobDao.updateJobsAll(jobs)
+    suspend fun deleteJobsAll(jobs: List<Job>) = jobDao.deleteJobsAll(jobs)
 
     // Job Type Config operations
     fun getAllJobTypeConfigs(): Flow<List<JobTypeConfig>> = jobTypeConfigDao.getAllJobTypeConfigs()
@@ -120,6 +135,11 @@ class EventManagerRepository(
     fun getShiftJobTypes(): Flow<List<JobTypeConfig>> = jobTypeConfigDao.getShiftJobTypes()
     fun getOrionJobTypes(): Flow<List<JobTypeConfig>> = jobTypeConfigDao.getOrionJobTypes()
 
+    // Batch job type config operations for optimized sync
+    suspend fun insertJobTypeConfigsAll(configs: List<JobTypeConfig>): List<Long> = jobTypeConfigDao.insertJobTypeConfigsAll(configs)
+    suspend fun updateJobTypeConfigsAll(configs: List<JobTypeConfig>) = jobTypeConfigDao.updateJobTypeConfigsAll(configs)
+    suspend fun deleteJobTypeConfigsAll(configs: List<JobTypeConfig>) = jobTypeConfigDao.deleteJobTypeConfigsAll(configs)
+
     // Venue operations
     fun getAllVenues(): Flow<List<VenueEntity>> = venueDao.getAllVenues()
     fun getAllActiveVenues(): Flow<List<VenueEntity>> = venueDao.getAllActiveVenues()
@@ -131,6 +151,11 @@ class EventManagerRepository(
     suspend fun deleteVenueById(id: Long) = venueDao.deleteVenueById(id)
     suspend fun updateVenueStatus(id: Long, isActive: Boolean) = venueDao.updateVenueStatus(id, isActive)
     suspend fun clearAllVenues() = venueDao.deleteAllVenues()
+
+    // Batch venue operations for optimized sync
+    suspend fun insertVenuesAll(venues: List<VenueEntity>): List<Long> = venueDao.insertVenuesAll(venues)
+    suspend fun updateVenuesAll(venues: List<VenueEntity>) = venueDao.updateVenuesAll(venues)
+    suspend fun deleteVenuesAll(venues: List<VenueEntity>) = venueDao.deleteVenuesAll(venues)
 
     // Sync operations
     suspend fun getGuestsModifiedAfter(timestamp: Long): List<Guest> = guestDao.getGuestsModifiedAfter(timestamp)
@@ -150,8 +175,21 @@ class EventManagerRepository(
         val volunteers = getAllVolunteers().first() // Include both active and inactive volunteers
         val jobs = getAllJobs().first()
         val jobTypeConfigs = getAllActiveJobTypeConfigs().first()
+        
+        // OPTIMIZED: Use pre-computed calculation context to avoid repeated filtering
+        // This creates lookups and date ranges once, then reuses them for all volunteers
+        val ctx = BenefitCalculator.CalculationContext(jobTypeConfigs)
+        
+        // OPTIMIZED: group jobs once to avoid O(volunteers * jobs) filtering
+        val jobsByVolunteerId = jobs.groupBy { it.volunteerId }
+        
         return volunteers.map { volunteer ->
-            BenefitCalculator.calculateVolunteerBenefitStatus(volunteer, jobs, jobTypeConfigs)
+            val volunteerJobs = jobsByVolunteerId[volunteer.id] ?: emptyList()
+            BenefitCalculator.calculateWithContext(
+                volunteer = volunteer,
+                volunteerJobs = volunteerJobs,
+                ctx = ctx
+            )
         }
     }
     
@@ -241,12 +279,16 @@ class EventManagerRepository(
     suspend fun syncVolunteerBenefitsToGuestList() {
         val volunteerStatuses = getAllVolunteerBenefitStatuses()
         val currentTime = System.currentTimeMillis()
+
+        // OPTIMIZED: avoid repeated DB reads and O(n^2) scans
+        val volunteersById = getAllVolunteers().first().associateBy { it.id }
+        val statusByVolunteerId = volunteerStatuses.associateBy { it.volunteerId }
         
         // Remove expired volunteer benefits from guest list
         val expiredVolunteerGuests = guestDao.getVolunteerBenefitGuests()
         for (guest in expiredVolunteerGuests) {
             if (guest.volunteerId != null) {
-                val volunteerStatus = volunteerStatuses.find { it.volunteerId == guest.volunteerId }
+                val volunteerStatus = statusByVolunteerId[guest.volunteerId]
                 if (volunteerStatus == null || !volunteerStatus.benefits.isActive || 
                     !volunteerStatus.benefits.guestListAccess ||
                     (volunteerStatus.benefits.validUntil != null && currentTime >= volunteerStatus.benefits.validUntil)) {
@@ -264,7 +306,7 @@ class EventManagerRepository(
                 status.benefits.guestListAccess &&
                 (status.benefits.validUntil == null || currentTime < status.benefits.validUntil)) {
                 
-                val volunteer = getVolunteerById(status.volunteerId)
+                val volunteer = volunteersById[status.volunteerId]
                 if (volunteer != null) {
                     // Use actual benefit information instead of hardcoded values
                     val invitations = status.benefits.inviteCount

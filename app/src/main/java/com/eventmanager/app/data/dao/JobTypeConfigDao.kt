@@ -21,11 +21,20 @@ interface JobTypeConfigDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertJobTypeConfig(config: JobTypeConfig): Long
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertJobTypeConfigsAll(configs: List<JobTypeConfig>): List<Long>
+
     @Update
     suspend fun updateJobTypeConfig(config: JobTypeConfig)
 
+    @Update
+    suspend fun updateJobTypeConfigsAll(configs: List<JobTypeConfig>)
+
     @Delete
     suspend fun deleteJobTypeConfig(config: JobTypeConfig)
+
+    @Delete
+    suspend fun deleteJobTypeConfigsAll(configs: List<JobTypeConfig>)
 
     @Query("DELETE FROM job_type_configs WHERE id = :id")
     suspend fun deleteJobTypeConfigById(id: Long)

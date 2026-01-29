@@ -170,6 +170,25 @@ public final class GuestDao_Impl implements GuestDao {
   }
 
   @Override
+  public Object insertGuestsAll(final List<Guest> guests,
+      final Continuation<? super List<Long>> $completion) {
+    return CoroutinesRoom.execute(__db, true, new Callable<List<Long>>() {
+      @Override
+      @NonNull
+      public List<Long> call() throws Exception {
+        __db.beginTransaction();
+        try {
+          final List<Long> _result = __insertionAdapterOfGuest.insertAndReturnIdsList(guests);
+          __db.setTransactionSuccessful();
+          return _result;
+        } finally {
+          __db.endTransaction();
+        }
+      }
+    }, $completion);
+  }
+
+  @Override
   public Object deleteGuest(final Guest guest, final Continuation<? super Unit> $completion) {
     return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
       @Override
@@ -188,6 +207,25 @@ public final class GuestDao_Impl implements GuestDao {
   }
 
   @Override
+  public Object deleteGuestsAll(final List<Guest> guests,
+      final Continuation<? super Unit> $completion) {
+    return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
+      @Override
+      @NonNull
+      public Unit call() throws Exception {
+        __db.beginTransaction();
+        try {
+          __deletionAdapterOfGuest.handleMultiple(guests);
+          __db.setTransactionSuccessful();
+          return Unit.INSTANCE;
+        } finally {
+          __db.endTransaction();
+        }
+      }
+    }, $completion);
+  }
+
+  @Override
   public Object updateGuest(final Guest guest, final Continuation<? super Unit> $completion) {
     return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
       @Override
@@ -196,6 +234,25 @@ public final class GuestDao_Impl implements GuestDao {
         __db.beginTransaction();
         try {
           __updateAdapterOfGuest.handle(guest);
+          __db.setTransactionSuccessful();
+          return Unit.INSTANCE;
+        } finally {
+          __db.endTransaction();
+        }
+      }
+    }, $completion);
+  }
+
+  @Override
+  public Object updateGuestsAll(final List<Guest> guests,
+      final Continuation<? super Unit> $completion) {
+    return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
+      @Override
+      @NonNull
+      public Unit call() throws Exception {
+        __db.beginTransaction();
+        try {
+          __updateAdapterOfGuest.handleMultiple(guests);
           __db.setTransactionSuccessful();
           return Unit.INSTANCE;
         } finally {

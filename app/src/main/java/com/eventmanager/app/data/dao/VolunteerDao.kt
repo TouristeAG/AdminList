@@ -25,11 +25,20 @@ interface VolunteerDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertVolunteer(volunteer: Volunteer): Long
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertVolunteersAll(volunteers: List<Volunteer>): List<Long>
+
     @Update
     suspend fun updateVolunteer(volunteer: Volunteer)
 
+    @Update
+    suspend fun updateVolunteersAll(volunteers: List<Volunteer>)
+
     @Delete
     suspend fun deleteVolunteer(volunteer: Volunteer)
+
+    @Delete
+    suspend fun deleteVolunteersAll(volunteers: List<Volunteer>)
 
     @Query("DELETE FROM volunteers WHERE id = :id")
     suspend fun deleteVolunteerById(id: Long)

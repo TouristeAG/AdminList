@@ -863,10 +863,8 @@ class EventManagerViewModel(
                 } else {
                     println("✅ Cleared all local guests - Google Sheets is empty (all guests deleted)")
                 }
-                
-                // Refresh guest data
-                refreshGuestData()
-                // Recompute and merge volunteer benefit entries locally
+                // Recompute and merge volunteer benefit entries locally.
+            
                 recalcAndUploadVolunteerGuestList()
                 
                 // Update sync time
@@ -1610,26 +1608,36 @@ class EventManagerViewModel(
         var volunteersAdded = 0
         var volunteersUpdated = 0
         
-        // Get all jobs to calculate activity
+        // Get all jobs to calculate activity - OPTIMIZED: group once instead of filtering for each volunteer
         val allJobs = repository.getAllJobs().first()
+        val jobsByVolunteerId = VolunteerActivityManager.groupJobsByVolunteerId(allJobs)
+        
+        // OPTIMIZED: Create lookup maps for O(1) access instead of O(n) find operations
+        val localVolunteersBySheetsId = localVolunteers.filter { it.sheetsId != null }.associateBy { it.sheetsId!! }
+        val localVolunteersByName = localVolunteers.associateBy { it.name }
+        
+        // OPTIMIZED: Create sets for O(1) deletion checks instead of O(n) any operations
+        val deletedSheetsIds = deletedVolunteers.mapNotNull { it.sheetsId }.toSet()
+        val deletedIds = deletedVolunteers.mapNotNull { it.id }.toSet()
         
         for (remoteVolunteer in remoteVolunteers) {
-            // Check if this item was deleted locally
-            val isDeleted = deletedVolunteers.any { 
-                it.sheetsId == remoteVolunteer.sheetsId || it.id == remoteVolunteer.id.toString() 
-            }
+            // OPTIMIZED: Use set lookup instead of any (O(1) vs O(n))
+            val isDeleted = (remoteVolunteer.sheetsId != null && remoteVolunteer.sheetsId in deletedSheetsIds) ||
+                            (remoteVolunteer.id.toString() in deletedIds)
             
             if (isDeleted) {
                 println("Skipping deleted volunteer: ${remoteVolunteer.name}")
                 continue
             }
             
-            val localVolunteer = localVolunteers.find { it.sheetsId == remoteVolunteer.sheetsId || it.name == remoteVolunteer.name }
+            // OPTIMIZED: Use map lookup instead of find (O(1) vs O(n))
+            val localVolunteer = remoteVolunteer.sheetsId?.let { localVolunteersBySheetsId[it] }
+                ?: localVolunteersByName[remoteVolunteer.name]
             if (localVolunteer == null) {
                 // New volunteer from sheets
                 try {
-                    // Calculate activity based on job assignments
-                    val updatedVolunteer = VolunteerActivityManager.calculateActivityFromJobs(remoteVolunteer, allJobs)
+                    // Calculate activity based on job assignments - OPTIMIZED: uses map lookup
+                    val updatedVolunteer = VolunteerActivityManager.calculateActivityFromJobsMap(remoteVolunteer, jobsByVolunteerId)
                     repository.insertVolunteer(updatedVolunteer)
                     volunteersAdded++
                     println("Added new volunteer: ${remoteVolunteer.name}")
@@ -1639,8 +1647,8 @@ class EventManagerViewModel(
             } else if (remoteVolunteer.lastModified > localVolunteer.lastModified) {
                 // Remote version is newer
                 try {
-                    // Calculate activity based on job assignments
-                    val updatedVolunteer = VolunteerActivityManager.calculateActivityFromJobs(remoteVolunteer, allJobs)
+                    // Calculate activity based on job assignments - OPTIMIZED: uses map lookup
+                    val updatedVolunteer = VolunteerActivityManager.calculateActivityFromJobsMap(remoteVolunteer, jobsByVolunteerId)
                     repository.updateVolunteer(updatedVolunteer.copy(id = localVolunteer.id))
                     volunteersUpdated++
                     println("Updated volunteer: ${remoteVolunteer.name}")
@@ -1650,7 +1658,8 @@ class EventManagerViewModel(
             } else {
                 // Local version is newer or same - update activity based on jobs
                 try {
-                    val updatedVolunteer = VolunteerActivityManager.calculateActivityFromJobs(localVolunteer, allJobs)
+                    // Calculate activity based on job assignments - OPTIMIZED: uses map lookup
+                    val updatedVolunteer = VolunteerActivityManager.calculateActivityFromJobsMap(localVolunteer, jobsByVolunteerId)
                     if (updatedVolunteer.lastShiftDate != localVolunteer.lastShiftDate || 
                         updatedVolunteer.isActive != localVolunteer.isActive) {
                         repository.updateVolunteer(updatedVolunteer)
@@ -1713,26 +1722,36 @@ class EventManagerViewModel(
         var volunteersAdded = 0
         var volunteersUpdated = 0
 
-        // Get all jobs to calculate activity
+        // Get all jobs to calculate activity - OPTIMIZED: group once instead of filtering for each volunteer
         val allJobs = repository.getAllJobs().first()
+        val jobsByVolunteerId = VolunteerActivityManager.groupJobsByVolunteerId(allJobs)
+
+        // OPTIMIZED: Create lookup maps for O(1) access instead of O(n) find operations
+        val localVolunteersBySheetsId = localVolunteers.filter { it.sheetsId != null }.associateBy { it.sheetsId!! }
+        val localVolunteersByName = localVolunteers.associateBy { it.name }
+
+        // OPTIMIZED: Create sets for O(1) deletion checks instead of O(n) any operations
+        val deletedSheetsIds = deletedVolunteers.mapNotNull { it.sheetsId }.toSet()
+        val deletedIds = deletedVolunteers.mapNotNull { it.id }.toSet()
 
         for (remoteVolunteer in remoteVolunteers) {
-            // Check if this item was deleted locally
-            val isDeleted = deletedVolunteers.any {
-                it.sheetsId == remoteVolunteer.sheetsId || it.id == remoteVolunteer.id.toString()
-            }
+            // OPTIMIZED: Use set lookup instead of any (O(1) vs O(n))
+            val isDeleted = (remoteVolunteer.sheetsId != null && remoteVolunteer.sheetsId in deletedSheetsIds) ||
+                            (remoteVolunteer.id.toString() in deletedIds)
 
             if (isDeleted) {
                 println("Skipping deleted volunteer: ${remoteVolunteer.name}")
                 continue
             }
 
-            val localVolunteer = localVolunteers.find { it.sheetsId == remoteVolunteer.sheetsId || it.name == remoteVolunteer.name }
+            // OPTIMIZED: Use map lookup instead of find (O(1) vs O(n))
+            val localVolunteer = remoteVolunteer.sheetsId?.let { localVolunteersBySheetsId[it] }
+                ?: localVolunteersByName[remoteVolunteer.name]
             if (localVolunteer == null) {
                 // New volunteer from sheets
                 try {
-                    // Calculate activity based on job assignments
-                    val updatedVolunteer = VolunteerActivityManager.calculateActivityFromJobs(remoteVolunteer, allJobs)
+                    // Calculate activity based on job assignments - OPTIMIZED: uses map lookup
+                    val updatedVolunteer = VolunteerActivityManager.calculateActivityFromJobsMap(remoteVolunteer, jobsByVolunteerId)
                     repository.insertVolunteer(updatedVolunteer)
                     volunteersAdded++
                     println("Added new volunteer from sheets: ${remoteVolunteer.name}")
@@ -1742,8 +1761,8 @@ class EventManagerViewModel(
             } else {
                 // Always use remote version (sheets priority)
                 try {
-                    // Calculate activity based on job assignments
-                    val updatedVolunteer = VolunteerActivityManager.calculateActivityFromJobs(remoteVolunteer, allJobs)
+                    // Calculate activity based on job assignments - OPTIMIZED: uses map lookup
+                    val updatedVolunteer = VolunteerActivityManager.calculateActivityFromJobsMap(remoteVolunteer, jobsByVolunteerId)
                     repository.updateVolunteer(updatedVolunteer.copy(id = localVolunteer.id))
                     volunteersUpdated++
                     println("Updated volunteer from sheets: ${remoteVolunteer.name}")
@@ -2798,10 +2817,13 @@ class EventManagerViewModel(
                 
                 val updatedVolunteers = VolunteerActivityManager.updateVolunteerActivityFromJobs(volunteers, jobs)
                 
+                // OPTIMIZED: Create a map for O(1) lookup instead of O(n) find for each volunteer
+                val volunteersById = volunteers.associateBy { it.id }
+                
                 // Update volunteers whose activity has changed
                 var updatedCount = 0
                 updatedVolunteers.forEach { updatedVolunteer ->
-                    val originalVolunteer = volunteers.find { it.id == updatedVolunteer.id }
+                    val originalVolunteer = volunteersById[updatedVolunteer.id]
                     if (originalVolunteer != null && 
                         (updatedVolunteer.lastShiftDate != originalVolunteer.lastShiftDate || 
                          updatedVolunteer.isActive != originalVolunteer.isActive)) {

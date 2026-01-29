@@ -16,6 +16,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.platform.LocalContext
+import com.eventmanager.app.data.sync.SettingsManager
 import kotlin.math.sin
 import kotlin.math.cos
 import kotlin.math.PI
@@ -27,13 +29,18 @@ fun FireworksAnimation(
     enabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val settingsManager = remember { SettingsManager(context) }
+    val animationMultiplier = remember { settingsManager.getAnimationIntensityMultiplier() }
+    
     // Check if current date is Dec 31 or Jan 1
     val calendar = Calendar.getInstance()
     val month = calendar.get(Calendar.MONTH) // 0-11
     val day = calendar.get(Calendar.DAY_OF_MONTH)
     
     val isNewYearSeason = (month == Calendar.DECEMBER && day == 31) || (month == Calendar.JANUARY && day == 1)
-    val shouldShowFireworks = enabled && isNewYearSeason
+    // Also check if reduced motion is enabled - if so, don't show animation
+    val shouldShowFireworks = enabled && isNewYearSeason && animationMultiplier > 0f
     
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         if (shouldShowFireworks) {
@@ -48,12 +55,19 @@ fun FireworksAnimation(
                 val lifespan: Float // 0-1, used for opacity fade
             )
             
-            val fireworks = remember {
+            // PERFORMANCE OPTIMIZATION: Reduce burst count and particles based on performance mode
+            // Normal: 5 bursts × 60 particles = 300 total
+            // Performance Mode: 3 bursts × 30 particles = 90 total
+            val fireworks = remember(animationMultiplier) {
                 val rnd = Random(System.nanoTime())
                 val particleList = mutableListOf<FireworkParticle>()
                 
-                // Create 5 bursts at different positions
-                repeat(5) { burstIndex ->
+                // Reduce bursts and particles per burst in performance mode
+                val burstCount = if (animationMultiplier >= 1.0f) 5 else 3
+                val particlesPerBurst = if (animationMultiplier >= 1.0f) 60 else 30
+                
+                // Create bursts at different positions
+                repeat(burstCount) { _ ->
                     // Random position for each burst
                     val burstX = rnd.nextFloat() * 0.8f + 0.1f
                     val burstY = rnd.nextFloat() * 0.6f + 0.1f
@@ -69,7 +83,7 @@ fun FireworksAnimation(
                     )
                     
                     // Create particles for this burst
-                    repeat(60) { _ ->
+                    repeat(particlesPerBurst) { _ ->
                         val angle = rnd.nextFloat() * 2f * PI.toFloat()
                         val speed = rnd.nextFloat() * 3f + 1f
                         
@@ -121,7 +135,6 @@ fun FireworksAnimation(
                 fireworks.forEachIndexed { index, particle ->
                     // Determine which burst this particle belongs to based on index
                     val burstIndex = index / 60 // 60 particles per burst
-                    val particleInBurst = index % 60
                     
                     // Calculate burst start time for staggered effect
                     val burstStartTime = (burstIndex * 0.8f) // Offset each burst
@@ -149,19 +162,23 @@ fun FireworksAnimation(
                             center = Offset(x, y)
                         )
                         
-                        // Add glow effect with semi-transparent circle
-                        drawCircle(
-                            color = particle.color.copy(alpha = alpha * 0.3f),
-                            radius = particle.size * 4f,
-                            center = Offset(x, y)
-                        )
-                        
-                        // Add larger outer glow for extra brilliance
-                        drawCircle(
-                            color = particle.color.copy(alpha = alpha * 0.15f),
-                            radius = particle.size * 6f,
-                            center = Offset(x, y)
-                        )
+                        // PERFORMANCE OPTIMIZATION: Only draw glow effects when not in performance mode
+                        // This reduces draw calls by 2/3 per visible particle on older hardware
+                        if (animationMultiplier >= 1.0f) {
+                            // Add glow effect with semi-transparent circle
+                            drawCircle(
+                                color = particle.color.copy(alpha = alpha * 0.3f),
+                                radius = particle.size * 4f,
+                                center = Offset(x, y)
+                            )
+                            
+                            // Add larger outer glow for extra brilliance
+                            drawCircle(
+                                color = particle.color.copy(alpha = alpha * 0.15f),
+                                radius = particle.size * 6f,
+                                center = Offset(x, y)
+                            )
+                        }
                     }
                 }
             }

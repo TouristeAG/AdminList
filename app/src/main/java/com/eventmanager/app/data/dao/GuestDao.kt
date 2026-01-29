@@ -18,11 +18,20 @@ interface GuestDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertGuest(guest: Guest): Long
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertGuestsAll(guests: List<Guest>): List<Long>
+
     @Update
     suspend fun updateGuest(guest: Guest)
 
+    @Update
+    suspend fun updateGuestsAll(guests: List<Guest>)
+
     @Delete
     suspend fun deleteGuest(guest: Guest)
+
+    @Delete
+    suspend fun deleteGuestsAll(guests: List<Guest>)
 
     @Query("DELETE FROM guests WHERE id = :id")
     suspend fun deleteGuestById(id: Long)

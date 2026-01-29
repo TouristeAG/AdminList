@@ -124,7 +124,10 @@ fun CleanupInactiveVolunteersDialog(
                                     .heightIn(max = 200.dp),
                                 verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                items(volunteersToDelete) { volunteer ->
+                                items(
+                                    items = volunteersToDelete,
+                                    key = { volunteer -> volunteer.id }
+                                ) { volunteer ->
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
