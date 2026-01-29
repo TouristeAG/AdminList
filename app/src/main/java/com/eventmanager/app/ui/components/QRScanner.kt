@@ -791,7 +791,10 @@ fun ManualVolunteerInputDialog(
                             .height(150.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        items(volunteers.take(10)) { volunteer ->
+                        items(
+                            items = volunteers.take(10),
+                            key = { volunteer -> volunteer.id }
+                        ) { volunteer ->
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
                                 onClick = {

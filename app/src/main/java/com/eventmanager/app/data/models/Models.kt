@@ -288,6 +288,43 @@ class Converters {
 
 object BenefitCalculator {
     
+    /**
+     * Pre-computed context for efficient batch benefit calculations.
+     * This avoids repeated filtering and date computations when calculating
+     * benefits for multiple volunteers.
+     */
+    class CalculationContext(
+        jobTypeConfigs: List<JobTypeConfig>,
+        val currentTime: Long = System.currentTimeMillis(),
+        val offsetHours: Int = 0
+    ) {
+        // Pre-computed job type lookups (computed once, reused for all volunteers)
+        val shiftJobTypeNames: Set<String> = jobTypeConfigs
+            .filter { it.isShiftJob && it.isActive }
+            .map { it.name }
+            .toSet()
+        
+        val orionJobTypeNames: Set<String> = jobTypeConfigs
+            .filter { it.isOrionJob && it.isActive }
+            .map { it.name }
+            .toSet()
+        
+        val manualRewardJobTypes: Map<String, JobTypeConfig> = jobTypeConfigs
+            .filter { it.benefitSystemType == BenefitSystemType.MANUAL && it.manualRewards != null }
+            .associateBy { it.name }
+        
+        val jobTypeConfigsByName: Map<String, JobTypeConfig> = jobTypeConfigs.associateBy { it.name }
+        
+        // Pre-computed date ranges (computed once, reused for all volunteers)
+        val monthStart: Long = com.eventmanager.app.data.utils.DateTimeUtils.getStartOfMonthWithOffset(currentTime, offsetHours)
+        val monthEnd: Long = com.eventmanager.app.data.utils.DateTimeUtils.getEndOfMonthWithOffset(currentTime, offsetHours) + 1
+        
+        // Calendar values for benefit calculations
+        private val calendar = java.util.Calendar.getInstance().apply { timeInMillis = currentTime }
+        val currentMonth: Int = calendar.get(java.util.Calendar.MONTH)
+        val currentYear: Int = calendar.get(java.util.Calendar.YEAR)
+    }
+    
     fun calculateVolunteerBenefitStatus(
         volunteer: Volunteer, 
         jobs: List<Job>, 
@@ -295,12 +332,50 @@ object BenefitCalculator {
         currentTime: Long = System.currentTimeMillis(),
         offsetHours: Int = 0
     ): VolunteerBenefitStatus {
+        // NOTE: This method intentionally accepts ALL jobs for backward compatibility.
+        // For performance when computing statuses for many volunteers, prefer calling
+        // calculateVolunteerBenefitStatusFromVolunteerJobs with a pre-filtered list.
         val volunteerJobs = jobs.filter { it.volunteerId == volunteer.id }
+        return calculateVolunteerBenefitStatusFromVolunteerJobs(
+            volunteer = volunteer,
+            volunteerJobs = volunteerJobs,
+            jobTypeConfigs = jobTypeConfigs,
+            currentTime = currentTime,
+            offsetHours = offsetHours
+        )
+    }
+
+    /**
+     * Optimized variant: caller passes jobs already filtered for the volunteer.
+     * This avoids O(totalJobs) filtering per volunteer when computing many statuses.
+     */
+    fun calculateVolunteerBenefitStatusFromVolunteerJobs(
+        volunteer: Volunteer,
+        volunteerJobs: List<Job>,
+        jobTypeConfigs: List<JobTypeConfig>,
+        currentTime: Long = System.currentTimeMillis(),
+        offsetHours: Int = 0
+    ): VolunteerBenefitStatus {
+        // Create context for this calculation (pre-computes lookups and date ranges)
+        val ctx = CalculationContext(jobTypeConfigs, currentTime, offsetHours)
+        return calculateWithContext(volunteer, volunteerJobs, ctx)
+    }
+    
+    /**
+     * OPTIMIZED: Calculate benefit status using pre-computed context.
+     * Use this when calculating benefits for multiple volunteers to avoid
+     * redundant filtering and date computations.
+     */
+    fun calculateWithContext(
+        volunteer: Volunteer,
+        volunteerJobs: List<Job>,
+        ctx: CalculationContext
+    ): VolunteerBenefitStatus {
         val lastJobDate = volunteerJobs.maxOfOrNull { it.date }
-        val monthlyShifts = getMonthlyShiftCount(volunteerJobs, jobTypeConfigs, currentTime, offsetHours)
+        val monthlyShifts = getMonthlyShiftCountOptimized(volunteerJobs, ctx)
         
         // Check for manual rewards first (overrides everything)
-        val manualRewardsBenefit = calculateManualRewardsBenefit(volunteerJobs, jobTypeConfigs, currentTime)
+        val manualRewardsBenefit = calculateManualRewardsBenefitOptimized(volunteerJobs, ctx)
         
         if (manualRewardsBenefit != null) {
             // Manual rewards override all stellar benefits
@@ -312,8 +387,8 @@ object BenefitCalculator {
                 lastJobDate = lastJobDate,
                 monthlyShifts = monthlyShifts,
                 isEligibleForGalaxie = monthlyShifts >= 3,
-                isEligibleForEtoile = hasAfterMidnightShift(volunteerJobs, jobTypeConfigs, currentTime, offsetHours),
-                isEligibleForNova = hasBeforeMidnightShift(volunteerJobs, jobTypeConfigs, currentTime, offsetHours)
+                isEligibleForEtoile = hasAfterMidnightShiftOptimized(volunteerJobs, ctx),
+                isEligibleForNova = hasBeforeMidnightShiftOptimized(volunteerJobs, ctx)
             )
         }
         
@@ -321,9 +396,14 @@ object BenefitCalculator {
         val allApplicableBenefits = mutableListOf<Benefit>()
         var primaryRank: VolunteerRank? = null
         
+        // Pre-compute orion jobs once (used by both VETERAN and ORION checks)
+        val orionJobs = volunteerJobs
+            .filter { ctx.orionJobTypeNames.contains(it.jobTypeName) }
+            .sortedByDescending { it.date }
+        
         // Check for VETERAN rank
-        if (isVolunteerVeteran(volunteerJobs, jobTypeConfigs, currentTime, offsetHours)) {
-            val benefit = calculateBenefitsForRank(VolunteerRank.VETERAN, volunteerJobs, jobTypeConfigs, currentTime, offsetHours)
+        if (isVolunteerVeteranOptimized(orionJobs, ctx)) {
+            val benefit = calculateBenefitsForRankOptimized(VolunteerRank.VETERAN, volunteerJobs, orionJobs, ctx)
             if (benefit.isActive) {
                 allApplicableBenefits.add(benefit)
                 primaryRank = VolunteerRank.VETERAN
@@ -331,8 +411,8 @@ object BenefitCalculator {
         }
         
         // Check for ORION rank
-        if (isVolunteerOrion(volunteerJobs, jobTypeConfigs, currentTime, offsetHours)) {
-            val benefit = calculateBenefitsForRank(VolunteerRank.ORION, volunteerJobs, jobTypeConfigs, currentTime, offsetHours)
+        if (isVolunteerOrionOptimized(orionJobs, ctx)) {
+            val benefit = calculateBenefitsForRankOptimized(VolunteerRank.ORION, volunteerJobs, orionJobs, ctx)
             if (benefit.isActive) {
                 allApplicableBenefits.add(benefit)
                 if (primaryRank != VolunteerRank.VETERAN) primaryRank = VolunteerRank.ORION
@@ -341,7 +421,7 @@ object BenefitCalculator {
         
         // Check for GALAXIE rank
         if (monthlyShifts >= 3) {
-            val benefit = calculateBenefitsForRank(VolunteerRank.GALAXIE, volunteerJobs, jobTypeConfigs, currentTime, offsetHours)
+            val benefit = calculateBenefitsForRankOptimized(VolunteerRank.GALAXIE, volunteerJobs, orionJobs, ctx)
             if (benefit.isActive) {
                 allApplicableBenefits.add(benefit)
                 if (primaryRank == null) primaryRank = VolunteerRank.GALAXIE
@@ -349,8 +429,8 @@ object BenefitCalculator {
         }
         
         // Check for ETOILE rank
-        if (hasAfterMidnightShift(volunteerJobs, jobTypeConfigs, currentTime, offsetHours)) {
-            val benefit = calculateBenefitsForRank(VolunteerRank.ETOILE, volunteerJobs, jobTypeConfigs, currentTime, offsetHours)
+        if (hasAfterMidnightShiftOptimized(volunteerJobs, ctx)) {
+            val benefit = calculateBenefitsForRankOptimized(VolunteerRank.ETOILE, volunteerJobs, orionJobs, ctx)
             if (benefit.isActive) {
                 allApplicableBenefits.add(benefit)
                 if (primaryRank == null) primaryRank = VolunteerRank.ETOILE
@@ -358,8 +438,8 @@ object BenefitCalculator {
         }
         
         // Check for NOVA rank (lowest priority, but should still be included if applicable)
-        if (hasBeforeMidnightShift(volunteerJobs, jobTypeConfigs, currentTime, offsetHours)) {
-            val benefit = calculateBenefitsForRank(VolunteerRank.NOVA, volunteerJobs, jobTypeConfigs, currentTime, offsetHours)
+        if (hasBeforeMidnightShiftOptimized(volunteerJobs, ctx)) {
+            val benefit = calculateBenefitsForRankOptimized(VolunteerRank.NOVA, volunteerJobs, orionJobs, ctx)
             if (benefit.isActive) {
                 allApplicableBenefits.add(benefit)
                 if (primaryRank == null) primaryRank = VolunteerRank.NOVA
@@ -393,9 +473,255 @@ object BenefitCalculator {
             lastJobDate = lastJobDate,
             monthlyShifts = monthlyShifts,
             isEligibleForGalaxie = monthlyShifts >= 3,
-            isEligibleForEtoile = hasAfterMidnightShift(volunteerJobs, jobTypeConfigs, currentTime),
-            isEligibleForNova = hasBeforeMidnightShift(volunteerJobs, jobTypeConfigs, currentTime)
+            isEligibleForEtoile = hasAfterMidnightShiftOptimized(volunteerJobs, ctx),
+            isEligibleForNova = hasBeforeMidnightShiftOptimized(volunteerJobs, ctx)
         )
+    }
+    
+    // ========== OPTIMIZED HELPER METHODS ==========
+    
+    private fun getMonthlyShiftCountOptimized(jobs: List<Job>, ctx: CalculationContext): Int {
+        return jobs.count { job ->
+            job.date >= ctx.monthStart && job.date < ctx.monthEnd && ctx.shiftJobTypeNames.contains(job.jobTypeName)
+        }
+    }
+    
+    private fun hasAfterMidnightShiftOptimized(jobs: List<Job>, ctx: CalculationContext): Boolean {
+        return jobs.any { job ->
+            job.date >= ctx.monthStart && job.date < ctx.monthEnd && 
+            job.shiftTime == ShiftTime.AFTER_MIDNIGHT && 
+            ctx.shiftJobTypeNames.contains(job.jobTypeName)
+        }
+    }
+    
+    private fun hasBeforeMidnightShiftOptimized(jobs: List<Job>, ctx: CalculationContext): Boolean {
+        return jobs.any { job ->
+            job.date >= ctx.monthStart && job.date < ctx.monthEnd && 
+            job.shiftTime == ShiftTime.BEFORE_MIDNIGHT && 
+            ctx.shiftJobTypeNames.contains(job.jobTypeName)
+        }
+    }
+    
+    private fun isVolunteerVeteranOptimized(orionJobs: List<Job>, ctx: CalculationContext): Boolean {
+        if (orionJobs.isNotEmpty()) {
+            val orionStartDate = orionJobs.first().date
+            val oneYearAfterOrion = orionStartDate + (365L * 24 * 60 * 60 * 1000)
+            val twoYearsAfterOrion = orionStartDate + (2L * 365L * 24 * 60 * 60 * 1000)
+            return ctx.currentTime >= oneYearAfterOrion && ctx.currentTime < twoYearsAfterOrion
+        }
+        return false
+    }
+    
+    private fun isVolunteerOrionOptimized(orionJobs: List<Job>, ctx: CalculationContext): Boolean {
+        if (orionJobs.isNotEmpty()) {
+            val orionStartDate = orionJobs.first().date
+            val oneYearAfterOrion = orionStartDate + (365L * 24 * 60 * 60 * 1000)
+            return ctx.currentTime >= orionStartDate && ctx.currentTime < oneYearAfterOrion
+        }
+        return false
+    }
+    
+    private fun calculateManualRewardsBenefitOptimized(jobs: List<Job>, ctx: CalculationContext): Benefit? {
+        // Find the most recent job with manual rewards using pre-computed lookup
+        val manualRewardJobs = jobs.filter { job ->
+            ctx.manualRewardJobTypes.containsKey(job.jobTypeName)
+        }
+        
+        if (manualRewardJobs.isEmpty()) {
+            return null
+        }
+        
+        val mostRecentJob = manualRewardJobs.maxByOrNull { it.date } ?: return null
+        val jobTypeConfig = ctx.manualRewardJobTypes[mostRecentJob.jobTypeName]
+        val manualRewards = jobTypeConfig?.manualRewards ?: return null
+        
+        // Calculate valid until based on duration
+        val validUntil = mostRecentJob.date + (manualRewards.durationDays * 24L * 60 * 60 * 1000)
+        val isActive = ctx.currentTime <= validUntil
+        
+        // Build description
+        val descriptionParts = mutableListOf<String>()
+        if (manualRewards.freeEntry) descriptionParts.add("Free entry")
+        if (manualRewards.invites > 0) descriptionParts.add("${manualRewards.invites} invites")
+        if (manualRewards.freeDrinks > 0) descriptionParts.add("${manualRewards.freeDrinks} free drinks")
+        if (manualRewards.barDiscountPercentage > 0) descriptionParts.add("${manualRewards.barDiscountPercentage}% bar discount")
+        if (manualRewards.otherNotes.isNotEmpty()) descriptionParts.add(manualRewards.otherNotes)
+        
+        val description = if (descriptionParts.isNotEmpty()) {
+            "Manual rewards: ${descriptionParts.joinToString(", ")} (${manualRewards.durationDays} days)"
+        } else {
+            "Manual rewards (${manualRewards.durationDays} days)"
+        }
+        
+        return Benefit(
+            rank = VolunteerRank.SPECIAL,
+            description = description,
+            freeEntry = manualRewards.freeEntry,
+            friendInvitation = manualRewards.invites > 0,
+            inviteCount = manualRewards.invites,
+            drinkTokens = manualRewards.freeDrinks,
+            barDiscount = manualRewards.barDiscountPercentage,
+            guestListAccess = manualRewards.freeEntry || manualRewards.invites > 0,
+            extraordinaryBenefits = false,
+            validUntil = validUntil,
+            isActive = isActive
+        )
+    }
+    
+    private fun calculateBenefitsForRankOptimized(
+        rank: VolunteerRank?, 
+        jobs: List<Job>, 
+        orionJobs: List<Job>,
+        ctx: CalculationContext
+    ): Benefit {
+        return when (rank) {
+            VolunteerRank.NOVA -> {
+                val lastNovaShift = jobs
+                    .filter { it.shiftTime == ShiftTime.BEFORE_MIDNIGHT }
+                    .maxByOrNull { it.date }
+                val endOfDay = if (lastNovaShift != null) {
+                    com.eventmanager.app.data.utils.DateTimeUtils.getEndOfDayWithOffset(lastNovaShift.date, ctx.offsetHours).timeInMillis
+                } else null
+                Benefit(
+                    rank = rank,
+                    description = "Free entry + 1 guest for the same-night event; 2 drink tokens; 50% bar discount (same night)",
+                    freeEntry = true,
+                    friendInvitation = true,
+                    inviteCount = 1,
+                    drinkTokens = 2,
+                    barDiscount = 50,
+                    guestListAccess = true,
+                    validUntil = endOfDay,
+                    isActive = endOfDay?.let { ctx.currentTime <= it } ?: false
+                )
+            }
+            
+            VolunteerRank.ETOILE -> {
+                val lastEtoileShift = jobs
+                    .filter { it.shiftTime == ShiftTime.AFTER_MIDNIGHT && ctx.shiftJobTypeNames.contains(it.jobTypeName) }
+                    .maxByOrNull { it.date }
+                
+                val validUntil = if (lastEtoileShift != null) {
+                    lastEtoileShift.date + (31L * 24 * 60 * 60 * 1000)
+                } else {
+                    ctx.currentTime + (31L * 24 * 60 * 60 * 1000)
+                }
+                
+                val isActive = ctx.currentTime <= validUntil
+                
+                Benefit(
+                    rank = rank,
+                    description = "Free entry (same night); plus within 31 days: free entry + 1 guest for another event",
+                    freeEntry = true,
+                    friendInvitation = true,
+                    inviteCount = 1,
+                    barDiscount = 0,
+                    guestListAccess = true,
+                    validUntil = validUntil,
+                    isActive = isActive
+                )
+            }
+            
+            VolunteerRank.GALAXIE -> {
+                val nextMonthCalendar = java.util.Calendar.getInstance()
+                nextMonthCalendar.set(ctx.currentYear, ctx.currentMonth + 1, 1, 0, 0, 0)
+                nextMonthCalendar.set(java.util.Calendar.MILLISECOND, 0)
+                val validUntil = nextMonthCalendar.timeInMillis
+                Benefit(
+                    rank = rank,
+                    description = "Free entry + 50% bar discount for all events this month",
+                    freeEntry = true,
+                    friendInvitation = false,
+                    inviteCount = 0,
+                    barDiscount = 50,
+                    guestListAccess = true,
+                    validUntil = validUntil,
+                    isActive = ctx.currentTime < validUntil
+                )
+            }
+            
+            VolunteerRank.ORION -> {
+                val validUntil = if (orionJobs.isNotEmpty()) {
+                    val orionStartDate = orionJobs.first().date
+                    orionStartDate + (365L * 24 * 60 * 60 * 1000)
+                } else {
+                    val nextYearCalendar = java.util.Calendar.getInstance()
+                    nextYearCalendar.set(ctx.currentYear + 1, ctx.currentMonth, 1, 0, 0, 0)
+                    nextYearCalendar.set(java.util.Calendar.MILLISECOND, 0)
+                    nextYearCalendar.timeInMillis
+                }
+                
+                Benefit(
+                    rank = rank,
+                    description = "1 guest per event; 50% bar discount; partner benefits (1 year from ORION start)",
+                    freeEntry = true,
+                    friendInvitation = true,
+                    inviteCount = 1,
+                    barDiscount = 50,
+                    guestListAccess = true,
+                    extraordinaryBenefits = true,
+                    validUntil = validUntil,
+                    isActive = ctx.currentTime < validUntil
+                )
+            }
+            
+            VolunteerRank.VETERAN -> {
+                val validUntil = if (orionJobs.isNotEmpty()) {
+                    val orionStartDate = orionJobs.first().date
+                    orionStartDate + (2L * 365L * 24 * 60 * 60 * 1000)
+                } else {
+                    val nextYearCalendar = java.util.Calendar.getInstance()
+                    nextYearCalendar.set(ctx.currentYear + 1, ctx.currentMonth, 1, 0, 0, 0)
+                    nextYearCalendar.set(java.util.Calendar.MILLISECOND, 0)
+                    nextYearCalendar.timeInMillis
+                }
+                
+                Benefit(
+                    rank = rank,
+                    description = "1 guest per event; 50% bar discount; partner benefits (1 year after ORION)",
+                    freeEntry = true,
+                    friendInvitation = true,
+                    inviteCount = 1,
+                    barDiscount = 50,
+                    guestListAccess = true,
+                    extraordinaryBenefits = true,
+                    validUntil = validUntil,
+                    isActive = ctx.currentTime < validUntil
+                )
+            }
+            
+            VolunteerRank.SPECIAL -> {
+                Benefit(
+                    rank = rank,
+                    description = "Special rank - should not appear in stellar benefits",
+                    freeEntry = false,
+                    friendInvitation = false,
+                    inviteCount = 0,
+                    drinkTokens = 0,
+                    barDiscount = 0,
+                    guestListAccess = false,
+                    extraordinaryBenefits = false,
+                    validUntil = null,
+                    isActive = false
+                )
+            }
+            
+            null -> {
+                Benefit(
+                    rank = null,
+                    description = "No benefits - no rank earned",
+                    freeEntry = false,
+                    friendInvitation = false,
+                    inviteCount = 0,
+                    drinkTokens = 0,
+                    barDiscount = 0,
+                    guestListAccess = false,
+                    extraordinaryBenefits = false,
+                    validUntil = null,
+                    isActive = false
+                )
+            }
+        }
     }
     
     private fun determineCurrentRank(volunteer: Volunteer, jobs: List<Job>, jobTypeConfigs: List<JobTypeConfig>, currentTime: Long): VolunteerRank? {
@@ -820,6 +1146,9 @@ object BenefitCalculator {
     /**
      * Calculate total number of free drinks available for all active volunteers
      * based on their current volunteer benefit status
+     * 
+     * OPTIMIZED: Uses pre-computed context and pre-grouped jobs to avoid
+     * O(volunteers * jobs) complexity
      */
     fun calculateTotalFreeDrinks(
         volunteers: List<Volunteer>,
@@ -827,22 +1156,21 @@ object BenefitCalculator {
         jobTypeConfigs: List<JobTypeConfig>,
         currentTime: Long = System.currentTimeMillis()
     ): Int {
+        // OPTIMIZED: Create calculation context once for all volunteers
+        val ctx = CalculationContext(jobTypeConfigs, currentTime)
+        
+        // OPTIMIZED: Pre-group jobs by volunteer ID once
+        val jobsByVolunteerId = jobs.groupBy { it.volunteerId }
+        
         return volunteers.sumOf { volunteer ->
-            // Calculate benefit status for each volunteer
-            val benefitStatus = calculateVolunteerBenefitStatus(volunteer, jobs, jobTypeConfigs, currentTime)
+            // Get pre-filtered jobs for this volunteer
+            val volunteerJobs = jobsByVolunteerId[volunteer.id] ?: emptyList()
             
-            // Sum up drink tokens from:
-            // 1. Primary aggregated benefit
-            val primaryDrinks = if (benefitStatus.benefits.isActive) benefitStatus.benefits.drinkTokens else 0
+            // Calculate benefit status using optimized context
+            val benefitStatus = calculateWithContext(volunteer, volunteerJobs, ctx)
             
-            // 2. All active benefits (from activeBenefits list)
-            val activeBenefitsDrinks = benefitStatus.activeBenefits.sumOf { benefit ->
-                if (benefit.isActive) benefit.drinkTokens else 0
-            }
-            
-            // Return the maximum between primary and active benefits sum to avoid double counting
-            // The aggregated benefit already includes all active benefits summed up
-            primaryDrinks
+            // Sum up drink tokens from primary aggregated benefit
+            if (benefitStatus.benefits.isActive) benefitStatus.benefits.drinkTokens else 0
         }
     }
 }

@@ -380,6 +380,7 @@
     <string name="animated_background_title">Animated Background</string>
     <string name="app_cache_cleared">App data cache cleared. Settings and keys were kept.</string>
     <string name="app_designed_for">Designed for Collectif Nocturne venues</string>
+    <string name="app_developed_full">Developed for the Collectif Nocturne by Leonardo Mondada</string>
     <string name="app_icon_auto_adapt_description">Automatically switch between light and dark icons based on your system theme</string>
     <string name="app_icon_auto_adapt_enabled">Auto-adapt enabled. Icon will update based on system theme.</string>
     <string name="app_icon_auto_adapt_title">Auto-Adapt Icon Based on System Theme</string>
@@ -426,6 +427,7 @@
     <string name="camera_permission_required">Camera permission is required to scan QR codes</string>
     <string name="camera_permission_title">Camera permission required</string>
     <string name="cancel">Cancel</string>
+    <string name="change_update_sources">Change update sources</string>
     <string name="check_for_updates">Check for updates</string>
     <string name="checking_for_updates_message">Contacting update server…</string>
     <string name="checking_for_updates_title">Checking for updates</string>
@@ -436,7 +438,6 @@
     <string name="close">Close</string>
     <string name="close_drawer">"Close navigation menu"</string>
     <string name="close_sheet">"Close sheet"</string>
-    <string name="collectif_nocturne"> Collectif Nocturne </string>
     <string name="color_theme_description">Choose a color theme for devices that don\'t support dynamic colors</string>
     <string name="color_theme_feminist_violet">Feminist Violet</string>
     <string name="color_theme_neutral_green">Neutral Green</string>
@@ -493,7 +494,6 @@
     <string name="delete_guest">Delete guest</string>
     <string name="delete_volunteer_button">Delete Volunteer</string>
     <string formatted="false" name="delete_volunteers">Delete %d Volunteer%s</string>
-    <string name="developed_by">Developed for the </string>
     <string name="download_complete">Download complete</string>
     <string name="download_error_message">Could not download update: %s</string>
     <string name="download_error_title">Download failed</string>
@@ -501,6 +501,8 @@
     <string name="downloading_update">Downloading update…</string>
     <string name="drink_tokens">🍺 %d Drink Tokens</string>
     <string name="dropdown_menu">"Dropdown menu"</string>
+    <string name="easter_egg_drive_nocturne">Nocturnal Drive</string>
+    <string name="easter_egg_flappy_nocturne">Nocturnal Flappy</string>
     <string name="edit">Edit</string>
     <string name="edit_guest">Edit Guest</string>
     <string name="edit_guest_details">Edit Guest Details</string>
@@ -594,9 +596,12 @@
     <string name="jobs_this_month">Jobs This Month</string>
     <string name="just_now">Just now</string>
     <string name="key_file_found">Key file found</string>
+    <string name="language_chinese">繁體中文</string>
+    <string name="language_chinese_simplified">简体中文</string>
     <string name="language_description">Select your preferred language</string>
     <string name="language_english">English</string>
     <string name="language_french">Français</string>
+    <string name="language_spanish">Español</string>
     <string name="language_title">Language</string>
     <string name="large_screen_experience">Enhanced experience for large screens</string>
     <string name="last_name_abbreviation">Last Name Abbreviation</string>
@@ -611,7 +616,6 @@
     <string name="latest_job_tablet">Latest Job: %s</string>
     <string name="latest_volunteer_phone">Volunteer: %s</string>
     <string name="latest_volunteer_tablet">Latest Volunteer: %s</string>
-    <string name="leonardo_mondada"> by Leonardo Mondada</string>
     <string name="library_zxingandroidembedded_author" translatable="false">JourneyApps</string>
     <string name="library_zxingandroidembedded_authorWebsite" translatable="false">https://journeyapps.com/</string>
     <string name="library_zxingandroidembedded_isOpenSource" translatable="false">true</string>
@@ -775,6 +779,8 @@
     <string name="scroll_behavior_full_page_title">Scroll Whole Page</string>
     <string name="scroll_behavior_list_only_description">Only the list scrolls. The top actions (add, filters, search) stay visible at the top.</string>
     <string name="scroll_behavior_list_only_title">Keep Header Fixed</string>
+    <string name="scroll_behavior_sticky_filters_description">The filters bar stays fixed at the top once it reaches the top of the screen, while the title and add button scroll away.</string>
+    <string name="scroll_behavior_sticky_filters_option">Keep filters visible when scrolling</string>
     <string name="scroll_behavior_title">Scroll Behavior for Manager Pages</string>
     <string name="search_guests_placeholder">Search guests by name...</string>
     <string name="search_menu_title">Search</string>
@@ -852,10 +858,17 @@
     <string name="step_9_description">Enter the Spreadsheet ID and sheet names in the settings above.</string>
     <string name="step_9_title">Configure App Settings</string>
     <string name="switch_role">Switch</string>
+    <string name="sync_advice_authentication">• Check your service account key file\n• Verify the key is uploaded in Settings\n• Re-upload the key if needed</string>
+    <string name="sync_advice_generic">• Try the sync again\n• Check your Google Sheets settings\n• Visit Settings to verify your configuration</string>
+    <string name="sync_advice_network">• Check your internet connection\n• Verify Wi-Fi or mobile data is enabled\n• Try again when connection is stable\n• Make sure you\'re not in airplane mode</string>
+    <string name="sync_advice_not_found">• Check the Spreadsheet ID in Settings\n• Verify the sheet names exist\n• Ensure the spreadsheet is accessible</string>
+    <string name="sync_advice_permission">• Share your spreadsheet with the service account email\n• Grant Editor access to the service account\n• Check the account email in your service key file</string>
+    <string name="sync_advice_rate_limit">• Wait 1–2 minutes before retrying\n• The app will automatically retry with backoff\n• Consider reducing sync frequency in settings</string>
     <string name="sync_config_title">Sync Configuration</string>
     <string name="sync_error_authentication">Authentication failed. Please check your Google Sheets configuration.</string>
     <string name="sync_error_backup_failed">Backup failed</string>
     <string name="sync_error_details">Error: %s</string>
+    <string name="sync_error_details_label">Error Details:</string>
     <string name="sync_error_device_time_message">Your device\'s time or date is incorrect. Google Sheets API requires accurate time synchronization to work properly.</string>
     <string name="sync_error_device_time_open_settings">Open Settings</string>
     <string name="sync_error_device_time_solution">How to fix:\n\n1. Go to Settings\n2. Look for \"Date &amp; Time\" or \"System\"\n3. Enable \"Automatic date &amp; time\" or \"Set time automatically\"\n4. If not available, manually set the correct date and time\n5. Restart the app and try syncing again\n\nCommon on older tablets - please check your device settings!</string>
@@ -880,12 +893,16 @@
     <string name="sync_error_unknown">An unknown error occurred. Please try again later.</string>
     <string name="sync_error_venue_sync_failed">Venue sync failed</string>
     <string name="sync_error_volunteer_sync_failed">Volunteer sync failed</string>
+    <string name="sync_error_what_to_do">💡 What to do:</string>
     <string name="sync_interval_hint">How often to sync with Google Sheets (1-60 minutes)</string>
     <string name="sync_interval_label">Sync Interval (minutes)</string>
+    <string name="sync_retrying">Retrying synchronization…</string>
     <string name="sync_status_configured">Google Sheets is configured and ready for sync</string>
     <string name="sync_status_dialog_title">Synchronisation Status</string>
     <string name="sync_status_error">Error testing sync status: %s</string>
     <string name="sync_status_not_configured">Google Sheets is not configured. Please check your settings.</string>
+    <string name="sync_success_message">Synchronization completed successfully</string>
+    <string name="sync_success_title">✓ Sync Successful</string>
     <string name="synced_days_ago">%dd ago</string>
     <string name="synced_hours_ago">%dh ago</string>
     <string name="synced_minutes_ago">%dm ago</string>
@@ -934,6 +951,12 @@
     <string name="update_job">Update Job</string>
     <string name="update_now">Update now</string>
     <string name="update_required_message">A newer version of this app is required to continue. Please update to the latest version.</string>
+    <string name="update_sources_custom_url">Custom URL</string>
+    <string name="update_sources_github_label">GitHub Manifest URL</string>
+    <string name="update_sources_reset">Reset to default</string>
+    <string name="update_sources_store_label">App Store URL (Fallback)</string>
+    <string name="update_sources_title">Update Sources</string>
+    <string name="update_sources_warning">The GitHub URL must point to a valid version.json file for update checks to work. Only modify these settings if you know what you are doing.</string>
     <string name="update_venue">Update Venue</string>
     <string name="update_volunteer">Update Volunteer</string>
     <string name="upload_failed">Upload failed: %s</string>

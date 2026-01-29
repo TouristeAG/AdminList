@@ -210,6 +210,25 @@ public final class VolunteerDao_Impl implements VolunteerDao {
   }
 
   @Override
+  public Object insertVolunteersAll(final List<Volunteer> volunteers,
+      final Continuation<? super List<Long>> $completion) {
+    return CoroutinesRoom.execute(__db, true, new Callable<List<Long>>() {
+      @Override
+      @NonNull
+      public List<Long> call() throws Exception {
+        __db.beginTransaction();
+        try {
+          final List<Long> _result = __insertionAdapterOfVolunteer.insertAndReturnIdsList(volunteers);
+          __db.setTransactionSuccessful();
+          return _result;
+        } finally {
+          __db.endTransaction();
+        }
+      }
+    }, $completion);
+  }
+
+  @Override
   public Object deleteVolunteer(final Volunteer volunteer,
       final Continuation<? super Unit> $completion) {
     return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
@@ -229,6 +248,25 @@ public final class VolunteerDao_Impl implements VolunteerDao {
   }
 
   @Override
+  public Object deleteVolunteersAll(final List<Volunteer> volunteers,
+      final Continuation<? super Unit> $completion) {
+    return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
+      @Override
+      @NonNull
+      public Unit call() throws Exception {
+        __db.beginTransaction();
+        try {
+          __deletionAdapterOfVolunteer.handleMultiple(volunteers);
+          __db.setTransactionSuccessful();
+          return Unit.INSTANCE;
+        } finally {
+          __db.endTransaction();
+        }
+      }
+    }, $completion);
+  }
+
+  @Override
   public Object updateVolunteer(final Volunteer volunteer,
       final Continuation<? super Unit> $completion) {
     return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
@@ -238,6 +276,25 @@ public final class VolunteerDao_Impl implements VolunteerDao {
         __db.beginTransaction();
         try {
           __updateAdapterOfVolunteer.handle(volunteer);
+          __db.setTransactionSuccessful();
+          return Unit.INSTANCE;
+        } finally {
+          __db.endTransaction();
+        }
+      }
+    }, $completion);
+  }
+
+  @Override
+  public Object updateVolunteersAll(final List<Volunteer> volunteers,
+      final Continuation<? super Unit> $completion) {
+    return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
+      @Override
+      @NonNull
+      public Unit call() throws Exception {
+        __db.beginTransaction();
+        try {
+          __updateAdapterOfVolunteer.handleMultiple(volunteers);
           __db.setTransactionSuccessful();
           return Unit.INSTANCE;
         } finally {

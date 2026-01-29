@@ -3,6 +3,8 @@
 
 package com.eventmanager.app.ui.screens
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -23,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.eventmanager.app.data.models.*
+import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.ui.components.SearchBarWithFilter
 import com.eventmanager.app.ui.utils.*
 import com.eventmanager.app.R
@@ -37,11 +40,13 @@ fun getRankDisplayName(rank: VolunteerRank?): String {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun BenefitsScreen(
     volunteers: List<Volunteer>,
     jobs: List<Job> = emptyList(),
-    jobTypeConfigs: List<JobTypeConfig> = emptyList()
+    jobTypeConfigs: List<JobTypeConfig> = emptyList(),
+    scrollBehavior: String = SettingsManager.FULL_SCROLL
 ) {
     val context = LocalContext.current
     val settingsManager = remember { com.eventmanager.app.data.sync.SettingsManager(context) }
@@ -60,173 +65,503 @@ fun BenefitsScreen(
     val responsivePadding = getResponsivePadding()
     val responsiveSpacing = getResponsiveSpacing()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(responsivePadding)
-    ) {
-        // Header
-        Text(
-            text = if (isCompact) context.getString(R.string.benefits_title) else context.getString(R.string.volunteer_benefits_overview),
-            style = getResponsiveTypography(),
-            fontWeight = FontWeight.Bold
-        )
-        
-        Spacer(modifier = Modifier.height(if (isCompact) 4.dp else 8.dp))
-        
-        if (!isCompact) {
-            Text(
-                text = context.getString(R.string.benefits_description),
-                style = getResponsiveBodyTypography(),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+    // Memoize filter options to avoid recomputing on every recomposition
+    val filterOptions = remember { VolunteerRank.values().map { it.name } }
+
+    // Memoize filtered volunteer benefits to avoid recalculating on every recomposition
+    val filteredVolunteerBenefits = remember(volunteerBenefits, searchText, selectedFilter) {
+        val lowerSearchText = searchText.lowercase()
+        volunteerBenefits.filter { (volunteer, status) ->
+            val matchesSearch = searchText.isEmpty() || 
+                volunteer.name.lowercase().contains(lowerSearchText) ||
+                volunteer.email.lowercase().contains(lowerSearchText) ||
+                volunteer.lastNameAbbreviation.lowercase().contains(lowerSearchText)
+            val matchesFilter = selectedFilter?.let { filter ->
+                status.rank?.name == filter
+            } ?: true
+            matchesSearch && matchesFilter
         }
-        
-        Spacer(modifier = Modifier.height(responsiveSpacing))
-        
-        // Search and Filter Section
-        SearchBarWithFilter(
-            searchText = searchText,
-            onSearchTextChange = { searchText = it },
-            placeholder = context.getString(R.string.search_volunteers_benefits_placeholder),
-            filterOptions = VolunteerRank.values().map { it.name },
-            selectedFilter = selectedFilter,
-            onFilterChange = { selectedFilter = it }
-        )
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        // Memoize filtered volunteer benefits to avoid recalculating on every recomposition
-        val filteredVolunteerBenefits = remember(volunteerBenefits, searchText, selectedFilter) {
-            val lowerSearchText = searchText.lowercase()
-            volunteerBenefits.filter { (volunteer, status) ->
-                val matchesSearch = searchText.isEmpty() || 
-                    volunteer.name.lowercase().contains(lowerSearchText) ||
-                    volunteer.email.lowercase().contains(lowerSearchText) ||
-                    volunteer.lastNameAbbreviation.lowercase().contains(lowerSearchText)
-                val matchesFilter = selectedFilter?.let { filter ->
-                    status.rank?.name == filter
-                } ?: true
-                matchesSearch && matchesFilter
+    }
+    
+    // Memoize statistics to avoid recounting on every recomposition (used in all scrollBehavior branches)
+    val (activeBenefitsCount, highRankCount) = remember(filteredVolunteerBenefits) {
+        var active = 0
+        var highRank = 0
+        filteredVolunteerBenefits.forEach { (volunteer, status) ->
+            if (status.benefits.isActive) active++
+            if (volunteer.currentRank == VolunteerRank.ORION || volunteer.currentRank == VolunteerRank.VETERAN) highRank++
+        }
+        active to highRank
+    }
+
+    when (scrollBehavior) {
+        SettingsManager.HEADER_PINNED -> {
+            // Header fixed, only list scrolls
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(responsivePadding)
+            ) {
+            // Header
+            Text(
+                text = if (isCompact) context.getString(R.string.benefits_title) else context.getString(R.string.volunteer_benefits_overview),
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold
+            )
+            
+            Spacer(modifier = Modifier.height(if (isCompact) 4.dp else 8.dp))
+            
+            if (!isCompact) {
+                Text(
+                    text = context.getString(R.string.benefits_description),
+                    style = getResponsiveBodyTypography(),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(responsiveSpacing))
+            
+            // Search and Filter Section
+            SearchBarWithFilter(
+                searchText = searchText,
+                onSearchTextChange = { searchText = it },
+                placeholder = context.getString(R.string.search_volunteers_benefits_placeholder),
+                filterOptions = filterOptions,
+                selectedFilter = selectedFilter,
+                onFilterChange = { selectedFilter = it }
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Statistics (using memoized counts)
+            if (isCompact) {
+                // Stack vertically on phones
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(responsiveSpacing)
+                ) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        elevation = CardDefaults.cardElevation(defaultElevation = getResponsiveCardElevation())
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(getResponsiveCardPadding()),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = activeBenefitsCount.toString(),
+                                style = getResponsiveTypography(),
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Active Benefits",
+                                style = getResponsiveBodyTypography(),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        elevation = CardDefaults.cardElevation(defaultElevation = getResponsiveCardElevation())
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(getResponsiveCardPadding()),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = highRankCount.toString(),
+                                style = getResponsiveTypography(),
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = context.getString(R.string.high_rank),
+                                style = getResponsiveBodyTypography(),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            } else {
+                // Side by side on tablets
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(responsiveSpacing)
+                ) {
+                    Card(
+                        modifier = Modifier.weight(1f),
+                        elevation = CardDefaults.cardElevation(defaultElevation = getResponsiveCardElevation())
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(getResponsiveCardPadding()),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = activeBenefitsCount.toString(),
+                                style = getResponsiveTypography(),
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Active Benefits",
+                                style = getResponsiveBodyTypography(),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    
+                    Card(
+                        modifier = Modifier.weight(1f),
+                        elevation = CardDefaults.cardElevation(defaultElevation = getResponsiveCardElevation())
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(getResponsiveCardPadding()),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = highRankCount.toString(),
+                                style = getResponsiveTypography(),
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = context.getString(R.string.high_rank),
+                                style = getResponsiveBodyTypography(),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(responsiveSpacing))
+            
+            // Benefits list - Use LazyColumn for lazy loading and better performance
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(responsiveSpacing),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            ) {
+                items(
+                    items = filteredVolunteerBenefits,
+                    key = { (volunteer, _) -> volunteer.id }
+                ) { (volunteer, status) ->
+                    BenefitCard(volunteer = volunteer, status = status)
+                }
+            }
             }
         }
-        
-        // Statistics
-        if (isCompact) {
-            // Stack vertically on phones
-            Column(
+        SettingsManager.STICKY_FILTERS -> {
+            // Page scrolls but filters become sticky at the top
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(responsivePadding),
                 verticalArrangement = Arrangement.spacedBy(responsiveSpacing)
             ) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    elevation = CardDefaults.cardElevation(defaultElevation = getResponsiveCardElevation())
-                ) {
-                    Column(
-                        modifier = Modifier.padding(getResponsiveCardPadding()),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
+                // Header section (scrolls away)
+                item {
+                    Text(
+                        text = if (isCompact) context.getString(R.string.benefits_title) else context.getString(R.string.volunteer_benefits_overview),
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(if (isCompact) 4.dp else 8.dp))
+                }
+
+                if (!isCompact) {
+                    item {
                         Text(
-                            text = filteredVolunteerBenefits.count { (_, status) -> status.benefits.isActive }.toString(),
-                            style = getResponsiveTypography(),
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "Active Benefits",
+                            text = context.getString(R.string.benefits_description),
                             style = getResponsiveBodyTypography(),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(responsiveSpacing))
+                }
+
+                // Sticky filter section - becomes pinned when scrolled to top
+                stickyHeader {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surface)
+                            .padding(bottom = 8.dp)
+                    ) {
+                        SearchBarWithFilter(
+                            searchText = searchText,
+                            onSearchTextChange = { searchText = it },
+                            placeholder = context.getString(R.string.search_volunteers_benefits_placeholder),
+                            filterOptions = filterOptions,
+                            selectedFilter = selectedFilter,
+                            onFilterChange = { selectedFilter = it }
                         )
                     }
                 }
                 
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    elevation = CardDefaults.cardElevation(defaultElevation = getResponsiveCardElevation())
-                ) {
-                    Column(
-                        modifier = Modifier.padding(getResponsiveCardPadding()),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = filteredVolunteerBenefits.count { (volunteer, _) -> 
-                                volunteer.currentRank == VolunteerRank.ORION || volunteer.currentRank == VolunteerRank.VETERAN 
-                            }.toString(),
-                            style = getResponsiveTypography(),
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = context.getString(R.string.high_rank),
-                            style = getResponsiveBodyTypography(),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                // Statistics section - scrolls with the list (using memoized counts)
+                item {
+                    if (isCompact) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(responsiveSpacing)
+                        ) {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                elevation = CardDefaults.cardElevation(defaultElevation = getResponsiveCardElevation())
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(getResponsiveCardPadding()),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = activeBenefitsCount.toString(),
+                                        style = getResponsiveTypography(),
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = "Active Benefits",
+                                        style = getResponsiveBodyTypography(),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                elevation = CardDefaults.cardElevation(defaultElevation = getResponsiveCardElevation())
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(getResponsiveCardPadding()),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = highRankCount.toString(),
+                                        style = getResponsiveTypography(),
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = context.getString(R.string.high_rank),
+                                        style = getResponsiveBodyTypography(),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(responsiveSpacing)
+                        ) {
+                            Card(
+                                modifier = Modifier.weight(1f),
+                                elevation = CardDefaults.cardElevation(defaultElevation = getResponsiveCardElevation())
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(getResponsiveCardPadding()),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = activeBenefitsCount.toString(),
+                                        style = getResponsiveTypography(),
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = "Active Benefits",
+                                        style = getResponsiveBodyTypography(),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            
+                            Card(
+                                modifier = Modifier.weight(1f),
+                                elevation = CardDefaults.cardElevation(defaultElevation = getResponsiveCardElevation())
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(getResponsiveCardPadding()),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = highRankCount.toString(),
+                                        style = getResponsiveTypography(),
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = context.getString(R.string.high_rank),
+                                        style = getResponsiveBodyTypography(),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
-            }
-        } else {
-            // Side by side on tablets
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(responsiveSpacing)
-            ) {
-                Card(
-                    modifier = Modifier.weight(1f),
-                    elevation = CardDefaults.cardElevation(defaultElevation = getResponsiveCardElevation())
-                ) {
-                    Column(
-                        modifier = Modifier.padding(getResponsiveCardPadding()),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = filteredVolunteerBenefits.count { (_, status) -> status.benefits.isActive }.toString(),
-                            style = getResponsiveTypography(),
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "Active Benefits",
-                            style = getResponsiveBodyTypography(),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-                
-                Card(
-                    modifier = Modifier.weight(1f),
-                    elevation = CardDefaults.cardElevation(defaultElevation = getResponsiveCardElevation())
-                ) {
-                    Column(
-                        modifier = Modifier.padding(getResponsiveCardPadding()),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = filteredVolunteerBenefits.count { (volunteer, _) -> 
-                                volunteer.currentRank == VolunteerRank.ORION || volunteer.currentRank == VolunteerRank.VETERAN 
-                            }.toString(),
-                            style = getResponsiveTypography(),
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = context.getString(R.string.high_rank),
-                            style = getResponsiveBodyTypography(),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+
+                items(
+                    items = filteredVolunteerBenefits,
+                    key = { (volunteer, _) -> volunteer.id }
+                ) { (volunteer, status) ->
+                    BenefitCard(volunteer = volunteer, status = status)
                 }
             }
         }
-        
-        Spacer(modifier = Modifier.height(responsiveSpacing))
-        
-        // Benefits list - Use LazyColumn for lazy loading and better performance
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(responsiveSpacing),
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-        ) {
-            items(
-                items = filteredVolunteerBenefits,
-                key = { (volunteer, _) -> volunteer.id }
-            ) { (volunteer, status) ->
-                BenefitCard(volunteer = volunteer, status = status)
+        else -> {
+            // FULL_SCROLL: Whole page (header + list) scrolls together
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(responsivePadding),
+                verticalArrangement = Arrangement.spacedBy(responsiveSpacing)
+            ) {
+                item {
+                    Text(
+                        text = if (isCompact) context.getString(R.string.benefits_title) else context.getString(R.string.volunteer_benefits_overview),
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(if (isCompact) 4.dp else 8.dp))
+                }
+
+                if (!isCompact) {
+                    item {
+                        Text(
+                            text = context.getString(R.string.benefits_description),
+                            style = getResponsiveBodyTypography(),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(responsiveSpacing))
+                }
+
+                item {
+                    SearchBarWithFilter(
+                        searchText = searchText,
+                        onSearchTextChange = { searchText = it },
+                        placeholder = context.getString(R.string.search_volunteers_benefits_placeholder),
+                        filterOptions = filterOptions,
+                        selectedFilter = selectedFilter,
+                        onFilterChange = { selectedFilter = it }
+                    )
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                item {
+                    // Statistics (using memoized counts)
+                    if (isCompact) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(responsiveSpacing)
+                        ) {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                elevation = CardDefaults.cardElevation(defaultElevation = getResponsiveCardElevation())
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(getResponsiveCardPadding()),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = activeBenefitsCount.toString(),
+                                        style = getResponsiveTypography(),
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = "Active Benefits",
+                                        style = getResponsiveBodyTypography(),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                elevation = CardDefaults.cardElevation(defaultElevation = getResponsiveCardElevation())
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(getResponsiveCardPadding()),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = highRankCount.toString(),
+                                        style = getResponsiveTypography(),
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = context.getString(R.string.high_rank),
+                                        style = getResponsiveBodyTypography(),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(responsiveSpacing)
+                        ) {
+                            Card(
+                                modifier = Modifier.weight(1f),
+                                elevation = CardDefaults.cardElevation(defaultElevation = getResponsiveCardElevation())
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(getResponsiveCardPadding()),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = activeBenefitsCount.toString(),
+                                        style = getResponsiveTypography(),
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = "Active Benefits",
+                                        style = getResponsiveBodyTypography(),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            
+                            Card(
+                                modifier = Modifier.weight(1f),
+                                elevation = CardDefaults.cardElevation(defaultElevation = getResponsiveCardElevation())
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(getResponsiveCardPadding()),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = highRankCount.toString(),
+                                        style = getResponsiveTypography(),
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = context.getString(R.string.high_rank),
+                                        style = getResponsiveBodyTypography(),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                items(
+                    items = filteredVolunteerBenefits,
+                    key = { (volunteer, _) -> volunteer.id }
+                ) { (volunteer, status) ->
+                    BenefitCard(volunteer = volunteer, status = status)
+                }
             }
         }
     }

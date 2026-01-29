@@ -1,8 +1,16 @@
 package com.eventmanager.app.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.*
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -10,17 +18,156 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.eventmanager.app.R
+import kotlinx.coroutines.delay
+
+/**
+ * Dialog state for tracking sync retry flow
+ */
+private enum class SyncDialogState {
+    ERROR,      // Showing error message
+    RETRYING,   // Retry in progress
+    SUCCESS     // Sync succeeded
+}
+
+/**
+ * Animated checkmark component - lightweight, similar to Google Pay validation
+ * Uses simple Canvas drawing with path animation for performance
+ */
+@Composable
+private fun AnimatedCheckmark(
+    modifier: Modifier = Modifier,
+    animationsEnabled: Boolean = true,
+    color: Color = MaterialTheme.colorScheme.primary
+) {
+    // Animation progress from 0 to 1
+    val animationProgress = remember { Animatable(0f) }
+    
+    LaunchedEffect(Unit) {
+        if (animationsEnabled) {
+            // Animate the checkmark drawing
+            animationProgress.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(
+                    durationMillis = 400,
+                    easing = FastOutSlowInEasing
+                )
+            )
+        } else {
+            // No animation - show immediately
+            animationProgress.snapTo(1f)
+        }
+    }
+    
+    // Scale animation for the circle background
+    val scale by animateFloatAsState(
+        targetValue = 1f,
+        animationSpec = if (animationsEnabled) {
+            spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessLow
+            )
+        } else {
+            snap()
+        },
+        label = "checkmark_scale"
+    )
+    
+    Box(
+        modifier = modifier
+            .size(80.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        // Circle background
+        Box(
+            modifier = Modifier
+                .size((72 * scale).dp)
+                .clip(CircleShape)
+                .background(color.copy(alpha = 0.15f))
+        )
+        
+        // Checkmark drawn on Canvas
+        Canvas(
+            modifier = Modifier.size(48.dp)
+        ) {
+            val progress = animationProgress.value
+            val strokeWidth = 4.dp.toPx()
+            
+            // Checkmark path: starts from left-center, goes down-center, then up-right
+            // Point 1: Start (left side)
+            val p1 = Offset(size.width * 0.2f, size.height * 0.5f)
+            // Point 2: Bottom of checkmark
+            val p2 = Offset(size.width * 0.4f, size.height * 0.7f)
+            // Point 3: End (right-top)
+            val p3 = Offset(size.width * 0.8f, size.height * 0.3f)
+            
+            // Calculate total length of the two line segments
+            val segment1Length = kotlin.math.sqrt(
+                (p2.x - p1.x) * (p2.x - p1.x) + (p2.y - p1.y) * (p2.y - p1.y)
+            )
+            val segment2Length = kotlin.math.sqrt(
+                (p3.x - p2.x) * (p3.x - p2.x) + (p3.y - p2.y) * (p3.y - p2.y)
+            )
+            val totalLength = segment1Length + segment2Length
+            
+            // Current drawing length based on progress
+            val currentLength = totalLength * progress
+            
+            if (currentLength > 0) {
+                if (currentLength <= segment1Length) {
+                    // Drawing first segment
+                    val ratio = currentLength / segment1Length
+                    val endX = p1.x + (p2.x - p1.x) * ratio
+                    val endY = p1.y + (p2.y - p1.y) * ratio
+                    drawLine(
+                        color = color,
+                        start = p1,
+                        end = Offset(endX, endY),
+                        strokeWidth = strokeWidth,
+                        cap = StrokeCap.Round
+                    )
+                } else {
+                    // Draw complete first segment
+                    drawLine(
+                        color = color,
+                        start = p1,
+                        end = p2,
+                        strokeWidth = strokeWidth,
+                        cap = StrokeCap.Round
+                    )
+                    
+                    // Draw second segment partially
+                    val remainingLength = currentLength - segment1Length
+                    val ratio = remainingLength / segment2Length
+                    val endX = p2.x + (p3.x - p2.x) * ratio
+                    val endY = p2.y + (p3.y - p2.y) * ratio
+                    drawLine(
+                        color = color,
+                        start = p2,
+                        end = Offset(endX, endY),
+                        strokeWidth = strokeWidth,
+                        cap = StrokeCap.Round
+                    )
+                }
+            }
+        }
+    }
+}
 
 /**
  * Dialog to display sync errors with detailed information
  * Includes a "do not tell me again today" checkbox
+ * Now handles retry flow with loading and success states
  */
 @Composable
 fun SyncErrorDialog(
@@ -29,161 +176,307 @@ fun SyncErrorDialog(
     onRetry: () -> Unit = {},
     errorMessage: String,
     modifier: Modifier = Modifier,
-    onDontTellTodayChanged: (Boolean) -> Unit = {}
+    onDontTellTodayChanged: (Boolean) -> Unit = {},
+    // New parameters for retry flow
+    isSyncing: Boolean = false,
+    animationsEnabled: Boolean = true
 ) {
     var dontTellToday by remember { mutableStateOf(false) }
+    var dialogState by remember { mutableStateOf(SyncDialogState.ERROR) }
+    var wasRetrying by remember { mutableStateOf(false) }
+    
+    // Track sync state changes to detect success after retry
+    LaunchedEffect(isSyncing) {
+        if (wasRetrying && !isSyncing && dialogState == SyncDialogState.RETRYING) {
+            // Sync just finished after we triggered retry
+            // Check if error is cleared (success) or still has error
+            if (errorMessage.isEmpty()) {
+                // Success! Show success state
+                dialogState = SyncDialogState.SUCCESS
+            } else {
+                // Still error, go back to error state
+                dialogState = SyncDialogState.ERROR
+            }
+        }
+    }
+    
+    // Auto-dismiss after showing success animation
+    LaunchedEffect(dialogState) {
+        if (dialogState == SyncDialogState.SUCCESS) {
+            // Wait for animation to complete, then auto-dismiss
+            delay(1800L)
+            onDismiss()
+        }
+        // Track retrying state
+        if (dialogState == SyncDialogState.RETRYING) {
+            wasRetrying = true
+        }
+    }
+    
+    // Reset state when dialog becomes visible
+    LaunchedEffect(isVisible) {
+        if (isVisible) {
+            dialogState = SyncDialogState.ERROR
+            wasRetrying = false
+            dontTellToday = false
+        }
+    }
     
     if (isVisible) {
         AlertDialog(
             onDismissRequest = {
-                if (dontTellToday) {
-                    onDontTellTodayChanged(true)
+                if (dialogState != SyncDialogState.RETRYING) {
+                    if (dontTellToday) {
+                        onDontTellTodayChanged(true)
+                    }
+                    onDismiss()
                 }
-                onDismiss()
             },
             title = {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        Icons.Default.ErrorOutline,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(28.dp)
-                    )
-                    Text(
-                        stringResource(R.string.sync_error_title),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
+                when (dialogState) {
+                    SyncDialogState.ERROR -> {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.ErrorOutline,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(28.dp)
+                            )
+                            Text(
+                                stringResource(R.string.sync_error_title),
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                    SyncDialogState.RETRYING -> {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp
+                            )
+                            Text(
+                                stringResource(R.string.sync_retrying),
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                    SyncDialogState.SUCCESS -> {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                stringResource(R.string.sync_success_title),
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
                 }
             },
             text = {
-                Column(
-                    modifier = Modifier
-                        .verticalScroll(rememberScrollState())
-                        .fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // Brief message
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer
-                        )
-                    ) {
+                when (dialogState) {
+                    SyncDialogState.ERROR -> {
                         Column(
-                            modifier = Modifier.padding(12.dp)
+                            modifier = Modifier
+                                .verticalScroll(rememberScrollState())
+                                .fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
+                            // Brief message
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.errorContainer
+                                )
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(12.dp)
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.sync_error_occurred),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                }
+                            }
+                            
+                            // Error details
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                )
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.sync_error_details_label),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    
+                                    Text(
+                                        text = errorMessage,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 8
+                                    )
+                                }
+                            }
+                            
+                            // Advice based on error type
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                                )
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.sync_error_what_to_do),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                    
+                                    val adviceResId = getErrorAdviceResId(errorMessage)
+                                    Text(
+                                        text = stringResource(adviceResId),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                            }
+                            
+                            // Do not tell again checkbox
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Checkbox(
+                                    checked = dontTellToday,
+                                    onCheckedChange = { dontTellToday = it },
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    stringResource(R.string.sync_error_dont_tell_today),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                    }
+                    SyncDialogState.RETRYING -> {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(48.dp),
+                                strokeWidth = 3.dp
+                            )
                             Text(
-                                text = stringResource(R.string.sync_error_occurred),
+                                text = stringResource(R.string.sync_retrying),
                                 style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onErrorContainer
+                                textAlign = TextAlign.Center
                             )
                         }
                     }
-                    
-                    // Error details
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
-                    ) {
+                    SyncDialogState.SUCCESS -> {
                         Column(
-                            modifier = Modifier.padding(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            Text(
-                                text = "Error Details:",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            // Animated checkmark
+                            AnimatedCheckmark(
+                                animationsEnabled = animationsEnabled,
+                                color = MaterialTheme.colorScheme.primary
                             )
                             
                             Text(
-                                text = errorMessage,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 8
+                                text = stringResource(R.string.sync_success_message),
+                                style = MaterialTheme.typography.bodyMedium,
+                                textAlign = TextAlign.Center,
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         }
-                    }
-                    
-                    // Advice based on error type
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer
-                        )
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                text = "💡 What to do:",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                            
-                            val advice = getErrorAdvice(errorMessage)
-                            Text(
-                                text = advice,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
-                    }
-                    
-                    // Do not tell again checkbox
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Checkbox(
-                            checked = dontTellToday,
-                            onCheckedChange = { dontTellToday = it },
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Text(
-                            stringResource(R.string.sync_error_dont_tell_today),
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.weight(1f)
-                        )
                     }
                 }
             },
             confirmButton = {
-                Button(
-                    onClick = {
-                        if (dontTellToday) {
-                            onDontTellTodayChanged(true)
+                when (dialogState) {
+                    SyncDialogState.ERROR -> {
+                        Button(
+                            onClick = {
+                                if (dontTellToday) {
+                                    onDontTellTodayChanged(true)
+                                }
+                                dialogState = SyncDialogState.RETRYING
+                                wasRetrying = false // Reset before starting
+                                onRetry()
+                                // Mark that we're now in retry mode after calling onRetry
+                                wasRetrying = true
+                            }
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringResource(R.string.sync_error_retry))
                         }
-                        onRetry()
                     }
-                ) {
-                    Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.sync_error_retry))
+                    SyncDialogState.RETRYING -> {
+                        // No confirm button while retrying
+                    }
+                    SyncDialogState.SUCCESS -> {
+                        // No confirm button on success (auto-dismiss)
+                    }
                 }
             },
             dismissButton = {
-                TextButton(
-                    onClick = {
-                        if (dontTellToday) {
-                            onDontTellTodayChanged(true)
+                when (dialogState) {
+                    SyncDialogState.ERROR -> {
+                        TextButton(
+                            onClick = {
+                                if (dontTellToday) {
+                                    onDontTellTodayChanged(true)
+                                }
+                                onDismiss()
+                            }
+                        ) {
+                            Text(stringResource(R.string.sync_error_dismiss))
                         }
-                        onDismiss()
                     }
-                ) {
-                    Text(stringResource(R.string.sync_error_dismiss))
+                    SyncDialogState.RETRYING -> {
+                        // No dismiss button while retrying
+                    }
+                    SyncDialogState.SUCCESS -> {
+                        // No dismiss button on success (auto-dismiss)
+                    }
                 }
             },
             modifier = modifier
@@ -212,30 +505,24 @@ fun shouldShowSyncError(errorMessage: String?): Boolean {
 }
 
 /**
- * Get contextual advice based on the error message
+ * Get contextual advice resource ID based on the error message
  */
-private fun getErrorAdvice(errorMessage: String): String {
+private fun getErrorAdviceResId(errorMessage: String): Int {
     return when {
         errorMessage.contains("429", ignoreCase = true) || 
         errorMessage.contains("rate limit", ignoreCase = true) ||
         errorMessage.contains("Rate limit", ignoreCase = true) -> {
-            "• Wait 1-2 minutes before retrying\n" +
-            "• The app will automatically retry with backoff\n" +
-            "• Consider reducing sync frequency in settings"
+            R.string.sync_advice_rate_limit
         }
         errorMessage.contains("authentication", ignoreCase = true) ||
         errorMessage.contains("auth", ignoreCase = true) ||
         errorMessage.contains("credential", ignoreCase = true) -> {
-            "• Check your service account key file\n" +
-            "• Verify the key is uploaded in Settings\n" +
-            "• Re-upload the key if needed"
+            R.string.sync_advice_authentication
         }
         errorMessage.contains("permission", ignoreCase = true) ||
         errorMessage.contains("forbidden", ignoreCase = true) ||
         errorMessage.contains("403", ignoreCase = true) -> {
-            "• Share your spreadsheet with the service account email\n" +
-            "• Grant Editor access to the service account\n" +
-            "• Check the account email in your service key file"
+            R.string.sync_advice_permission
         }
         errorMessage.contains("network", ignoreCase = true) ||
         errorMessage.contains("connection", ignoreCase = true) ||
@@ -245,21 +532,14 @@ private fun getErrorAdvice(errorMessage: String): String {
         errorMessage.contains("No address associated with hostname", ignoreCase = true) ||
         errorMessage.contains("Wi-Fi", ignoreCase = true) ||
         errorMessage.contains("mobile data", ignoreCase = true) -> {
-            "• Check your internet connection\n" +
-            "• Verify Wi-Fi or mobile data is enabled\n" +
-            "• Try again when connection is stable\n" +
-            "• Make sure you're not in airplane mode"
+            R.string.sync_advice_network
         }
         errorMessage.contains("not found", ignoreCase = true) ||
         errorMessage.contains("404", ignoreCase = true) -> {
-            "• Check the Spreadsheet ID in Settings\n" +
-            "• Verify the sheet names exist\n" +
-            "• Ensure the spreadsheet is accessible"
+            R.string.sync_advice_not_found
         }
         else -> {
-            "• Try the sync again\n" +
-            "• Check your Google Sheets settings\n" +
-            "• Visit Settings to verify your configuration"
+            R.string.sync_advice_generic
         }
     }
 }

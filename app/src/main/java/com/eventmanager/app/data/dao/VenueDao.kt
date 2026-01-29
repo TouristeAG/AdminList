@@ -21,11 +21,20 @@ interface VenueDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertVenue(venue: VenueEntity): Long
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertVenuesAll(venues: List<VenueEntity>): List<Long>
+
     @Update
     suspend fun updateVenue(venue: VenueEntity)
 
+    @Update
+    suspend fun updateVenuesAll(venues: List<VenueEntity>)
+
     @Delete
     suspend fun deleteVenue(venue: VenueEntity)
+
+    @Delete
+    suspend fun deleteVenuesAll(venues: List<VenueEntity>)
 
     @Query("DELETE FROM venues WHERE id = :id")
     suspend fun deleteVenueById(id: Long)

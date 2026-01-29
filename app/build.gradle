@@ -1,3 +1,5 @@
+import groovy.json.JsonSlurper
+
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
@@ -13,8 +15,18 @@ android {
         applicationId "com.eventmanager.app"
         minSdk 21  // Android 5.0 (Lollipop) - supports older hardware while maintaining compatibility
         targetSdk 34
-        versionCode 1
-        versionName "1.0"
+        // Load version information from version.json so the app and settings screen
+        // always reflect the same version as the update manifest.
+        def versionFile = file("$rootDir/version.json")
+        if (versionFile.exists()) {
+            def versionConfig = new JsonSlurper().parse(versionFile)
+            versionCode versionConfig.latestVersionCode as Integer
+            versionName versionConfig.latestVersionName as String
+        } else {
+            // Fallback values if version.json is missing
+            versionCode 1
+            versionName "1.0"
+        }
 
         // Remote update manifest and fallback store URL for manual update checks
         // The manifest is a simple JSON file hosted on GitHub (no private server needed)

@@ -9,7 +9,19 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -26,6 +38,7 @@ import com.eventmanager.app.R
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
+import java.lang.ThreadLocal as JavaThreadLocal
 import kotlin.math.round
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.geometry.Offset
@@ -55,7 +68,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CoroutineScope
-import androidx.compose.runtime.rememberCoroutineScope
 import com.eventmanager.app.utils.GraphExportUtils
 import com.eventmanager.app.ui.utils.isTablet
 import android.content.Intent
@@ -66,6 +78,8 @@ import java.io.FileOutputStream
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.ui.draw.clip
+import com.eventmanager.app.data.sync.SettingsManager
+import kotlinx.coroutines.delay
 
 enum class TimePeriod(val displayName: String, val days: Long, val unitLabel: String) {
     ONE_WEEK("1 Week", 7, "Day"),
@@ -93,6 +107,50 @@ data class InteractionState(
     val hoveredLabel: String = ""
 )
 
+/**
+ * PERFORMANCE OPTIMIZATION: Deferred graph container that shows a loading placeholder
+ * and defers the actual graph rendering until after initial composition.
+ * This prevents all graphs from being computed at once during initial load.
+ */
+@Composable
+private fun DeferredGraph(
+    delayMs: Long = 0L,
+    isPhone: Boolean = true,
+    content: @Composable () -> Unit
+) {
+    var isLoaded by remember { mutableStateOf(delayMs == 0L) }
+    
+    LaunchedEffect(Unit) {
+        if (delayMs > 0) {
+            delay(delayMs)
+            isLoaded = true
+        }
+    }
+    
+    if (isLoaded) {
+        content()
+    } else {
+        // Show a lightweight placeholder while the graph loads
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(if (isPhone) 200.dp else 250.dp)
+                .padding(horizontal = if (isPhone) 4.dp else 8.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(32.dp),
+                    strokeWidth = 2.dp
+                )
+            }
+        }
+    }
+}
+
 @Composable
 fun StatsGraphsPanel(
     volunteers: List<Volunteer>,
@@ -105,7 +163,6 @@ fun StatsGraphsPanel(
 ) {
     val context = LocalContext.current
     val settingsManager = remember { com.eventmanager.app.data.sync.SettingsManager(context) }
-    val offsetHours = remember { settingsManager.getDateChangeOffsetHours() }
     
     // Load saved time period or default to ONE_MONTH
     val savedPeriodName = remember { settingsManager.getSelectedGraphTimePeriod() }
@@ -145,92 +202,104 @@ fun StatsGraphsPanel(
             isPhone = isPhone
         )
 
-        // Active Volunteers Section
+        // Active Volunteers Section - loads immediately (first visible graph)
         SectionHeader(
             title = context.getString(R.string.active_volunteers),
             description = context.getString(R.string.active_volunteers_description),
             isPhone = isPhone
         )
-        ActiveVolunteersGraph(
-            volunteers = volunteers,
-            jobs = jobs,
-            timePeriod = selectedPeriod,
-            isPhone = isPhone
-        )
+        DeferredGraph(delayMs = 0L, isPhone = isPhone) {
+            ActiveVolunteersGraph(
+                volunteers = volunteers,
+                jobs = jobs,
+                timePeriod = selectedPeriod,
+                isPhone = isPhone
+            )
+        }
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Shift Statistics Section
+        // Shift Statistics Section - deferred loading
         SectionHeader(
             title = context.getString(R.string.shift_statistics),
             description = context.getString(R.string.shift_statistics_description),
             isPhone = isPhone
         )
-        ShiftStatisticsGraph(
-            jobs = jobs,
-            venues = venues,
-            timePeriod = selectedPeriod,
-            isPhone = isPhone
-        )
+        DeferredGraph(delayMs = 50L, isPhone = isPhone) {
+            ShiftStatisticsGraph(
+                jobs = jobs,
+                venues = venues,
+                timePeriod = selectedPeriod,
+                isPhone = isPhone
+            )
+        }
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Guest List Statistics Section
+        // Guest List Statistics Section - deferred loading
         SectionHeader(
             title = context.getString(R.string.guest_list_statistics),
             description = context.getString(R.string.guest_list_statistics_description),
             isPhone = isPhone
         )
-        GuestListStatisticsGraph(
-            volunteers = volunteers,
-            guests = guests,
-            jobs = jobs,
-            jobTypeConfigs = jobTypeConfigs,
-            timePeriod = selectedPeriod,
-            isPhone = isPhone
-        )
+        DeferredGraph(delayMs = 100L, isPhone = isPhone) {
+            GuestListStatisticsGraph(
+                volunteers = volunteers,
+                guests = guests,
+                jobs = jobs,
+                jobTypeConfigs = jobTypeConfigs,
+                timePeriod = selectedPeriod,
+                isPhone = isPhone
+            )
+        }
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Gender Parity Section
+        // Gender Parity Section - deferred loading
         SectionHeader(
             title = context.getString(R.string.gender_parity),
             description = context.getString(R.string.gender_parity_description),
             isPhone = isPhone
         )
-        GenderParityGraph(
-            volunteers = volunteers,
-            isPhone = isPhone
-        )
+        DeferredGraph(delayMs = 150L, isPhone = isPhone) {
+            GenderParityGraph(
+                volunteers = volunteers,
+                isPhone = isPhone
+            )
+        }
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Age Distribution Section
+        // Age Distribution Section - deferred loading
         SectionHeader(
             title = context.getString(R.string.age_distribution),
             description = context.getString(R.string.age_distribution_description),
             isPhone = isPhone
         )
-        AgeDistributionGraph(
-            volunteers = volunteers,
-            isPhone = isPhone
-        )
+        DeferredGraph(delayMs = 200L, isPhone = isPhone) {
+            AgeDistributionGraph(
+                volunteers = volunteers,
+                isPhone = isPhone
+            )
+        }
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Free Drinks Statistics Section
+        // Free Drinks Statistics Section - deferred loading
         SectionHeader(
             title = context.getString(R.string.free_drinks_statistics),
             description = context.getString(R.string.free_drinks_statistics_description),
             isPhone = isPhone
         )
-        FreeDrinksGraph(
-            volunteers = volunteers,
-            jobs = jobs,
-            jobTypeConfigs = jobTypeConfigs,
-            timePeriod = selectedPeriod,
-            isPhone = isPhone
-        )
+        DeferredGraph(delayMs = 250L, isPhone = isPhone) {
+            FreeDrinksGraph(
+                volunteers = volunteers,
+                jobs = jobs,
+                jobTypeConfigs = jobTypeConfigs,
+                timePeriod = selectedPeriod,
+                isPhone = isPhone
+            )
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
     }
@@ -703,10 +772,11 @@ private fun ShiftStatisticsGraph(
     }
 }
 
+@Suppress("UNUSED_PARAMETER")
 @Composable
 private fun GuestListStatisticsGraph(
     volunteers: List<Volunteer>,
-    guests: List<Guest>,
+    guests: List<Guest>, // Kept for future use with direct guest statistics
     jobs: List<Job>,
     jobTypeConfigs: List<JobTypeConfig>,
     timePeriod: TimePeriod,
@@ -2055,7 +2125,7 @@ private fun MultiLineGraphContent(
 
         // Draw all series
         seriesDataWithTrends.forEach { (seriesTriple, color) ->
-            val (name, dataPoints, trendPoints) = seriesTriple
+            val (_, dataPoints, trendPoints) = seriesTriple
             
             // Only draw if this series has at least 2 points
             if (dataPoints.size >= 2) {
@@ -2110,12 +2180,13 @@ private fun MultiLineGraphContent(
 /**
  * Multi-line tooltip showing values for all series at the selected point
  */
+@Suppress("UNUSED_PARAMETER")
 @Composable
 private fun MultiLineGraphTooltip(
     seriesData: List<Triple<String, List<DataPoint>, Color>>,
     pointIndex: Int,
     label: String,
-    xPosition: Float
+    xPosition: Float // Kept for potential future tooltip positioning
 ) {
     // Check if we have valid data to display
     val hasValidData = seriesData.any { it.second.indices.contains(pointIndex) }
@@ -2199,6 +2270,7 @@ private fun calculateNearestPointIndex(xPosition: Float, width: Float, dataPoint
     }
 }
 
+@Suppress("UNUSED_PARAMETER")
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun GraphCard(
@@ -2207,12 +2279,11 @@ private fun GraphCard(
     dataPoints: List<DataPoint>,
     timePeriod: TimePeriod,
     isPhone: Boolean = true,
-    valueFormatter: (Float) -> String = { it.toInt().toString() },
-    yAxisLabel: String = "",
+    valueFormatter: (Float) -> String = { it.toInt().toString() }, // Kept for future custom formatting
+    yAxisLabel: String = "", // Kept for future y-axis labeling
     description: String? = null,
     onLongPress: (() -> Unit)? = null
 ) {
-    val context = LocalContext.current
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -2651,12 +2722,13 @@ private fun InteractiveLineGraph(
 /**
  * Tooltip showing exact value at interaction point
  */
+@Suppress("UNUSED_PARAMETER")
 @Composable
 private fun GraphTooltip(
     value: Float,
     label: String,
     valueFormatter: (Float) -> String,
-    xPosition: Float
+    xPosition: Float // Kept for potential future tooltip positioning
 ) {
     Box(
         modifier = Modifier
@@ -2788,9 +2860,9 @@ private fun calculateActiveVolunteersData(
 ): List<DataPoint> {
     val now = System.currentTimeMillis()
     val startTime = if (timePeriod == TimePeriod.MAX) {
-        jobs.minOfOrNull { it.date } ?: (now - 365 * 24 * 60 * 60 * 1000)
+        jobs.minOfOrNull { it.date } ?: (now - 365L * 24 * 60 * 60 * 1000)
     } else {
-        now - timePeriod.days * 24 * 60 * 60 * 1000
+        now - timePeriod.days * 24L * 60 * 60 * 1000
     }
 
     val dateFormat = getDateFormat(timePeriod, startTime, now)
@@ -2834,53 +2906,101 @@ private fun calculateActiveVolunteersData(
     return dataPoints.ifEmpty { emptyList() }
 }
 
+@Suppress("UNUSED_PARAMETER")
 private fun calculateFreeDrinksData(
-    volunteers: List<Volunteer>,
+    volunteers: List<Volunteer>,  // Kept for API consistency with other graph functions
     jobs: List<Job>,
     jobTypeConfigs: List<JobTypeConfig>,
     timePeriod: TimePeriod,
-    offsetHours: Int = 0
+    offsetHours: Int = 0  // Kept for API consistency with other graph functions
 ): List<DataPoint> {
     val now = System.currentTimeMillis()
     val startTime = if (timePeriod == TimePeriod.MAX) {
-        jobs.minOfOrNull { it.date } ?: (now - 365 * 24 * 60 * 60 * 1000)
+        jobs.minOfOrNull { it.date } ?: (now - 365L * 24 * 60 * 60 * 1000)
     } else {
-        now - timePeriod.days * 24 * 60 * 60 * 1000
+        now - timePeriod.days * 24L * 60 * 60 * 1000
     }
 
     val dateFormat = getDateFormat(timePeriod, startTime, now)
     val aggregationMs = getAggregationPeriodMs(timePeriod)
     
-    // Generate data points using the aggregation period
+    // OPTIMIZATION: Pre-compute job type sets once (O(jobTypeConfigs))
+    val shiftJobTypeNames = jobTypeConfigs
+        .filter { it.isShiftJob && it.isActive }
+        .mapTo(HashSet()) { it.name }
+    
+    val manualRewardJobTypes = jobTypeConfigs
+        .filter { it.benefitSystemType == com.eventmanager.app.data.models.BenefitSystemType.MANUAL && it.manualRewards != null }
+        .associateBy { it.name }
+    
+    // OPTIMIZATION: Pre-filter and sort NOVA shifts once - O(jobs) instead of O(periods * jobs)
+    // Only include shifts within our time range
+    val novaShiftsSorted = jobs
+        .filter { job ->
+            job.date >= startTime &&
+            job.shiftTime == com.eventmanager.app.data.models.ShiftTime.BEFORE_MIDNIGHT &&
+            shiftJobTypeNames.contains(job.jobTypeName)
+        }
+        .sortedBy { it.date }
+    
+    // OPTIMIZATION: Pre-compute manual reward periods once - O(volunteers * jobs) total, done once
+    // Instead of O(periods * volunteers * jobs)
+    // Store: (rewardStart, rewardEnd, freeDrinks) for each volunteer with active manual rewards
+    data class ManualRewardPeriod(val start: Long, val end: Long, val drinks: Int)
+    
+    val manualRewardPeriods = if (manualRewardJobTypes.isNotEmpty()) {
+        // Group jobs by volunteer ID once
+        val jobsByVolunteerId = jobs
+            .filter { manualRewardJobTypes.containsKey(it.jobTypeName) }
+            .groupBy { it.volunteerId }
+        
+        jobsByVolunteerId.mapNotNull { (_, volunteerJobs) ->
+            val mostRecentJob = volunteerJobs.maxByOrNull { it.date } ?: return@mapNotNull null
+            val jobTypeConfig = manualRewardJobTypes[mostRecentJob.jobTypeName] ?: return@mapNotNull null
+            val manualRewards = jobTypeConfig.manualRewards ?: return@mapNotNull null
+            
+            if (manualRewards.freeDrinks <= 0) return@mapNotNull null
+            
+            val rewardStart = mostRecentJob.date
+            val rewardEnd = rewardStart + (manualRewards.durationDays * 24L * 60 * 60 * 1000)
+            
+            // Only include if reward period overlaps with our time range
+            if (rewardEnd < startTime) return@mapNotNull null
+            
+            ManualRewardPeriod(rewardStart, rewardEnd, manualRewards.freeDrinks)
+        }
+    } else {
+        emptyList()
+    }
+    
+    // Generate data points using optimized sliding window approach
     val dataPoints = mutableListOf<DataPoint>()
     var currentDate = startTime
+    var novaStartIndex = 0  // Sliding window start for NOVA shifts
     
     while (currentDate <= now) {
-        // For this date, calculate total free drinks available from all volunteers
-        // Use the same logic as calculateTotalFreeDrinks but for each date in history
+        val periodEnd = currentDate + aggregationMs
         var totalDrinks = 0
         
-        // Check each volunteer
-        for (volunteer in volunteers) {
-            // Find this volunteer's jobs UP TO and INCLUDING this date
-            val jobsUpToThisDate = jobs.filter { job ->
-                job.volunteerId == volunteer.id && job.date <= currentDate
-            }
-            
-            // Calculate benefit status at this point in time
-            val benefitStatus = com.eventmanager.app.data.models.BenefitCalculator.calculateVolunteerBenefitStatus(
-                volunteer = volunteer,
-                jobs = jobsUpToThisDate,
-                jobTypeConfigs = jobTypeConfigs,
-                currentTime = currentDate,
-                offsetHours = offsetHours
-            )
-            
-            // Use the same logic as calculateTotalFreeDrinks: just check if benefits are active
-            // The calculateVolunteerBenefitStatus already takes currentTime into account
-            if (benefitStatus.benefits.isActive) {
-                // Add their drink tokens
-                totalDrinks += benefitStatus.benefits.drinkTokens
+        // OPTIMIZED Source 1: Count NOVA shifts using sliding window on sorted list
+        // Advance start index past shifts before current period (they won't be needed again)
+        while (novaStartIndex < novaShiftsSorted.size && novaShiftsSorted[novaStartIndex].date < currentDate) {
+            novaStartIndex++
+        }
+        // Count shifts in current period from the start index
+        var novaCount = 0
+        var tempIndex = novaStartIndex
+        while (tempIndex < novaShiftsSorted.size && novaShiftsSorted[tempIndex].date < periodEnd) {
+            novaCount++
+            tempIndex++
+        }
+        totalDrinks += novaCount * 2  // 2 drink tokens per NOVA shift
+        
+        // OPTIMIZED Source 2: Check pre-computed manual reward periods (simple overlap check)
+        // This is O(manualRewardPeriods) per period, but manualRewardPeriods is typically small
+        for (reward in manualRewardPeriods) {
+            if (reward.end >= currentDate && reward.start < periodEnd) {
+                totalDrinks += reward.drinks
             }
         }
         
@@ -2900,9 +3020,9 @@ private fun calculateVenueShiftData(
 ): List<DataPoint> {
     val now = System.currentTimeMillis()
     val startTime = if (timePeriod == TimePeriod.MAX) {
-        jobs.minOfOrNull { it.date } ?: (now - 365 * 24 * 60 * 60 * 1000)
+        jobs.minOfOrNull { it.date } ?: (now - 365L * 24 * 60 * 60 * 1000)
     } else {
-        now - timePeriod.days * 24 * 60 * 60 * 1000
+        now - timePeriod.days * 24L * 60 * 60 * 1000
     }
 
     val dateFormat = getDateFormat(timePeriod, startTime, now)
@@ -2936,9 +3056,9 @@ private fun calculateTotalShiftData(
 ): List<DataPoint> {
     val now = System.currentTimeMillis()
     val startTime = if (timePeriod == TimePeriod.MAX) {
-        jobs.minOfOrNull { it.date } ?: (now - 365 * 24 * 60 * 60 * 1000)
+        jobs.minOfOrNull { it.date } ?: (now - 365L * 24 * 60 * 60 * 1000)
     } else {
-        now - timePeriod.days * 24 * 60 * 60 * 1000
+        now - timePeriod.days * 24L * 60 * 60 * 1000
     }
 
     val dateFormat = getDateFormat(timePeriod, startTime, now)
@@ -2973,9 +3093,9 @@ private fun calculateVolunteerGuestListData(
 ): List<DataPoint> {
     val now = System.currentTimeMillis()
     val startTime = if (timePeriod == TimePeriod.MAX) {
-        jobs.minOfOrNull { it.date } ?: (now - 365 * 24 * 60 * 60 * 1000)
+        jobs.minOfOrNull { it.date } ?: (now - 365L * 24 * 60 * 60 * 1000)
     } else {
-        now - timePeriod.days * 24 * 60 * 60 * 1000
+        now - timePeriod.days * 24L * 60 * 60 * 1000
     }
 
     val dateFormat = getDateFormat(timePeriod, startTime, now)
@@ -3031,9 +3151,9 @@ private fun calculateVolunteerInvitesData(
 ): List<DataPoint> {
     val now = System.currentTimeMillis()
     val startTime = if (timePeriod == TimePeriod.MAX) {
-        jobs.minOfOrNull { it.date } ?: (now - 365 * 24 * 60 * 60 * 1000)
+        jobs.minOfOrNull { it.date } ?: (now - 365L * 24 * 60 * 60 * 1000)
     } else {
-        now - timePeriod.days * 24 * 60 * 60 * 1000
+        now - timePeriod.days * 24L * 60 * 60 * 1000
     }
 
     val dateFormat = getDateFormat(timePeriod, startTime, now)
@@ -3130,41 +3250,57 @@ private fun calculateTotalGuestListData(
     }.sortedBy { it.timestamp }
 }
 
+// Thread-safe cached SimpleDateFormat instances for graph date formatting
+private val graphDayFormatterCache = object : JavaThreadLocal<SimpleDateFormat>() {
+    override fun initialValue(): SimpleDateFormat {
+        return SimpleDateFormat("EEE d", Locale.getDefault())
+    }
+}
+private val graphMonthFormatterCache = object : JavaThreadLocal<SimpleDateFormat>() {
+    override fun initialValue(): SimpleDateFormat {
+        return SimpleDateFormat("MMM", Locale.getDefault())
+    }
+}
+// Thread-safe cached Calendar instance for week calculations
+private val calendarCache = object : JavaThreadLocal<Calendar>() {
+    override fun initialValue(): Calendar {
+        return Calendar.getInstance()
+    }
+}
+
 private fun getDateFormat(timePeriod: TimePeriod, startTime: Long, now: Long): (Long) -> String {
+    // Pre-fetch cached formatters to avoid ambiguous lambda syntax
+    // Using !! since initialValue() guarantees non-null values
+    val dayFormatter = graphDayFormatterCache.get()!!
+    val monthFormatter = graphMonthFormatterCache.get()!!
+    val calendar = calendarCache.get()!!
+    
     return when (timePeriod) {
         TimePeriod.ONE_WEEK, TimePeriod.TWO_WEEKS, TimePeriod.ONE_MONTH -> {
             // Format as day (e.g., "Mon 5")
-            { timestamp ->
-                SimpleDateFormat("EEE d", Locale.getDefault()).format(Date(timestamp))
-            }
+            { timestamp: Long -> dayFormatter.format(Date(timestamp)) }
         }
         TimePeriod.SIX_MONTHS -> {
             // Format as week (e.g., "W12")
-            { timestamp ->
-                val cal = Calendar.getInstance().apply { timeInMillis = timestamp }
-                "W${cal.get(Calendar.WEEK_OF_YEAR)}"
+            { timestamp: Long ->
+                calendar.timeInMillis = timestamp
+                "W${calendar.get(Calendar.WEEK_OF_YEAR)}"
             }
         }
         TimePeriod.ONE_YEAR -> {
             // Format as month (e.g., "Jan")
-            { timestamp ->
-                SimpleDateFormat("MMM", Locale.getDefault()).format(Date(timestamp))
-            }
+            { timestamp: Long -> monthFormatter.format(Date(timestamp)) }
         }
         TimePeriod.MAX -> {
             // Dynamic format based on data range
-            val daysDiff = (now - startTime) / (24 * 60 * 60 * 1000)
+            val daysDiff = (now - startTime) / (24L * 60 * 60 * 1000)
             when {
-                daysDiff <= 30 -> { timestamp ->
-                    SimpleDateFormat("EEE d", Locale.getDefault()).format(Date(timestamp))
+                daysDiff <= 30 -> { timestamp: Long -> dayFormatter.format(Date(timestamp)) }
+                daysDiff <= 180 -> { timestamp: Long ->
+                    calendar.timeInMillis = timestamp
+                    "W${calendar.get(Calendar.WEEK_OF_YEAR)}"
                 }
-                daysDiff <= 180 -> { timestamp ->
-                    val cal = Calendar.getInstance().apply { timeInMillis = timestamp }
-                    "W${cal.get(Calendar.WEEK_OF_YEAR)}"
-                }
-                else -> { timestamp ->
-                    SimpleDateFormat("MMM", Locale.getDefault()).format(Date(timestamp))
-                }
+                else -> { timestamp: Long -> monthFormatter.format(Date(timestamp)) }
             }
         }
     }

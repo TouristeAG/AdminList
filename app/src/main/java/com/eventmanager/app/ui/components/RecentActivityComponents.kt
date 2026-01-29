@@ -14,6 +14,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -123,22 +124,25 @@ fun RecentActivitySection(
                 )
             }
 
-            // Activity items
+            // Activity items - optimized to avoid unnecessary recompositions
+            // Use key() to help Compose identify items efficiently
             activities.forEachIndexed { index, activity ->
-                if (index > 0) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(1.dp)
-                            .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-                            .padding(vertical = if (isPhone) 8.dp else 12.dp)
+                key(activity.id) {
+                    if (index > 0) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(1.dp)
+                                .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                                .padding(vertical = if (isPhone) 8.dp else 12.dp)
+                        )
+                    }
+                    
+                    RecentActivityItemCard(
+                        activity = activity,
+                        isPhone = isPhone
                     )
                 }
-                
-                RecentActivityItemCard(
-                    activity = activity,
-                    isPhone = isPhone
-                )
             }
         }
     }
@@ -259,6 +263,14 @@ fun BadgeChip(
 }
 
 /**
+ * Thread-safe cached SimpleDateFormat instance for date formatting
+ * SimpleDateFormat is thread-safe for reading (format operations)
+ */
+private val dateFormatterCache = ThreadLocal.withInitial {
+    SimpleDateFormat("MMM d", Locale.getDefault())
+}
+
+/**
  * Displays formatted time ago
  */
 @Composable
@@ -267,7 +279,10 @@ fun TimeDisplay(
     isPhone: Boolean = true,
     modifier: Modifier = Modifier
 ) {
-    val timeAgo = formatTimeAgo(timestamp)
+    // Use remember to cache the formatted string and avoid recomputation on every recomposition
+    val timeAgo = remember(timestamp) {
+        formatTimeAgo(timestamp)
+    }
     
     Text(
         text = timeAgo,
@@ -280,11 +295,11 @@ fun TimeDisplay(
 
 /**
  * Formats timestamp to human readable "time ago" format
+ * Optimized to reuse cached SimpleDateFormat instance
  */
 fun formatTimeAgo(timestamp: Long): String {
-    val date = Date(timestamp)
-    val formatter = SimpleDateFormat("MMM d", Locale.getDefault())
-    return formatter.format(date)
+    val formatter = dateFormatterCache.get()
+    return formatter.format(Date(timestamp))
 }
 
 /**
@@ -444,8 +459,12 @@ fun PeopleCounter(
             
             // Last Modified Display
             if (lastModified > 0) {
+                // Use remember to cache the formatted string and avoid recomputation
+                val formattedTime = remember(lastModified) {
+                    formatCounterTime(lastModified)
+                }
                 Text(
-                    text = "Last modified: ${formatCounterTime(lastModified)}",
+                    text = "Last modified: $formattedTime",
                     style = if (isPhone) MaterialTheme.typography.labelSmall else MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
@@ -650,18 +669,28 @@ fun PeopleCounter(
 }
 
 /**
+ * Thread-safe cached SimpleDateFormat instance for counter time formatting
+ */
+private val counterTimeFormatterCache = ThreadLocal.withInitial {
+    SimpleDateFormat("MMM d, HH:mm", Locale.getDefault())
+}
+
+/**
  * Format counter timestamp to readable string
+ * Optimized to reuse cached SimpleDateFormat instance and avoid creating Date objects unnecessarily
  */
 fun formatCounterTime(timestamp: Long): String {
-    val date = java.util.Date(timestamp)
-    val now = java.util.Date()
-    val diffMs = now.time - date.time
+    val now = System.currentTimeMillis()
+    val diffMs = now - timestamp
     
     return when {
         diffMs < 1000 -> "just now"
         diffMs < 60000 -> "${diffMs / 1000}s ago"
         diffMs < 3600000 -> "${diffMs / 60000}m ago"
         diffMs < 86400000 -> "${diffMs / 3600000}h ago"
-        else -> java.text.SimpleDateFormat("MMM d, HH:mm", java.util.Locale.getDefault()).format(date)
+        else -> {
+            val formatter = counterTimeFormatterCache.get()
+            formatter.format(Date(timestamp))
+        }
     }
 }

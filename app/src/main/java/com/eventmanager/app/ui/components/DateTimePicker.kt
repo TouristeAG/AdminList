@@ -13,6 +13,7 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import com.eventmanager.app.data.utils.DateTimeUtils
 import java.util.*
 import java.util.Date
@@ -184,9 +185,21 @@ private fun DatePickerDialog(
     AlertDialog(
         onDismissRequest = onDismissRequest,
         title = { Text("Select Date") },
-        text = content,
+        text = {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+            ) {
+                content()
+            }
+        },
         confirmButton = confirmButton,
-        dismissButton = dismissButton
+        dismissButton = dismissButton,
+        properties = DialogProperties(
+            // Allow the dialog (and consequently the calendar) to use the full available width.
+            // This prevents the last column (e.g., Saturday) from being clipped on smaller screens.
+            usePlatformDefaultWidth = false
+        )
     )
 }
 

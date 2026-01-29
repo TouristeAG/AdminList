@@ -130,30 +130,40 @@ fun JobTypeManagementScreen(
         
         Spacer(modifier = Modifier.height(responsiveSpacing))
         
+        // Memoize filter strings and options to avoid recomputation on every recomposition
+        val filterShiftTypes = stringResource(R.string.filter_shift_types)
+        val filterOrionTypes = stringResource(R.string.filter_orion_types)
+        val filterOptions = remember(filterShiftTypes, filterOrionTypes) { 
+            listOf(filterShiftTypes, filterOrionTypes) 
+        }
+        
         // Search and Filter Section
         SearchBarWithFilter(
             searchText = searchText,
             onSearchTextChange = { searchText = it },
             placeholder = stringResource(R.string.search_shift_types_placeholder),
-            filterOptions = listOf(stringResource(R.string.filter_shift_types), stringResource(R.string.filter_orion_types)),
+            filterOptions = filterOptions,
             selectedFilter = selectedFilter,
             onFilterChange = { selectedFilter = it }
         )
         
         Spacer(modifier = Modifier.height(16.dp))
         
-        val filteredJobTypes = jobTypeConfigs.filter { config ->
-            val matchesSearch = searchText.isEmpty() || 
-                config.name.contains(searchText, ignoreCase = true) ||
-                config.description.contains(searchText, ignoreCase = true)
-            val matchesFilter = selectedFilter?.let { filter ->
-                when (filter) {
-                    stringResource(R.string.filter_shift_types) -> config.isShiftJob
-                    stringResource(R.string.filter_orion_types) -> config.isOrionJob
-                    else -> true
-                }
-            } ?: true
-            matchesSearch && matchesFilter
+        // Memoize filtered job types to avoid recalculating on every recomposition
+        val filteredJobTypes = remember(jobTypeConfigs, searchText, selectedFilter, filterShiftTypes, filterOrionTypes) {
+            jobTypeConfigs.filter { config ->
+                val matchesSearch = searchText.isEmpty() || 
+                    config.name.contains(searchText, ignoreCase = true) ||
+                    config.description.contains(searchText, ignoreCase = true)
+                val matchesFilter = selectedFilter?.let { filter ->
+                    when (filter) {
+                        filterShiftTypes -> config.isShiftJob
+                        filterOrionTypes -> config.isOrionJob
+                        else -> true
+                    }
+                } ?: true
+                matchesSearch && matchesFilter
+            }
         }
         
         Text(
@@ -171,7 +181,10 @@ fun JobTypeManagementScreen(
                 .fillMaxWidth()
                 .weight(1f)
         ) {
-            items(filteredJobTypes) { config ->
+            items(
+                items = filteredJobTypes,
+                key = { config -> config.id }
+            ) { config ->
                 JobTypeConfigCard(
                     config = config,
                     onUpdate = { showEditDialog = config },

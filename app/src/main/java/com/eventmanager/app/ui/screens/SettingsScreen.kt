@@ -14,6 +14,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.filled.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -28,7 +29,31 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.draw.scale
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.border
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.shape.RoundedCornerShape
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalView
 import com.eventmanager.app.data.sync.FileManager
 import com.eventmanager.app.data.sync.GoogleSheetsConfig
 import com.eventmanager.app.data.sync.JsonKeyInfo
@@ -46,6 +71,9 @@ import com.eventmanager.app.BuildConfig
 import com.eventmanager.app.ui.theme.ThemeMode
 import com.eventmanager.app.ui.components.ResolutionScaleSlider
 import com.eventmanager.app.ui.components.AppRestartDialog
+import com.eventmanager.app.ui.components.RetroSynthwaveGameDialog
+import com.eventmanager.app.ui.components.FlappyNocturneGameDialog
+import com.eventmanager.app.ui.components.DriveNocturneGameDialog
 
 // Data class for icon options
 private data class IconOption(
@@ -130,27 +158,31 @@ fun SettingsScreen(
     var showTestDialog by remember { mutableStateOf(false) }
     var testResult by remember { mutableStateOf<String?>(null) }
     var jsonKeyInfo by remember { mutableStateOf<JsonKeyInfo?>(null) }
-    var showFileUploadDialog by remember { mutableStateOf(false) }
-    var showDiagnosticDialog by remember { mutableStateOf(false) }
-    var diagnosticResults by remember { mutableStateOf("") }
     var showActiveVolunteersDialog by remember { mutableStateOf(false) }
     var showCleanupDialog by remember { mutableStateOf(false) }
     var uploadStatus by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
     var selectedFileUri by remember { mutableStateOf<Uri?>(null) }
     var syncInterval by remember { mutableStateOf(settingsManager.getSyncInterval()) }
-    var showSyncSettings by remember { mutableStateOf(false) }
-    var showAppearanceSettings by remember { mutableStateOf(false) }
-    var showLocalizationSettings by remember { mutableStateOf(false) }
-    var showAnimationSettings by remember { mutableStateOf(false) }
-    var showDeveloperSettings by remember { mutableStateOf(false) }
-    var showMaintenanceSettings by remember { mutableStateOf(false) }
+    var showSyncSettings by remember { mutableStateOf(settingsManager.isCategorySyncExpanded()) }
+    var showAppearanceSettings by remember { mutableStateOf(settingsManager.isCategoryAppearanceExpanded()) }
+    var showLocalizationSettings by remember { mutableStateOf(settingsManager.isCategoryLocalizationExpanded()) }
+    var showAnimationSettings by remember { mutableStateOf(settingsManager.isCategoryAnimationExpanded()) }
+    var showDeveloperSettings by remember { mutableStateOf(settingsManager.isCategoryDeveloperExpanded()) }
+    var showMaintenanceSettings by remember { mutableStateOf(settingsManager.isCategoryMaintenanceExpanded()) }
     var showRestartDialog by remember { mutableStateOf(false) }
     var currentResolutionScale by remember { mutableStateOf(settingsManager.getResolutionScale()) }
     var pendingResolutionScale by remember { mutableStateOf(settingsManager.getResolutionScale()) }
     var hasUnsavedResolutionChanges by remember { mutableStateOf(false) }
     var showAppIconRestartDialog by remember { mutableStateOf(false) }
     var showUpdateResultDialog by remember { mutableStateOf(false) }
+    
+    // Easter Egg state
+    var easterEggTapCount by remember { mutableStateOf(0) }
+    var lastEasterEggTapTime by remember { mutableStateOf(0L) }
+    var showEasterEggDialog by remember { mutableStateOf(false) }
+    var showFlappyGame by remember { mutableStateOf(false) }
+    var showDriveGame by remember { mutableStateOf(false) }
     
     // Check if JSON key file exists on first load
     LaunchedEffect(Unit) {
@@ -176,7 +208,7 @@ fun SettingsScreen(
                 .onSuccess { keyInfo ->
                     uploadStatus = context.getString(R.string.file_validated_uploading)
                     fileManager.copyFileToAssets(uri, "service_account_key.json")
-                        .onSuccess { path ->
+                        .onSuccess { _ ->
                             uploadStatus = context.getString(R.string.file_uploaded_successfully)
                             jsonKeyInfo = keyInfo
                         }
@@ -218,7 +250,10 @@ fun SettingsScreen(
             title = context.getString(R.string.settings_category_sync),
             icon = Icons.Default.CloudSync,
             isExpanded = showSyncSettings,
-            onToggleExpanded = { showSyncSettings = !showSyncSettings }
+            onToggleExpanded = { 
+                showSyncSettings = !showSyncSettings
+                settingsManager.setCategorySyncExpanded(showSyncSettings)
+            }
         ) {
             // Google Sheets Configuration Section
             Card(
@@ -253,7 +288,7 @@ fun SettingsScreen(
                         onClick = { showInstructions = true },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(Icons.Default.Help, contentDescription = null)
+                        Icon(Icons.AutoMirrored.Filled.Help, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(context.getString(R.string.view_setup_instructions))
                     }
@@ -616,7 +651,10 @@ fun SettingsScreen(
             title = context.getString(R.string.settings_category_appearance),
             icon = Icons.Default.Palette,
             isExpanded = showAppearanceSettings,
-            onToggleExpanded = { showAppearanceSettings = !showAppearanceSettings }
+            onToggleExpanded = { 
+                showAppearanceSettings = !showAppearanceSettings
+                settingsManager.setCategoryAppearanceExpanded(showAppearanceSettings)
+            }
         ) {
             // Theme Selection
             var selectedTheme by remember { mutableStateOf(ThemeMode.fromString(settingsManager.getThemeMode())) }
@@ -888,7 +926,7 @@ fun SettingsScreen(
             
             // App Icon Style Selection - Carousel
             var selectedIconStyle by remember { mutableStateOf(settingsManager.getAppIconStyle()) }
-            var headerPinned by remember { mutableStateOf(settingsManager.isHeaderPinned()) }
+            var scrollBehavior by remember { mutableStateOf(settingsManager.getScrollBehavior()) }
             
             Column(
                 modifier = Modifier.fillMaxWidth()
@@ -1150,6 +1188,9 @@ fun SettingsScreen(
                         
                         Spacer(modifier = Modifier.height(12.dp))
                         
+                        val isHeaderPinned = scrollBehavior == SettingsManager.HEADER_PINNED
+                        val isFullScroll = scrollBehavior == SettingsManager.FULL_SCROLL || scrollBehavior == SettingsManager.STICKY_FILTERS
+                        
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -1159,23 +1200,23 @@ fun SettingsScreen(
                                 modifier = Modifier
                                     .weight(1f)
                                     .clickable {
-                                        if (!headerPinned) {
-                                            headerPinned = true
-                                            settingsManager.setHeaderPinned(true)
+                                        if (!isHeaderPinned) {
+                                            scrollBehavior = SettingsManager.HEADER_PINNED
+                                            settingsManager.setScrollBehavior(SettingsManager.HEADER_PINNED)
                                         }
                                     },
                                 colors = CardDefaults.cardColors(
-                                    containerColor = if (headerPinned)
+                                    containerColor = if (isHeaderPinned)
                                         MaterialTheme.colorScheme.primaryContainer
                                     else
                                         MaterialTheme.colorScheme.surface
                                 ),
                                 elevation = CardDefaults.cardElevation(
-                                    defaultElevation = if (headerPinned) 8.dp else 2.dp
+                                    defaultElevation = if (isHeaderPinned) 8.dp else 2.dp
                                 ),
                                 border = BorderStroke(
-                                    width = if (headerPinned) 2.dp else 1.dp,
-                                    color = if (headerPinned)
+                                    width = if (isHeaderPinned) 2.dp else 1.dp,
+                                    color = if (isHeaderPinned)
                                         MaterialTheme.colorScheme.primary
                                     else
                                         MaterialTheme.colorScheme.outline
@@ -1216,23 +1257,23 @@ fun SettingsScreen(
                                 modifier = Modifier
                                     .weight(1f)
                                     .clickable {
-                                        if (headerPinned) {
-                                            headerPinned = false
-                                            settingsManager.setHeaderPinned(false)
+                                        if (!isFullScroll) {
+                                            scrollBehavior = SettingsManager.FULL_SCROLL
+                                            settingsManager.setScrollBehavior(SettingsManager.FULL_SCROLL)
                                         }
                                     },
                                 colors = CardDefaults.cardColors(
-                                    containerColor = if (!headerPinned)
+                                    containerColor = if (isFullScroll)
                                         MaterialTheme.colorScheme.primaryContainer
                                     else
                                         MaterialTheme.colorScheme.surface
                                 ),
                                 elevation = CardDefaults.cardElevation(
-                                    defaultElevation = if (!headerPinned) 8.dp else 2.dp
+                                    defaultElevation = if (isFullScroll) 8.dp else 2.dp
                                 ),
                                 border = BorderStroke(
-                                    width = if (!headerPinned) 2.dp else 1.dp,
-                                    color = if (!headerPinned)
+                                    width = if (isFullScroll) 2.dp else 1.dp,
+                                    color = if (isFullScroll)
                                         MaterialTheme.colorScheme.primary
                                     else
                                         MaterialTheme.colorScheme.outline
@@ -1268,39 +1309,66 @@ fun SettingsScreen(
                                 }
                             }
                         }
-                    }
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    // Statistics Visibility Toggle
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Start,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        var statisticsVisible by remember { mutableStateOf(settingsManager.isStatisticsVisible()) }
-                        Column(
-                            modifier = Modifier.weight(1f)
+                        
+                        // Sub-option: Sticky filters (only visible when full scroll is selected)
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = isFullScroll,
+                            enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
+                            exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()
                         ) {
-                            Text(
-                                text = context.getString(R.string.statistics_visibility_title),
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                            Text(
-                                text = context.getString(R.string.statistics_visibility_description),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = statisticsVisible,
-                            onCheckedChange = {
-                                statisticsVisible = it
-                                settingsManager.setStatisticsVisible(it)
+                            Column {
+                                Spacer(modifier = Modifier.height(12.dp))
+                                
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            val newBehavior = if (scrollBehavior == SettingsManager.STICKY_FILTERS) {
+                                                SettingsManager.FULL_SCROLL
+                                            } else {
+                                                SettingsManager.STICKY_FILTERS
+                                            }
+                                            scrollBehavior = newBehavior
+                                            settingsManager.setScrollBehavior(newBehavior)
+                                        }
+                                        .padding(vertical = 6.dp, horizontal = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column(
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text(
+                                            text = context.getString(R.string.scroll_behavior_sticky_filters_option),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                        Text(
+                                            text = context.getString(R.string.scroll_behavior_sticky_filters_description),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Switch(
+                                        checked = scrollBehavior == SettingsManager.STICKY_FILTERS,
+                                        onCheckedChange = { checked ->
+                                            val newBehavior = if (checked) {
+                                                SettingsManager.STICKY_FILTERS
+                                            } else {
+                                                SettingsManager.FULL_SCROLL
+                                            }
+                                            scrollBehavior = newBehavior
+                                            settingsManager.setScrollBehavior(newBehavior)
+                                        },
+                                        modifier = Modifier.scale(0.8f)
+                                    )
+                                }
                             }
-                        )
+                        }
                     }
-        }
+                    
+                    }
         
         Spacer(modifier = Modifier.height(24.dp))
         
@@ -1309,7 +1377,10 @@ fun SettingsScreen(
             title = context.getString(R.string.settings_category_localization),
             icon = Icons.Default.Language,
             isExpanded = showLocalizationSettings,
-            onToggleExpanded = { showLocalizationSettings = !showLocalizationSettings }
+            onToggleExpanded = { 
+                showLocalizationSettings = !showLocalizationSettings
+                settingsManager.setCategoryLocalizationExpanded(showLocalizationSettings)
+            }
         ) {
             // Language Selection
             var selectedLanguage by remember { mutableStateOf(settingsManager.getLanguage()) }
@@ -1341,6 +1412,9 @@ fun SettingsScreen(
                         Text(
                             text = when (selectedLanguage) {
                                 "fr" -> context.getString(R.string.language_french)
+                                "es" -> context.getString(R.string.language_spanish)
+                                "zh-TW" -> context.getString(R.string.language_chinese)
+                                "zh-CN" -> context.getString(R.string.language_chinese_simplified)
                                 else -> context.getString(R.string.language_english)
                             },
                             modifier = Modifier.weight(1f),
@@ -1372,6 +1446,33 @@ fun SettingsScreen(
                             onClick = {
                                 selectedLanguage = "fr"
                                 settingsManager.saveLanguage("fr")
+                                showLanguageMenu = false
+                                (context as? android.app.Activity)?.recreate()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(context.getString(R.string.language_spanish)) },
+                            onClick = {
+                                selectedLanguage = "es"
+                                settingsManager.saveLanguage("es")
+                                showLanguageMenu = false
+                                (context as? android.app.Activity)?.recreate()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(context.getString(R.string.language_chinese)) },
+                            onClick = {
+                                selectedLanguage = "zh-TW"
+                                settingsManager.saveLanguage("zh-TW")
+                                showLanguageMenu = false
+                                (context as? android.app.Activity)?.recreate()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(context.getString(R.string.language_chinese_simplified)) },
+                            onClick = {
+                                selectedLanguage = "zh-CN"
+                                settingsManager.saveLanguage("zh-CN")
                                 showLanguageMenu = false
                                 (context as? android.app.Activity)?.recreate()
                             }
@@ -1598,7 +1699,10 @@ fun SettingsScreen(
             title = context.getString(R.string.settings_category_animations),
             icon = Icons.Default.PlayArrow,
             isExpanded = showAnimationSettings,
-            onToggleExpanded = { showAnimationSettings = !showAnimationSettings }
+            onToggleExpanded = { 
+                showAnimationSettings = !showAnimationSettings
+                settingsManager.setCategoryAnimationExpanded(showAnimationSettings)
+            }
         ) {
             // Animated Background Toggle
             Row(
@@ -1690,6 +1794,7 @@ fun SettingsScreen(
                     }
                 )
             }
+            
         }
         
         Spacer(modifier = Modifier.height(24.dp))
@@ -1699,7 +1804,10 @@ fun SettingsScreen(
             title = context.getString(R.string.settings_category_developer),
             icon = Icons.Default.BugReport,
             isExpanded = showDeveloperSettings,
-            onToggleExpanded = { showDeveloperSettings = !showDeveloperSettings }
+            onToggleExpanded = { 
+                showDeveloperSettings = !showDeveloperSettings
+                settingsManager.setCategoryDeveloperExpanded(showDeveloperSettings)
+            }
         ) {
             // Debug Mode Toggle
             var debugModeEnabled by remember { mutableStateOf(settingsManager.getDebugMode()) }
@@ -1742,7 +1850,7 @@ fun SettingsScreen(
                 var showLogViewer by remember { mutableStateOf(false) }
                 var selectedLogContent by remember { mutableStateOf<String?>(null) }
                 val logsDirectoryPath = remember { com.eventmanager.app.data.sync.AppLogger.getLogsDirectoryPath() }
-                val coroutineScope = rememberCoroutineScope()
+                val logCoroutineScope = rememberCoroutineScope()
                 
                 LaunchedEffect(debugModeEnabled) {
                     if (debugModeEnabled) {
@@ -1820,7 +1928,7 @@ fun SettingsScreen(
                                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                     TextButton(
                                         onClick = {
-                                            coroutineScope.launch {
+                                            logCoroutineScope.launch {
                                                 selectedLogContent = try {
                                                     logFile.readText()
                                                 } catch (e: Exception) {
@@ -1876,7 +1984,7 @@ fun SettingsScreen(
                         if (logFilesState.isNotEmpty()) {
                             Button(
                                 onClick = {
-                                    coroutineScope.launch {
+                                    logCoroutineScope.launch {
                                         selectedLogContent = com.eventmanager.app.data.sync.AppLogger.getLatestLogContent()
                                         showLogViewer = true
                                     }
@@ -1974,11 +2082,16 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(24.dp))
         
         // Maintenance Settings
+        var showUpdateSourcesDialog by remember { mutableStateOf(false) }
+        
         ExpandableSettingsCategory(
             title = context.getString(R.string.settings_category_maintenance),
             icon = Icons.Default.Build,
             isExpanded = showMaintenanceSettings,
-            onToggleExpanded = { showMaintenanceSettings = !showMaintenanceSettings }
+            onToggleExpanded = { 
+                showMaintenanceSettings = !showMaintenanceSettings
+                settingsManager.setCategoryMaintenanceExpanded(showMaintenanceSettings)
+            }
         ) {
             // Check for updates
             Button(
@@ -1988,11 +2101,30 @@ fun SettingsScreen(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 8.dp)
             ) {
                 Icon(Icons.Default.SystemUpdate, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(context.getString(R.string.check_for_updates))
+            }
+            
+            // Change update sources link
+            TextButton(
+                onClick = { showUpdateSourcesDialog = true },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+                contentPadding = PaddingValues(vertical = 4.dp)
+            ) {
+                Icon(
+                    Icons.Default.Settings,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = context.getString(R.string.change_update_sources),
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
 
             // Clear Cache Button
@@ -2012,6 +2144,14 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(context.getString(R.string.clear_app_cache))
             }
+        }
+        
+        // Update Sources Dialog
+        if (showUpdateSourcesDialog) {
+            UpdateSourcesDialog(
+                settingsManager = settingsManager,
+                onDismiss = { showUpdateSourcesDialog = false }
+            )
         }
         
         Spacer(modifier = Modifier.height(24.dp))
@@ -2114,13 +2254,32 @@ fun SettingsScreen(
         
         Spacer(modifier = Modifier.height(24.dp))
         
-        // App Information Section
+        // App Information Section with Easter Egg
         Card(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable {
+                    val currentTime = System.currentTimeMillis()
+                    // Reset if more than 500ms between taps
+                    if (currentTime - lastEasterEggTapTime > 500) {
+                        easterEggTapCount = 1
+                    } else {
+                        easterEggTapCount++
+                    }
+                    lastEasterEggTapTime = currentTime
+                    
+                    // Trigger Easter Egg after 10 rapid taps
+                    if (easterEggTapCount >= 10) {
+                        showEasterEggDialog = true
+                        easterEggTapCount = 0
+                    }
+                },
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {
             Column(
-                modifier = Modifier.padding(16.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -2133,55 +2292,55 @@ fun SettingsScreen(
                         tint = MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = context.getString(R.string.app_info_title),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    Column {
+                        Text(
+                            text = context.getString(R.string.app_info_title),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = "${context.getString(R.string.app_name)} ${BuildConfig.VERSION_NAME}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
-                Text(
-                    text = "${context.getString(R.string.app_name)} ${BuildConfig.VERSION_NAME}",
-                    style = MaterialTheme.typography.titleMedium
-                )
-                
-                Text(
-                    text = context.getString(R.string.app_designed_for),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                Row {
+
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Text(
-                        text = context.getString(R.string.developed_by),
+                        text = context.getString(R.string.app_designed_for),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
                     Text(
-                        text = context.getString(R.string.collectif_nocturne),
-                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                        text = context.getString(R.string.app_developed_full),
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
                     Text(
-                        text = context.getString(R.string.leonardo_mondada),
-                        style = MaterialTheme.typography.bodyMedium,
+                        text = context.getString(
+                            R.string.last_sync,
+                            if (settingsManager.getLastSyncTime() > 0)
+                                com.eventmanager.app.data.sync.DateFormatUtils.formatDateTime(
+                                    settingsManager.getLastSyncTime(),
+                                    context
+                                )
+                            else context.getString(R.string.never)
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                Text(
-                    text = context.getString(R.string.last_sync, if (settingsManager.getLastSyncTime() > 0) 
-                        com.eventmanager.app.data.sync.DateFormatUtils.formatDateTime(settingsManager.getLastSyncTime(), context)
-                    else context.getString(R.string.never)),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
         }
     }
@@ -2207,7 +2366,7 @@ fun SettingsScreen(
                             text = {
                                 Column {
                                     LinearProgressIndicator(
-                                        progress = downloadState.progress / 100f,
+                                        progress = { downloadState.progress / 100f },
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                     Spacer(modifier = Modifier.height(8.dp))
@@ -2286,7 +2445,7 @@ fun SettingsScreen(
                                     } else {
                                         // Fallback to browser if no download URL
                                         val targetUrl = manifest.storeUrl
-                                            ?: BuildConfig.UPDATE_FALLBACK_STORE_URL
+                                            ?: settingsManager.getUpdateStoreUrl()
                                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(targetUrl))
                                         context.startActivity(intent)
                                         showUpdateResultDialog = false
@@ -2446,6 +2605,35 @@ fun SettingsScreen(
         isVisible = showAppIconRestartDialog,
         onDismiss = { showAppIconRestartDialog = false }
     )
+    
+    // Easter Egg Dialog
+    if (showEasterEggDialog) {
+        RetroSynthwaveGameDialog(
+            onDismiss = { showEasterEggDialog = false },
+            onDriveSelected = {
+                showEasterEggDialog = false
+                showDriveGame = true
+            },
+            onFlappySelected = {
+                showEasterEggDialog = false
+                showFlappyGame = true
+            }
+        )
+    }
+    
+    // Flappy Nocturne Game Dialog
+    if (showFlappyGame) {
+        FlappyNocturneGameDialog(
+            onDismiss = { showFlappyGame = false }
+        )
+    }
+    
+    // Drive Nocturne Game Dialog
+    if (showDriveGame) {
+        DriveNocturneGameDialog(
+            onDismiss = { showDriveGame = false }
+        )
+    }
     
 }
 
@@ -2694,7 +2882,10 @@ fun ActiveVolunteersDialog(
                         .heightIn(max = 300.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    items(activeVolunteers) { volunteer ->
+                    items(
+                        items = activeVolunteers,
+                        key = { volunteer -> volunteer.id }
+                    ) { volunteer ->
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -2729,7 +2920,10 @@ fun ActiveVolunteersDialog(
                             )
                         }
                         
-                        items(inactiveVolunteers) { volunteer ->
+                        items(
+                            items = inactiveVolunteers,
+                            key = { volunteer -> volunteer.id }
+                        ) { volunteer ->
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -2760,6 +2954,199 @@ fun ActiveVolunteersDialog(
         confirmButton = {
             TextButton(onClick = onDismiss) {
                 Text(context.getString(R.string.close))
+            }
+        }
+    )
+}
+
+@Composable
+fun UpdateSourcesDialog(
+    settingsManager: SettingsManager,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    
+    var githubUrl by remember { mutableStateOf(settingsManager.getUpdateManifestUrl()) }
+    var storeUrl by remember { mutableStateOf(settingsManager.getUpdateStoreUrl()) }
+    
+    val defaultGithubUrl = BuildConfig.UPDATE_MANIFEST_URL
+    val defaultStoreUrl = BuildConfig.UPDATE_FALLBACK_STORE_URL
+    
+    val isGithubUrlChanged = githubUrl != defaultGithubUrl
+    val isStoreUrlChanged = storeUrl != defaultStoreUrl
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.Default.Sync,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = context.getString(R.string.update_sources_title),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Warning card
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Icon(
+                            Icons.Default.Info,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.tertiary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = context.getString(R.string.update_sources_warning),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+                    }
+                }
+                
+                // GitHub URL field
+                Column {
+                    Text(
+                        text = context.getString(R.string.update_sources_github_label),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    OutlinedTextField(
+                        value = githubUrl,
+                        onValueChange = { githubUrl = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { 
+                            Text(
+                                text = defaultGithubUrl,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Code,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        },
+                        trailingIcon = {
+                            if (isGithubUrlChanged) {
+                                IconButton(
+                                    onClick = { githubUrl = defaultGithubUrl }
+                                ) {
+                                    Icon(
+                                        Icons.Default.Restore,
+                                        contentDescription = context.getString(R.string.update_sources_reset),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        },
+                        singleLine = false,
+                        maxLines = 2,
+                        textStyle = MaterialTheme.typography.bodySmall
+                    )
+                    if (isGithubUrlChanged) {
+                        Text(
+                            text = context.getString(R.string.update_sources_custom_url),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            modifier = Modifier.padding(start = 4.dp, top = 2.dp)
+                        )
+                    }
+                }
+                
+                // Store URL field
+                Column {
+                    Text(
+                        text = context.getString(R.string.update_sources_store_label),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    OutlinedTextField(
+                        value = storeUrl,
+                        onValueChange = { storeUrl = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { 
+                            Text(
+                                text = defaultStoreUrl,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Store,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        },
+                        trailingIcon = {
+                            if (isStoreUrlChanged) {
+                                IconButton(
+                                    onClick = { storeUrl = defaultStoreUrl }
+                                ) {
+                                    Icon(
+                                        Icons.Default.Restore,
+                                        contentDescription = context.getString(R.string.update_sources_reset),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        },
+                        singleLine = false,
+                        maxLines = 2,
+                        textStyle = MaterialTheme.typography.bodySmall
+                    )
+                    if (isStoreUrlChanged) {
+                        Text(
+                            text = context.getString(R.string.update_sources_custom_url),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            modifier = Modifier.padding(start = 4.dp, top = 2.dp)
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    settingsManager.saveUpdateManifestUrl(githubUrl)
+                    settingsManager.saveUpdateStoreUrl(storeUrl)
+                    onDismiss()
+                }
+            ) {
+                Text(context.getString(R.string.save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(context.getString(R.string.cancel))
             }
         }
     )

@@ -25,11 +25,20 @@ interface JobDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertJob(job: Job): Long
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertJobsAll(jobs: List<Job>): List<Long>
+
     @Update
     suspend fun updateJob(job: Job)
 
+    @Update
+    suspend fun updateJobsAll(jobs: List<Job>)
+
     @Delete
     suspend fun deleteJob(job: Job)
+
+    @Delete
+    suspend fun deleteJobsAll(jobs: List<Job>)
 
     @Query("DELETE FROM jobs WHERE id = :id")
     suspend fun deleteJobById(id: Long)

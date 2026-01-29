@@ -2,6 +2,7 @@ package com.eventmanager.app.data.sync
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.eventmanager.app.BuildConfig
 
 /**
  * Manages app settings persistence using SharedPreferences
@@ -38,6 +39,21 @@ class SettingsManager(context: Context) {
         private const val KEY_PEOPLE_COUNTER_VISIBLE = "people_counter_visible"
         private const val KEY_STATISTICS_VISIBLE = "statistics_visible"
         private const val KEY_PAGE_SCROLL_BEHAVIOR = "page_scroll_behavior"
+        private const val KEY_UPDATE_MANIFEST_URL = "update_manifest_url"
+        private const val KEY_UPDATE_STORE_URL = "update_store_url"
+        
+        // Settings Category Expansion State Keys
+        private const val KEY_CATEGORY_SYNC_EXPANDED = "category_sync_expanded"
+        private const val KEY_CATEGORY_APPEARANCE_EXPANDED = "category_appearance_expanded"
+        private const val KEY_CATEGORY_LOCALIZATION_EXPANDED = "category_localization_expanded"
+        private const val KEY_CATEGORY_ANIMATION_EXPANDED = "category_animation_expanded"
+        private const val KEY_CATEGORY_DEVELOPER_EXPANDED = "category_developer_expanded"
+        private const val KEY_CATEGORY_MAINTENANCE_EXPANDED = "category_maintenance_expanded"
+        
+        // Page Scroll Behavior Configuration Constants
+        const val HEADER_PINNED = "header_pinned"
+        const val FULL_SCROLL = "full_scroll"
+        const val STICKY_FILTERS = "sticky_filters"
     }
     
     // Google Sheets Configuration
@@ -284,14 +300,66 @@ class SettingsManager(context: Context) {
     }
 
     // Page Scroll Behavior Configuration
-    // true  -> Only the list scrolls, header stays fixed (current default)
-    // false -> Header scrolls together with the list
-    fun isHeaderPinned(): Boolean {
-        return prefs.getBoolean(KEY_PAGE_SCROLL_BEHAVIOR, true)
+    // HEADER_PINNED   -> Only the list scrolls, header stays fixed
+    // FULL_SCROLL     -> Header scrolls together with the list (default)
+    // STICKY_FILTERS  -> Header scrolls but filters become sticky at the top
+    fun getScrollBehavior(): String {
+        // Check if new string setting exists
+        val storedString = prefs.getString("${KEY_PAGE_SCROLL_BEHAVIOR}_mode", null)
+        if (storedString != null) {
+            return storedString
+        }
+        
+        // Migrate old boolean setting if it was explicitly set
+        // Note: prefs.contains checks if the key was ever set by the user
+        if (prefs.contains(KEY_PAGE_SCROLL_BEHAVIOR)) {
+            val oldValue = prefs.getBoolean(KEY_PAGE_SCROLL_BEHAVIOR, true)
+            return if (oldValue) HEADER_PINNED else FULL_SCROLL
+        }
+        
+        // Default to FULL_SCROLL for new users
+        return FULL_SCROLL
     }
     
-    fun setHeaderPinned(pinned: Boolean) {
-        prefs.edit().putBoolean(KEY_PAGE_SCROLL_BEHAVIOR, pinned).apply()
+    fun setScrollBehavior(behavior: String) {
+        prefs.edit().putString("${KEY_PAGE_SCROLL_BEHAVIOR}_mode", behavior).apply()
+    }
+    
+    // Legacy support - kept for backward compatibility
+    fun isHeaderPinned(): Boolean {
+        return getScrollBehavior() == HEADER_PINNED
+    }
+    
+    fun isStickyFilters(): Boolean {
+        return getScrollBehavior() == STICKY_FILTERS
+    }
+
+    // Update Manifest URL Configuration
+    fun getUpdateManifestUrl(): String {
+        return prefs.getString(KEY_UPDATE_MANIFEST_URL, BuildConfig.UPDATE_MANIFEST_URL)
+            ?: BuildConfig.UPDATE_MANIFEST_URL
+    }
+
+    fun saveUpdateManifestUrl(url: String) {
+        prefs.edit().putString(KEY_UPDATE_MANIFEST_URL, url).apply()
+    }
+
+    // Update Store URL Configuration
+    fun getUpdateStoreUrl(): String {
+        return prefs.getString(KEY_UPDATE_STORE_URL, BuildConfig.UPDATE_FALLBACK_STORE_URL)
+            ?: BuildConfig.UPDATE_FALLBACK_STORE_URL
+    }
+
+    fun saveUpdateStoreUrl(url: String) {
+        prefs.edit().putString(KEY_UPDATE_STORE_URL, url).apply()
+    }
+    
+    /**
+     * Returns animation intensity multiplier.
+     * Always returns 1.0f - users can disable specific animations via their individual toggles.
+     */
+    fun getAnimationIntensityMultiplier(): Float {
+        return 1.0f
     }
     
     // Clear all settings
@@ -303,5 +371,54 @@ class SettingsManager(context: Context) {
     fun isConfigured(): Boolean {
         val spreadsheetId = getSpreadsheetId()
         return spreadsheetId.isNotEmpty() && spreadsheetId != GoogleSheetsConfig.SPREADSHEET_ID
+    }
+    
+    // Settings Category Expansion State
+    fun isCategorySyncExpanded(): Boolean {
+        return prefs.getBoolean(KEY_CATEGORY_SYNC_EXPANDED, false)
+    }
+    
+    fun setCategorySyncExpanded(expanded: Boolean) {
+        prefs.edit().putBoolean(KEY_CATEGORY_SYNC_EXPANDED, expanded).apply()
+    }
+    
+    fun isCategoryAppearanceExpanded(): Boolean {
+        return prefs.getBoolean(KEY_CATEGORY_APPEARANCE_EXPANDED, false)
+    }
+    
+    fun setCategoryAppearanceExpanded(expanded: Boolean) {
+        prefs.edit().putBoolean(KEY_CATEGORY_APPEARANCE_EXPANDED, expanded).apply()
+    }
+    
+    fun isCategoryLocalizationExpanded(): Boolean {
+        return prefs.getBoolean(KEY_CATEGORY_LOCALIZATION_EXPANDED, false)
+    }
+    
+    fun setCategoryLocalizationExpanded(expanded: Boolean) {
+        prefs.edit().putBoolean(KEY_CATEGORY_LOCALIZATION_EXPANDED, expanded).apply()
+    }
+    
+    fun isCategoryAnimationExpanded(): Boolean {
+        return prefs.getBoolean(KEY_CATEGORY_ANIMATION_EXPANDED, false)
+    }
+    
+    fun setCategoryAnimationExpanded(expanded: Boolean) {
+        prefs.edit().putBoolean(KEY_CATEGORY_ANIMATION_EXPANDED, expanded).apply()
+    }
+    
+    fun isCategoryDeveloperExpanded(): Boolean {
+        return prefs.getBoolean(KEY_CATEGORY_DEVELOPER_EXPANDED, false)
+    }
+    
+    fun setCategoryDeveloperExpanded(expanded: Boolean) {
+        prefs.edit().putBoolean(KEY_CATEGORY_DEVELOPER_EXPANDED, expanded).apply()
+    }
+    
+    fun isCategoryMaintenanceExpanded(): Boolean {
+        return prefs.getBoolean(KEY_CATEGORY_MAINTENANCE_EXPANDED, false)
+    }
+    
+    fun setCategoryMaintenanceExpanded(expanded: Boolean) {
+        prefs.edit().putBoolean(KEY_CATEGORY_MAINTENANCE_EXPANDED, expanded).apply()
     }
 }

@@ -11,10 +11,13 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import com.eventmanager.app.data.sync.SettingsManager
 import java.util.Calendar
 
 @Composable
@@ -22,13 +25,18 @@ fun PrideAnimation(
     enabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val settingsManager = remember { SettingsManager(context) }
+    val animationMultiplier = remember { settingsManager.getAnimationIntensityMultiplier() }
+    
     // Check if current date is June 28 (Pride Day)
     val calendar = Calendar.getInstance()
     val month = calendar.get(Calendar.MONTH) // 0-11, so June is 5
     val day = calendar.get(Calendar.DAY_OF_MONTH)
     
     val isPrideDay = month == Calendar.JUNE && day == 28
-    val shouldShowPride = enabled && isPrideDay
+    // Also check if reduced motion is enabled - if so, don't show animation
+    val shouldShowPride = enabled && isPrideDay && animationMultiplier > 0f
     
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         if (shouldShowPride) {
@@ -57,7 +65,6 @@ fun PrideAnimation(
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val width = size.width
                 val height = size.height
-                val rainbowCycleHeight = height / 6f * 6f // One full rainbow is 6 colors
                 
                 // Calculate offset for continuous smooth scrolling
                 // The animation scrolls through multiple full cycles

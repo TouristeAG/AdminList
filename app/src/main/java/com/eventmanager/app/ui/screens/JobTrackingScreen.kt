@@ -1,5 +1,7 @@
 package com.eventmanager.app.ui.screens
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import com.eventmanager.app.data.models.*
 import com.eventmanager.app.data.utils.DateTimeUtils
 import com.eventmanager.app.data.sync.DateFormatUtils
+import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.ui.components.SearchBarWithFilter
 import com.eventmanager.app.ui.components.SearchableDropdown
 import com.eventmanager.app.ui.components.DateTimePicker
@@ -31,7 +34,7 @@ import kotlinx.datetime.toLocalDateTime
 import java.text.SimpleDateFormat
 import java.util.*
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun JobTrackingScreen(
     jobs: List<Job>,
@@ -41,7 +44,7 @@ fun JobTrackingScreen(
     onAddJob: (Job) -> Unit,
     onUpdateJob: (Job) -> Unit,
     onDeleteJob: (Job) -> Unit,
-    headerPinned: Boolean = true
+    scrollBehavior: String = SettingsManager.FULL_SCROLL
 ) {
     val context = LocalContext.current
     var showAddDialog by remember { mutableStateOf(false) }
@@ -94,157 +97,26 @@ fun JobTrackingScreen(
         }
     }
     
-    if (headerPinned) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(responsivePadding)
-        ) {
-            // Header
-            if (isCompact) {
-                // Stack vertically on phones
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(responsiveSpacing)
-                ) {
-                    Text(
-                        text = context.getString(R.string.shifts_title),
-                        style = getResponsiveTypography(),
-                        fontWeight = FontWeight.Bold
-                    )
-                    
-                    // Venue Filter
-                    val venueFilterOptions = generateVenueFilterOptions(venues)
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.horizontalScroll(rememberScrollState())
-                    ) {
-                        venueFilterOptions.forEach { venueOption ->
-                            FilterChip(
-                                onClick = { 
-                                    selectedVenueName = if (selectedVenueName == venueOption.venueName) null else venueOption.venueName
-                                },
-                                label = { Text(venueOption.displayName) },
-                                selected = selectedVenueName == venueOption.venueName
-                            )
-                        }
-                    }
-                    
-                    Button(
-                        onClick = { showAddDialog = true },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(getResponsiveButtonHeight())
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(context.getString(R.string.add_shift))
-                    }
-                }
-            } else {
-                // Side by side on tablets
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = context.getString(R.string.shift_tracking),
-                        style = getResponsiveTypography(),
-                        fontWeight = FontWeight.Bold
-                    )
-                    
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.horizontalScroll(rememberScrollState())
-                    ) {
-                        // Venue Filter
-                        val venueFilterOptions = generateVenueFilterOptions(venues)
-                        venueFilterOptions.forEach { venueOption ->
-                            FilterChip(
-                                onClick = { 
-                                    selectedVenueName = if (selectedVenueName == venueOption.venueName) null else venueOption.venueName
-                                },
-                                label = { Text(venueOption.displayName) },
-                                selected = selectedVenueName == venueOption.venueName
-                            )
-                        }
-                        
-                        Spacer(modifier = Modifier.width(16.dp))
-                        
-                        Button(
-                            onClick = { showAddDialog = true },
-                            modifier = Modifier.height(getResponsiveButtonHeight())
-                        ) {
-                            Icon(Icons.Default.Add, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(context.getString(R.string.add_shift))
-                        }
-                    }
-                }
-            }
-            
-        Spacer(modifier = Modifier.height(responsiveSpacing))
-        
-            // Search and Filter Section
-            SearchBarWithFilter(
-                searchText = searchText,
-                onSearchTextChange = { searchText = it },
-                placeholder = context.getString(R.string.search_shifts_placeholder),
-                filterOptions = activeJobTypeConfigs.map { it.name },
-                selectedFilter = selectedFilter,
-                onFilterChange = { selectedFilter = it }
-            )
-            
-        Spacer(modifier = Modifier.height(16.dp))
-        
-            Text(
-                text = "${filteredJobs.size} of ${jobs.size} shifts",
-                style = getResponsiveBodyTypography(),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            
-            Spacer(modifier = Modifier.height(if (isCompact) 4.dp else 8.dp))
-            
-            // Shifts list - Use LazyColumn for lazy loading and better performance
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(if (isCompact) 6.dp else 8.dp),
+    when (scrollBehavior) {
+        SettingsManager.HEADER_PINNED -> {
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
+                    .fillMaxSize()
+                    .padding(responsivePadding)
             ) {
-                items(
-                    items = filteredJobs,
-                    key = { job -> job.id }
-                ) { job ->
-                    JobCard(
-                        job = job,
-                        volunteer = job.volunteerId?.let { volunteersMap[it] },
-                        venues = venues,
-                        onUpdate = { showEditDialog = job },
-                        onDelete = onDeleteJob
-                    )
-                }
-            }
-        }
-    } else {
-        // Whole page (header + list) scrolls together
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(responsivePadding),
-            verticalArrangement = Arrangement.spacedBy(if (isCompact) 6.dp else 8.dp)
-        ) {
-            item {
+                // Header
                 if (isCompact) {
+                    // Stack vertically on phones
                     Column(
                         verticalArrangement = Arrangement.spacedBy(responsiveSpacing)
                     ) {
                         Text(
                             text = context.getString(R.string.shifts_title),
-                            style = getResponsiveTypography(),
+                            style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Bold
                         )
                         
+                        // Venue Filter
                         val venueFilterOptions = generateVenueFilterOptions(venues)
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -273,6 +145,7 @@ fun JobTrackingScreen(
                         }
                     }
                 } else {
+                    // Side by side on tablets
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -280,7 +153,7 @@ fun JobTrackingScreen(
                     ) {
                         Text(
                             text = context.getString(R.string.shift_tracking),
-                            style = getResponsiveTypography(),
+                            style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Bold
                         )
                         
@@ -288,6 +161,7 @@ fun JobTrackingScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.horizontalScroll(rememberScrollState())
                         ) {
+                            // Venue Filter
                             val venueFilterOptions = generateVenueFilterOptions(venues)
                             venueFilterOptions.forEach { venueOption ->
                                 FilterChip(
@@ -312,13 +186,10 @@ fun JobTrackingScreen(
                         }
                     }
                 }
-            }
-            
-            item {
+                
                 Spacer(modifier = Modifier.height(responsiveSpacing))
-            }
-            
-            item {
+                
+                // Search and Filter Section
                 SearchBarWithFilter(
                     searchText = searchText,
                     onSearchTextChange = { searchText = it },
@@ -327,31 +198,300 @@ fun JobTrackingScreen(
                     selectedFilter = selectedFilter,
                     onFilterChange = { selectedFilter = it }
                 )
-            }
-            
-            item {
+                
                 Spacer(modifier = Modifier.height(16.dp))
-            }
-            
-            item {
+                
                 Text(
                     text = "${filteredJobs.size} of ${jobs.size} shifts",
                     style = getResponsiveBodyTypography(),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                
+                Spacer(modifier = Modifier.height(if (isCompact) 4.dp else 8.dp))
+                
+                // Shifts list - Use LazyColumn for lazy loading and better performance
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(if (isCompact) 6.dp else 8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                ) {
+                    items(
+                        items = filteredJobs,
+                        key = { job -> job.id }
+                    ) { job ->
+                        JobCard(
+                            job = job,
+                            volunteer = job.volunteerId?.let { volunteersMap[it] },
+                            venues = venues,
+                            onUpdate = { showEditDialog = job },
+                            onDelete = onDeleteJob
+                        )
+                    }
+                }
             }
-            
-            items(
-                items = filteredJobs,
-                key = { job -> job.id }
-            ) { job ->
-                JobCard(
-                    job = job,
-                    volunteer = job.volunteerId?.let { volunteersMap[it] },
-                    venues = venues,
-                    onUpdate = { showEditDialog = job },
-                    onDelete = onDeleteJob
-                )
+        }
+        SettingsManager.STICKY_FILTERS -> {
+            // Page scrolls but filters become sticky at the top
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(responsivePadding),
+                verticalArrangement = Arrangement.spacedBy(if (isCompact) 6.dp else 8.dp)
+            ) {
+                // Header section (scrolls away)
+                item {
+                    if (isCompact) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(responsiveSpacing)
+                        ) {
+                            Text(
+                                text = context.getString(R.string.shifts_title),
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            
+                            val venueFilterOptions = generateVenueFilterOptions(venues)
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.horizontalScroll(rememberScrollState())
+                            ) {
+                                venueFilterOptions.forEach { venueOption ->
+                                    FilterChip(
+                                        onClick = { 
+                                            selectedVenueName = if (selectedVenueName == venueOption.venueName) null else venueOption.venueName
+                                        },
+                                        label = { Text(venueOption.displayName) },
+                                        selected = selectedVenueName == venueOption.venueName
+                                    )
+                                }
+                            }
+                            
+                            Button(
+                                onClick = { showAddDialog = true },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(getResponsiveButtonHeight())
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(context.getString(R.string.add_shift))
+                            }
+                        }
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = context.getString(R.string.shift_tracking),
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.horizontalScroll(rememberScrollState())
+                            ) {
+                                val venueFilterOptions = generateVenueFilterOptions(venues)
+                                venueFilterOptions.forEach { venueOption ->
+                                    FilterChip(
+                                        onClick = { 
+                                            selectedVenueName = if (selectedVenueName == venueOption.venueName) null else venueOption.venueName
+                                        },
+                                        label = { Text(venueOption.displayName) },
+                                        selected = selectedVenueName == venueOption.venueName
+                                    )
+                                }
+                                
+                                Spacer(modifier = Modifier.width(16.dp))
+                                
+                                Button(
+                                    onClick = { showAddDialog = true },
+                                    modifier = Modifier.height(getResponsiveButtonHeight())
+                                ) {
+                                    Icon(Icons.Default.Add, contentDescription = null)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(context.getString(R.string.add_shift))
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                item {
+                    Spacer(modifier = Modifier.height(responsiveSpacing))
+                }
+                
+                // Sticky filter section - becomes pinned when scrolled to top
+                stickyHeader {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surface)
+                            .padding(bottom = 8.dp)
+                    ) {
+                        SearchBarWithFilter(
+                            searchText = searchText,
+                            onSearchTextChange = { searchText = it },
+                            placeholder = context.getString(R.string.search_shifts_placeholder),
+                            filterOptions = activeJobTypeConfigs.map { it.name },
+                            selectedFilter = selectedFilter,
+                            onFilterChange = { selectedFilter = it }
+                        )
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        Text(
+                            text = "${filteredJobs.size} of ${jobs.size} shifts",
+                            style = getResponsiveBodyTypography(),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                
+                items(
+                    items = filteredJobs,
+                    key = { job -> job.id }
+                ) { job ->
+                    JobCard(
+                        job = job,
+                        volunteer = job.volunteerId?.let { volunteersMap[it] },
+                        venues = venues,
+                        onUpdate = { showEditDialog = job },
+                        onDelete = onDeleteJob
+                    )
+                }
+            }
+        }
+        else -> {
+            // FULL_SCROLL: Whole page (header + list) scrolls together
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(responsivePadding),
+                verticalArrangement = Arrangement.spacedBy(if (isCompact) 6.dp else 8.dp)
+            ) {
+                item {
+                    if (isCompact) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(responsiveSpacing)
+                        ) {
+                            Text(
+                                text = context.getString(R.string.shifts_title),
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            
+                            val venueFilterOptions = generateVenueFilterOptions(venues)
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.horizontalScroll(rememberScrollState())
+                            ) {
+                                venueFilterOptions.forEach { venueOption ->
+                                    FilterChip(
+                                        onClick = { 
+                                            selectedVenueName = if (selectedVenueName == venueOption.venueName) null else venueOption.venueName
+                                        },
+                                        label = { Text(venueOption.displayName) },
+                                        selected = selectedVenueName == venueOption.venueName
+                                    )
+                                }
+                            }
+                            
+                            Button(
+                                onClick = { showAddDialog = true },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(getResponsiveButtonHeight())
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(context.getString(R.string.add_shift))
+                            }
+                        }
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = context.getString(R.string.shift_tracking),
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.horizontalScroll(rememberScrollState())
+                            ) {
+                                val venueFilterOptions = generateVenueFilterOptions(venues)
+                                venueFilterOptions.forEach { venueOption ->
+                                    FilterChip(
+                                        onClick = { 
+                                            selectedVenueName = if (selectedVenueName == venueOption.venueName) null else venueOption.venueName
+                                        },
+                                        label = { Text(venueOption.displayName) },
+                                        selected = selectedVenueName == venueOption.venueName
+                                    )
+                                }
+                                
+                                Spacer(modifier = Modifier.width(16.dp))
+                                
+                                Button(
+                                    onClick = { showAddDialog = true },
+                                    modifier = Modifier.height(getResponsiveButtonHeight())
+                                ) {
+                                    Icon(Icons.Default.Add, contentDescription = null)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(context.getString(R.string.add_shift))
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                item {
+                    Spacer(modifier = Modifier.height(responsiveSpacing))
+                }
+                
+                item {
+                    SearchBarWithFilter(
+                        searchText = searchText,
+                        onSearchTextChange = { searchText = it },
+                        placeholder = context.getString(R.string.search_shifts_placeholder),
+                        filterOptions = activeJobTypeConfigs.map { it.name },
+                        selectedFilter = selectedFilter,
+                        onFilterChange = { selectedFilter = it }
+                    )
+                }
+                
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+                
+                item {
+                    Text(
+                        text = "${filteredJobs.size} of ${jobs.size} shifts",
+                        style = getResponsiveBodyTypography(),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                
+                items(
+                    items = filteredJobs,
+                    key = { job -> job.id }
+                ) { job ->
+                    JobCard(
+                        job = job,
+                        volunteer = job.volunteerId?.let { volunteersMap[it] },
+                        venues = venues,
+                        onUpdate = { showEditDialog = job },
+                        onDelete = onDeleteJob
+                    )
+                }
             }
         }
     }
@@ -692,8 +832,8 @@ fun AddJobDialog(
                             }
                         )
                         
-                        // Add individual venues
-                        venues.forEach { venue ->
+                        // Add individual venues (only active ones)
+                        venues.filter { it.isActive }.forEach { venue ->
                             DropdownMenuItem(
                                 text = { Text(venue.name) },
                                 onClick = {
@@ -968,8 +1108,8 @@ fun EditJobDialog(
                             }
                         )
                         
-                        // Add individual venues
-                        venues.forEach { venue ->
+                        // Add individual venues (only active ones)
+                        venues.filter { it.isActive }.forEach { venue ->
                             DropdownMenuItem(
                                 text = { Text(venue.name) },
                                 onClick = {

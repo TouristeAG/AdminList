@@ -11,11 +11,14 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.platform.LocalContext
+import com.eventmanager.app.data.sync.SettingsManager
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -25,8 +28,18 @@ fun BeerAnimation(
     enabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val settingsManager = remember { SettingsManager(context) }
+    val animationMultiplier = remember { settingsManager.getAnimationIntensityMultiplier() }
+    
+    // Skip animation entirely if reduced motion is enabled
+    val shouldAnimate = enabled && animationMultiplier > 0f
+    
+    // PERFORMANCE OPTIMIZATION: Determine if we're in performance mode
+    val performanceMode = animationMultiplier < 1.0f
+    
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
-        if (enabled) {
+        if (shouldAnimate) {
             // Animation for beer wave flowing from top to bottom
             val infinite = rememberInfiniteTransition(label = "beer_animation")
             
@@ -53,8 +66,11 @@ fun BeerAnimation(
                 val waveHeight = height * 0.5f // Height of the wave band
                 val waveSpeed = -waveHeight + waveProgress * (height + waveHeight * 2f) // Start above screen, end below
                 
-                // Draw 3 wave layers for depth and illustration style
-                for (layer in 0..2) {
+                // PERFORMANCE OPTIMIZATION: Reduce layers in performance mode (3 -> 2)
+                val layerCount = if (performanceMode) 2 else 3
+                
+                // Draw wave layers for depth and illustration style
+                for (layer in 0 until layerCount) {
                     val layerOffset = waveSpeed - (layer * waveHeight * 0.25f)
                     val layerAlpha = 1f - (layer * 0.15f)
                     val layerAmplitude = 25f - (layer * 6f)
@@ -67,7 +83,8 @@ fun BeerAnimation(
                             waveHeight = waveHeight,
                             amplitude = layerAmplitude,
                             color = if (layer == 0) beerColor else beerColorDark,
-                            alpha = layerAlpha
+                            alpha = layerAlpha,
+                            performanceMode = performanceMode
                         )
                     }
                 }
@@ -80,7 +97,8 @@ fun BeerAnimation(
                         height = height,
                         foamY = foamY,
                         waveHeight = waveHeight,
-                        color = foamColor
+                        color = foamColor,
+                        performanceMode = performanceMode
                     )
                 }
             }
@@ -88,18 +106,21 @@ fun BeerAnimation(
     }
 }
 
+@Suppress("UNUSED_PARAMETER")
 private fun DrawScope.drawBeerWave(
     width: Float,
     height: Float,
     waveY: Float,
-    waveHeight: Float,
+    waveHeight: Float, // Kept for API consistency with drawFoam
     amplitude: Float,
     color: Color,
-    alpha: Float
+    alpha: Float,
+    performanceMode: Boolean = false
 ) {
     val path = Path()
     val waveLength = width * 0.8f
-    val segments = 60 // Number of points for smooth curve
+    // PERFORMANCE OPTIMIZATION: Reduce segments in performance mode (60 -> 30)
+    val segments = if (performanceMode) 30 else 60
     
     // Start path from left edge
     path.moveTo(0f, waveY)
@@ -134,11 +155,13 @@ private fun DrawScope.drawFoam(
     height: Float,
     foamY: Float,
     waveHeight: Float,
-    color: Color
+    color: Color,
+    performanceMode: Boolean = false
 ) {
     val foamThickness = waveHeight * 0.15f
     val foamAmplitude = 15f
-    val segments = 80
+    // PERFORMANCE OPTIMIZATION: Reduce segments in performance mode (80 -> 40)
+    val segments = if (performanceMode) 40 else 80
     
     // Draw multiple foam bubbles/layers
     for (foamLayer in 0..2) {
@@ -178,9 +201,13 @@ private fun DrawScope.drawFoam(
         )
     }
     
+    // PERFORMANCE OPTIMIZATION: Reduce or skip bubbles in performance mode
+    // Normal: 16 bubbles, Performance Mode: 8 bubbles
+    val bubbleCount = if (performanceMode) 8 else 16
+    
     // Draw small foam bubbles for extra detail
-    for (i in 0..15) {
-        val bubbleX = (i * width / 15f) + (foamY / 20f) % (width / 15f)
+    for (i in 0 until bubbleCount) {
+        val bubbleX = (i * width / bubbleCount.toFloat()) + (foamY / 20f) % (width / bubbleCount.toFloat())
         val bubbleY = foamY + (i % 3) * (foamThickness / 3f)
         val bubbleSize = 3f + (i % 2) * 2f
         

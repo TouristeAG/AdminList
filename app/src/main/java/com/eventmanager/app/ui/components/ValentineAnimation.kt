@@ -16,6 +16,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.platform.LocalContext
+import com.eventmanager.app.data.sync.SettingsManager
 import kotlin.math.sin
 import kotlin.math.cos
 import kotlin.math.PI
@@ -27,13 +29,18 @@ fun ValentineAnimation(
     enabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val settingsManager = remember { SettingsManager(context) }
+    val animationMultiplier = remember { settingsManager.getAnimationIntensityMultiplier() }
+    
     // Check if current date is February 14
     val calendar = Calendar.getInstance()
     val month = calendar.get(Calendar.MONTH) // 0-11
     val day = calendar.get(Calendar.DAY_OF_MONTH)
     
     val isValentinesDay = month == Calendar.FEBRUARY && day == 14
-    val shouldShowHearts = enabled && isValentinesDay
+    // Also check if reduced motion is enabled - if so, don't show animation
+    val shouldShowHearts = enabled && isValentinesDay && animationMultiplier > 0f
     
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         if (shouldShowHearts) {
@@ -51,9 +58,11 @@ fun ValentineAnimation(
                 val bounce: Float
             )
             
-            val hearts = remember {
+            // PERFORMANCE OPTIMIZATION: Reduce heart count based on performance mode
+            // Normal: 15, Performance Mode: 8
+            val hearts = remember(animationMultiplier) {
                 val rnd = Random(System.nanoTime())
-                val count = 15 // Number of hearts
+                val count = if (animationMultiplier >= 1.0f) 15 else 8
                 List(count) { _ ->
                     val colors = listOf(
                         Color(0xFFFF1493), // Deep Pink
@@ -139,14 +148,17 @@ fun ValentineAnimation(
                         color = heart.color.copy(alpha = alpha * 0.9f)
                     )
                     
-                    // Add glow effect
-                    drawHeart(
-                        centerX = xPos,
-                        centerY = yPos,
-                        size = heart.size * scale * 1.3f,
-                        rotation = currentRotation,
-                        color = heart.color.copy(alpha = alpha * 0.2f)
-                    )
+                    // PERFORMANCE OPTIMIZATION: Only draw glow effect when not in performance mode
+                    if (animationMultiplier >= 1.0f) {
+                        // Add glow effect
+                        drawHeart(
+                            centerX = xPos,
+                            centerY = yPos,
+                            size = heart.size * scale * 1.3f,
+                            rotation = currentRotation,
+                            color = heart.color.copy(alpha = alpha * 0.2f)
+                        )
+                    }
                 }
             }
         }
@@ -160,8 +172,6 @@ private fun DrawScope.drawHeart(
     rotation: Float,
     color: Color
 ) {
-    val scaleFactor = size / 100f
-    
     // Create a simple heart shape using circles and a triangle
     val halfSize = size / 2f
     

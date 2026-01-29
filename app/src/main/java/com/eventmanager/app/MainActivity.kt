@@ -85,6 +85,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.SizeTransform
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -179,13 +182,31 @@ class MainActivity : ComponentActivity() {
         val settingsManager = SettingsManager(this)
         val language = settingsManager.getLanguage()
         
-        val locale = Locale(language)
+        val locale = createLocaleFromLanguageCode(language)
         Locale.setDefault(locale)
         
         val config = Configuration(resources.configuration)
         config.setLocale(locale)
         
         resources.updateConfiguration(config, resources.displayMetrics)
+    }
+    
+    private fun createLocaleFromLanguageCode(languageCode: String): Locale {
+        return when {
+            // Ensure English uses a Monday-first calendar (en-GB) instead of the default
+            // Sunday-first locale. This affects components like the Material 3 DatePicker,
+            // making Monday the first day of the week while keeping English text.
+            languageCode.equals("en", ignoreCase = true) -> Locale("en", "GB")
+            languageCode.contains("-") -> {
+                val parts = languageCode.split("-")
+                Locale(parts[0], parts[1])
+            }
+            languageCode.contains("_") -> {
+                val parts = languageCode.split("_")
+                Locale(parts[0], parts[1])
+            }
+            else -> Locale(languageCode)
+        }
     }
     
     private fun applyResolutionScaling() {
@@ -209,7 +230,7 @@ class MainActivity : ComponentActivity() {
         val settingsManager = SettingsManager(context)
         val language = settingsManager.getLanguage()
         
-        val locale = Locale(language)
+        val locale = createLocaleFromLanguageCode(language)
         val config = Configuration(context.resources.configuration)
         config.setLocale(locale)
         
@@ -332,12 +353,14 @@ private fun performStrongHaptic(vibrator: Vibrator?) {
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
 fun EventManagerApp() {
-    // Use rememberSaveable to persist state across process death/recomposition
+    val appContext = LocalContext.current
+    val settingsManager = remember { SettingsManager(appContext) }
+
+    // Use rememberSaveable to persist state across configuration changes
+    // The welcome screen should be shown on every fresh app launch.
     var showWelcome by rememberSaveable { mutableStateOf(true) }
     var selectedTab by rememberSaveable { mutableStateOf(0) }
     var previousTab by rememberSaveable { mutableStateOf(0) }
-    val appContext = LocalContext.current
-    val settingsManager = remember { SettingsManager(appContext) }
     val pageAnimationsEnabled = settingsManager.isPageAnimationsEnabled()
     var showJobTypeManagement by rememberSaveable { mutableStateOf(false) }
     var showVenueManagement by rememberSaveable { mutableStateOf(false) }
@@ -352,7 +375,11 @@ fun EventManagerApp() {
     val vibrator = remember { appContext.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator }
 
     if (showWelcome) {
-        WelcomeScreen(onStartManaging = { showWelcome = false })
+        WelcomeScreen(
+            onStartManaging = {
+                showWelcome = false
+            }
+        )
     } else {
         // Initialize database and repository
         val database = EventManagerDatabase.getDatabase(LocalContext.current)
@@ -380,6 +407,7 @@ fun EventManagerApp() {
         // Collect sync error state
         val syncError by viewModel.syncError.collectAsState()
         val showSyncErrorDialog by viewModel.showSyncErrorDialog.collectAsState()
+        val isSyncing by viewModel.isSyncing.collectAsState()
         
         // Collect sync status state
         val syncStatusMessage by viewModel.syncStatusMessage.collectAsState()
@@ -419,13 +447,14 @@ fun EventManagerApp() {
         }
         
         // Defer sync operations on tab switch to allow instant UI response
-        // Syncs are triggered 175ms after tab change to let page transition start first
+        // OPTIMIZED: Syncs are triggered 250ms after tab change to ensure animation completes first
         LaunchedEffect(selectedTab) {
             // Skip sync on initial load (handled by initial sync above)
             if (selectedTab == previousTab) return@LaunchedEffect
             
-            // Delay sync to allow page transition animation to start immediately
-            kotlinx.coroutines.delay(175)
+            // Delay sync until after animation completes (180ms animation + buffer)
+            // This prevents sync-related state updates from causing jank during transition
+            kotlinx.coroutines.delay(250)
             
             println("Tab changed from $previousTab to $selectedTab - triggering deferred targeted sync")
             when (selectedTab) {
@@ -434,8 +463,11 @@ fun EventManagerApp() {
                 2 -> viewModel.syncVolunteersWithTargetedUpdates() // Enter Volunteers
                 3 -> viewModel.syncJobsWithTargetedUpdates() // Enter Jobs
                 4 -> {
+                    // Benefits screen: stagger syncs slightly to reduce concurrent load
                     viewModel.syncJobsWithTargetedUpdates()
+                    kotlinx.coroutines.delay(50)
                     viewModel.syncVolunteersWithTargetedUpdates()
+                    kotlinx.coroutines.delay(50)
                     viewModel.syncJobTypesWithTargetedUpdates()
                 } // Enter Benefits
             }
@@ -710,44 +742,86 @@ fun EventManagerApp() {
                 // Tab Content with optimized switching
                 // Use key() to maintain screen identity and prevent unnecessary recreation
                 val goingLeft = selectedTab > previousTab
-                if (pageAnimationsEnabled) {
+                
+                // Create a composite screen state for animations
+                // Format: "tab:{tabIndex}" for main tabs, "management:jobtype" or "management:venue" for management screens
+                val currentScreenState = when {
+                    showJobTypeManagement -> "management:jobtype"
+                    showVenueManagement -> "management:venue"
+                    else -> "tab:$selectedTab"
+                }
+                
+if (pageAnimationsEnabled) {
                     AnimatedContent(
-                        targetState = selectedTab,
+                        targetState = currentScreenState,
                         transitionSpec = {
-                            val duration = 200
-                            val enter = slideInHorizontally(
-                                animationSpec = tween(durationMillis = duration, easing = FastOutSlowInEasing),
-                                initialOffsetX = { fullWidth -> if (goingLeft) fullWidth else -fullWidth }
-                            ) + fadeIn(animationSpec = tween(durationMillis = duration))
-                            val exit = slideOutHorizontally(
-                                animationSpec = tween(durationMillis = duration, easing = FastOutSlowInEasing),
-                                targetOffsetX = { fullWidth -> if (goingLeft) -fullWidth / 2 else fullWidth / 2 }
-                            ) + fadeOut(animationSpec = tween(durationMillis = duration))
-                            enter togetherWith exit
+                            // OPTIMIZED: Shorter duration (180ms) feels snappier while remaining smooth
+                            // Fade starts faster (120ms) so content is visible sooner
+                            // Exit offset reduced to minimize visual complexity
+                            val slideDuration = 180
+                            val fadeDuration = 120
+                            when {
+                                // Opening management screen - slide in from right
+                                targetState.startsWith("management:") && initialState.startsWith("tab:") -> {
+                                    val enter = slideInHorizontally(
+                                        animationSpec = tween(durationMillis = slideDuration, easing = FastOutSlowInEasing),
+                                        initialOffsetX = { fullWidth -> fullWidth }
+                                    ) + fadeIn(animationSpec = tween(durationMillis = fadeDuration))
+                                    val exit = slideOutHorizontally(
+                                        animationSpec = tween(durationMillis = slideDuration, easing = FastOutSlowInEasing),
+                                        targetOffsetX = { fullWidth -> -fullWidth / 4 }
+                                    ) + fadeOut(animationSpec = tween(durationMillis = fadeDuration))
+                                    (enter togetherWith exit).using(SizeTransform(clip = false))
+                                }
+                                // Closing management screen - slide out to right
+                                targetState.startsWith("tab:") && initialState.startsWith("management:") -> {
+                                    val enter = slideInHorizontally(
+                                        animationSpec = tween(durationMillis = slideDuration, easing = FastOutSlowInEasing),
+                                        initialOffsetX = { fullWidth -> -fullWidth / 4 }
+                                    ) + fadeIn(animationSpec = tween(durationMillis = fadeDuration))
+                                    val exit = slideOutHorizontally(
+                                        animationSpec = tween(durationMillis = slideDuration, easing = FastOutSlowInEasing),
+                                        targetOffsetX = { fullWidth -> fullWidth }
+                                    ) + fadeOut(animationSpec = tween(durationMillis = fadeDuration))
+                                    (enter togetherWith exit).using(SizeTransform(clip = false))
+                                }
+                                // Regular tab transitions - optimized for smoothness
+                                else -> {
+                                    val enter = slideInHorizontally(
+                                        animationSpec = tween(durationMillis = slideDuration, easing = FastOutSlowInEasing),
+                                        initialOffsetX = { fullWidth -> if (goingLeft) fullWidth else -fullWidth }
+                                    ) + fadeIn(animationSpec = tween(durationMillis = fadeDuration))
+                                    val exit = slideOutHorizontally(
+                                        animationSpec = tween(durationMillis = slideDuration, easing = FastOutSlowInEasing),
+                                        targetOffsetX = { fullWidth -> if (goingLeft) -fullWidth / 4 else fullWidth / 4 }
+                                    ) + fadeOut(animationSpec = tween(durationMillis = fadeDuration))
+                                    (enter togetherWith exit).using(SizeTransform(clip = false))
+                                }
+                            }
                         },
                         label = "page_transition"
-                    ) { tab: Int ->
+                    ) { screenState: String ->
                         // Use key() to maintain screen identity across recompositions
                         when {
-                            showJobTypeManagement -> key("job_type_management") {
+                            screenState == "management:jobtype" -> key("job_type_management") {
                                 JobTypeManagementScreenWithViewModel(viewModel) {
                                     println("Exiting Job Type Management - triggering job types sync")
                                     viewModel.syncJobTypesOnly()
                                     showJobTypeManagement = false
                                 }
                             }
-                            showVenueManagement -> key("venue_management") {
+                            screenState == "management:venue" -> key("venue_management") {
                                 VenueManagementScreenWithViewModel(viewModel) {
                                     println("Exiting Venue Management")
                                     showVenueManagement = false
                                 }
                             }
-                            tab == 0 -> key("dashboard") { DashboardScreenWithViewModel(viewModel) }
-                            tab == 1 -> key("guest_list") { GuestListScreenWithViewModel(viewModel) }
-                            tab == 2 -> key("volunteers") { VolunteerScreenWithViewModel(viewModel) }
-                            tab == 3 -> key("jobs") { JobTrackingScreenWithViewModel(viewModel) }
-                            tab == 4 -> key("benefits") { BenefitsScreenWithViewModel(viewModel) }
-                            tab == 5 -> key("settings") {
+                            screenState == "tab:0" -> key("dashboard") { DashboardScreenWithViewModel(viewModel) }
+                            screenState == "tab:1" -> key("guest_list") { GuestListScreenWithViewModel(viewModel) }
+                            screenState == "tab:2" -> key("volunteers") { VolunteerScreenWithViewModel(viewModel) }
+                            screenState == "tab:3" -> key("jobs") { JobTrackingScreenWithViewModel(viewModel) }
+                            screenState == "tab:4" -> key("benefits") { BenefitsScreenWithViewModel(viewModel) }
+                            screenState == "tab:5" -> key("settings") {
                                 SettingsScreen(
                                     viewModel = viewModel,
                                     onNavigateToJobTypeManagement = { 
@@ -871,7 +945,9 @@ fun EventManagerApp() {
                     viewModel.setSyncErrorSuppressedToday()
                 }
                 viewModel.dismissSyncErrorDialog()
-            }
+            },
+            isSyncing = isSyncing,
+            animationsEnabled = pageAnimationsEnabled
         )
         
         // Device Time Error Dialog
@@ -1067,42 +1143,13 @@ fun DashboardScreenWithViewModel(viewModel: EventManagerViewModel) {
     val jobTypeConfigs by viewModel.jobTypeConfigs.collectAsState()
     val venues by viewModel.venues.collectAsState()
     val isSyncing by viewModel.isSyncing.collectAsState()
-    val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
     val settingsManager = remember { SettingsManager(context) }
     
-    // Track if screen has been initialized to prevent re-syncing on every recomposition
-    var isInitialized by remember { mutableStateOf(false) }
-    
-    // Track if initial app sync is in progress to avoid duplicate syncs
-    val isInitialSyncInProgress by viewModel.isSyncing.collectAsState()
-    
-    // Trigger TARGETED syncs when screen loads - only changed items are updated
-    // Use isInitialized flag to prevent re-execution on recomposition
-    // Defer dashboard syncs to avoid conflicts with initial app sync
-    LaunchedEffect(isInitialized) {
-        if (!isInitialized) {
-            // Wait for initial sync to complete (or timeout after 2 seconds)
-            var waitTime = 0
-            while (isInitialSyncInProgress && waitTime < 20) {
-                kotlinx.coroutines.delay(100)
-                waitTime++
-            }
-            
-            // Additional delay to ensure UI is fully rendered
-            kotlinx.coroutines.delay(500)
-            
-            println("Dashboard screen loaded - triggering TARGETED syncs for all data")
-            // Sync all key data types with targeted updates
-            // These functions already run in background via viewModelScope
-            viewModel.syncGuestsWithTargetedUpdates()
-            viewModel.syncVolunteersWithTargetedUpdates()
-            viewModel.syncJobsWithTargetedUpdates()
-            viewModel.syncJobTypesWithTargetedUpdates()
-            viewModel.syncVenuesWithTargetedUpdates()
-            isInitialized = true
-        }
-    }
+    // OPTIMIZATION: Removed redundant sync triggers
+    // Initial sync is handled by LaunchedEffect(Unit) in EventManagerApp
+    // Tab-change sync is handled by LaunchedEffect(selectedTab) in EventManagerApp
+    // This reduces duplicate network calls and improves navigation smoothness
 
     DashboardScreen(
         guests = guests,
@@ -1137,8 +1184,8 @@ fun DashboardScreen(
     // State for beer animation
     var showBeerAnimation by remember { mutableStateOf(false) }
     
-    // Check if seasonal fun is enabled
-    val seasonalFunEnabled = settingsManager.isSeasonalFunEnabled()
+    // Memoize seasonal fun setting to avoid repeated reads
+    val seasonalFunEnabled = remember { settingsManager.isSeasonalFunEnabled() }
     
     // Auto-hide beer animation after short duration
     LaunchedEffect(showBeerAnimation) {
@@ -1166,9 +1213,7 @@ fun DashboardScreen(
             }
         }
         
-        // Memoize SettingsManager to avoid recreating it on every recomposition
-        val settingsManager = remember { SettingsManager(context) }
-        // Only read format once and cache it - formats rarely change
+        // Only read format once and cache it - formats rarely change (settingsManager already defined above)
         val userTimeFormat = remember { settingsManager.getTimeFormat() }
         val userDateFormat = remember { settingsManager.getDateFormat() }
         // Visibility settings
@@ -1219,16 +1264,30 @@ fun DashboardScreen(
         
         Spacer(modifier = Modifier.height(if (isPhone) 16.dp else 24.dp))
 
-        // Calculate statistics - memoized to prevent ANR
-        // Use derivedStateOf for better performance with multiple dependencies
-        val allGuests = remember(guests) { guests.count { !it.isVolunteerBenefit } }
-        val totalInvites = remember(guests) { guests.sumOf { it.invitations } }
-        val activeVolunteersCount = remember(volunteers) { volunteers.count { it.isActive } }
-        val totalPeople = remember(allGuests, totalInvites, activeVolunteersCount) { 
-            allGuests + totalInvites + activeVolunteersCount 
+        // Calculate statistics - memoized and grouped by data source for efficient single-pass computation
+        // Guest stats: single pass through guests list
+        val (allGuests, totalInvites) = remember(guests) {
+            var permanentCount = 0
+            var invitesSum = 0
+            guests.forEach { guest ->
+                if (!guest.isVolunteerBenefit) permanentCount++
+                invitesSum += guest.invitations
+            }
+            permanentCount to invitesSum
         }
-        val totalVolunteers = remember(volunteers) { volunteers.size }
-        val inactiveVolunteersCount = remember(volunteers) { volunteers.count { !it.isActive } }
+        
+        // Volunteer stats: single pass through volunteers list
+        val (totalVolunteers, activeVolunteersCount, inactiveVolunteersCount) = remember(volunteers) {
+            var active = 0
+            var inactive = 0
+            volunteers.forEach { volunteer ->
+                if (volunteer.isActive) active++ else inactive++
+            }
+            Triple(volunteers.size, active, inactive)
+        }
+        
+        // Derived calculation - no remember needed since operands are already memoized
+        val totalPeople = allGuests + totalInvites + activeVolunteersCount
         // Move expensive calculation to background if needed
         val totalFreeDrinks = remember(volunteers, jobs, jobTypeConfigs) { 
             com.eventmanager.app.data.models.BenefitCalculator.calculateTotalFreeDrinks(
@@ -1656,20 +1715,10 @@ fun GuestListScreenWithViewModel(viewModel: EventManagerViewModel) {
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
     val settingsManager = remember { SettingsManager(context) }
-    val headerPinned = settingsManager.isHeaderPinned()
+    val scrollBehavior = remember { settingsManager.getScrollBehavior() }
     
-    // Track if screen has been initialized to prevent re-syncing on every recomposition
-    var isInitialized by remember { mutableStateOf(false) }
-    
-    // Trigger TARGETED sync when screen loads - only changed guests are updated
-    // Use isInitialized flag to prevent re-execution on recomposition
-    LaunchedEffect(isInitialized) {
-        if (!isInitialized) {
-            println("Guest List screen loaded - triggering TARGETED guest sync")
-            viewModel.syncGuestsWithTargetedUpdates()
-            isInitialized = true
-        }
-    }
+    // OPTIMIZATION: Sync is now handled by the centralized LaunchedEffect(selectedTab) in EventManagerApp
+    // This prevents duplicate syncs and improves navigation smoothness
     
     GuestListScreen(
         guests = guests,
@@ -1679,7 +1728,7 @@ fun GuestListScreenWithViewModel(viewModel: EventManagerViewModel) {
         venues = venues,
         isSyncing = isSyncing,
         lastSyncTime = settingsManager.getLastSyncTime(),
-        headerPinned = headerPinned,
+        scrollBehavior = scrollBehavior,
         onAddGuest = { 
             coroutineScope.launch { 
                 try {
@@ -1720,27 +1769,17 @@ fun VolunteerScreenWithViewModel(viewModel: EventManagerViewModel) {
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
     val settingsManager = remember { SettingsManager(context) }
-    val headerPinned = settingsManager.isHeaderPinned()
+    val scrollBehavior = remember { settingsManager.getScrollBehavior() }
     
-    // Track if screen has been initialized to prevent re-syncing on every recomposition
-    var isInitialized by remember { mutableStateOf(false) }
-    
-    // Trigger TARGETED sync when screen loads - only changed volunteers are updated
-    // Use isInitialized flag to prevent re-execution on recomposition
-    LaunchedEffect(isInitialized) {
-        if (!isInitialized) {
-            println("Volunteer screen loaded - triggering TARGETED volunteer sync")
-            viewModel.syncVolunteersWithTargetedUpdates()
-            isInitialized = true
-        }
-    }
+    // OPTIMIZATION: Sync is handled by the centralized LaunchedEffect(selectedTab) in EventManagerApp
+    // Removing duplicate sync trigger improves navigation smoothness
     
     VolunteerScreen(
         volunteers = volunteers,
         volunteerJobs = jobs,
         venues = venues,
         jobTypeConfigs = jobTypeConfigs,
-        headerPinned = headerPinned,
+        scrollBehavior = scrollBehavior,
         onAddVolunteer = { 
             coroutineScope.launch { 
                 try {
@@ -1780,27 +1819,17 @@ fun JobTrackingScreenWithViewModel(viewModel: EventManagerViewModel) {
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
     val settingsManager = remember { SettingsManager(context) }
-    val headerPinned = settingsManager.isHeaderPinned()
+    val scrollBehavior = remember { settingsManager.getScrollBehavior() }
     
-    // Track if screen has been initialized to prevent re-syncing on every recomposition
-    var isInitialized by remember { mutableStateOf(false) }
-    
-    // Trigger TARGETED sync when screen loads - only changed jobs are updated
-    // Use isInitialized flag to prevent re-execution on recomposition
-    LaunchedEffect(isInitialized) {
-        if (!isInitialized) {
-            println("Job Tracking screen loaded - triggering TARGETED job sync")
-            viewModel.syncJobsWithTargetedUpdates()
-            isInitialized = true
-        }
-    }
+    // OPTIMIZATION: Sync is handled by the centralized LaunchedEffect(selectedTab) in EventManagerApp
+    // Removing duplicate sync trigger improves navigation smoothness
 
     JobTrackingScreen(
         jobs = jobs,
         volunteers = volunteers,
         jobTypeConfigs = jobTypeConfigs,
         venues = venues,
-        headerPinned = headerPinned,
+        scrollBehavior = scrollBehavior,
         onAddJob = { 
             coroutineScope.launch { 
                 try {
@@ -1836,28 +1865,18 @@ fun BenefitsScreenWithViewModel(viewModel: EventManagerViewModel) {
     val volunteers by viewModel.volunteers.collectAsState()
     val jobs by viewModel.jobs.collectAsState()
     val jobTypeConfigs by viewModel.jobTypeConfigs.collectAsState()
+    val context = LocalContext.current
+    val settingsManager = remember { SettingsManager(context) }
+    val scrollBehavior = remember { settingsManager.getScrollBehavior() }
     
-    // Track if screen has been initialized to prevent re-syncing on every recomposition
-    var isInitialized by remember { mutableStateOf(false) }
-    
-    // Trigger TARGETED sync when screen loads - only changed jobs/volunteers/job types are updated
-    // Use isInitialized flag to prevent re-execution on recomposition
-    LaunchedEffect(isInitialized) {
-        if (!isInitialized) {
-            println("Benefits screen loaded - triggering TARGETED syncs for benefits data")
-            // Sync jobs (which affects benefits calculation)
-            viewModel.syncJobsWithTargetedUpdates()
-            // Also sync volunteers and job types as they affect benefits
-            viewModel.syncVolunteersWithTargetedUpdates()
-            viewModel.syncJobTypesWithTargetedUpdates()
-            isInitialized = true
-        }
-    }
+    // OPTIMIZATION: Sync is handled by the centralized LaunchedEffect(selectedTab) in EventManagerApp
+    // Removing duplicate sync trigger improves navigation smoothness
     
     BenefitsScreen(
         volunteers = volunteers,
         jobs = jobs,
-        jobTypeConfigs = jobTypeConfigs
+        jobTypeConfigs = jobTypeConfigs,
+        scrollBehavior = scrollBehavior
     )
 }
 

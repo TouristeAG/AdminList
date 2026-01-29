@@ -280,6 +280,7 @@ class DifferentialSyncService(
     
     /**
      * Apply all changes to the database (merge TEMP_DB → MAIN_DB)
+     * Legacy method - uses individual operations for backward compatibility
      */
     suspend fun applyChanges(result: DifferentialSyncResult) = withContext(Dispatchers.IO) {
         // Apply guest changes
@@ -306,6 +307,67 @@ class DifferentialSyncService(
         result.venues.new.forEach { repository.insertVenue(it) }
         result.venues.modified.forEach { repository.updateVenue(it) }
         result.venues.deleted.forEach { repository.deleteVenue(it) }
+    }
+    
+    /**
+     * OPTIMIZED: Apply all changes to the database using batch operations
+     * This is significantly faster for large datasets as it reduces database transaction overhead
+     */
+    suspend fun applyChangesBatched(result: DifferentialSyncResult) = withContext(Dispatchers.IO) {
+        // Apply guest changes (batch operations)
+        if (result.guests.new.isNotEmpty()) {
+            repository.insertGuestsAll(result.guests.new)
+        }
+        if (result.guests.modified.isNotEmpty()) {
+            repository.updateGuestsAll(result.guests.modified)
+        }
+        if (result.guests.deleted.isNotEmpty()) {
+            repository.deleteGuestsAll(result.guests.deleted)
+        }
+        
+        // Apply volunteer changes (batch operations)
+        if (result.volunteers.new.isNotEmpty()) {
+            repository.insertVolunteersAll(result.volunteers.new)
+        }
+        if (result.volunteers.modified.isNotEmpty()) {
+            repository.updateVolunteersAll(result.volunteers.modified)
+        }
+        if (result.volunteers.deleted.isNotEmpty()) {
+            repository.deleteVolunteersAll(result.volunteers.deleted)
+        }
+        
+        // Apply job changes (batch operations)
+        if (result.jobs.new.isNotEmpty()) {
+            repository.insertJobsAll(result.jobs.new)
+        }
+        if (result.jobs.modified.isNotEmpty()) {
+            repository.updateJobsAll(result.jobs.modified)
+        }
+        if (result.jobs.deleted.isNotEmpty()) {
+            repository.deleteJobsAll(result.jobs.deleted)
+        }
+        
+        // Apply job type config changes (batch operations)
+        if (result.jobTypeConfigs.new.isNotEmpty()) {
+            repository.insertJobTypeConfigsAll(result.jobTypeConfigs.new)
+        }
+        if (result.jobTypeConfigs.modified.isNotEmpty()) {
+            repository.updateJobTypeConfigsAll(result.jobTypeConfigs.modified)
+        }
+        if (result.jobTypeConfigs.deleted.isNotEmpty()) {
+            repository.deleteJobTypeConfigsAll(result.jobTypeConfigs.deleted)
+        }
+        
+        // Apply venue changes (batch operations)
+        if (result.venues.new.isNotEmpty()) {
+            repository.insertVenuesAll(result.venues.new)
+        }
+        if (result.venues.modified.isNotEmpty()) {
+            repository.updateVenuesAll(result.venues.modified)
+        }
+        if (result.venues.deleted.isNotEmpty()) {
+            repository.deleteVenuesAll(result.venues.deleted)
+        }
     }
 }
 

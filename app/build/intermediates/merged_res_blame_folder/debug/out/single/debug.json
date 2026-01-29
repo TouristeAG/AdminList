@@ -16,12 +16,12 @@
         "source": "com.eventmanager.app-main-68:/mipmap-xxxhdpi/ic_launcher_foreground.png"
     },
     {
-        "merged": "com.eventmanager.app-merged_res-66:/mipmap-hdpi_ic_launcher_foreground_braun.png.flat",
-        "source": "com.eventmanager.app-main-68:/mipmap-hdpi/ic_launcher_foreground_braun.png"
-    },
-    {
         "merged": "com.eventmanager.app-merged_res-66:/mipmap-xxxhdpi_ic_launcher_braun.png.flat",
         "source": "com.eventmanager.app-main-68:/mipmap-xxxhdpi/ic_launcher_braun.png"
+    },
+    {
+        "merged": "com.eventmanager.app-merged_res-66:/mipmap-hdpi_ic_launcher_foreground_braun.png.flat",
+        "source": "com.eventmanager.app-main-68:/mipmap-hdpi/ic_launcher_foreground_braun.png"
     },
     {
         "merged": "com.eventmanager.app-merged_res-66:/mipmap-xxhdpi_ic_launcher_braun.png.flat",
@@ -68,12 +68,12 @@
         "source": "com.eventmanager.app-main-68:/mipmap-hdpi/ic_launcher_dark.png"
     },
     {
-        "merged": "com.eventmanager.app-merged_res-66:/mipmap-mdpi_ic_launcher_foreground_violet.png.flat",
-        "source": "com.eventmanager.app-main-68:/mipmap-mdpi/ic_launcher_foreground_violet.png"
-    },
-    {
         "merged": "com.eventmanager.app-merged_res-66:/mipmap-hdpi_ic_launcher_foreground_violet.png.flat",
         "source": "com.eventmanager.app-main-68:/mipmap-hdpi/ic_launcher_foreground_violet.png"
+    },
+    {
+        "merged": "com.eventmanager.app-merged_res-66:/mipmap-mdpi_ic_launcher_foreground_violet.png.flat",
+        "source": "com.eventmanager.app-main-68:/mipmap-mdpi/ic_launcher_foreground_violet.png"
     },
     {
         "merged": "com.eventmanager.app-merged_res-66:/mipmap-xxhdpi_ic_launcher_foreground_braun.png.flat",
@@ -96,12 +96,12 @@
         "source": "com.eventmanager.app-main-68:/mipmap-anydpi-v26/ic_launcher_deep_blue.xml"
     },
     {
-        "merged": "com.eventmanager.app-merged_res-66:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
-        "source": "com.eventmanager.app-main-68:/mipmap-anydpi-v26/ic_launcher_round.xml"
-    },
-    {
         "merged": "com.eventmanager.app-merged_res-66:/mipmap-xhdpi_ic_launcher_round_braun.png.flat",
         "source": "com.eventmanager.app-main-68:/mipmap-xhdpi/ic_launcher_round_braun.png"
+    },
+    {
+        "merged": "com.eventmanager.app-merged_res-66:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "com.eventmanager.app-main-68:/mipmap-anydpi-v26/ic_launcher_round.xml"
     },
     {
         "merged": "com.eventmanager.app-merged_res-66:/mipmap-xxhdpi_ic_launcher_round_deep_blue.png.flat",
@@ -124,12 +124,12 @@
         "source": "com.eventmanager.app-main-68:/mipmap-xxxhdpi/ic_launcher_foreground_dark.png"
     },
     {
-        "merged": "com.eventmanager.app-merged_res-66:/drawable_launch_screen_light.png.flat",
-        "source": "com.eventmanager.app-main-68:/drawable/launch_screen_light.png"
-    },
-    {
         "merged": "com.eventmanager.app-merged_res-66:/drawable_launch_logo_light.png.flat",
         "source": "com.eventmanager.app-main-68:/drawable/launch_logo_light.png"
+    },
+    {
+        "merged": "com.eventmanager.app-merged_res-66:/drawable_launch_screen_light.png.flat",
+        "source": "com.eventmanager.app-main-68:/drawable/launch_screen_light.png"
     },
     {
         "merged": "com.eventmanager.app-merged_res-66:/mipmap-anydpi-v26_ic_launcher_round_braun.xml.flat",
@@ -208,16 +208,16 @@
         "source": "com.eventmanager.app-main-68:/mipmap-xxxhdpi/ic_launcher_violet.png"
     },
     {
-        "merged": "com.eventmanager.app-merged_res-66:/mipmap-hdpi_ic_launcher_round_purple.png.flat",
-        "source": "com.eventmanager.app-main-68:/mipmap-hdpi/ic_launcher_round_purple.png"
-    },
-    {
         "merged": "com.eventmanager.app-merged_res-66:/mipmap-xxxhdpi_ic_launcher_foreground_violet.png.flat",
         "source": "com.eventmanager.app-main-68:/mipmap-xxxhdpi/ic_launcher_foreground_violet.png"
     },
     {
         "merged": "com.eventmanager.app-merged_res-66:/mipmap-xxhdpi_ic_launcher_foreground_blue_ocean.png.flat",
         "source": "com.eventmanager.app-main-68:/mipmap-xxhdpi/ic_launcher_foreground_blue_ocean.png"
+    },
+    {
+        "merged": "com.eventmanager.app-merged_res-66:/mipmap-hdpi_ic_launcher_round_purple.png.flat",
+        "source": "com.eventmanager.app-main-68:/mipmap-hdpi/ic_launcher_round_purple.png"
     },
     {
         "merged": "com.eventmanager.app-merged_res-66:/mipmap-xxxhdpi_ic_launcher_round_violet.png.flat",
@@ -240,16 +240,20 @@
         "source": "com.eventmanager.app-main-68:/mipmap-ldpi/ic_launcher_violet.png"
     },
     {
-        "merged": "com.eventmanager.app-merged_res-66:/mipmap-xxxhdpi_ic_launcher_round_purple.png.flat",
-        "source": "com.eventmanager.app-main-68:/mipmap-xxxhdpi/ic_launcher_round_purple.png"
-    },
-    {
         "merged": "com.eventmanager.app-merged_res-66:/drawable_qrscan_icon.png.flat",
         "source": "com.eventmanager.app-main-68:/drawable/qrscan_icon.png"
     },
     {
+        "merged": "com.eventmanager.app-merged_res-66:/mipmap-xxxhdpi_ic_launcher_round_purple.png.flat",
+        "source": "com.eventmanager.app-main-68:/mipmap-xxxhdpi/ic_launcher_round_purple.png"
+    },
+    {
         "merged": "com.eventmanager.app-merged_res-66:/mipmap-xxxhdpi_ic_launcher_foreground_blue_ocean.png.flat",
         "source": "com.eventmanager.app-main-68:/mipmap-xxxhdpi/ic_launcher_foreground_blue_ocean.png"
+    },
+    {
+        "merged": "com.eventmanager.app-merged_res-66:/mipmap-xxhdpi_ic_launcher.png.flat",
+        "source": "com.eventmanager.app-main-68:/mipmap-xxhdpi/ic_launcher.png"
     },
     {
         "merged": "com.eventmanager.app-merged_res-66:/mipmap-xxxhdpi_ic_launcher_round_blue_ocean.png.flat",
@@ -258,10 +262,6 @@
     {
         "merged": "com.eventmanager.app-merged_res-66:/mipmap-hdpi_ic_launcher_round.png.flat",
         "source": "com.eventmanager.app-main-68:/mipmap-hdpi/ic_launcher_round.png"
-    },
-    {
-        "merged": "com.eventmanager.app-merged_res-66:/mipmap-xxhdpi_ic_launcher.png.flat",
-        "source": "com.eventmanager.app-main-68:/mipmap-xxhdpi/ic_launcher.png"
     },
     {
         "merged": "com.eventmanager.app-merged_res-66:/mipmap-ldpi_ic_launcher_round_blue_ocean.png.flat",
@@ -304,12 +304,12 @@
         "source": "com.eventmanager.app-main-68:/mipmap-xxxhdpi/ic_launcher_foreground_deep_blue.png"
     },
     {
-        "merged": "com.eventmanager.app-merged_res-66:/mipmap-hdpi_ic_launcher_violet.png.flat",
-        "source": "com.eventmanager.app-main-68:/mipmap-hdpi/ic_launcher_violet.png"
-    },
-    {
         "merged": "com.eventmanager.app-merged_res-66:/mipmap-xhdpi_ic_launcher_violet.png.flat",
         "source": "com.eventmanager.app-main-68:/mipmap-xhdpi/ic_launcher_violet.png"
+    },
+    {
+        "merged": "com.eventmanager.app-merged_res-66:/mipmap-hdpi_ic_launcher_violet.png.flat",
+        "source": "com.eventmanager.app-main-68:/mipmap-hdpi/ic_launcher_violet.png"
     },
     {
         "merged": "com.eventmanager.app-merged_res-66:/mipmap-xxhdpi_ic_launcher_round_violet.png.flat",
@@ -320,12 +320,12 @@
         "source": "com.eventmanager.app-main-68:/mipmap-mdpi/ic_launcher.png"
     },
     {
-        "merged": "com.eventmanager.app-merged_res-66:/mipmap-mdpi_ic_launcher_blue_ocean.png.flat",
-        "source": "com.eventmanager.app-main-68:/mipmap-mdpi/ic_launcher_blue_ocean.png"
-    },
-    {
         "merged": "com.eventmanager.app-merged_res-66:/mipmap-xxxhdpi_ic_launcher.png.flat",
         "source": "com.eventmanager.app-main-68:/mipmap-xxxhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.eventmanager.app-merged_res-66:/mipmap-mdpi_ic_launcher_blue_ocean.png.flat",
+        "source": "com.eventmanager.app-main-68:/mipmap-mdpi/ic_launcher_blue_ocean.png"
     },
     {
         "merged": "com.eventmanager.app-merged_res-66:/mipmap-ldpi_ic_launcher_deep_blue.png.flat",
@@ -468,12 +468,12 @@
         "source": "com.eventmanager.app-main-68:/mipmap-hdpi/ic_launcher_blue_ocean.png"
     },
     {
-        "merged": "com.eventmanager.app-merged_res-66:/mipmap-xhdpi_ic_launcher.png.flat",
-        "source": "com.eventmanager.app-main-68:/mipmap-xhdpi/ic_launcher.png"
-    },
-    {
         "merged": "com.eventmanager.app-merged_res-66:/mipmap-mdpi_ic_launcher_round_violet.png.flat",
         "source": "com.eventmanager.app-main-68:/mipmap-mdpi/ic_launcher_round_violet.png"
+    },
+    {
+        "merged": "com.eventmanager.app-merged_res-66:/mipmap-xhdpi_ic_launcher.png.flat",
+        "source": "com.eventmanager.app-main-68:/mipmap-xhdpi/ic_launcher.png"
     },
     {
         "merged": "com.eventmanager.app-merged_res-66:/mipmap-anydpi-v26_ic_launcher_blue_ocean.xml.flat",
@@ -492,12 +492,12 @@
         "source": "com.eventmanager.app-main-68:/mipmap-hdpi/ic_launcher_foreground_deep_blue.png"
     },
     {
-        "merged": "com.eventmanager.app-merged_res-66:/mipmap-xhdpi_ic_launcher_deep_blue.png.flat",
-        "source": "com.eventmanager.app-main-68:/mipmap-xhdpi/ic_launcher_deep_blue.png"
-    },
-    {
         "merged": "com.eventmanager.app-merged_res-66:/mipmap-xhdpi_ic_launcher_round.png.flat",
         "source": "com.eventmanager.app-main-68:/mipmap-xhdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "com.eventmanager.app-merged_res-66:/mipmap-xhdpi_ic_launcher_deep_blue.png.flat",
+        "source": "com.eventmanager.app-main-68:/mipmap-xhdpi/ic_launcher_deep_blue.png"
     },
     {
         "merged": "com.eventmanager.app-merged_res-66:/mipmap-xhdpi_ic_launcher_round_deep_blue.png.flat",

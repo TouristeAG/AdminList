@@ -128,21 +128,24 @@ fun VenueManagementScreen(
         
         Spacer(modifier = Modifier.height(responsiveSpacing))
         
+        // Memoize filter strings and options to avoid recomputation on every recomposition
+        val filterActiveText = stringResource(R.string.filter_active)
+        val filterInactiveText = stringResource(R.string.filter_inactive)
+        val filterOptions = remember(filterActiveText, filterInactiveText) { 
+            listOf(filterActiveText, filterInactiveText) 
+        }
+        
         // Search and Filter Section
         SearchBarWithFilter(
             searchText = searchText,
             onSearchTextChange = { searchText = it },
             placeholder = stringResource(R.string.search_venues_placeholder),
-            filterOptions = listOf(stringResource(R.string.filter_active), stringResource(R.string.filter_inactive)),
+            filterOptions = filterOptions,
             selectedFilter = selectedFilter,
             onFilterChange = { selectedFilter = it }
         )
         
         Spacer(modifier = Modifier.height(16.dp))
-        
-        // Get string resources outside of remember block
-        val filterActiveText = stringResource(R.string.filter_active)
-        val filterInactiveText = stringResource(R.string.filter_inactive)
         
         // Memoize filtered venues to avoid recalculating on every recomposition
         val filteredVenues = remember(venues, searchText, selectedFilter, filterActiveText, filterInactiveText) {
@@ -177,7 +180,10 @@ fun VenueManagementScreen(
                 .fillMaxWidth()
                 .weight(1f)
         ) {
-            items(filteredVenues) { venue ->
+            items(
+                items = filteredVenues,
+                key = { venue -> venue.id }
+            ) { venue ->
                 VenueConfigCard(
                     venue = venue,
                     onUpdate = { showEditDialog = venue },

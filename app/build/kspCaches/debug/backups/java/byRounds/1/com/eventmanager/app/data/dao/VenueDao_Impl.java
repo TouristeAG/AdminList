@@ -154,6 +154,25 @@ public final class VenueDao_Impl implements VenueDao {
   }
 
   @Override
+  public Object insertVenuesAll(final List<VenueEntity> venues,
+      final Continuation<? super List<Long>> $completion) {
+    return CoroutinesRoom.execute(__db, true, new Callable<List<Long>>() {
+      @Override
+      @NonNull
+      public List<Long> call() throws Exception {
+        __db.beginTransaction();
+        try {
+          final List<Long> _result = __insertionAdapterOfVenueEntity.insertAndReturnIdsList(venues);
+          __db.setTransactionSuccessful();
+          return _result;
+        } finally {
+          __db.endTransaction();
+        }
+      }
+    }, $completion);
+  }
+
+  @Override
   public Object deleteVenue(final VenueEntity venue, final Continuation<? super Unit> $completion) {
     return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
       @Override
@@ -172,6 +191,25 @@ public final class VenueDao_Impl implements VenueDao {
   }
 
   @Override
+  public Object deleteVenuesAll(final List<VenueEntity> venues,
+      final Continuation<? super Unit> $completion) {
+    return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
+      @Override
+      @NonNull
+      public Unit call() throws Exception {
+        __db.beginTransaction();
+        try {
+          __deletionAdapterOfVenueEntity.handleMultiple(venues);
+          __db.setTransactionSuccessful();
+          return Unit.INSTANCE;
+        } finally {
+          __db.endTransaction();
+        }
+      }
+    }, $completion);
+  }
+
+  @Override
   public Object updateVenue(final VenueEntity venue, final Continuation<? super Unit> $completion) {
     return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
       @Override
@@ -180,6 +218,25 @@ public final class VenueDao_Impl implements VenueDao {
         __db.beginTransaction();
         try {
           __updateAdapterOfVenueEntity.handle(venue);
+          __db.setTransactionSuccessful();
+          return Unit.INSTANCE;
+        } finally {
+          __db.endTransaction();
+        }
+      }
+    }, $completion);
+  }
+
+  @Override
+  public Object updateVenuesAll(final List<VenueEntity> venues,
+      final Continuation<? super Unit> $completion) {
+    return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
+      @Override
+      @NonNull
+      public Unit call() throws Exception {
+        __db.beginTransaction();
+        try {
+          __updateAdapterOfVenueEntity.handleMultiple(venues);
           __db.setTransactionSuccessful();
           return Unit.INSTANCE;
         } finally {

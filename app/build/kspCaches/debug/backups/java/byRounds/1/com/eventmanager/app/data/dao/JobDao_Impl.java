@@ -170,6 +170,25 @@ public final class JobDao_Impl implements JobDao {
   }
 
   @Override
+  public Object insertJobsAll(final List<Job> jobs,
+      final Continuation<? super List<Long>> $completion) {
+    return CoroutinesRoom.execute(__db, true, new Callable<List<Long>>() {
+      @Override
+      @NonNull
+      public List<Long> call() throws Exception {
+        __db.beginTransaction();
+        try {
+          final List<Long> _result = __insertionAdapterOfJob.insertAndReturnIdsList(jobs);
+          __db.setTransactionSuccessful();
+          return _result;
+        } finally {
+          __db.endTransaction();
+        }
+      }
+    }, $completion);
+  }
+
+  @Override
   public Object deleteJob(final Job job, final Continuation<? super Unit> $completion) {
     return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
       @Override
@@ -188,6 +207,24 @@ public final class JobDao_Impl implements JobDao {
   }
 
   @Override
+  public Object deleteJobsAll(final List<Job> jobs, final Continuation<? super Unit> $completion) {
+    return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
+      @Override
+      @NonNull
+      public Unit call() throws Exception {
+        __db.beginTransaction();
+        try {
+          __deletionAdapterOfJob.handleMultiple(jobs);
+          __db.setTransactionSuccessful();
+          return Unit.INSTANCE;
+        } finally {
+          __db.endTransaction();
+        }
+      }
+    }, $completion);
+  }
+
+  @Override
   public Object updateJob(final Job job, final Continuation<? super Unit> $completion) {
     return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
       @Override
@@ -196,6 +233,24 @@ public final class JobDao_Impl implements JobDao {
         __db.beginTransaction();
         try {
           __updateAdapterOfJob.handle(job);
+          __db.setTransactionSuccessful();
+          return Unit.INSTANCE;
+        } finally {
+          __db.endTransaction();
+        }
+      }
+    }, $completion);
+  }
+
+  @Override
+  public Object updateJobsAll(final List<Job> jobs, final Continuation<? super Unit> $completion) {
+    return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
+      @Override
+      @NonNull
+      public Unit call() throws Exception {
+        __db.beginTransaction();
+        try {
+          __updateAdapterOfJob.handleMultiple(jobs);
           __db.setTransactionSuccessful();
           return Unit.INSTANCE;
         } finally {
