@@ -136,9 +136,18 @@ import com.eventmanager.app.ui.components.SyncErrorDialog
 import android.content.Intent
 import android.provider.Settings
 import com.eventmanager.app.ui.components.DeviceTimeErrorDialog
+import com.eventmanager.app.ui.components.SleepResumeSyncWarningDialog
 import com.eventmanager.app.ui.components.SyncStatusDialog
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import com.eventmanager.app.utils.ImageUtils
 import androidx.compose.ui.graphics.ImageBitmap
+import com.eventmanager.app.data.update.UpdateCheckResult
+import com.eventmanager.app.data.update.DownloadState
+import androidx.compose.runtime.LaunchedEffect
+import android.net.Uri
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -363,13 +372,13 @@ fun EventManagerApp() {
     var showQRScanner by rememberSaveable { mutableStateOf(false) }
     var showVolunteerBenefits: Volunteer? by remember { mutableStateOf(null) }
     
-    // Track if we've encountered an error
-    var hasError by rememberSaveable { mutableStateOf(false) }
-    var errorMessage by rememberSaveable { mutableStateOf("") }
-    
     // Haptic feedback for page navigation - very subtle vibration
     val vibrator = remember { appContext.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator }
 
+    // Update check state - only show dialog if update is available
+    var showUpdateDialog by remember { mutableStateOf(false) }
+    var hasCheckedUpdate by remember { mutableStateOf(false) }
+    
     if (showWelcome) {
         WelcomeScreen(
             onStartManaging = {
@@ -409,8 +418,80 @@ fun EventManagerApp() {
         val syncStatusMessage by viewModel.syncStatusMessage.collectAsState()
         val showSyncStatusDialog by viewModel.showSyncStatusDialog.collectAsState()
         
+        // Collect update check state
+        val updateCheckResult by viewModel.updateCheckState.collectAsState()
+        val updateDownloadState by viewModel.updateDownloadState.collectAsState()
+        
         // State for device time error
         val showDeviceTimeErrorDialog = remember { mutableStateOf(false) }
+        
+        // State for sleep/resume sync warning
+        val showSleepResumeWarning = remember { mutableStateOf(false) }
+        val wasInBackground = remember { mutableStateOf(false) }
+        val justResumed = remember { mutableStateOf(false) }
+        
+        // Detect app lifecycle changes to track when app resumes from background/sleep
+        val lifecycleOwner = LocalLifecycleOwner.current
+        DisposableEffect(lifecycleOwner) {
+            val observer = LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_PAUSE -> {
+                        wasInBackground.value = true
+                    }
+                    Lifecycle.Event.ON_RESUME -> {
+                        // App just resumed from background/sleep
+                        if (wasInBackground.value) {
+                            println("📱 App resumed from background/sleep")
+                            justResumed.value = true
+                        }
+                        wasInBackground.value = false
+                    }
+                    else -> {}
+                }
+            }
+            lifecycleOwner.lifecycle.addObserver(observer)
+            onDispose {
+                lifecycleOwner.lifecycle.removeObserver(observer)
+            }
+        }
+        
+        // Reset justResumed flag after a delay
+        LaunchedEffect(justResumed.value) {
+            if (justResumed.value) {
+                kotlinx.coroutines.delay(5000) // Reset after 5 seconds
+                justResumed.value = false
+            }
+        }
+        
+        // Show warning if sync error occurs after resume from sleep/background
+        // Always show the simple warning dialog instead of the detailed error dialog
+        // This provides a better UX - just tell user to resync at the bottom
+        LaunchedEffect(syncError, justResumed.value, isSyncing) {
+            // If we just resumed and there's a sync error (and not currently syncing), show warning
+            if (justResumed.value && syncError != null && !isSyncing) {
+                println("⚠️ Sync error after resume detected, showing simple warning dialog")
+                // Small delay to ensure UI is ready
+                kotlinx.coroutines.delay(300)
+                // Show warning instead of regular error dialog
+                showSleepResumeWarning.value = true
+            }
+        }
+        
+        // Trigger update check in background when app starts (after welcome screen is dismissed)
+        LaunchedEffect(Unit) {
+            if (!hasCheckedUpdate) {
+                hasCheckedUpdate = true
+                // Check for updates in background
+                viewModel.checkForAppUpdates()
+            }
+        }
+        
+        // Show update dialog only if update is available
+        LaunchedEffect(updateCheckResult) {
+            if (updateCheckResult is UpdateCheckResult.UpdateAvailable) {
+                showUpdateDialog = true
+            }
+        }
         
         // Detect device time errors
         LaunchedEffect(syncError) {
@@ -433,11 +514,7 @@ fun EventManagerApp() {
                 } catch (e: Exception) {
                     println("❌ Sync error: ${e.message}")
                     e.printStackTrace()
-                    // Update error state on main thread
-                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                        hasError = true
-                        errorMessage = "Sync failed: ${e.message}"
-                    }
+                    // Error is handled by viewModel's syncError state
                 }
             }
         }
@@ -919,7 +996,10 @@ if (pageAnimationsEnabled) {
                 jobs.filter { it.volunteerId == volunteer.id }
             }
 
-            androidx.compose.ui.window.Dialog(onDismissRequest = { showVolunteerBenefits = null }) {
+            androidx.compose.ui.window.Dialog(
+                onDismissRequest = { showVolunteerBenefits = null },
+                properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+            ) {
                 VolunteerBenefitsPanel(
                     volunteer = volunteer,
                     volunteerBenefitStatus = memoizedBenefitStatus,
@@ -930,9 +1010,18 @@ if (pageAnimationsEnabled) {
             }
         }
         
-        // Sync Error Dialog
+        // Sleep/Resume Sync Warning Dialog - Show this INSTEAD of regular error dialog when app resumes
+        SleepResumeSyncWarningDialog(
+            isVisible = showSleepResumeWarning.value && !showDeviceTimeErrorDialog.value,
+            onDismiss = {
+                showSleepResumeWarning.value = false
+                viewModel.dismissSyncErrorDialog()
+            }
+        )
+        
+        // Sync Error Dialog - Only show if NOT showing sleep/resume warning
         SyncErrorDialog(
-            isVisible = showSyncErrorDialog && !showDeviceTimeErrorDialog.value,
+            isVisible = showSyncErrorDialog && !showDeviceTimeErrorDialog.value && !showSleepResumeWarning.value,
             onDismiss = { viewModel.dismissSyncErrorDialog() },
             onRetry = { viewModel.performFullSync() },
             errorMessage = syncError ?: "",
@@ -974,6 +1063,122 @@ if (pageAnimationsEnabled) {
                 }
             }
         )
+        
+        // Update dialog - only shown when update is available
+        if (showUpdateDialog && updateCheckResult is UpdateCheckResult.UpdateAvailable) {
+            val manifest = (updateCheckResult as UpdateCheckResult.UpdateAvailable).manifest
+            val isRequired = (updateCheckResult as UpdateCheckResult.UpdateAvailable).isRequired
+            val currentDownloadState = updateDownloadState
+            
+            when (currentDownloadState) {
+                is DownloadState.Downloading -> {
+                    AlertDialog(
+                        onDismissRequest = { },
+                        title = {
+                            Text(text = context.getString(R.string.downloading_update))
+                        },
+                        text = {
+                            Column {
+                                LinearProgressIndicator(
+                                    progress = { currentDownloadState.progress / 100f },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = context.getString(R.string.download_progress, currentDownloadState.progress),
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        },
+                        confirmButton = {}
+                    )
+                }
+                is DownloadState.Downloaded -> {
+                    AlertDialog(
+                        onDismissRequest = { showUpdateDialog = false },
+                        title = {
+                            Text(text = context.getString(R.string.download_complete))
+                        },
+                        text = {
+                            Text(text = context.getString(R.string.update_available_message))
+                        },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                viewModel.installUpdate(currentDownloadState.file)
+                                showUpdateDialog = false
+                            }) {
+                                Text(context.getString(R.string.install_update))
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showUpdateDialog = false }) {
+                                Text(context.getString(R.string.later))
+                            }
+                        }
+                    )
+                }
+                is DownloadState.Error -> {
+                    AlertDialog(
+                        onDismissRequest = { showUpdateDialog = false },
+                        title = {
+                            Text(text = context.getString(R.string.download_error_title))
+                        },
+                        text = {
+                            Text(text = context.getString(R.string.download_error_message, currentDownloadState.message))
+                        },
+                        confirmButton = {
+                            TextButton(onClick = { showUpdateDialog = false }) {
+                                Text(context.getString(R.string.ok))
+                            }
+                        }
+                    )
+                }
+                else -> {
+                    // Show update available dialog
+                    AlertDialog(
+                        onDismissRequest = { showUpdateDialog = false },
+                        title = {
+                            Text(text = context.getString(R.string.update_available_title, manifest.latestVersionName))
+                        },
+                        text = {
+                            Text(
+                                text = manifest.changelogShort
+                                    ?: if (isRequired) {
+                                        context.getString(R.string.update_required_message)
+                                    } else {
+                                        context.getString(R.string.update_available_message)
+                                    }
+                            )
+                        },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                // Start download instead of opening browser
+                                val downloadUrl = manifest.downloadUrl
+                                if (downloadUrl != null) {
+                                    viewModel.downloadUpdate(downloadUrl)
+                                } else {
+                                    // Fallback to browser if no download URL
+                                    val targetUrl = manifest.storeUrl
+                                        ?: settingsManager.getUpdateStoreUrl()
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(targetUrl))
+                                    context.startActivity(intent)
+                                    showUpdateDialog = false
+                                }
+                            }) {
+                                Text(context.getString(R.string.update_now))
+                            }
+                        },
+                        dismissButton = {
+                            if (!isRequired) {
+                                TextButton(onClick = { showUpdateDialog = false }) {
+                                    Text(context.getString(R.string.later))
+                                }
+                            }
+                        }
+                    )
+                }
+            }
+        }
         
         // Sync Status Dialog
         SyncStatusDialog(
@@ -1517,67 +1722,6 @@ fun DashboardScreen(
             BeerAnimation(
                 enabled = true,
                 modifier = Modifier.fillMaxSize()
-            )
-        }
-    }
-}
-
-@Composable
-fun StatCard(
-    title: String,
-    value: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    modifier: Modifier = Modifier
-) {
-    val isCompact = isCompactScreen()
-    val isPhone = !isTablet()
-    val responsivePadding = getResponsivePadding()
-    val responsiveIconSize = getResponsiveIconSize()
-    
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(if (isPhone) 12.dp else 16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(if (isPhone) 12.dp else 20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Icon with background circle
-            Box(
-                modifier = Modifier
-                    .size(if (isPhone) 40.dp else if (isCompact) 48.dp else 56.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        shape = CircleShape
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    modifier = Modifier.size(if (isPhone) 20.dp else if (isCompact) 24.dp else responsiveIconSize),
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(if (isPhone) 8.dp else 12.dp))
-            
-            Text(
-                text = value,
-                style = if (isPhone) MaterialTheme.typography.titleLarge else if (isCompact) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
-            )
-            
-            Spacer(modifier = Modifier.height(if (isPhone) 2.dp else 4.dp))
-            
-            Text(
-                text = title,
-                style = if (isPhone) getPhonePortraitBodyTypography() else if (isCompact) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

@@ -4,7 +4,6 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import androidx.room.Update
 import com.eventmanager.app.data.models.CounterData
 import kotlinx.coroutines.flow.Flow
 
@@ -18,11 +17,5 @@ interface CounterDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdateCounter(counter: CounterData)
-
-    @Update
-    suspend fun updateCounter(counter: CounterData)
-
-    @Query("DELETE FROM people_counter")
-    suspend fun deleteCounter()
 }
 

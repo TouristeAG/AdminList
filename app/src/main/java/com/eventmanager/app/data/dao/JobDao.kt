@@ -45,36 +45,6 @@ interface JobDao {
 
     @Query("SELECT * FROM jobs WHERE lastModified > :timestamp")
     suspend fun getJobsModifiedAfter(timestamp: Long): List<Job>
-
-    @Query("UPDATE jobs SET lastModified = :timestamp WHERE id = :id")
-    suspend fun updateLastModified(id: Long, timestamp: Long)
-
-    // Query to get volunteer rank based on job history
-    @Query("""
-        SELECT COUNT(*) FROM jobs 
-        WHERE volunteerId = :volunteerId 
-        AND date >= :monthStart 
-        AND date <= :monthEnd
-    """)
-    suspend fun getJobCountForMonth(volunteerId: Long, monthStart: Long, monthEnd: Long): Int
-
-    @Query("""
-        SELECT COUNT(*) FROM jobs 
-        WHERE volunteerId = :volunteerId 
-        AND shiftTime = 'AFTER_MIDNIGHT'
-        AND date >= :monthStart 
-        AND date <= :monthEnd
-    """)
-    suspend fun getAfterMidnightJobCount(volunteerId: Long, monthStart: Long, monthEnd: Long): Int
-
-    @Query("""
-        SELECT COUNT(*) FROM jobs 
-        WHERE volunteerId = :volunteerId 
-        AND shiftTime = 'BEFORE_MIDNIGHT'
-        AND date >= :monthStart 
-        AND date <= :monthEnd
-    """)
-    suspend fun getBeforeMidnightJobCount(volunteerId: Long, monthStart: Long, monthEnd: Long): Int
     
     @Query("SELECT * FROM jobs WHERE sheetsId = :sheetsId")
     suspend fun getJobBySheetsId(sheetsId: String): Job?

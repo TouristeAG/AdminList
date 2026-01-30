@@ -441,6 +441,69 @@
     <string name="share">Share</string>
     <string name="send_by_mail">Send by mail</string>
     <string name="failed_to_generate_qr_code">Failed to generate QR code</string>
+    
+    <!-- Email QR Code Settings -->
+    <string name="settings_category_email">Email Settings</string>
+    <string name="email_qr_settings_title">QR Code Email Settings</string>
+    <string name="email_qr_settings_description">Configure the content of emails when sending QR codes to volunteers</string>
+    <string name="email_subject_label">Email Subject</string>
+    <string name="email_subject_hint">Subject line for the QR code email</string>
+    <string name="email_subject_default">Your Volunteer Profile QR Code</string>
+    <string name="email_content_before_label">Message Before QR Code</string>
+    <string name="email_content_before_hint">Optional greeting or introduction</string>
+    <string name="email_content_before_default">Hello !\n\nHere is your personal QR code for your volunteer profile. This QR code works for all events, so please keep it handy and show it when you arrive at the entrance. It helps us process your entry quickly.</string>
+    <string name="email_include_qr_label">Include QR Code in Email</string>
+    <string name="email_include_qr_description">Attach the QR code image to the email</string>
+    <string name="email_content_after_label">Message After QR Code</string>
+    <string name="email_content_after_hint">Optional additional information</string>
+    <string name="email_content_after_default">If you have any questions, feel free to reach out to us. :)</string>
+    <string name="email_signature_label">Signature</string>
+    <string name="email_signature_hint">Your sign-off (e.g., Best regards, The Team)</string>
+    <string name="email_signature_default">Best regards,\nThe Event Team</string>
+    <string name="email_include_logo_label">Include Association Logo</string>
+    <string name="email_include_logo_description">Add your organization\'s logo to the email</string>
+    <string name="email_logo_upload">Upload Logo</string>
+    <string name="email_logo_change">Change Logo</string>
+    <string name="email_logo_remove">Remove Logo</string>
+    <string name="email_logo_preview">Logo Preview</string>
+    <string name="email_settings_saved">Email settings saved</string>
+    <string name="email_reset_to_defaults">Reset to Defaults</string>
+    <string name="email_preview">Preview Email</string>
+    
+    <!-- Gmail OAuth -->
+    <string name="email_gmail_auth_title">Gmail API Authentication</string>
+    <string name="email_gmail_auth_description">Connect your Gmail account to send emails automatically via Gmail API</string>
+    <string name="email_gmail_sign_in">Sign in with Google</string>
+    <string name="email_gmail_sign_out">Sign out</string>
+    <string name="email_gmail_signed_in_as">Signed in as: %s</string>
+    <string name="email_gmail_not_signed_in">Not signed in</string>
+    <string name="email_gmail_auth_success">Successfully authenticated with Gmail</string>
+    <string name="email_gmail_auth_error">Failed to authenticate with Gmail: %s</string>
+    <string name="email_gmail_auth_revoked">Gmail access revoked</string>
+    
+    <!-- Email Send Dialog -->
+    <string name="email_confirm_send_title">Send QR Code by Email</string>
+    <string name="email_confirm_send_message">Send QR code to %s?</string>
+    <string name="email_send_manual">Send Manually (HTML)</string>
+    <string name="email_send_api">Send via Gmail API</string>
+    <string name="email_send_manual_description">Open email app with HTML content and QR code attachment</string>
+    <string name="email_send_api_description">Send automatically via Gmail API with embedded images</string>
+    <string name="email_no_email_title">No Email Address</string>
+    <string name="email_no_email_message">This volunteer doesn\'t have an email address. Please add one first.</string>
+    <string name="email_send">Send</string>
+    <string name="email_sending">Sending…</string>
+    <string name="email_error_title">Email Error</string>
+    <string name="email_error_message">Could not open email app: %s</string>
+    <string name="email_api_error_message">Failed to send email via Gmail API: %s</string>
+    <string name="email_api_success">Email sent successfully via Gmail API</string>
+    <string name="email_api_not_authenticated">Gmail API not authenticated. Please sign in first in Settings.</string>
+    <string name="email_open_settings">Configure Email</string>
+    
+    <!-- Email HTML Template -->
+    <string name="email_html_header">Your Volunteer QR Code</string>
+    <string name="email_html_footer">This email was sent automatically. Please keep your QR code safe.</string>
+    <string name="email_qr_attachment_text">QR Code\nattached</string>
+    <string name="email_qr_attachment_note">The QR code is available as an attachment</string>
     <string name="personal_information">Personal Information</string>
     <string name="name">Name</string>
     <string name="abbreviation">Abbreviation</string>
@@ -557,6 +620,10 @@
     <string name="sync_error_device_time_message">Your device\'s time or date is incorrect. Google Sheets API requires accurate time synchronization to work properly.</string>
     <string name="sync_error_device_time_solution">How to fix:\n\n1. Go to Settings\n2. Look for \"Date &amp; Time\" or \"System\"\n3. Enable \"Automatic date &amp; time\" or \"Set time automatically\"\n4. If not available, manually set the correct date and time\n5. Restart the app and try syncing again\n\nCommon on older tablets - please check your device settings!</string>
     <string name="sync_error_device_time_open_settings">Open Settings</string>
+    
+    <!-- Sleep/Resume Sync Warning -->
+    <string name="sync_warning_sleep_resume_title">⚠️ App Not Synced</string>
+    <string name="sync_warning_sleep_resume_message">The app is not synced anymore. Please sync it by pressing the resync button at the bottom.</string>
     
     <!-- Specific Sync Error Types -->
     <string name="sync_error_rate_limit">Rate limit exceeded. Please wait 1-2 minutes before trying again.</string>

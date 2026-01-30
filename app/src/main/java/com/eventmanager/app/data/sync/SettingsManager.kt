@@ -50,6 +50,18 @@ class SettingsManager(context: Context) {
         private const val KEY_CATEGORY_DEVELOPER_EXPANDED = "category_developer_expanded"
         private const val KEY_CATEGORY_MAINTENANCE_EXPANDED = "category_maintenance_expanded"
         
+        // Email Settings Keys
+        private const val KEY_EMAIL_SUBJECT = "email_qr_subject"
+        private const val KEY_EMAIL_CONTENT_BEFORE = "email_qr_content_before"
+        private const val KEY_EMAIL_INCLUDE_QR = "email_include_qr"
+        private const val KEY_EMAIL_CONTENT_AFTER = "email_qr_content_after"
+        private const val KEY_EMAIL_SIGNATURE = "email_signature"
+        private const val KEY_EMAIL_INCLUDE_LOGO = "email_include_logo"
+        private const val KEY_EMAIL_LOGO_URI = "email_logo_uri"
+        private const val KEY_EMAIL_GMAIL_ACCOUNT = "email_gmail_account"
+        private const val KEY_EMAIL_GMAIL_AUTH_TOKEN = "email_gmail_auth_token"
+        private const val KEY_CATEGORY_EMAIL_EXPANDED = "category_email_expanded"
+        
         // Page Scroll Behavior Configuration Constants
         const val HEADER_PINNED = "header_pinned"
         const val FULL_SCROLL = "full_scroll"
@@ -140,14 +152,6 @@ class SettingsManager(context: Context) {
     
     fun saveSyncInterval(intervalMinutes: Int) {
         prefs.edit().putInt(KEY_SYNC_INTERVAL, intervalMinutes).apply()
-    }
-    
-    fun getAutoSyncEnabled(): Boolean {
-        return prefs.getBoolean(KEY_AUTO_SYNC, true)
-    }
-    
-    fun saveAutoSyncEnabled(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_AUTO_SYNC, enabled).apply()
     }
     
     fun getDebugMode(): Boolean {
@@ -301,8 +305,8 @@ class SettingsManager(context: Context) {
 
     // Page Scroll Behavior Configuration
     // HEADER_PINNED   -> Only the list scrolls, header stays fixed
-    // FULL_SCROLL     -> Header scrolls together with the list (default)
-    // STICKY_FILTERS  -> Header scrolls but filters become sticky at the top
+    // FULL_SCROLL     -> Header scrolls together with the list
+    // STICKY_FILTERS  -> Header scrolls but filters become sticky at the top (default)
     fun getScrollBehavior(): String {
         // Check if new string setting exists
         val storedString = prefs.getString("${KEY_PAGE_SCROLL_BEHAVIOR}_mode", null)
@@ -317,23 +321,14 @@ class SettingsManager(context: Context) {
             return if (oldValue) HEADER_PINNED else FULL_SCROLL
         }
         
-        // Default to FULL_SCROLL for new users
-        return FULL_SCROLL
+        // Default to STICKY_FILTERS for new users
+        return STICKY_FILTERS
     }
     
     fun setScrollBehavior(behavior: String) {
         prefs.edit().putString("${KEY_PAGE_SCROLL_BEHAVIOR}_mode", behavior).apply()
     }
     
-    // Legacy support - kept for backward compatibility
-    fun isHeaderPinned(): Boolean {
-        return getScrollBehavior() == HEADER_PINNED
-    }
-    
-    fun isStickyFilters(): Boolean {
-        return getScrollBehavior() == STICKY_FILTERS
-    }
-
     // Update Manifest URL Configuration
     fun getUpdateManifestUrl(): String {
         return prefs.getString(KEY_UPDATE_MANIFEST_URL, BuildConfig.UPDATE_MANIFEST_URL)
@@ -360,6 +355,95 @@ class SettingsManager(context: Context) {
      */
     fun getAnimationIntensityMultiplier(): Float {
         return 1.0f
+    }
+    
+    // Email Settings Configuration
+    // Note: Default values use resource IDs that should be resolved at runtime with context
+    fun getEmailSubject(): String {
+        return prefs.getString(KEY_EMAIL_SUBJECT, "") ?: ""
+    }
+    
+    fun saveEmailSubject(subject: String) {
+        prefs.edit().putString(KEY_EMAIL_SUBJECT, subject).apply()
+    }
+    
+    fun getEmailContentBefore(): String {
+        return prefs.getString(KEY_EMAIL_CONTENT_BEFORE, "") ?: ""
+    }
+    
+    fun saveEmailContentBefore(content: String) {
+        prefs.edit().putString(KEY_EMAIL_CONTENT_BEFORE, content).apply()
+    }
+    
+    fun isEmailIncludeQrEnabled(): Boolean {
+        return prefs.getBoolean(KEY_EMAIL_INCLUDE_QR, true) // Include QR by default
+    }
+    
+    fun setEmailIncludeQrEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_EMAIL_INCLUDE_QR, enabled).apply()
+    }
+    
+    fun getEmailContentAfter(): String {
+        return prefs.getString(KEY_EMAIL_CONTENT_AFTER, "") ?: ""
+    }
+    
+    fun saveEmailContentAfter(content: String) {
+        prefs.edit().putString(KEY_EMAIL_CONTENT_AFTER, content).apply()
+    }
+    
+    fun getEmailSignature(): String {
+        return prefs.getString(KEY_EMAIL_SIGNATURE, "") ?: ""
+    }
+    
+    fun saveEmailSignature(signature: String) {
+        prefs.edit().putString(KEY_EMAIL_SIGNATURE, signature).apply()
+    }
+    
+    fun isEmailIncludeLogoEnabled(): Boolean {
+        return prefs.getBoolean(KEY_EMAIL_INCLUDE_LOGO, false) // Logo disabled by default
+    }
+    
+    fun setEmailIncludeLogoEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_EMAIL_INCLUDE_LOGO, enabled).apply()
+    }
+    
+    fun getEmailLogoUri(): String {
+        return prefs.getString(KEY_EMAIL_LOGO_URI, "") ?: ""
+    }
+    
+    fun saveEmailLogoUri(uri: String) {
+        prefs.edit().putString(KEY_EMAIL_LOGO_URI, uri).apply()
+    }
+    
+    fun getGmailAccount(): String {
+        return prefs.getString(KEY_EMAIL_GMAIL_ACCOUNT, "") ?: ""
+    }
+    
+    fun saveGmailAccount(account: String) {
+        prefs.edit().putString(KEY_EMAIL_GMAIL_ACCOUNT, account).apply()
+    }
+    
+    fun getGmailAuthToken(): String {
+        return prefs.getString(KEY_EMAIL_GMAIL_AUTH_TOKEN, "") ?: ""
+    }
+    
+    fun saveGmailAuthToken(token: String) {
+        prefs.edit().putString(KEY_EMAIL_GMAIL_AUTH_TOKEN, token).apply()
+    }
+    
+    fun clearGmailAuth() {
+        prefs.edit()
+            .remove(KEY_EMAIL_GMAIL_ACCOUNT)
+            .remove(KEY_EMAIL_GMAIL_AUTH_TOKEN)
+            .apply()
+    }
+    
+    fun isCategoryEmailExpanded(): Boolean {
+        return prefs.getBoolean(KEY_CATEGORY_EMAIL_EXPANDED, false)
+    }
+    
+    fun setCategoryEmailExpanded(expanded: Boolean) {
+        prefs.edit().putBoolean(KEY_CATEGORY_EMAIL_EXPANDED, expanded).apply()
     }
     
     // Clear all settings

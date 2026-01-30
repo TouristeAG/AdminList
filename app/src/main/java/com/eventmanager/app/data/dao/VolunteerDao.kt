@@ -46,9 +46,6 @@ interface VolunteerDao {
     @Query("SELECT * FROM volunteers WHERE lastModified > :timestamp")
     suspend fun getVolunteersModifiedAfter(timestamp: Long): List<Volunteer>
 
-    @Query("UPDATE volunteers SET lastModified = :timestamp WHERE id = :id")
-    suspend fun updateLastModified(id: Long, timestamp: Long)
-
     @Query("UPDATE volunteers SET isActive = :isActive WHERE id = :id")
     suspend fun updateVolunteerStatus(id: Long, isActive: Boolean)
     

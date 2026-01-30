@@ -38,9 +38,6 @@ interface GuestDao {
 
     @Query("SELECT * FROM guests WHERE lastModified > :timestamp")
     suspend fun getGuestsModifiedAfter(timestamp: Long): List<Guest>
-
-    @Query("UPDATE guests SET lastModified = :timestamp WHERE id = :id")
-    suspend fun updateLastModified(id: Long, timestamp: Long)
     
     @Query("SELECT * FROM guests WHERE isVolunteerBenefit = 1")
     suspend fun getVolunteerBenefitGuests(): List<Guest>

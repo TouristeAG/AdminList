@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.eventmanager.app-mergeDebugResources-64:/values-v28/values-v28.xml",
+            "outputFile": "com.eventmanager.app-mergeDebugResources-68:/values-v28/values-v28.xml",
             "map": [
                 {
                     "source": "/Users/leonardomondada/.gradle/caches/8.10/transforms/c9fab00c6a35168cc6ee949a43590418/transformed/appcompat-1.6.1/res/values-v28/values-v28.xml",

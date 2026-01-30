@@ -32,8 +32,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.Canvas
+import coil.compose.rememberAsyncImagePainter
 import androidx.compose.foundation.border
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.animateFloat
@@ -46,6 +48,9 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import android.webkit.WebView
+import com.eventmanager.app.data.sync.GmailAuthService
+import kotlinx.coroutines.launch
+import android.widget.Toast
 import android.webkit.WebViewClient
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
@@ -64,8 +69,11 @@ import com.eventmanager.app.data.utils.AppIconManager
 import com.eventmanager.app.data.models.Volunteer
 import com.eventmanager.app.ui.viewmodel.EventManagerViewModel
 import com.eventmanager.app.ui.components.CleanupInactiveVolunteersDialog
+import com.eventmanager.app.ui.components.SyncStatusDialog
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.collectAsState
 import com.eventmanager.app.R
 import com.eventmanager.app.BuildConfig
 import com.eventmanager.app.ui.theme.ThemeMode
@@ -74,6 +82,9 @@ import com.eventmanager.app.ui.components.AppRestartDialog
 import com.eventmanager.app.ui.components.RetroSynthwaveGameDialog
 import com.eventmanager.app.ui.components.FlappyNocturneGameDialog
 import com.eventmanager.app.ui.components.DriveNocturneGameDialog
+import com.eventmanager.app.utils.ImageUtils
+import androidx.core.content.ContextCompat
+import androidx.compose.ui.graphics.asImageBitmap
 
 // Data class for icon options
 private data class IconOption(
@@ -135,6 +146,544 @@ private fun ExpandableSettingsCategory(
     }
 }
 
+/**
+ * Optimized Email Settings composable - extracted to reduce recomposition scope
+ * and improve performance by only loading settings when needed.
+ */
+@Composable
+private fun EmailSettingsContent(
+    settingsManager: SettingsManager,
+    context: android.content.Context
+) {
+    // Cache string resources to avoid repeated lookups
+    val strings = remember {
+        EmailSettingsStrings(
+            subjectDefault = context.getString(R.string.email_subject_default),
+            contentBeforeDefault = context.getString(R.string.email_content_before_default),
+            contentAfterDefault = context.getString(R.string.email_content_after_default),
+            signatureDefault = context.getString(R.string.email_signature_default),
+            title = context.getString(R.string.email_qr_settings_title),
+            description = context.getString(R.string.email_qr_settings_description),
+            subjectLabel = context.getString(R.string.email_subject_label),
+            subjectHint = context.getString(R.string.email_subject_hint),
+            contentBeforeLabel = context.getString(R.string.email_content_before_label),
+            contentBeforeHint = context.getString(R.string.email_content_before_hint),
+            includeQrLabel = context.getString(R.string.email_include_qr_label),
+            includeQrDescription = context.getString(R.string.email_include_qr_description),
+            contentAfterLabel = context.getString(R.string.email_content_after_label),
+            contentAfterHint = context.getString(R.string.email_content_after_hint),
+            signatureLabel = context.getString(R.string.email_signature_label),
+            signatureHint = context.getString(R.string.email_signature_hint),
+            includeLogoLabel = context.getString(R.string.email_include_logo_label),
+            includeLogoDescription = context.getString(R.string.email_include_logo_description),
+            logoPreview = context.getString(R.string.email_logo_preview),
+            logoChange = context.getString(R.string.email_logo_change),
+            logoRemove = context.getString(R.string.email_logo_remove),
+            logoUpload = context.getString(R.string.email_logo_upload),
+            resetDefaults = context.getString(R.string.email_reset_to_defaults)
+        )
+    }
+    
+    // Initialize with defaults for immediate UI render
+    var emailSubject by remember { mutableStateOf(strings.subjectDefault) }
+    var emailContentBefore by remember { mutableStateOf(strings.contentBeforeDefault) }
+    var emailIncludeQr by remember { mutableStateOf(true) }
+    var emailContentAfter by remember { mutableStateOf(strings.contentAfterDefault) }
+    var emailSignature by remember { mutableStateOf(strings.signatureDefault) }
+    var emailIncludeLogo by remember { mutableStateOf(false) }
+    var emailLogoUri by remember { mutableStateOf("") }
+    
+    // Load settings asynchronously only once
+    LaunchedEffect(Unit) {
+        emailSubject = settingsManager.getEmailSubject().ifEmpty { strings.subjectDefault }
+        emailContentBefore = settingsManager.getEmailContentBefore().ifEmpty { strings.contentBeforeDefault }
+        emailIncludeQr = settingsManager.isEmailIncludeQrEnabled()
+        emailContentAfter = settingsManager.getEmailContentAfter().ifEmpty { strings.contentAfterDefault }
+        emailSignature = settingsManager.getEmailSignature().ifEmpty { strings.signatureDefault }
+        emailIncludeLogo = settingsManager.isEmailIncludeLogoEnabled()
+        emailLogoUri = settingsManager.getEmailLogoUri()
+    }
+    
+    // Debounce saves to avoid excessive SharedPreferences writes
+    val coroutineScope = rememberCoroutineScope()
+    var saveJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    
+    fun debouncedSave(block: suspend () -> Unit) {
+        saveJob?.cancel()
+        saveJob = coroutineScope.launch {
+            kotlinx.coroutines.delay(500) // 500ms debounce
+            block()
+        }
+    }
+    
+    // Logo picker launcher
+    val logoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        uri?.let { selectedUri ->
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    selectedUri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (e: Exception) {
+                // Ignore if permission already taken or not available
+            }
+            emailLogoUri = selectedUri.toString()
+            settingsManager.saveEmailLogoUri(selectedUri.toString())
+        }
+    }
+    
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Section Header
+        Text(
+            text = strings.title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold
+        )
+        Text(
+            text = strings.description,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        
+        HorizontalDivider()
+        
+        // Email Subject
+        OutlinedTextField(
+            value = emailSubject,
+            onValueChange = { 
+                emailSubject = it
+                debouncedSave { settingsManager.saveEmailSubject(it) }
+            },
+            label = { Text(strings.subjectLabel) },
+            placeholder = { Text(strings.subjectHint) },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            leadingIcon = { Icon(Icons.Default.Subject, contentDescription = null) }
+        )
+        
+        // Content Before QR Code
+        OutlinedTextField(
+            value = emailContentBefore,
+            onValueChange = { 
+                emailContentBefore = it
+                debouncedSave { settingsManager.saveEmailContentBefore(it) }
+            },
+            label = { Text(strings.contentBeforeLabel) },
+            placeholder = { Text(strings.contentBeforeHint) },
+            modifier = Modifier.fillMaxWidth(),
+            minLines = 3,
+            maxLines = 6,
+            leadingIcon = { Icon(Icons.Default.TextFields, contentDescription = null) }
+        )
+        
+        // Include QR Code Toggle
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = strings.includeQrLabel,
+                    style = MaterialTheme.typography.titleSmall
+                )
+                Text(
+                    text = strings.includeQrDescription,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Switch(
+                checked = emailIncludeQr,
+                onCheckedChange = {
+                    emailIncludeQr = it
+                    settingsManager.setEmailIncludeQrEnabled(it)
+                }
+            )
+        }
+        
+        // Content After QR Code
+        OutlinedTextField(
+            value = emailContentAfter,
+            onValueChange = { 
+                emailContentAfter = it
+                debouncedSave { settingsManager.saveEmailContentAfter(it) }
+            },
+            label = { Text(strings.contentAfterLabel) },
+            placeholder = { Text(strings.contentAfterHint) },
+            modifier = Modifier.fillMaxWidth(),
+            minLines = 2,
+            maxLines = 4,
+            leadingIcon = { Icon(Icons.Default.TextFields, contentDescription = null) }
+        )
+        
+        // Signature
+        OutlinedTextField(
+            value = emailSignature,
+            onValueChange = { 
+                emailSignature = it
+                debouncedSave { settingsManager.saveEmailSignature(it) }
+            },
+            label = { Text(strings.signatureLabel) },
+            placeholder = { Text(strings.signatureHint) },
+            modifier = Modifier.fillMaxWidth(),
+            minLines = 2,
+            maxLines = 4,
+            leadingIcon = { Icon(Icons.Default.Create, contentDescription = null) }
+        )
+        
+        HorizontalDivider()
+        
+        // Include Logo Toggle
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = strings.includeLogoLabel,
+                    style = MaterialTheme.typography.titleSmall
+                )
+                Text(
+                    text = strings.includeLogoDescription,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Switch(
+                checked = emailIncludeLogo,
+                onCheckedChange = {
+                    emailIncludeLogo = it
+                    settingsManager.setEmailIncludeLogoEnabled(it)
+                }
+            )
+        }
+        
+        // Logo Upload (only visible when toggle is on)
+        if (emailIncludeLogo) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    if (emailLogoUri.isNotEmpty()) {
+                        Text(
+                            text = strings.logoPreview,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        val logoUri = remember(emailLogoUri) { Uri.parse(emailLogoUri) }
+                        Image(
+                            painter = rememberAsyncImagePainter(logoUri),
+                            contentDescription = strings.logoPreview,
+                            modifier = Modifier
+                                .size(100.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(MaterialTheme.colorScheme.surface)
+                        )
+                        
+                        Spacer(modifier = Modifier.height(12.dp))
+                        
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = { logoPickerLauncher.launch(arrayOf("image/*")) }
+                            ) {
+                                Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(strings.logoChange)
+                            }
+                            
+                            OutlinedButton(
+                                onClick = {
+                                    emailLogoUri = ""
+                                    settingsManager.saveEmailLogoUri("")
+                                },
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.error
+                                )
+                            ) {
+                                Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(strings.logoRemove)
+                            }
+                        }
+                    } else {
+                        Icon(
+                            Icons.Default.Image,
+                            contentDescription = null,
+                            modifier = Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = { logoPickerLauncher.launch(arrayOf("image/*")) }
+                        ) {
+                            Icon(Icons.Default.Upload, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(strings.logoUpload)
+                        }
+                    }
+                }
+            }
+        }
+        
+        HorizontalDivider()
+        
+        // Gmail OAuth Authentication Section
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = context.getString(R.string.email_gmail_auth_title),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = context.getString(R.string.email_gmail_auth_description),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                
+                // Gmail Auth Status and Actions
+                GmailAuthSection(settingsManager, context)
+            }
+        }
+        
+        HorizontalDivider()
+        
+        // Reset to Defaults Button - batch all saves
+        OutlinedButton(
+            onClick = {
+                emailSubject = strings.subjectDefault
+                emailContentBefore = strings.contentBeforeDefault
+                emailIncludeQr = true
+                emailContentAfter = strings.contentAfterDefault
+                emailSignature = strings.signatureDefault
+                emailIncludeLogo = false
+                emailLogoUri = ""
+                
+                // Batch all saves in a single operation
+                coroutineScope.launch {
+                    settingsManager.saveEmailSubject(emailSubject)
+                    settingsManager.saveEmailContentBefore(emailContentBefore)
+                    settingsManager.setEmailIncludeQrEnabled(emailIncludeQr)
+                    settingsManager.saveEmailContentAfter(emailContentAfter)
+                    settingsManager.saveEmailSignature(emailSignature)
+                    settingsManager.setEmailIncludeLogoEnabled(emailIncludeLogo)
+                    settingsManager.saveEmailLogoUri(emailLogoUri)
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Default.Refresh, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(strings.resetDefaults)
+        }
+    }
+}
+
+/**
+ * Gmail Authentication Section using AccountManager
+ * This approach uses the device's Google accounts directly - like email apps do.
+ */
+@Composable
+private fun GmailAuthSection(
+    settingsManager: SettingsManager,
+    context: android.content.Context
+) {
+    val gmailAuthService = remember { GmailAuthService(context) }
+    val coroutineScope = rememberCoroutineScope()
+    
+    var isAccountSelected by remember { mutableStateOf(gmailAuthService.isAccountSelected()) }
+    var selectedEmail by remember { mutableStateOf(gmailAuthService.getSelectedAccountEmail()) }
+    var isLoading by remember { mutableStateOf(false) }
+    var needsPermission by remember { mutableStateOf(false) }
+    
+    // Account picker launcher
+    val accountPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        isLoading = false
+        
+        if (result.resultCode == android.app.Activity.RESULT_OK && result.data != null) {
+            val accountName = result.data?.getStringExtra(android.accounts.AccountManager.KEY_ACCOUNT_NAME)
+            if (accountName != null) {
+                android.util.Log.d("GmailAuth", "Account selected: $accountName")
+                gmailAuthService.setSelectedAccount(accountName)
+                settingsManager.saveGmailAccount(accountName)
+                isAccountSelected = true
+                selectedEmail = accountName
+                needsPermission = true // Will need to request permission on first use
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.email_gmail_auth_success),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        } else {
+            android.util.Log.w("GmailAuth", "Account selection cancelled")
+            Toast.makeText(
+                context,
+                context.getString(R.string.email_gmail_auth_error, "Account selection cancelled"),
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+    
+    // Permission request launcher
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            android.util.Log.d("GmailAuth", "Permission granted")
+            needsPermission = false
+            Toast.makeText(
+                context,
+                "Gmail permission granted!",
+                Toast.LENGTH_SHORT
+            ).show()
+        } else {
+            android.util.Log.w("GmailAuth", "Permission denied")
+            Toast.makeText(
+                context,
+                "Gmail permission denied",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+    
+    // Check and request permission after account selection
+    LaunchedEffect(needsPermission, isAccountSelected) {
+        if (needsPermission && isAccountSelected) {
+            val authIntent = gmailAuthService.testPermissionAndGetAuthIntent()
+            if (authIntent != null) {
+                permissionLauncher.launch(authIntent)
+            }
+            needsPermission = false
+        }
+    }
+    
+    if (isAccountSelected && selectedEmail != null) {
+        // Account selected state
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = context.getString(R.string.email_gmail_signed_in_as, selectedEmail!!),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            OutlinedButton(
+                onClick = {
+                    gmailAuthService.clearSelectedAccount()
+                    settingsManager.clearGmailAuth()
+                    isAccountSelected = false
+                    selectedEmail = null
+                    Toast.makeText(
+                        context,
+                        "Account disconnected",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                },
+                enabled = !isLoading
+            ) {
+                Icon(Icons.Default.ExitToApp, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(context.getString(R.string.email_gmail_sign_out))
+            }
+        }
+    } else {
+        // No account selected
+        Button(
+            onClick = {
+                isLoading = true
+                val pickerIntent = gmailAuthService.getAccountPickerIntent()
+                accountPickerLauncher.launch(pickerIntent)
+            },
+            enabled = !isLoading,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+            }
+            Icon(Icons.Default.AccountCircle, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(context.getString(R.string.email_gmail_sign_in))
+        }
+        
+        Text(
+            text = context.getString(R.string.email_gmail_not_signed_in),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+// Data class to cache string resources
+private data class EmailSettingsStrings(
+    val subjectDefault: String,
+    val contentBeforeDefault: String,
+    val contentAfterDefault: String,
+    val signatureDefault: String,
+    val title: String,
+    val description: String,
+    val subjectLabel: String,
+    val subjectHint: String,
+    val contentBeforeLabel: String,
+    val contentBeforeHint: String,
+    val includeQrLabel: String,
+    val includeQrDescription: String,
+    val contentAfterLabel: String,
+    val contentAfterHint: String,
+    val signatureLabel: String,
+    val signatureHint: String,
+    val includeLogoLabel: String,
+    val includeLogoDescription: String,
+    val logoPreview: String,
+    val logoChange: String,
+    val logoRemove: String,
+    val logoUpload: String,
+    val resetDefaults: String
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -155,8 +704,6 @@ fun SettingsScreen(
     var jobTypesSheet by remember { mutableStateOf(settingsManager.getJobTypesSheet()) }
     var venuesSheet by remember { mutableStateOf(settingsManager.getVenuesSheet()) }
     var showInstructions by remember { mutableStateOf(false) }
-    var showTestDialog by remember { mutableStateOf(false) }
-    var testResult by remember { mutableStateOf<String?>(null) }
     var jsonKeyInfo by remember { mutableStateOf<JsonKeyInfo?>(null) }
     var showActiveVolunteersDialog by remember { mutableStateOf(false) }
     var showCleanupDialog by remember { mutableStateOf(false) }
@@ -165,6 +712,7 @@ fun SettingsScreen(
     var selectedFileUri by remember { mutableStateOf<Uri?>(null) }
     var syncInterval by remember { mutableStateOf(settingsManager.getSyncInterval()) }
     var showSyncSettings by remember { mutableStateOf(settingsManager.isCategorySyncExpanded()) }
+    var showEmailSettings by remember { mutableStateOf(settingsManager.isCategoryEmailExpanded()) }
     var showAppearanceSettings by remember { mutableStateOf(settingsManager.isCategoryAppearanceExpanded()) }
     var showLocalizationSettings by remember { mutableStateOf(settingsManager.isCategoryLocalizationExpanded()) }
     var showAnimationSettings by remember { mutableStateOf(settingsManager.isCategoryAnimationExpanded()) }
@@ -183,6 +731,10 @@ fun SettingsScreen(
     var showEasterEggDialog by remember { mutableStateOf(false) }
     var showFlappyGame by remember { mutableStateOf(false) }
     var showDriveGame by remember { mutableStateOf(false) }
+    
+    // Sync status dialog state
+    val syncStatusMessage by viewModel.syncStatusMessage.collectAsState()
+    val showSyncStatusDialog by viewModel.showSyncStatusDialog.collectAsState()
     
     // Check if JSON key file exists on first load
     LaunchedEffect(Unit) {
@@ -392,35 +944,21 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(24.dp))
                     
                     // Action Buttons
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    Button(
+                        onClick = { 
+                            settingsManager.saveSpreadsheetId(spreadsheetId)
+                            settingsManager.saveGuestListSheet(guestListSheet)
+                            settingsManager.saveVolunteerSheet(volunteerSheet)
+                            settingsManager.saveJobsSheet(jobsSheet)
+                            settingsManager.saveVolunteerGuestListSheet(volunteerGuestListSheet)
+                            settingsManager.saveJobTypesSheet(jobTypesSheet)
+                            settingsManager.saveVenuesSheet(venuesSheet)
+                        },
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Button(
-                            onClick = { 
-                                settingsManager.saveSpreadsheetId(spreadsheetId)
-                                settingsManager.saveGuestListSheet(guestListSheet)
-                                settingsManager.saveVolunteerSheet(volunteerSheet)
-                                settingsManager.saveJobsSheet(jobsSheet)
-                                settingsManager.saveVolunteerGuestListSheet(volunteerGuestListSheet)
-                                settingsManager.saveJobTypesSheet(jobTypesSheet)
-                                settingsManager.saveVenuesSheet(venuesSheet)
-                            },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(Icons.Default.Save, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(context.getString(R.string.save_settings))
-                        }
-                        
-                        OutlinedButton(
-                            onClick = { showTestDialog = true },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(Icons.Default.Sync, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(context.getString(R.string.test_connection))
-                        }
+                        Icon(Icons.Default.Save, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(context.getString(R.string.save_settings))
                     }
                 }
             }
@@ -642,6 +1180,24 @@ fun SettingsScreen(
                     }
                 }
             }
+        }
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        // Email Settings Category
+        ExpandableSettingsCategory(
+            title = context.getString(R.string.settings_category_email),
+            icon = Icons.Default.Email,
+            isExpanded = showEmailSettings,
+            onToggleExpanded = { 
+                showEmailSettings = !showEmailSettings
+                settingsManager.setCategoryEmailExpanded(showEmailSettings)
+            }
+        ) {
+            EmailSettingsContent(
+                settingsManager = settingsManager,
+                context = context
+            )
         }
         
         Spacer(modifier = Modifier.height(24.dp))
@@ -1020,11 +1576,45 @@ fun SettingsScreen(
                                             ),
                                         contentAlignment = Alignment.Center
                                     ) {
+                                        // Load mipmap resource using ImageUtils (painterResource doesn't support mipmap)
+                                        val iconBitmap = remember(iconOption.iconResId) {
+                                            ImageUtils.loadScaledImageBitmap(
+                                                context = context,
+                                                resId = iconOption.iconResId,
+                                                maxWidthDp = 64.dp,
+                                                maxHeightDp = 64.dp
+                                            )
+                                        }
+                                        
+                                        iconBitmap?.let { bitmap ->
                                             Image(
-                                                painter = painterResource(id = iconOption.iconResId),
+                                                bitmap = bitmap,
                                                 contentDescription = context.getString(iconOption.nameResId),
                                                 modifier = Modifier.size(64.dp)
-                                        )
+                                            )
+                                        } ?: run {
+                                            // Fallback: try loading via ContextCompat
+                                            val fallbackBitmap = remember(iconOption.iconResId) {
+                                                ContextCompat.getDrawable(context, iconOption.iconResId)?.let { d ->
+                                                    android.graphics.Bitmap.createBitmap(
+                                                        d.intrinsicWidth.coerceAtLeast(1),
+                                                        d.intrinsicHeight.coerceAtLeast(1),
+                                                        android.graphics.Bitmap.Config.ARGB_8888
+                                                    ).apply {
+                                                        val canvas = android.graphics.Canvas(this)
+                                                        d.setBounds(0, 0, width, height)
+                                                        d.draw(canvas)
+                                                    }.asImageBitmap()
+                                                }
+                                            }
+                                            fallbackBitmap?.let { bitmap ->
+                                                Image(
+                                                    bitmap = bitmap,
+                                                    contentDescription = context.getString(iconOption.nameResId),
+                                                    modifier = Modifier.size(64.dp)
+                                                )
+                                            }
+                                        }
                                     }
                                     
                                     Spacer(modifier = Modifier.height(12.dp))
@@ -2533,15 +3123,12 @@ fun SettingsScreen(
         )
     }
     
-    // Test Connection Dialog
-    if (showTestDialog) {
-        TestConnectionDialog(
-            onDismiss = { showTestDialog = false },
-            onTest = { result ->
-                testResult = result
-            }
-        )
-    }
+    // Sync Status Dialog (used by test connection button)
+    SyncStatusDialog(
+        isVisible = showSyncStatusDialog,
+        onDismiss = { viewModel.dismissSyncStatusDialog() },
+        statusMessage = syncStatusMessage
+    )
     
     // Active Volunteers Dialog
     if (showActiveVolunteersDialog) {
@@ -2789,57 +3376,6 @@ fun InstructionStep(
             )
         }
     }
-}
-
-@Composable
-fun TestConnectionDialog(
-    onDismiss: () -> Unit,
-    onTest: (String) -> Unit
-) {
-    val context = LocalContext.current
-    var isTesting by remember { mutableStateOf(false) }
-    var result by remember { mutableStateOf<String?>(null) }
-    
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(context.getString(R.string.test_google_sheets_connection)) },
-        text = {
-            Column {
-                if (isTesting) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        CircularProgressIndicator(modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(context.getString(R.string.testing_connection))
-                    }
-                } else if (result != null) {
-                    Text(result!!)
-                } else {
-                    Text(context.getString(R.string.test_connection_description))
-                }
-            }
-        },
-        confirmButton = {
-            if (!isTesting) {
-                Button(
-                    onClick = {
-                        isTesting = true
-                        // Simulate test - in real implementation, this would call the actual service
-                        onTest("Connection test completed successfully!")
-                        isTesting = false
-                    }
-                ) {
-                    Text(context.getString(R.string.test))
-                }
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(context.getString(R.string.close))
-            }
-        }
-    )
 }
 
 @Composable

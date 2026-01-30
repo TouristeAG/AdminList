@@ -2926,11 +2926,6 @@ class EventManagerViewModel(
         return repository.getVolunteerBenefitStatus(volunteer.id)
     }
     
-    // Legacy method for backward compatibility
-    @Suppress("unused")
-    fun getVolunteerBenefits(volunteer: Volunteer): Benefit {
-        return BenefitCalculator.getBenefitsForRank(volunteer.currentRank)
-    }
 
     // Check if Google Sheets is configured
     private fun isGoogleSheetsConfigured(): Boolean {

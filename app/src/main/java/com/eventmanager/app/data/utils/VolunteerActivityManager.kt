@@ -8,7 +8,6 @@ object VolunteerActivityManager {
     
     // Constants for activity tracking
     private const val ACTIVE_THRESHOLD_YEARS = 1
-    private const val CLEANUP_THRESHOLD_YEARS = 4
     
     /**
      * Determines if a volunteer is considered active based on their last shift date
@@ -23,28 +22,6 @@ object VolunteerActivityManager {
         }.timeInMillis
         
         return lastShiftDate >= oneYearAgo
-    }
-    
-    /**
-     * Determines if a volunteer should be cleaned up (deleted)
-     * A volunteer should be cleaned up if they haven't done a shift in 4+ years
-     */
-    fun shouldCleanupVolunteer(volunteer: Volunteer): Boolean {
-        val lastShiftDate = volunteer.lastShiftDate ?: return false
-        
-        val calendar = Calendar.getInstance()
-        val fourYearsAgo = calendar.apply {
-            add(Calendar.YEAR, -CLEANUP_THRESHOLD_YEARS)
-        }.timeInMillis
-        
-        return lastShiftDate < fourYearsAgo
-    }
-    
-    /**
-     * Updates a volunteer's last shift date to the current time
-     */
-    fun updateLastShiftDate(volunteer: Volunteer): Volunteer {
-        return volunteer.copy(lastShiftDate = System.currentTimeMillis())
     }
     
     /**
