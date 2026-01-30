@@ -5,11 +5,9 @@ import android.os.CancellationSignal;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.room.CoroutinesRoom;
-import androidx.room.EntityDeletionOrUpdateAdapter;
 import androidx.room.EntityInsertionAdapter;
 import androidx.room.RoomDatabase;
 import androidx.room.RoomSQLiteQuery;
-import androidx.room.SharedSQLiteStatement;
 import androidx.room.util.CursorUtil;
 import androidx.room.util.DBUtil;
 import androidx.sqlite.db.SupportSQLiteStatement;
@@ -35,10 +33,6 @@ public final class CounterDao_Impl implements CounterDao {
 
   private final EntityInsertionAdapter<CounterData> __insertionAdapterOfCounterData;
 
-  private final EntityDeletionOrUpdateAdapter<CounterData> __updateAdapterOfCounterData;
-
-  private final SharedSQLiteStatement __preparedStmtOfDeleteCounter;
-
   public CounterDao_Impl(@NonNull final RoomDatabase __db) {
     this.__db = __db;
     this.__insertionAdapterOfCounterData = new EntityInsertionAdapter<CounterData>(__db) {
@@ -54,30 +48,6 @@ public final class CounterDao_Impl implements CounterDao {
         statement.bindLong(1, entity.getId());
         statement.bindLong(2, entity.getCount());
         statement.bindLong(3, entity.getLastModified());
-      }
-    };
-    this.__updateAdapterOfCounterData = new EntityDeletionOrUpdateAdapter<CounterData>(__db) {
-      @Override
-      @NonNull
-      protected String createQuery() {
-        return "UPDATE OR ABORT `people_counter` SET `id` = ?,`count` = ?,`lastModified` = ? WHERE `id` = ?";
-      }
-
-      @Override
-      protected void bind(@NonNull final SupportSQLiteStatement statement,
-          @NonNull final CounterData entity) {
-        statement.bindLong(1, entity.getId());
-        statement.bindLong(2, entity.getCount());
-        statement.bindLong(3, entity.getLastModified());
-        statement.bindLong(4, entity.getId());
-      }
-    };
-    this.__preparedStmtOfDeleteCounter = new SharedSQLiteStatement(__db) {
-      @Override
-      @NonNull
-      public String createQuery() {
-        final String _query = "DELETE FROM people_counter";
-        return _query;
       }
     };
   }
@@ -96,48 +66,6 @@ public final class CounterDao_Impl implements CounterDao {
           return Unit.INSTANCE;
         } finally {
           __db.endTransaction();
-        }
-      }
-    }, $completion);
-  }
-
-  @Override
-  public Object updateCounter(final CounterData counter,
-      final Continuation<? super Unit> $completion) {
-    return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
-      @Override
-      @NonNull
-      public Unit call() throws Exception {
-        __db.beginTransaction();
-        try {
-          __updateAdapterOfCounterData.handle(counter);
-          __db.setTransactionSuccessful();
-          return Unit.INSTANCE;
-        } finally {
-          __db.endTransaction();
-        }
-      }
-    }, $completion);
-  }
-
-  @Override
-  public Object deleteCounter(final Continuation<? super Unit> $completion) {
-    return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
-      @Override
-      @NonNull
-      public Unit call() throws Exception {
-        final SupportSQLiteStatement _stmt = __preparedStmtOfDeleteCounter.acquire();
-        try {
-          __db.beginTransaction();
-          try {
-            _stmt.executeUpdateDelete();
-            __db.setTransactionSuccessful();
-            return Unit.INSTANCE;
-          } finally {
-            __db.endTransaction();
-          }
-        } finally {
-          __preparedStmtOfDeleteCounter.release(_stmt);
         }
       }
     }, $completion);

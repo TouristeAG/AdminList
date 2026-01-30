@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.eventmanager.app-mergeDebugResources-64:/values-sw720dp-v13/values-sw720dp-v13.xml",
+            "outputFile": "com.eventmanager.app-mergeDebugResources-68:/values-sw720dp-v13/values-sw720dp-v13.xml",
             "map": [
                 {
                     "source": "/Users/leonardomondada/EventManagerApp/app/src/main/res/values-sw720dp/styles.xml",

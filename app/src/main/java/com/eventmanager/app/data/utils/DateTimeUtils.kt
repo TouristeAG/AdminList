@@ -73,20 +73,6 @@ object DateTimeUtils {
     }
     
     /**
-     * Gets the start of day (00:00:00) for a given date in Geneva timezone
-     */
-    fun getStartOfDayGeneva(year: Int, month: Int, dayOfMonth: Int): Calendar {
-        return createGenevaCalendar(year, month, dayOfMonth, 0, 0)
-    }
-    
-    /**
-     * Gets the end of day (23:59:59) for a given date in Geneva timezone
-     */
-    fun getEndOfDayGeneva(year: Int, month: Int, dayOfMonth: Int): Calendar {
-        return createGenevaCalendar(year, month, dayOfMonth, 23, 59)
-    }
-    
-    /**
      * Checks if a timestamp is in the past (before current Geneva time)
      */
     fun isPast(timestamp: Long): Boolean {
@@ -127,29 +113,6 @@ object DateTimeUtils {
             }
             else -> if (diff > 0) "in a moment" else "just now"
         }
-    }
-    
-    /**
-     * Gets the start of day with offset applied for a given timestamp.
-     * If offset is +3 hours, start of day for Jan 1 would be Jan 1 3:00 AM.
-     * 
-     * @param timestamp The timestamp to get the start of day for
-     * @param offsetHours Hours to add before the date changes (e.g., 3 means 3:00 AM)
-     * @return Calendar instance set to the start of day with offset applied
-     */
-    fun getStartOfDayWithOffset(timestamp: Long, offsetHours: Int): Calendar {
-        val calendar = Calendar.getInstance()
-        calendar.timeInMillis = timestamp
-        calendar.set(Calendar.HOUR_OF_DAY, 0)
-        calendar.set(Calendar.MINUTE, 0)
-        calendar.set(Calendar.SECOND, 0)
-        calendar.set(Calendar.MILLISECOND, 0)
-        
-        // Subtract offset hours to get the actual start of day
-        // If offset is +3, we want Jan 1 3:00 AM, so we set to Jan 1 00:00 and add 3 hours
-        calendar.add(Calendar.HOUR_OF_DAY, offsetHours)
-        
-        return calendar
     }
     
     /**

@@ -43,8 +43,6 @@ public final class GuestDao_Impl implements GuestDao {
 
   private final SharedSQLiteStatement __preparedStmtOfDeleteGuestById;
 
-  private final SharedSQLiteStatement __preparedStmtOfUpdateLastModified;
-
   private final SharedSQLiteStatement __preparedStmtOfDeleteAllGuests;
 
   public GuestDao_Impl(@NonNull final RoomDatabase __db) {
@@ -130,14 +128,6 @@ public final class GuestDao_Impl implements GuestDao {
       @NonNull
       public String createQuery() {
         final String _query = "DELETE FROM guests WHERE id = ?";
-        return _query;
-      }
-    };
-    this.__preparedStmtOfUpdateLastModified = new SharedSQLiteStatement(__db) {
-      @Override
-      @NonNull
-      public String createQuery() {
-        final String _query = "UPDATE guests SET lastModified = ? WHERE id = ?";
         return _query;
       }
     };
@@ -282,34 +272,6 @@ public final class GuestDao_Impl implements GuestDao {
           }
         } finally {
           __preparedStmtOfDeleteGuestById.release(_stmt);
-        }
-      }
-    }, $completion);
-  }
-
-  @Override
-  public Object updateLastModified(final long id, final long timestamp,
-      final Continuation<? super Unit> $completion) {
-    return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
-      @Override
-      @NonNull
-      public Unit call() throws Exception {
-        final SupportSQLiteStatement _stmt = __preparedStmtOfUpdateLastModified.acquire();
-        int _argIndex = 1;
-        _stmt.bindLong(_argIndex, timestamp);
-        _argIndex = 2;
-        _stmt.bindLong(_argIndex, id);
-        try {
-          __db.beginTransaction();
-          try {
-            _stmt.executeUpdateDelete();
-            __db.setTransactionSuccessful();
-            return Unit.INSTANCE;
-          } finally {
-            __db.endTransaction();
-          }
-        } finally {
-          __preparedStmtOfUpdateLastModified.release(_stmt);
         }
       }
     }, $completion);

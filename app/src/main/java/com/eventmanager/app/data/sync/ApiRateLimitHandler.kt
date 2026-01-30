@@ -65,11 +65,4 @@ object ApiRateLimitHandler {
     fun getBriefRateLimitMessage(): String {
         return "Rate limit exceeded. Please wait a moment and try again."
     }
-    
-    /**
-     * Get detailed rate limit error message
-     */
-    fun getRateLimitErrorMessage(): String {
-        return "Google Sheets API rate limit exceeded. The app will automatically retry with backoff. Please wait 1-2 minutes before trying again."
-    }
 }

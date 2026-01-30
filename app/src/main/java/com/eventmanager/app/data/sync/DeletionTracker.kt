@@ -139,37 +139,4 @@ class DeletionTracker(private val context: Context) {
         deletedItems.any { it.sheetsId == sheetsId }
     }
     
-    suspend fun clearOldDeletions(olderThanDays: Int = 30) = withContext(Dispatchers.IO) {
-        val cutoffTime = System.currentTimeMillis() - (olderThanDays * 24 * 60 * 60 * 1000L)
-        
-        val keys = listOf(KEY_DELETED_GUESTS, KEY_DELETED_VOLUNTEERS, KEY_DELETED_JOBS, KEY_DELETED_JOB_TYPES, KEY_DELETED_VENUES)
-        
-        keys.forEach { key ->
-            val deletedItems = getDeletedItems(key)
-            val recentItems = deletedItems.filter { it.deletionTime > cutoffTime }
-            
-            val jsonArray = JSONArray()
-            recentItems.forEach { item ->
-                val itemJson = JSONObject().apply {
-                    put("id", item.id)
-                    put("sheetsId", item.sheetsId ?: "")
-                    put("deletionTime", item.deletionTime)
-                    put("type", item.type)
-                }
-                jsonArray.put(itemJson)
-            }
-            
-            prefs.edit().putString(key, jsonArray.toString()).apply()
-        }
-        
-        println("Cleared old deletion records older than $olderThanDays days")
-    }
-    
-    suspend fun clearAllDeletions() = withContext(Dispatchers.IO) {
-        val keys = listOf(KEY_DELETED_GUESTS, KEY_DELETED_VOLUNTEERS, KEY_DELETED_JOBS, KEY_DELETED_JOB_TYPES)
-        keys.forEach { key ->
-            prefs.edit().putString(key, "[]").apply()
-        }
-        println("Cleared all deletion records")
-    }
 }

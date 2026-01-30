@@ -113,18 +113,6 @@ class FileManager(private val context: Context) {
         }
     }
     
-    /**
-     * Delete the service account key file
-     */
-    fun deleteServiceAccountKey(): Boolean {
-        val assetsDir = File(context.filesDir, ASSETS_FOLDER)
-        val keyFile = File(assetsDir, SERVICE_ACCOUNT_KEY_FILE)
-        return if (keyFile.exists()) {
-            keyFile.delete()
-        } else {
-            false
-        }
-    }
 }
 
 data class JsonKeyInfo(

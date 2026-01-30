@@ -19,7 +19,6 @@ import com.eventmanager.app.data.models.JobType;
 import com.eventmanager.app.data.models.ShiftTime;
 import java.lang.Class;
 import java.lang.Exception;
-import java.lang.Integer;
 import java.lang.Long;
 import java.lang.Object;
 import java.lang.Override;
@@ -48,8 +47,6 @@ public final class JobDao_Impl implements JobDao {
   private final EntityDeletionOrUpdateAdapter<Job> __updateAdapterOfJob;
 
   private final SharedSQLiteStatement __preparedStmtOfDeleteJobById;
-
-  private final SharedSQLiteStatement __preparedStmtOfUpdateLastModified;
 
   private final SharedSQLiteStatement __preparedStmtOfDeleteAllJobs;
 
@@ -130,14 +127,6 @@ public final class JobDao_Impl implements JobDao {
       @NonNull
       public String createQuery() {
         final String _query = "DELETE FROM jobs WHERE id = ?";
-        return _query;
-      }
-    };
-    this.__preparedStmtOfUpdateLastModified = new SharedSQLiteStatement(__db) {
-      @Override
-      @NonNull
-      public String createQuery() {
-        final String _query = "UPDATE jobs SET lastModified = ? WHERE id = ?";
         return _query;
       }
     };
@@ -280,34 +269,6 @@ public final class JobDao_Impl implements JobDao {
           }
         } finally {
           __preparedStmtOfDeleteJobById.release(_stmt);
-        }
-      }
-    }, $completion);
-  }
-
-  @Override
-  public Object updateLastModified(final long id, final long timestamp,
-      final Continuation<? super Unit> $completion) {
-    return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
-      @Override
-      @NonNull
-      public Unit call() throws Exception {
-        final SupportSQLiteStatement _stmt = __preparedStmtOfUpdateLastModified.acquire();
-        int _argIndex = 1;
-        _stmt.bindLong(_argIndex, timestamp);
-        _argIndex = 2;
-        _stmt.bindLong(_argIndex, id);
-        try {
-          __db.beginTransaction();
-          try {
-            _stmt.executeUpdateDelete();
-            __db.setTransactionSuccessful();
-            return Unit.INSTANCE;
-          } finally {
-            __db.endTransaction();
-          }
-        } finally {
-          __preparedStmtOfUpdateLastModified.release(_stmt);
         }
       }
     }, $completion);
@@ -735,128 +696,6 @@ public final class JobDao_Impl implements JobDao {
             _tmpLastModified = _cursor.getLong(_cursorIndexOfLastModified);
             _item = new Job(_tmpId,_tmpSheetsId,_tmpVolunteerId,_tmpJobType,_tmpJobTypeName,_tmpVenueName,_tmpDate,_tmpShiftTime,_tmpNotes,_tmpLastModified);
             _result.add(_item);
-          }
-          return _result;
-        } finally {
-          _cursor.close();
-          _statement.release();
-        }
-      }
-    }, $completion);
-  }
-
-  @Override
-  public Object getJobCountForMonth(final long volunteerId, final long monthStart,
-      final long monthEnd, final Continuation<? super Integer> $completion) {
-    final String _sql = "\n"
-            + "        SELECT COUNT(*) FROM jobs \n"
-            + "        WHERE volunteerId = ? \n"
-            + "        AND date >= ? \n"
-            + "        AND date <= ?\n"
-            + "    ";
-    final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, 3);
-    int _argIndex = 1;
-    _statement.bindLong(_argIndex, volunteerId);
-    _argIndex = 2;
-    _statement.bindLong(_argIndex, monthStart);
-    _argIndex = 3;
-    _statement.bindLong(_argIndex, monthEnd);
-    final CancellationSignal _cancellationSignal = DBUtil.createCancellationSignal();
-    return CoroutinesRoom.execute(__db, false, _cancellationSignal, new Callable<Integer>() {
-      @Override
-      @NonNull
-      public Integer call() throws Exception {
-        final Cursor _cursor = DBUtil.query(__db, _statement, false, null);
-        try {
-          final Integer _result;
-          if (_cursor.moveToFirst()) {
-            final int _tmp;
-            _tmp = _cursor.getInt(0);
-            _result = _tmp;
-          } else {
-            _result = 0;
-          }
-          return _result;
-        } finally {
-          _cursor.close();
-          _statement.release();
-        }
-      }
-    }, $completion);
-  }
-
-  @Override
-  public Object getAfterMidnightJobCount(final long volunteerId, final long monthStart,
-      final long monthEnd, final Continuation<? super Integer> $completion) {
-    final String _sql = "\n"
-            + "        SELECT COUNT(*) FROM jobs \n"
-            + "        WHERE volunteerId = ? \n"
-            + "        AND shiftTime = 'AFTER_MIDNIGHT'\n"
-            + "        AND date >= ? \n"
-            + "        AND date <= ?\n"
-            + "    ";
-    final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, 3);
-    int _argIndex = 1;
-    _statement.bindLong(_argIndex, volunteerId);
-    _argIndex = 2;
-    _statement.bindLong(_argIndex, monthStart);
-    _argIndex = 3;
-    _statement.bindLong(_argIndex, monthEnd);
-    final CancellationSignal _cancellationSignal = DBUtil.createCancellationSignal();
-    return CoroutinesRoom.execute(__db, false, _cancellationSignal, new Callable<Integer>() {
-      @Override
-      @NonNull
-      public Integer call() throws Exception {
-        final Cursor _cursor = DBUtil.query(__db, _statement, false, null);
-        try {
-          final Integer _result;
-          if (_cursor.moveToFirst()) {
-            final int _tmp;
-            _tmp = _cursor.getInt(0);
-            _result = _tmp;
-          } else {
-            _result = 0;
-          }
-          return _result;
-        } finally {
-          _cursor.close();
-          _statement.release();
-        }
-      }
-    }, $completion);
-  }
-
-  @Override
-  public Object getBeforeMidnightJobCount(final long volunteerId, final long monthStart,
-      final long monthEnd, final Continuation<? super Integer> $completion) {
-    final String _sql = "\n"
-            + "        SELECT COUNT(*) FROM jobs \n"
-            + "        WHERE volunteerId = ? \n"
-            + "        AND shiftTime = 'BEFORE_MIDNIGHT'\n"
-            + "        AND date >= ? \n"
-            + "        AND date <= ?\n"
-            + "    ";
-    final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, 3);
-    int _argIndex = 1;
-    _statement.bindLong(_argIndex, volunteerId);
-    _argIndex = 2;
-    _statement.bindLong(_argIndex, monthStart);
-    _argIndex = 3;
-    _statement.bindLong(_argIndex, monthEnd);
-    final CancellationSignal _cancellationSignal = DBUtil.createCancellationSignal();
-    return CoroutinesRoom.execute(__db, false, _cancellationSignal, new Callable<Integer>() {
-      @Override
-      @NonNull
-      public Integer call() throws Exception {
-        final Cursor _cursor = DBUtil.query(__db, _statement, false, null);
-        try {
-          final Integer _result;
-          if (_cursor.moveToFirst()) {
-            final int _tmp;
-            _tmp = _cursor.getInt(0);
-            _result = _tmp;
-          } else {
-            _result = 0;
           }
           return _result;
         } finally {

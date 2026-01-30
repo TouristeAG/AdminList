@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.eventmanager.app-mergeDebugResources-64:/values-en-rXC/values-en-rXC.xml",
+            "outputFile": "com.eventmanager.app-mergeDebugResources-68:/values-en-rXC/values-en-rXC.xml",
             "map": [
                 {
                     "source": "/Users/leonardomondada/.gradle/caches/8.10/transforms/945acdcb13c745c6e043ea92c691a0db/transformed/ui-release/res/values-en-rXC/values-en-rXC.xml",

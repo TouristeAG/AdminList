@@ -279,38 +279,7 @@ class DifferentialSyncService(
     // ========== APPLY CHANGES ==========
     
     /**
-     * Apply all changes to the database (merge TEMP_DB → MAIN_DB)
-     * Legacy method - uses individual operations for backward compatibility
-     */
-    suspend fun applyChanges(result: DifferentialSyncResult) = withContext(Dispatchers.IO) {
-        // Apply guest changes
-        result.guests.new.forEach { repository.insertGuest(it) }
-        result.guests.modified.forEach { repository.updateGuest(it) }
-        result.guests.deleted.forEach { repository.deleteGuest(it) }
-        
-        // Apply volunteer changes
-        result.volunteers.new.forEach { repository.insertVolunteer(it) }
-        result.volunteers.modified.forEach { repository.updateVolunteer(it) }
-        result.volunteers.deleted.forEach { repository.deleteVolunteer(it) }
-        
-        // Apply job changes
-        result.jobs.new.forEach { repository.insertJob(it) }
-        result.jobs.modified.forEach { repository.updateJob(it) }
-        result.jobs.deleted.forEach { repository.deleteJob(it) }
-        
-        // Apply job type config changes
-        result.jobTypeConfigs.new.forEach { repository.insertJobTypeConfig(it) }
-        result.jobTypeConfigs.modified.forEach { repository.updateJobTypeConfig(it) }
-        result.jobTypeConfigs.deleted.forEach { repository.deleteJobTypeConfig(it) }
-        
-        // Apply venue changes
-        result.venues.new.forEach { repository.insertVenue(it) }
-        result.venues.modified.forEach { repository.updateVenue(it) }
-        result.venues.deleted.forEach { repository.deleteVenue(it) }
-    }
-    
-    /**
-     * OPTIMIZED: Apply all changes to the database using batch operations
+     * Apply all changes to the database using batch operations
      * This is significantly faster for large datasets as it reduces database transaction overhead
      */
     suspend fun applyChangesBatched(result: DifferentialSyncResult) = withContext(Dispatchers.IO) {
