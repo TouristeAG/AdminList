@@ -6,9 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -41,12 +39,11 @@ fun GuestListScreen(
     onAddGuest: (Guest) -> Unit,
     onUpdateGuest: (Guest) -> Unit,
     onDeleteGuest: (Guest) -> Unit,
-    isSyncing: Boolean = false,
-    lastSyncTime: Long = 0L,
+    @Suppress("UNUSED_PARAMETER") isSyncing: Boolean = false,
+    @Suppress("UNUSED_PARAMETER") lastSyncTime: Long = 0L,
     scrollBehavior: String = SettingsManager.FULL_SCROLL
 ) {
     val context = LocalContext.current
-    var selectedVenue by remember { mutableStateOf<Venue?>(null) }
     var selectedVenueName by remember { mutableStateOf<String?>(null) }
     var showAddDialog by remember { mutableStateOf(false) }
     var showVolunteerBenefits by remember { mutableStateOf<Volunteer?>(null) }
@@ -69,35 +66,34 @@ fun GuestListScreen(
     val filterVolunteerBenefits = context.getString(R.string.filter_volunteer_benefits)
     val filterRegularGuests = context.getString(R.string.filter_regular_guests)
 
-    // Optimize filtering with derivedStateOf - let it track dependencies automatically
-    // Removed explicit keys from remember() since derivedStateOf handles dependency tracking
-    val filteredGuests = remember {
-        derivedStateOf {
-            val lowerSearchText = searchText.lowercase()
-            guests.filter { guest ->
-                val matchesVenue = if (selectedVenueName == null) {
-                    true  // No filter selected, show all
-                } else if (selectedVenueName == "BOTH") {
-                    guest.venueName == "BOTH"  // Show only guests marked as "BOTH"
-                } else {
-                    guest.venueName == selectedVenueName || guest.venueName == "BOTH"  // Show matching or BOTH
-                }
-                val matchesSearch = searchText.isEmpty() || 
-                    guest.name.lowercase().contains(lowerSearchText) ||
-                    guest.notes.lowercase().contains(lowerSearchText)
-                val matchesFilter = when (selectedFilter) {
-                    filterVolunteerBenefits -> guest.isVolunteerBenefit
-                    filterRegularGuests -> !guest.isVolunteerBenefit
-                    else -> true
-                }
-                matchesVenue && matchesSearch && matchesFilter
+    // Filter guests with proper dependency tracking on all inputs
+    // Note: derivedStateOf only tracks Compose State objects, not function parameters like 'guests'
+    // So we must include 'guests' as a key to remember() to re-filter when sync updates data
+    val filteredGuests = remember(guests, selectedVenueName, searchText, selectedFilter) {
+        val lowerSearchText = searchText.lowercase()
+        guests.filter { guest ->
+            val matchesVenue = if (selectedVenueName == null) {
+                true  // No filter selected, show all
+            } else if (selectedVenueName == "BOTH") {
+                guest.venueName == "BOTH"  // Show only guests marked as "BOTH"
+            } else {
+                guest.venueName == selectedVenueName || guest.venueName == "BOTH"  // Show matching or BOTH
             }
+            val matchesSearch = searchText.isEmpty() || 
+                guest.name.lowercase().contains(lowerSearchText) ||
+                guest.notes.lowercase().contains(lowerSearchText)
+            val matchesFilter = when (selectedFilter) {
+                filterVolunteerBenefits -> guest.isVolunteerBenefit
+                filterRegularGuests -> !guest.isVolunteerBenefit
+                else -> true
+            }
+            matchesVenue && matchesSearch && matchesFilter
         }
     }
     
     // Memoize total invitations calculation
-    val totalInvitations = remember(filteredGuests.value) {
-        filteredGuests.value.sumOf { it.invitations }
+    val totalInvitations = remember(filteredGuests) {
+        filteredGuests.sumOf { it.invitations }
     }
     
     // Generate venue filter options (composable function, cannot use remember)
@@ -237,7 +233,7 @@ fun GuestListScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = filteredGuests.value.size.toString(),
+                            text = filteredGuests.size.toString(),
                             style = if (isPhone) MaterialTheme.typography.titleLarge else getResponsiveTypography(),
                             fontWeight = FontWeight.Bold
                         )
@@ -282,7 +278,7 @@ fun GuestListScreen(
                     .weight(1f)
             ) {
                 items(
-                    items = filteredGuests.value,
+                    items = filteredGuests,
                     key = { guest -> 
                         // Use sheetsId if available (unique), otherwise use composite key to handle id=0 cases
                         guest.sheetsId ?: "${guest.id}_${guest.name}_${guest.venueName}"
@@ -446,7 +442,7 @@ fun GuestListScreen(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Text(
-                                    text = filteredGuests.value.size.toString(),
+                                    text = filteredGuests.size.toString(),
                                     style = if (isPhone) MaterialTheme.typography.titleLarge else getResponsiveTypography(),
                                     fontWeight = FontWeight.Bold
                                 )
@@ -483,7 +479,7 @@ fun GuestListScreen(
                 }
                 
                 items(
-                    items = filteredGuests.value,
+                    items = filteredGuests,
                     key = { guest -> 
                         // Use sheetsId if available (unique), otherwise use composite key to handle id=0 cases
                         guest.sheetsId ?: "${guest.id}_${guest.name}_${guest.venueName}"
@@ -636,7 +632,7 @@ fun GuestListScreen(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Text(
-                                    text = filteredGuests.value.size.toString(),
+                                    text = filteredGuests.size.toString(),
                                     style = if (isPhone) MaterialTheme.typography.titleLarge else getResponsiveTypography(),
                                     fontWeight = FontWeight.Bold
                                 )
@@ -673,7 +669,7 @@ fun GuestListScreen(
                 }
                 
                 items(
-                    items = filteredGuests.value,
+                    items = filteredGuests,
                     key = { guest -> 
                         // Use sheetsId if available (unique), otherwise use composite key to handle id=0 cases
                         guest.sheetsId ?: "${guest.id}_${guest.name}_${guest.venueName}"
@@ -719,8 +715,8 @@ fun GuestListScreen(
         val volunteer = showVolunteerBenefits!!
         
         // Memoize benefit status and jobs to prevent unnecessary recompositions
-        val context = LocalContext.current
-        val settingsManager = remember { com.eventmanager.app.data.sync.SettingsManager(context) }
+        val benefitContext = LocalContext.current
+        val settingsManager = remember { SettingsManager(benefitContext) }
         val offsetHours = remember { settingsManager.getDateChangeOffsetHours() }
         val memoizedBenefitStatus = remember(volunteer.id, jobs, jobTypeConfigs, offsetHours) {
             BenefitCalculator.calculateVolunteerBenefitStatus(volunteer, jobs, jobTypeConfigs, offsetHours = offsetHours)
@@ -778,10 +774,10 @@ fun GuestCard(
     guest: Guest,
     volunteersMap: Map<Long, Volunteer>,
     venues: List<VenueEntity>,
-    onDelete: () -> Unit,
+    @Suppress("UNUSED_PARAMETER") onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
     onVolunteerClick: (Volunteer) -> Unit = {},
-    onGuestClick: (Guest) -> Unit = {},
-    modifier: Modifier = Modifier
+    onGuestClick: (Guest) -> Unit = {}
 ) {
     val context = LocalContext.current
     val isCompact = isCompactScreen()
@@ -887,7 +883,7 @@ fun GuestCard(
                             tint = MaterialTheme.colorScheme.primary
                         )
                         Text(
-                            text = context.getString(R.string.invitations_text, guest.invitations, if (guest.invitations != 1) "s" else ""),
+                            text = context.getString(R.string.invitations_text, guest.invitations),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -923,6 +919,7 @@ fun GuestCard(
             
             // Click indicator for volunteer benefits or permanent guests
             if (guest.isVolunteerBenefit && guest.volunteerId != null) {
+                @Suppress("DEPRECATION")
                 Icon(
                     imageVector = Icons.Default.ArrowForward,
                     contentDescription = context.getString(R.string.view_benefits),
@@ -931,6 +928,7 @@ fun GuestCard(
                 )
             } else {
                 // Permanent guest - show click indicator
+                @Suppress("DEPRECATION")
                 Icon(
                     imageVector = Icons.Default.ArrowForward,
                     contentDescription = context.getString(R.string.view_details),

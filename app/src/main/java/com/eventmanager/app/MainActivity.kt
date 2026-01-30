@@ -28,7 +28,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Warning
@@ -39,7 +38,6 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.LocalBar
 import androidx.compose.material3.*
@@ -47,8 +45,6 @@ import com.eventmanager.app.ui.components.QRScannerDialog
 import com.eventmanager.app.ui.components.VolunteerBenefitsPanel
 import com.eventmanager.app.ui.components.PeopleCounter
 import com.eventmanager.app.ui.scaling.ResolutionScaler
-import com.eventmanager.app.data.models.VolunteerBenefitStatus
-import com.eventmanager.app.data.models.Benefit
 import com.eventmanager.app.data.models.Guest
 import com.eventmanager.app.data.models.Volunteer
 import com.eventmanager.app.data.models.Job
@@ -1017,8 +1013,9 @@ viewModel: EventManagerViewModel,
                 interactionSource = interactionSource,
                 indication = null,
                 onClick = {
-                    // Trigger manual sync when clicked
-                    viewModel.performFullSync()
+                    // Trigger differential sync for efficient targeted updates
+                    // Only reloads changed items instead of the entire list
+                    viewModel.performDifferentialFullSync()
                 }
             ),
         shape = RoundedCornerShape(20.dp),

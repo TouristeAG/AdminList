@@ -324,7 +324,7 @@
     <string name="invitations_count">Invitations</string>
     <string name="total_invitations_count">Total d\'invitations</string>
     <string name="volunteer_label">Bénévole</string>
-    <string name="invitations_text" formatted="false">%d invitation%s</string>
+    <string name="invitations_text">%d invitations</string>
     <string name="view_benefits">Voir les avantages</string>
     <string name="delete_guest">Supprimer l\'invité·e</string>
     <string name="edit_guest">Modifier l\'invité·e</string>

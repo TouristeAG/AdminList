@@ -22,7 +22,7 @@ import java.io.IOException
  * 6. Differential Sync: Efficient UI updates via data comparison
  */
 class TwoWaySyncService(
-    private val context: Context,
+    context: Context,
     private val repository: EventManagerRepository,
     private val googleSheetsService: GoogleSheetsService
 ) {
@@ -284,11 +284,15 @@ class TwoWaySyncService(
                 )
             }
             
-            println("📊 Current local data: ${mainGuests.size} guests, ${mainVolunteers.size} volunteers, ${mainJobs.size} jobs, ${mainJobTypeConfigs.size} job types, ${mainVenues.size} venues")
+            println("📊 Current local data: ${mainGuests.size} guests (${mainGuests.count { it.isVolunteerBenefit }} volunteer benefits), ${mainVolunteers.size} volunteers, ${mainJobs.size} jobs, ${mainJobTypeConfigs.size} job types, ${mainVenues.size} venues")
             
             // STEP 3: Compare TEMP_DB vs MAIN_DB - OPTIMIZED: parallel comparisons
+            // CRITICAL: Exclude volunteer benefit guests from comparison - they're managed separately
+            // and are not synced from Google Sheets (computed locally from volunteer ranks)
+            val regularMainGuests = mainGuests.filter { !it.isVolunteerBenefit }
+            
             val (guestChanges, volunteerChanges, jobChanges, jobTypeChanges, venueChanges) = coroutineScope {
-                val guestChangesDeferred = async { differentialSyncService.compareGuests(remoteGuests, mainGuests) }
+                val guestChangesDeferred = async { differentialSyncService.compareGuests(remoteGuests, regularMainGuests) }
                 val volunteerChangesDeferred = async { differentialSyncService.compareVolunteers(remoteVolunteers, mainVolunteers) }
                 val jobChangesDeferred = async { differentialSyncService.compareJobs(remoteJobs, mainJobs) }
                 val jobTypeChangesDeferred = async { differentialSyncService.compareJobTypeConfigs(remoteJobTypeConfigs, mainJobTypeConfigs) }
@@ -420,10 +424,12 @@ class TwoWaySyncService(
             
             // STEP 2: Get current local guests (MAIN_DB)
             val mainGuests = repository.getAllGuests().first()
-            println("📊 Current local data: ${mainGuests.size} guests")
+            // CRITICAL: Exclude volunteer benefit guests - they're managed separately
+            val regularMainGuests = mainGuests.filter { !it.isVolunteerBenefit }
+            println("📊 Current local data: ${mainGuests.size} guests (${mainGuests.size - regularMainGuests.size} volunteer benefits excluded from comparison)")
             
-            // STEP 3: Compare TEMP_DB vs MAIN_DB
-            val guestChanges = differentialSyncService.compareGuests(remoteGuests, mainGuests)
+            // STEP 3: Compare TEMP_DB vs MAIN_DB (regular guests only)
+            val guestChanges = differentialSyncService.compareGuests(remoteGuests, regularMainGuests)
             println("📋 Changes detected: ${guestChanges.new.size} new, ${guestChanges.modified.size} modified, ${guestChanges.deleted.size} deleted")
             
             // STEP 4: Apply changes to database
@@ -898,12 +904,12 @@ class TwoWaySyncService(
         return settingsManager.isConfigured()
     }
     
-    private suspend fun updateLastSyncTime() {
+    private fun updateLastSyncTime() {
         val currentTime = System.currentTimeMillis()
         settingsManager.saveLastSyncTime(currentTime)
     }
     
-    suspend fun getLastSyncTime(): Long {
+    fun getLastSyncTime(): Long {
         return settingsManager.getLastSyncTime()
     }
     
