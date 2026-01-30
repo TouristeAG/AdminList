@@ -1,8 +1,8 @@
 {
-  "latestVersionCode": 4,
-  "latestVersionName": "0.9.3",
+  "latestVersionCode": 5,
+  "latestVersionName": "0.9.4",
   "minSupportedVersionCode": "3",
-  "changelogShort": "Options de défilement : En-tête fixe, Défilement complet, Filtres fixes (configurables dans les paramètres)\nÉcran des paramètres : Réorganisation en catégories extensibles avec état persistant\nCorrections de bugs\nOptimisations.",
-  "downloadUrl": "https://github.com/TouristeAG/AdminList/releases/download/0.9.3/app-release-0.9.3.apk",
+  "changelogShort": "New Sync logic and bug fixes",
+  "downloadUrl": "https://github.com/TouristeAG/AdminList/releases/download/0.9.4/app-release-0.9.4.apk",
   "storeUrl": "https://play.google.com/store/apps/details?id=com.eventmanager.app"
 }
