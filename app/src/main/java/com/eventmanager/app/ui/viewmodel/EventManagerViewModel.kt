@@ -7,14 +7,11 @@ import com.eventmanager.app.data.repository.EventManagerRepository
 import com.eventmanager.app.data.sync.GoogleSheetsService
 import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.data.sync.DeletionTracker
-import com.eventmanager.app.data.sync.FileManager
 import com.eventmanager.app.data.sync.TwoWaySyncService
 import com.eventmanager.app.data.sync.SyncManager
 import com.eventmanager.app.data.sync.SyncResult
 import com.eventmanager.app.data.sync.ValidationResult
 import com.eventmanager.app.data.utils.VolunteerActivityManager
-import com.eventmanager.app.data.sync.RateLimitError
-import com.eventmanager.app.data.sync.ApiRateLimitHandler
 import com.eventmanager.app.data.sync.DifferentialSyncService
 import com.eventmanager.app.data.sync.DifferentialSyncResult
 import com.eventmanager.app.data.sync.VolunteerSyncResult
@@ -64,22 +61,22 @@ class EventManagerViewModel(
 
     // State for guests
     private val _guests = MutableStateFlow<List<Guest>>(emptyList())
-    val guests: StateFlow<List<Guest>> = _guests.asStateFlow()
+    val guests: StateFlow<List<Guest>> = _guests
 
     // State for volunteers
     private val _volunteers = MutableStateFlow<List<Volunteer>>(emptyList())
-    val volunteers: StateFlow<List<Volunteer>> = _volunteers.asStateFlow()
+    val volunteers: StateFlow<List<Volunteer>> = _volunteers
 
     // State for jobs
     private val _jobs = MutableStateFlow<List<Job>>(emptyList())
-    val jobs: StateFlow<List<Job>> = _jobs.asStateFlow()
+    val jobs: StateFlow<List<Job>> = _jobs
 
     // State for job type configs
     private val _jobTypeConfigs = MutableStateFlow<List<JobTypeConfig>>(emptyList())
-    val jobTypeConfigs: StateFlow<List<JobTypeConfig>> = _jobTypeConfigs.asStateFlow()
+    val jobTypeConfigs: StateFlow<List<JobTypeConfig>> = _jobTypeConfigs
 
     private val _venues = MutableStateFlow<List<VenueEntity>>(emptyList())
-    val venues: StateFlow<List<VenueEntity>> = _venues.asStateFlow()
+    val venues: StateFlow<List<VenueEntity>> = _venues
 
     // State for sync status
     private val _isSyncing = MutableStateFlow(false)
@@ -203,16 +200,18 @@ class EventManagerViewModel(
                 while (true) {
                     try {
                         println("Background sync waiting for $syncInterval minutes...")
-                        kotlinx.coroutines.delay(syncInterval * 60 * 1000L) // Convert minutes to milliseconds
+                        delay(syncInterval * 60 * 1000L) // Convert minutes to milliseconds
                         
                         println("Background sync timer triggered")
                         if (isGoogleSheetsConfigured()) {
-                            println("Google Sheets is configured, starting full sync...")
-                            performFullSync()
+                            println("Google Sheets is configured, starting differential sync...")
+                            // Use differential sync for background updates - more efficient
+                            // as it only updates changed items instead of refreshing everything
+                            performDifferentialFullSync()
                         } else {
                             println("Google Sheets not configured, skipping sync")
                         }
-                    } catch (e: kotlinx.coroutines.CancellationException) {
+                    } catch (_: kotlinx.coroutines.CancellationException) {
                         println("Background sync cancelled - this is normal when updating interval")
                         break // Exit the loop when cancelled
                     } catch (e: Exception) {
@@ -465,7 +464,7 @@ class EventManagerViewModel(
                 val jobWithId = job.copy(id = jobId)
                 
                 // Add individual job to Google Sheets and get sheetsId
-                val sheetsId = googleSheetsService?.addJobToSheets(jobWithId, _venues.value)
+                val sheetsId = googleSheetsService.addJobToSheets(jobWithId, _venues.value)
                 
                 // Update the job with the sheetsId
                 if (sheetsId != null) {
@@ -496,7 +495,7 @@ class EventManagerViewModel(
                 // Update individual job in Google Sheets if sheetsId exists
                 if (job.sheetsId != null) {
                     try {
-                        googleSheetsService?.updateJobInSheets(job, _venues.value)
+                        googleSheetsService.updateJobInSheets(job, _venues.value)
                         println("Successfully updated job in Google Sheets: ${job.jobTypeName}")
                     } catch (e: Exception) {
                         println("Individual job update failed, falling back to backup mode: ${e.message}")
@@ -530,7 +529,7 @@ class EventManagerViewModel(
                 // Delete individual job from Google Sheets if sheetsId exists
                 if (job.sheetsId != null) {
                     try {
-                        googleSheetsService?.deleteJobFromSheets(job.id.toString(), job.sheetsId)
+                        googleSheetsService.deleteJobFromSheets(job.id.toString(), job.sheetsId)
                         println("Successfully deleted job from Google Sheets: ${job.jobTypeName}")
                     } catch (e: Exception) {
                         println("Individual job deletion failed, falling back to backup mode: ${e.message}")
@@ -685,6 +684,7 @@ class EventManagerViewModel(
     }
 
     // Job assignment operations - simplified for current Job model
+    @Suppress("unused")
     fun assignJobToVolunteer(job: Job, volunteer: Volunteer) {
         viewModelScope.launch {
             try {
@@ -707,6 +707,7 @@ class EventManagerViewModel(
         }
     }
 
+    @Suppress("unused")
     fun updateVolunteerStatus(volunteer: Volunteer, isActive: Boolean) {
         viewModelScope.launch {
             try {
@@ -722,6 +723,7 @@ class EventManagerViewModel(
     }
 
     // Single element upload methods (App Priority)
+    @Suppress("unused")
     private suspend fun uploadSingleGuestToSheets(guest: Guest) {
         try {
             if (!isGoogleSheetsConfigured()) return
@@ -736,8 +738,8 @@ class EventManagerViewModel(
                 guest.sheetsId
             }
             
-            // Update local guest with sheets ID
-            if (sheetsId != null && guest.sheetsId != sheetsId) {
+            // Update local guest with sheets ID if it changed
+            if (guest.sheetsId != sheetsId) {
                 val updatedGuest = guest.copy(sheetsId = sheetsId)
                 repository.updateGuest(updatedGuest)
             }
@@ -748,6 +750,7 @@ class EventManagerViewModel(
         }
     }
     
+    @Suppress("unused")
     private suspend fun uploadSingleVolunteerToSheets(volunteer: Volunteer) {
         try {
             if (!isGoogleSheetsConfigured()) return
@@ -762,8 +765,8 @@ class EventManagerViewModel(
                 volunteer.sheetsId
             }
             
-            // Update local volunteer with sheets ID
-            if (sheetsId != null && volunteer.sheetsId != sheetsId) {
+            // Update local volunteer with sheets ID if it changed
+            if (volunteer.sheetsId != sheetsId) {
                 val updatedVolunteer = volunteer.copy(sheetsId = sheetsId)
                 repository.updateVolunteer(updatedVolunteer)
             }
@@ -774,6 +777,7 @@ class EventManagerViewModel(
         }
     }
     
+    @Suppress("unused")
     private suspend fun uploadSingleJobToSheets(job: Job) {
         try {
             if (!isGoogleSheetsConfigured()) return
@@ -800,6 +804,7 @@ class EventManagerViewModel(
         }
     }
     
+    @Suppress("unused")
     private suspend fun uploadSingleJobTypeToSheets(config: JobTypeConfig) {
         try {
             if (!isGoogleSheetsConfigured()) return
@@ -814,8 +819,8 @@ class EventManagerViewModel(
                 config.sheetsId
             }
             
-            // Update local job type with sheets ID
-            if (sheetsId != null && config.sheetsId != sheetsId) {
+            // Update local job type with sheets ID if it changed
+            if (config.sheetsId != sheetsId) {
                 val updatedConfig = config.copy(sheetsId = sheetsId)
                 repository.updateJobTypeConfig(updatedConfig)
             }
@@ -827,6 +832,7 @@ class EventManagerViewModel(
     }
 
     // Targeted sync operations for specific data types (Sheets Priority)
+    @Suppress("unused")
     fun syncGuestsOnly() {
         viewModelScope.launch {
             _isSyncing.value = true
@@ -842,29 +848,39 @@ class EventManagerViewModel(
                     return@launch
                 }
                 
-                googleSheetsService.initializeSheetsService()
-                
-                // Download all guests from sheets
-                val remoteGuests = downloadGuestsFromSheets()
-                println("Downloaded ${remoteGuests.size} guests from sheets")
-                
-                // Always clear and replace with sheets data to handle deletions properly
-                // Clear local guests first
-                repository.clearAllGuests()
-                println("🧹 Cleared all local guests")
-                
-                // Insert remote guests (even if empty, this handles deletions)
-                for (guest in remoteGuests) {
-                    repository.insertGuest(guest)
+                // Perform database operations on IO dispatcher
+                withContext(Dispatchers.IO) {
+                    googleSheetsService.initializeSheetsService()
+                    
+                    // Download all guests from sheets
+                    val remoteGuests = downloadGuestsFromSheets()
+                    println("Downloaded ${remoteGuests.size} guests from sheets")
+                    
+                    // Always clear and replace with sheets data to handle deletions properly
+                    // Clear local guests first
+                    repository.clearAllGuests()
+                    println("🧹 Cleared all local guests")
+                    
+                    // Insert remote guests (even if empty, this handles deletions)
+                    for (guest in remoteGuests) {
+                        repository.insertGuest(guest)
+                    }
+                    
+                    if (remoteGuests.isNotEmpty()) {
+                        println("✅ Replaced local guests with ${remoteGuests.size} guests from Google Sheets")
+                    } else {
+                        println("✅ Cleared all local guests - Google Sheets is empty (all guests deleted)")
+                    }
                 }
                 
-                if (remoteGuests.isNotEmpty()) {
-                    println("✅ Replaced local guests with ${remoteGuests.size} guests from Google Sheets")
-                } else {
-                    println("✅ Cleared all local guests - Google Sheets is empty (all guests deleted)")
+                // CRITICAL: Refresh guest data on Main dispatcher to trigger UI update
+                withContext(Dispatchers.Main) {
+                    val updatedGuests = repository.getAllGuests().first()
+                    _guests.value = removeDuplicateGuests(updatedGuests)
+                    println("✅ Guest UI refreshed on Main dispatcher: ${_guests.value.size} guests")
                 }
-                // Recompute and merge volunteer benefit entries locally.
-            
+                
+                // Recompute and merge volunteer benefit entries locally
                 recalcAndUploadVolunteerGuestList()
                 
                 // Update sync time
@@ -885,6 +901,7 @@ class EventManagerViewModel(
         }
     }
     
+    @Suppress("unused")
     fun syncVolunteersOnly() {
         viewModelScope.launch {
             _isSyncing.value = true
@@ -900,30 +917,37 @@ class EventManagerViewModel(
                     return@launch
                 }
                 
-                googleSheetsService.initializeSheetsService()
-                
-                // Download all volunteers from sheets
-                val remoteVolunteers = downloadVolunteersFromSheets()
-                println("Downloaded ${remoteVolunteers.size} volunteers from sheets")
-                
-                // Always clear and replace with sheets data to handle deletions properly
-                // Clear local volunteers first
-                repository.clearAllVolunteers()
-                println("🧹 Cleared all local volunteers")
-                
-                // Insert remote volunteers (even if empty, this handles deletions)
-                for (volunteer in remoteVolunteers) {
-                    repository.insertVolunteer(volunteer)
+                // Perform database operations on IO dispatcher
+                withContext(Dispatchers.IO) {
+                    googleSheetsService.initializeSheetsService()
+                    
+                    // Download all volunteers from sheets
+                    val remoteVolunteers = downloadVolunteersFromSheets()
+                    println("Downloaded ${remoteVolunteers.size} volunteers from sheets")
+                    
+                    // Always clear and replace with sheets data to handle deletions properly
+                    // Clear local volunteers first
+                    repository.clearAllVolunteers()
+                    println("🧹 Cleared all local volunteers")
+                    
+                    // Insert remote volunteers (even if empty, this handles deletions)
+                    for (volunteer in remoteVolunteers) {
+                        repository.insertVolunteer(volunteer)
+                    }
+                    
+                    if (remoteVolunteers.isNotEmpty()) {
+                        println("✅ Replaced local volunteers with ${remoteVolunteers.size} volunteers from Google Sheets")
+                    } else {
+                        println("✅ Cleared all local volunteers - Google Sheets is empty (all volunteers deleted)")
+                    }
                 }
                 
-                if (remoteVolunteers.isNotEmpty()) {
-                    println("✅ Replaced local volunteers with ${remoteVolunteers.size} volunteers from Google Sheets")
-                } else {
-                    println("✅ Cleared all local volunteers - Google Sheets is empty (all volunteers deleted)")
+                // CRITICAL: Refresh volunteer data on Main dispatcher
+                withContext(Dispatchers.Main) {
+                    refreshVolunteerData()
+                    println("✅ Volunteer UI refreshed on Main dispatcher")
                 }
                 
-                // Refresh volunteer data
-                refreshVolunteerData()
                 // Update activity and last time worked from jobs
                 updateVolunteerActivityFromJobs()
                 // Recompute guestlist benefits since ranks/volunteers may have changed
@@ -947,6 +971,7 @@ class EventManagerViewModel(
         }
     }
     
+    @Suppress("unused")
     fun syncJobsOnly() {
         viewModelScope.launch {
             _isSyncing.value = true
@@ -962,31 +987,40 @@ class EventManagerViewModel(
                     return@launch
                 }
                 
-                googleSheetsService.initializeSheetsService()
-                
-                // Get current local jobs and job type configs
-                val localJobs = repository.getAllJobs().first()
-                val localJobTypeConfigs = repository.getAllJobTypeConfigs().first()
-                println("Local jobs: ${localJobs.size}, Job types: ${localJobTypeConfigs.size}")
-                
-                // Download all jobs from sheets
-                val remoteJobs = downloadJobsFromSheets(localJobTypeConfigs)
-                println("Downloaded ${remoteJobs.size} jobs from sheets")
-                
-                // Always clear and replace with sheets data to handle deletions properly
-                // Clear local jobs first
-                repository.clearAllJobs()
-                println("🧹 Cleared all local jobs")
-                
-                // Insert remote jobs (even if empty, this handles deletions)
-                for (job in remoteJobs) {
-                    repository.insertJob(job)
+                // Perform database operations on IO dispatcher
+                withContext(Dispatchers.IO) {
+                    googleSheetsService.initializeSheetsService()
+                    
+                    // Get current local jobs and job type configs
+                    val localJobs = repository.getAllJobs().first()
+                    val localJobTypeConfigs = repository.getAllJobTypeConfigs().first()
+                    println("Local jobs: ${localJobs.size}, Job types: ${localJobTypeConfigs.size}")
+                    
+                    // Download all jobs from sheets
+                    val remoteJobs = downloadJobsFromSheets(localJobTypeConfigs)
+                    println("Downloaded ${remoteJobs.size} jobs from sheets")
+                    
+                    // Always clear and replace with sheets data to handle deletions properly
+                    // Clear local jobs first
+                    repository.clearAllJobs()
+                    println("🧹 Cleared all local jobs")
+                    
+                    // Insert remote jobs (even if empty, this handles deletions)
+                    for (job in remoteJobs) {
+                        repository.insertJob(job)
+                    }
+                    
+                    if (remoteJobs.isNotEmpty()) {
+                        println("✅ Replaced local jobs with ${remoteJobs.size} jobs from Google Sheets")
+                    } else {
+                        println("✅ Cleared all local jobs - Google Sheets is empty (all jobs deleted)")
+                    }
                 }
                 
-                if (remoteJobs.isNotEmpty()) {
-                    println("✅ Replaced local jobs with ${remoteJobs.size} jobs from Google Sheets")
-                } else {
-                    println("✅ Cleared all local jobs - Google Sheets is empty (all jobs deleted)")
+                // CRITICAL: Refresh job data on Main dispatcher
+                withContext(Dispatchers.Main) {
+                    refreshJobData()
+                    println("✅ Job UI refreshed on Main dispatcher")
                 }
                 
                 // Refresh job data
@@ -1067,6 +1101,7 @@ class EventManagerViewModel(
         }
     }
 
+    @Suppress("unused")
     fun syncVenuesOnly() {
         viewModelScope.launch {
             _isSyncing.value = true
@@ -1461,10 +1496,12 @@ class EventManagerViewModel(
     }
     
     // Helper data class for returning multiple values
+    @Suppress("unused")
     private data class Tuple4<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
     private data class Tuple5<A, B, C, D, E>(val first: A, val second: B, val third: C, val fourth: D, val fifth: E)
     
     // Helper methods for targeted sync operations
+    @Suppress("unused")
     private suspend fun uploadGuestsToSheets(guests: List<Guest>) {
         try {
             val venues = repository.getAllVenues().first()
@@ -1476,6 +1513,7 @@ class EventManagerViewModel(
         }
     }
     
+    @Suppress("unused")
     private suspend fun uploadVolunteersToSheets(volunteers: List<Volunteer>) {
         try {
             googleSheetsService.syncVolunteersToSheets(volunteers)
@@ -1486,6 +1524,7 @@ class EventManagerViewModel(
         }
     }
     
+    @Suppress("unused")
     private suspend fun uploadJobsToSheets(jobs: List<Job>) {
         try {
             val venues = repository.getAllVenues().first()
@@ -1497,6 +1536,7 @@ class EventManagerViewModel(
         }
     }
     
+    @Suppress("unused")
     private suspend fun uploadJobTypesToSheets(jobTypes: List<JobTypeConfig>) {
         try {
             googleSheetsService.syncJobTypeConfigsToSheets(jobTypes)
@@ -1562,6 +1602,7 @@ class EventManagerViewModel(
         }
     }
     
+    @Suppress("unused")
     private suspend fun mergeGuestData(localGuests: List<Guest>, remoteGuests: List<Guest>) {
         val deletedGuests = deletionTracker?.getDeletedGuests() ?: emptyList()
         var guestsAdded = 0
@@ -1603,6 +1644,7 @@ class EventManagerViewModel(
         println("Guest merge results: +$guestsAdded ~$guestsUpdated")
     }
     
+    @Suppress("unused")
     private suspend fun mergeVolunteerData(localVolunteers: List<Volunteer>, remoteVolunteers: List<Volunteer>) {
         val deletedVolunteers = deletionTracker?.getDeletedVolunteers() ?: emptyList()
         var volunteersAdded = 0
@@ -1617,8 +1659,8 @@ class EventManagerViewModel(
         val localVolunteersByName = localVolunteers.associateBy { it.name }
         
         // OPTIMIZED: Create sets for O(1) deletion checks instead of O(n) any operations
-        val deletedSheetsIds = deletedVolunteers.mapNotNull { it.sheetsId }.toSet()
-        val deletedIds = deletedVolunteers.mapNotNull { it.id }.toSet()
+        val deletedSheetsIds = deletedVolunteers.mapNotNullTo(mutableSetOf()) { it.sheetsId }
+        val deletedIds = deletedVolunteers.mapNotNullTo(mutableSetOf()) { it.id }
         
         for (remoteVolunteer in remoteVolunteers) {
             // OPTIMIZED: Use set lookup instead of any (O(1) vs O(n))
@@ -1676,6 +1718,7 @@ class EventManagerViewModel(
     }
     
     // Sheets priority merge methods (remote data wins conflicts)
+    @Suppress("unused")
     private suspend fun mergeGuestDataSheetsPriority(localGuests: List<Guest>, remoteGuests: List<Guest>) {
         val deletedGuests = deletionTracker?.getDeletedGuests() ?: emptyList()
         var guestsAdded = 0
@@ -1717,6 +1760,7 @@ class EventManagerViewModel(
         println("Sheets priority guest merge results: +$guestsAdded ~$guestsUpdated")
     }
     
+    @Suppress("unused")
     private suspend fun mergeVolunteerDataSheetsPriority(localVolunteers: List<Volunteer>, remoteVolunteers: List<Volunteer>) {
         val deletedVolunteers = deletionTracker?.getDeletedVolunteers() ?: emptyList()
         var volunteersAdded = 0
@@ -1731,8 +1775,8 @@ class EventManagerViewModel(
         val localVolunteersByName = localVolunteers.associateBy { it.name }
 
         // OPTIMIZED: Create sets for O(1) deletion checks instead of O(n) any operations
-        val deletedSheetsIds = deletedVolunteers.mapNotNull { it.sheetsId }.toSet()
-        val deletedIds = deletedVolunteers.mapNotNull { it.id }.toSet()
+        val deletedSheetsIds = deletedVolunteers.mapNotNullTo(mutableSetOf()) { it.sheetsId }
+        val deletedIds = deletedVolunteers.mapNotNullTo(mutableSetOf()) { it.id }
 
         for (remoteVolunteer in remoteVolunteers) {
             // OPTIMIZED: Use set lookup instead of any (O(1) vs O(n))
@@ -1775,6 +1819,7 @@ class EventManagerViewModel(
         println("Sheets priority volunteer merge results: +$volunteersAdded ~$volunteersUpdated")
     }
     
+    @Suppress("unused")
     private suspend fun mergeJobDataSheetsPriority(localJobs: List<Job>, remoteJobs: List<Job>) {
         val deletedJobs = deletionTracker?.getDeletedJobs() ?: emptyList()
         var jobsAdded = 0
@@ -1816,6 +1861,7 @@ class EventManagerViewModel(
         println("Sheets priority job merge results: +$jobsAdded ~$jobsUpdated")
     }
     
+    @Suppress("unused")
     private suspend fun mergeJobTypeDataSheetsPriority(localJobTypes: List<JobTypeConfig>, remoteJobTypes: List<JobTypeConfig>) {
         val deletedJobTypes = deletionTracker?.getDeletedJobTypes() ?: emptyList()
         var jobTypesAdded = 0
@@ -1857,6 +1903,7 @@ class EventManagerViewModel(
         println("Sheets priority job type merge results: +$jobTypesAdded ~$jobTypesUpdated")
     }
     
+    @Suppress("unused")
     private suspend fun mergeJobData(localJobs: List<Job>, remoteJobs: List<Job>) {
         val deletedJobs = deletionTracker?.getDeletedJobs() ?: emptyList()
         var jobsAdded = 0
@@ -1901,6 +1948,7 @@ class EventManagerViewModel(
         println("Job merge results: +$jobsAdded ~$jobsUpdated")
     }
     
+    @Suppress("unused")
     private suspend fun mergeJobTypeData(localJobTypes: List<JobTypeConfig>, remoteJobTypes: List<JobTypeConfig>) {
         val deletedJobTypes = deletionTracker?.getDeletedJobTypes() ?: emptyList()
         var jobTypesAdded = 0
@@ -1969,7 +2017,7 @@ class EventManagerViewModel(
         _venues.value = removeDuplicateVenues(updatedVenues)
     }
     
-    private suspend fun updateSyncTime() {
+    private fun updateSyncTime() {
         val currentTime = System.currentTimeMillis()
         context?.let { ctx ->
             val settingsManager = SettingsManager(ctx)
@@ -1979,6 +2027,7 @@ class EventManagerViewModel(
     }
 
     // Sync app data to Google Sheets
+    @Suppress("unused")
     private suspend fun syncToGoogleSheets() {
         try {
             if (!isGoogleSheetsConfigured()) {
@@ -2045,14 +2094,32 @@ class EventManagerViewModel(
             AppLogger.i("EventManagerViewModel", "Starting full sync")
             
             try {
-                val result = syncManager?.performFullSync()
+                // Perform sync on IO dispatcher
+                val result = withContext(Dispatchers.IO) {
+                    syncManager?.performFullSync()
+                }
                 
                 if (result?.isSuccess == true) {
-                    // Refresh all data after successful sync
-                    refreshAllData()
+                    println("🔄 Sync successful, refreshing UI data...")
+                    println("📊 Before refresh - Guests: ${_guests.value.size}, Volunteers: ${_volunteers.value.size}")
+                    
+                    // CRITICAL: Ensure data refresh happens on Main dispatcher
+                    // This ensures StateFlow updates trigger Compose recomposition
+                    withContext(Dispatchers.Main) {
+                        // Refresh all data after successful sync
+                        refreshAllData()
+                        println("✅ UI data refreshed on Main dispatcher after sync")
+                        println("📊 After refresh - Guests: ${_guests.value.size}, Volunteers: ${_volunteers.value.size}")
+                    }
+                    
+                    // Recalculate volunteer guest list
                     recalcAndUploadVolunteerGuestList()
+                    
+                    // Update sync time
+                    updateSyncTime()
+                    
                     AppLogger.i("EventManagerViewModel", "Full sync completed successfully")
-                    println("Full sync completed successfully")
+                    println("✅✅✅ Full sync completed successfully - UI should be updated now")
                 } else {
                     val errorResult = result as? SyncResult.Error
                     val errorMsg = errorResult?.message ?: "Full sync failed"
@@ -2109,9 +2176,8 @@ class EventManagerViewModel(
                     } else {
                         println("Warning: Volunteer with ID ${status.volunteerId} not found for benefit status")
                     }
-                } else {
-                    
                 }
+                // Benefits not active or not eligible for guest list - skip silently
             }
             
             println("Computed ${entries.size} volunteer guest entries")
@@ -2125,38 +2191,99 @@ class EventManagerViewModel(
 
     suspend fun recalcAndUploadVolunteerGuestList() = withContext(Dispatchers.IO) {
         try {
-            println("Starting volunteer guest list recalculation...")
+            println("Starting volunteer guest list recalculation with differential updates...")
 
-            // Compute volunteer entries locally
-            val volunteerGuests = computeVolunteerGuestEntries()
-            println("Computed ${volunteerGuests.size} volunteer guest entries")
+            // Compute new volunteer entries
+            val newVolunteerGuests = computeVolunteerGuestEntries()
+            println("Computed ${newVolunteerGuests.size} volunteer guest entries")
 
-            // Update local guest table: remove stale volunteer benefit entries, then re-add current
+            // Get existing volunteer benefit guests
             val existingVolunteerGuests = repository.getVolunteerBenefitGuests()
-            println("Found ${existingVolunteerGuests.size} existing volunteer benefit guests to remove")
+            println("Found ${existingVolunteerGuests.size} existing volunteer benefit guests")
 
-            // Remove old ones
-            existingVolunteerGuests.forEach { repository.deleteGuest(it) }
-            println("Removed ${existingVolunteerGuests.size} old volunteer benefit guests")
+            // Create maps for efficient comparison using volunteerId as key
+            val existingByVolunteerId = existingVolunteerGuests.associateBy { it.volunteerId }
+            val newByVolunteerId = newVolunteerGuests.associateBy { it.volunteerId }
 
-            // Insert current list
-            volunteerGuests.forEach { repository.insertGuest(it) }
-            println("Inserted ${volunteerGuests.size} new volunteer benefit guests")
+            // Determine changes
+            val toDelete = mutableListOf<Guest>()
+            val toInsert = mutableListOf<Guest>()
+            val toUpdate = mutableListOf<Guest>()
 
-            // Upload-only to Volunteer Guest List sheet
+            // Find deleted (in existing but not in new)
+            for ((volunteerId, existingGuest) in existingByVolunteerId) {
+                if (volunteerId != null && !newByVolunteerId.containsKey(volunteerId)) {
+                    toDelete.add(existingGuest)
+                }
+            }
+
+            // Find new and modified
+            for ((volunteerId, newGuest) in newByVolunteerId) {
+                val existingGuest = existingByVolunteerId[volunteerId]
+                if (existingGuest == null) {
+                    toInsert.add(newGuest)
+                } else if (existingGuest.name != newGuest.name ||
+                           existingGuest.invitations != newGuest.invitations ||
+                           existingGuest.notes != newGuest.notes) {
+                    // Modified - update with existing ID
+                    toUpdate.add(newGuest.copy(id = existingGuest.id))
+                }
+                // If unchanged, do nothing
+            }
+
+            println("Volunteer benefit changes: ${toInsert.size} new, ${toUpdate.size} modified, ${toDelete.size} deleted")
+
+            // Apply database changes
+            if (toDelete.isNotEmpty()) {
+                toDelete.forEach { repository.deleteGuest(it) }
+            }
+            if (toInsert.isNotEmpty()) {
+                toInsert.forEach { repository.insertGuest(it) }
+            }
+            if (toUpdate.isNotEmpty()) {
+                toUpdate.forEach { repository.updateGuest(it) }
+            }
+
+            // Upload to Google Sheets
             if (isGoogleSheetsConfigured()) {
                 println("Uploading volunteer guest list to Google Sheets...")
                 googleSheetsService.initializeSheetsService()
-                googleSheetsService.syncVolunteerGuestListToSheets(volunteerGuests, _venues.value)
+                googleSheetsService.syncVolunteerGuestListToSheets(newVolunteerGuests, _venues.value)
                 println("Successfully uploaded volunteer guest list to Google Sheets")
-            } else {
-                println("Google Sheets not configured, skipping upload")
             }
 
-            // Refresh UI state on main thread
-            withContext(Dispatchers.Main) {
-                refreshGuestData()
+            // Apply targeted UI updates only if there were changes
+            val hasChanges = toDelete.isNotEmpty() || toInsert.isNotEmpty() || toUpdate.isNotEmpty()
+            if (hasChanges) {
+                withContext(Dispatchers.Main) {
+                    val currentGuests = _guests.value.toMutableList()
+                    
+                    // Remove deleted volunteer benefits from UI
+                    toDelete.forEach { deleted ->
+                        currentGuests.removeAll { it.volunteerId == deleted.volunteerId && it.isVolunteerBenefit }
+                    }
+                    
+                    // Add new volunteer benefits to UI
+                    currentGuests.addAll(toInsert)
+                    
+                    // Update modified volunteer benefits in UI
+                    toUpdate.forEach { updated ->
+                        val index = currentGuests.indexOfFirst { it.volunteerId == updated.volunteerId && it.isVolunteerBenefit }
+                        if (index >= 0) {
+                            currentGuests[index] = updated
+                        } else {
+                            // If not found, add it
+                            currentGuests.add(updated)
+                        }
+                    }
+                    
+                    _guests.value = removeDuplicateGuests(currentGuests)
+                    println("✅ Applied ${toInsert.size + toUpdate.size + toDelete.size} volunteer benefit UI updates")
+                }
+            } else {
+                println("No volunteer benefit changes to apply to UI")
             }
+            
             println("Volunteer guest list recalculation completed successfully")
         } catch (e: Exception) {
             println("Failed to recalc/upload volunteer guest list: ${e.message}")
@@ -2218,6 +2345,7 @@ class EventManagerViewModel(
      * SIMPLE PAGE CHANGE SYNC: Download only current page and new page data
      * This is used when user changes pages in the app (simpler version)
      */
+    @Suppress("unused")
     fun performSimplePageChangeSync(currentPage: String, newPage: String) {
         viewModelScope.launch {
             _isSyncing.value = true
@@ -2368,6 +2496,7 @@ class EventManagerViewModel(
     /**
      * GET EXPECTED HEADERS: Get the expected headers for a sheet type
      */
+    @Suppress("unused")
     fun getExpectedHeaders(sheetType: String): List<String>? {
         return syncManager?.getExpectedHeaders(sheetType)
     }
@@ -2375,13 +2504,16 @@ class EventManagerViewModel(
     /**
      * GET ALL EXPECTED HEADERS: Get all expected headers for all sheet types
      */
+    @Suppress("unused")
     fun getAllExpectedHeaders(): Map<String, List<String>> {
         return syncManager?.getAllExpectedHeaders() ?: emptyMap()
     }
 
     // Convenience methods for different sync modes
+    @Suppress("unused")
     fun performAutoSync() = performFullSync()
 
+    @Suppress("unused")
     fun clearSyncError() {
         _syncError.value = null
     }
@@ -2389,22 +2521,27 @@ class EventManagerViewModel(
     /**
      * UI CONVENIENCE METHODS for page change sync
      */
+    @Suppress("unused")
     fun onPageChangeToGuests() {
         performPageChangeSync("", "guests")
     }
     
+    @Suppress("unused")
     fun onPageChangeToVolunteers() {
         performPageChangeSync("", "volunteers")
     }
     
+    @Suppress("unused")
     fun onPageChangeToJobs() {
         performPageChangeSync("", "jobs")
     }
     
+    @Suppress("unused")
     fun onPageChangeToJobTypes() {
         performPageChangeSync("", "job_types")
     }
     
+    @Suppress("unused")
     fun onPageChange(from: String, to: String) {
         performPageChangeSync(from, to)
     }
@@ -2412,26 +2549,32 @@ class EventManagerViewModel(
     /**
      * MANUAL SYNC TRIGGERS
      */
+    @Suppress("unused")
     fun triggerManualSync() {
         performFullSync()
     }
     
+    @Suppress("unused")
     fun triggerBackupToSheets() {
         performBackupToSheets()
     }
     
+    @Suppress("unused")
     fun triggerValidation() {
         validateGoogleSheetsStructure()
     }
     
+    @Suppress("unused")
     fun triggerDataStructureValidation() {
         validateDataStructure()
     }
     
+    @Suppress("unused")
     fun triggerCreateOrFixSheetStructure() {
         createOrFixSheetStructure()
     }
     
+    @Suppress("unused")
     fun triggerDuplicateCleanup() {
         cleanupDuplicates()
     }
@@ -2460,6 +2603,7 @@ class EventManagerViewModel(
      * FORCE REFRESH VOLUNTEERS: Force sync volunteers from Google Sheets
      * This is useful for debugging and ensuring volunteers are properly loaded
      */
+    @Suppress("unused")
     fun forceRefreshVolunteers() {
         viewModelScope.launch {
             _isSyncing.value = true
@@ -2486,6 +2630,7 @@ class EventManagerViewModel(
         }
     }
     
+    @Suppress("unused")
     fun clearAllErrors() {
         _syncError.value = null
     }
@@ -2494,6 +2639,7 @@ class EventManagerViewModel(
      * FORCE REFRESH ALL DATA: Force refresh all data from database
      * This is useful for debugging and ensuring data is properly loaded
      */
+    @Suppress("unused")
     fun forceRefreshAllData() {
         viewModelScope.launch {
             _isSyncing.value = true
@@ -2523,31 +2669,59 @@ class EventManagerViewModel(
         }
     }
     
-    private fun refreshAllData() {
-        viewModelScope.launch {
-            try {
-                // Get data from repository
-                val guests = repository.getAllGuests().first()
-                val volunteers = repository.getAllVolunteers().first()
-                val jobs = repository.getAllJobs().first()
-                val jobTypeConfigs = repository.getAllJobTypeConfigs().first()
+    private suspend fun refreshAllData() {
+        try {
+            println("🔄 Starting refreshAllData...")
+            
+            // CRITICAL: Small delay to ensure database changes have propagated
+            // Room's Flow emissions can be delayed after batch operations
+            delay(100)
+            
+            // Get data from repository on IO dispatcher
+            val (guests, volunteers, jobs, jobTypeConfigs, venues) = withContext(Dispatchers.IO) {
+                println("📊 Reading fresh data from database...")
+                val guestsData = repository.getAllGuests().first()
+                val volunteersData = repository.getAllVolunteers().first()
+                val jobsData = repository.getAllJobs().first()
+                val jobTypeConfigsData = repository.getAllJobTypeConfigs().first()
+                val venuesData = repository.getAllVenues().first()
                 
-                // Remove duplicates and update UI
-                _guests.value = removeDuplicateGuests(guests)
-                _volunteers.value = removeDuplicateVolunteers(volunteers)
-                _jobs.value = removeDuplicateJobs(jobs)
-                _jobTypeConfigs.value = removeDuplicateJobTypes(jobTypeConfigs)
+                println("📊 Database read complete: ${guestsData.size} guests, ${volunteersData.size} volunteers, ${jobsData.size} jobs, ${jobTypeConfigsData.size} job types, ${venuesData.size} venues")
                 
-                println("Data refreshed - Guests: ${_guests.value.size}, Volunteers: ${_volunteers.value.size}, Jobs: ${_jobs.value.size}, Job Types: ${_jobTypeConfigs.value.size}")
-            } catch (e: Exception) {
-                println("Failed to refresh data: ${e.message}")
+                // Return all data as a tuple
+                Quint(guestsData, volunteersData, jobsData, jobTypeConfigsData, venuesData)
             }
+            
+            // Update StateFlows on Main dispatcher to ensure Compose recomposition
+            withContext(Dispatchers.Main) {
+                println("🔄 Updating StateFlows on Main dispatcher...")
+                val oldGuestCount = _guests.value.size
+                val oldVolunteerCount = _volunteers.value.size
+                
+                // CRITICAL FIX: Force StateFlow emission by creating new list instances
+                // StateFlow only emits if value changes, so we ensure new references
+                _guests.value = removeDuplicateGuests(guests).toList()
+                _volunteers.value = removeDuplicateVolunteers(volunteers).toList()
+                _jobs.value = removeDuplicateJobs(jobs).toList()
+                _jobTypeConfigs.value = removeDuplicateJobTypes(jobTypeConfigs).toList()
+                _venues.value = removeDuplicateVenues(venues).toList()
+                
+                println("✅ StateFlows updated - Guests: $oldGuestCount → ${_guests.value.size}, Volunteers: $oldVolunteerCount → ${_volunteers.value.size}, Jobs: ${_jobs.value.size}, Job Types: ${_jobTypeConfigs.value.size}, Venues: ${_venues.value.size}")
+                println("✅ UI should now recompose with new data")
+            }
+        } catch (e: Exception) {
+            println("❌ Failed to refresh data: ${e.message}")
+            e.printStackTrace()
         }
     }
+    
+    // Helper class for returning 5 values from suspend function
+    private data class Quint<A, B, C, D, E>(val first: A, val second: B, val third: C, val fourth: D, val fifth: E)
     
     /**
      * Updates volunteer activity based on current jobs
      */
+    @Suppress("unused")
     private fun updateVolunteerActivity(volunteers: List<Volunteer>): List<Volunteer> {
         val currentJobs = _jobs.value
         return if (currentJobs.isNotEmpty()) {
@@ -2575,11 +2749,8 @@ class EventManagerViewModel(
                     _volunteers.value = updatedVolunteers
                     println("Updated volunteer activity for ${updatedVolunteers.size} volunteers based on ${currentJobs.size} jobs")
                 }
-            } else if (currentVolunteers.isNotEmpty() && currentJobs.isEmpty()) {
-                // If no jobs are loaded yet, just set volunteers without activity calculation
-                // Activity will be calculated when jobs are loaded
-                println("Volunteers loaded but no jobs yet - activity will be calculated when jobs are available")
             }
+            // If no jobs are loaded yet, activity will be calculated when jobs are available
         }
     }
     
@@ -2750,11 +2921,13 @@ class EventManagerViewModel(
     }
 
     // Get volunteer benefits with time-based calculation
+    @Suppress("unused")
     suspend fun getVolunteerBenefitStatus(volunteer: Volunteer): VolunteerBenefitStatus? {
         return repository.getVolunteerBenefitStatus(volunteer.id)
     }
     
     // Legacy method for backward compatibility
+    @Suppress("unused")
     fun getVolunteerBenefits(volunteer: Volunteer): Benefit {
         return BenefitCalculator.getBenefitsForRank(volunteer.currentRank)
     }
@@ -2931,7 +3104,10 @@ class EventManagerViewModel(
             try {
                 println("🔄 Starting differential full sync...")
                 
-                val result = syncManager?.performDifferentialSync()
+                // Perform sync on IO dispatcher
+                val result = withContext(Dispatchers.IO) {
+                    syncManager?.performDifferentialSync()
+                }
                 
                 if (result is DifferentialSyncResult.Success) {
                     val changes = result.changes
@@ -2939,13 +3115,19 @@ class EventManagerViewModel(
                     AppLogger.i("EventManagerViewModel", "Differential sync changes: $summary")
                     println("📊 $summary")
                     
-                    // Apply targeted UI updates based on what actually changed
-                    applyDifferentialUIUpdates(changes)
-                    
-                    // Recalculate volunteer guest list if needed
-                    if (changes.volunteers.hasChanges) {
-                        recalcAndUploadVolunteerGuestList()
+                    // CRITICAL: Apply UI updates on Main dispatcher
+                    withContext(Dispatchers.Main) {
+                        applyDifferentialUIUpdates(changes)
+                        println("✅ UI updates applied on Main dispatcher")
                     }
+                    
+                    // Always recalculate volunteer benefits to ensure they're present
+                    // This handles: new volunteers, rank changes from jobs, initial sync, etc.
+                    // Uses differential updates internally so it won't cause full refresh
+                    recalcAndUploadVolunteerGuestList()
+                    
+                    // Update sync time
+                    updateSyncTime()
                     
                     AppLogger.i("EventManagerViewModel", "Differential full sync completed successfully")
                     println("✅ Differential full sync completed successfully")
@@ -2987,21 +3169,27 @@ class EventManagerViewModel(
             val currentJobTypes = _jobTypeConfigs.value.toMutableList()
             val currentVenues = _venues.value.toMutableList()
             
-            // Apply guest changes
+            // Apply guest changes (excludes volunteer benefits - they're handled separately)
             if (changes.guests.hasChanges) {
-                // Remove deleted guests
+                // Helper to get matching key for a guest (same as DifferentialSyncService)
+                fun guestKey(g: Guest) = g.sheetsId ?: "${g.name}_${g.venueName}_${g.invitations}"
+                
+                // Remove deleted guests by matching key (not by id, since synced items may have id=0)
                 changes.guests.deleted.forEach { deletedGuest ->
-                    currentGuests.removeAll { it.id == deletedGuest.id }
+                    val deleteKey = guestKey(deletedGuest)
+                    currentGuests.removeAll { guestKey(it) == deleteKey }
                 }
                 
                 // Add new guests
                 currentGuests.addAll(changes.guests.new)
                 
-                // Update modified guests
+                // Update modified guests by matching key
                 changes.guests.modified.forEach { modifiedGuest ->
-                    val index = currentGuests.indexOfFirst { it.id == modifiedGuest.id }
+                    val modifyKey = guestKey(modifiedGuest)
+                    val index = currentGuests.indexOfFirst { guestKey(it) == modifyKey }
                     if (index >= 0) {
-                        currentGuests[index] = modifiedGuest
+                        // Preserve the local ID when updating
+                        currentGuests[index] = modifiedGuest.copy(id = currentGuests[index].id)
                     }
                 }
                 
@@ -3011,19 +3199,24 @@ class EventManagerViewModel(
             
             // Apply volunteer changes
             if (changes.volunteers.hasChanges) {
-                // Remove deleted volunteers
+                // Helper to get matching key (same as DifferentialSyncService)
+                fun volunteerKey(v: Volunteer) = v.sheetsId ?: "${v.name}_${v.email}_${v.phoneNumber}"
+                
+                // Remove deleted volunteers by matching key
                 changes.volunteers.deleted.forEach { deletedVolunteer ->
-                    currentVolunteers.removeAll { it.id == deletedVolunteer.id }
+                    val deleteKey = volunteerKey(deletedVolunteer)
+                    currentVolunteers.removeAll { volunteerKey(it) == deleteKey }
                 }
                 
                 // Add new volunteers
                 currentVolunteers.addAll(changes.volunteers.new)
                 
-                // Update modified volunteers
+                // Update modified volunteers by matching key
                 changes.volunteers.modified.forEach { modifiedVolunteer ->
-                    val index = currentVolunteers.indexOfFirst { it.id == modifiedVolunteer.id }
+                    val modifyKey = volunteerKey(modifiedVolunteer)
+                    val index = currentVolunteers.indexOfFirst { volunteerKey(it) == modifyKey }
                     if (index >= 0) {
-                        currentVolunteers[index] = modifiedVolunteer
+                        currentVolunteers[index] = modifiedVolunteer.copy(id = currentVolunteers[index].id)
                     }
                 }
                 
@@ -3033,19 +3226,24 @@ class EventManagerViewModel(
             
             // Apply job changes
             if (changes.jobs.hasChanges) {
-                // Remove deleted jobs
+                // Helper to get matching key (same as DifferentialSyncService)
+                fun jobKey(j: Job) = j.sheetsId ?: "${j.volunteerId}_${j.jobTypeName}_${j.date}_${j.venueName}_${j.shiftTime}"
+                
+                // Remove deleted jobs by matching key
                 changes.jobs.deleted.forEach { deletedJob ->
-                    currentJobs.removeAll { it.id == deletedJob.id }
+                    val deleteKey = jobKey(deletedJob)
+                    currentJobs.removeAll { jobKey(it) == deleteKey }
                 }
                 
                 // Add new jobs
                 currentJobs.addAll(changes.jobs.new)
                 
-                // Update modified jobs
+                // Update modified jobs by matching key
                 changes.jobs.modified.forEach { modifiedJob ->
-                    val index = currentJobs.indexOfFirst { it.id == modifiedJob.id }
+                    val modifyKey = jobKey(modifiedJob)
+                    val index = currentJobs.indexOfFirst { jobKey(it) == modifyKey }
                     if (index >= 0) {
-                        currentJobs[index] = modifiedJob
+                        currentJobs[index] = modifiedJob.copy(id = currentJobs[index].id)
                     }
                 }
                 
@@ -3055,19 +3253,24 @@ class EventManagerViewModel(
             
             // Apply job type config changes
             if (changes.jobTypeConfigs.hasChanges) {
-                // Remove deleted job type configs
+                // Helper to get matching key (same as DifferentialSyncService)
+                fun jobTypeKey(c: JobTypeConfig) = c.sheetsId ?: c.name
+                
+                // Remove deleted job type configs by matching key
                 changes.jobTypeConfigs.deleted.forEach { deletedConfig ->
-                    currentJobTypes.removeAll { it.id == deletedConfig.id }
+                    val deleteKey = jobTypeKey(deletedConfig)
+                    currentJobTypes.removeAll { jobTypeKey(it) == deleteKey }
                 }
                 
                 // Add new job type configs
                 currentJobTypes.addAll(changes.jobTypeConfigs.new)
                 
-                // Update modified job type configs
+                // Update modified job type configs by matching key
                 changes.jobTypeConfigs.modified.forEach { modifiedConfig ->
-                    val index = currentJobTypes.indexOfFirst { it.id == modifiedConfig.id }
+                    val modifyKey = jobTypeKey(modifiedConfig)
+                    val index = currentJobTypes.indexOfFirst { jobTypeKey(it) == modifyKey }
                     if (index >= 0) {
-                        currentJobTypes[index] = modifiedConfig
+                        currentJobTypes[index] = modifiedConfig.copy(id = currentJobTypes[index].id)
                     }
                 }
                 
@@ -3077,19 +3280,24 @@ class EventManagerViewModel(
             
             // Apply venue changes
             if (changes.venues.hasChanges) {
-                // Remove deleted venues
+                // Helper to get matching key (same as DifferentialSyncService)
+                fun venueKey(v: VenueEntity) = v.sheetsId ?: v.name
+                
+                // Remove deleted venues by matching key
                 changes.venues.deleted.forEach { deletedVenue ->
-                    currentVenues.removeAll { it.id == deletedVenue.id }
+                    val deleteKey = venueKey(deletedVenue)
+                    currentVenues.removeAll { venueKey(it) == deleteKey }
                 }
                 
                 // Add new venues
                 currentVenues.addAll(changes.venues.new)
                 
-                // Update modified venues
+                // Update modified venues by matching key
                 changes.venues.modified.forEach { modifiedVenue ->
-                    val index = currentVenues.indexOfFirst { it.id == modifiedVenue.id }
+                    val modifyKey = venueKey(modifiedVenue)
+                    val index = currentVenues.indexOfFirst { venueKey(it) == modifyKey }
                     if (index >= 0) {
-                        currentVenues[index] = modifiedVenue
+                        currentVenues[index] = modifiedVenue.copy(id = currentVenues[index].id)
                     }
                 }
                 
@@ -3192,9 +3400,13 @@ class EventManagerViewModel(
         try {
             val currentVolunteers = _volunteers.value.toMutableList()
             
-            // Remove deleted volunteers
+            // Helper to get matching key (same as DifferentialSyncService)
+            fun volunteerKey(v: Volunteer) = v.sheetsId ?: "${v.name}_${v.email}_${v.phoneNumber}"
+            
+            // Remove deleted volunteers by matching key
             changes.deleted.forEach { deletedVolunteer ->
-                currentVolunteers.removeAll { it.id == deletedVolunteer.id }
+                val deleteKey = volunteerKey(deletedVolunteer)
+                currentVolunteers.removeAll { volunteerKey(it) == deleteKey }
                 println("🗑️ Removed deleted volunteer: ${deletedVolunteer.name}")
             }
             
@@ -3204,11 +3416,12 @@ class EventManagerViewModel(
                 println("➕ Added new volunteer: ${newVolunteer.name}")
             }
             
-            // Update modified volunteers
+            // Update modified volunteers by matching key
             changes.modified.forEach { modifiedVolunteer ->
-                val index = currentVolunteers.indexOfFirst { it.id == modifiedVolunteer.id }
+                val modifyKey = volunteerKey(modifiedVolunteer)
+                val index = currentVolunteers.indexOfFirst { volunteerKey(it) == modifyKey }
                 if (index >= 0) {
-                    currentVolunteers[index] = modifiedVolunteer
+                    currentVolunteers[index] = modifiedVolunteer.copy(id = currentVolunteers[index].id)
                     println("✏️ Updated volunteer: ${modifiedVolunteer.name}")
                 }
             }
@@ -3292,9 +3505,13 @@ class EventManagerViewModel(
         try {
             val currentGuests = _guests.value.toMutableList()
             
-            // Remove deleted guests
+            // Helper to get matching key (same as DifferentialSyncService)
+            fun guestKey(g: Guest) = g.sheetsId ?: "${g.name}_${g.venueName}_${g.invitations}"
+            
+            // Remove deleted guests by matching key
             changes.deleted.forEach { deletedGuest ->
-                currentGuests.removeAll { it.id == deletedGuest.id }
+                val deleteKey = guestKey(deletedGuest)
+                currentGuests.removeAll { guestKey(it) == deleteKey }
                 println("🗑️ Removed deleted guest: ${deletedGuest.name}")
             }
             
@@ -3304,11 +3521,12 @@ class EventManagerViewModel(
                 println("➕ Added new guest: ${newGuest.name}")
             }
             
-            // Update modified guests
+            // Update modified guests by matching key
             changes.modified.forEach { modifiedGuest ->
-                val index = currentGuests.indexOfFirst { it.id == modifiedGuest.id }
+                val modifyKey = guestKey(modifiedGuest)
+                val index = currentGuests.indexOfFirst { guestKey(it) == modifyKey }
                 if (index >= 0) {
-                    currentGuests[index] = modifiedGuest
+                    currentGuests[index] = modifiedGuest.copy(id = currentGuests[index].id)
                     println("✏️ Updated guest: ${modifiedGuest.name}")
                 }
             }
@@ -3473,9 +3691,13 @@ class EventManagerViewModel(
         try {
             val currentJobs = _jobs.value.toMutableList()
             
-            // Remove deleted jobs
+            // Helper to get matching key (same as DifferentialSyncService)
+            fun jobKey(j: Job) = j.sheetsId ?: "${j.volunteerId}_${j.jobTypeName}_${j.date}_${j.venueName}_${j.shiftTime}"
+            
+            // Remove deleted jobs by matching key
             changes.deleted.forEach { deletedJob ->
-                currentJobs.removeAll { it.id == deletedJob.id }
+                val deleteKey = jobKey(deletedJob)
+                currentJobs.removeAll { jobKey(it) == deleteKey }
                 println("🗑️ Removed deleted job: ${deletedJob.jobTypeName}")
             }
             
@@ -3485,11 +3707,12 @@ class EventManagerViewModel(
                 println("➕ Added new job: ${newJob.jobTypeName}")
             }
             
-            // Update modified jobs
+            // Update modified jobs by matching key
             changes.modified.forEach { modifiedJob ->
-                val index = currentJobs.indexOfFirst { it.id == modifiedJob.id }
+                val modifyKey = jobKey(modifiedJob)
+                val index = currentJobs.indexOfFirst { jobKey(it) == modifyKey }
                 if (index >= 0) {
-                    currentJobs[index] = modifiedJob
+                    currentJobs[index] = modifiedJob.copy(id = currentJobs[index].id)
                     println("✏️ Updated job: ${modifiedJob.jobTypeName}")
                 }
             }
@@ -3570,9 +3793,13 @@ class EventManagerViewModel(
         try {
             val currentJobTypes = _jobTypeConfigs.value.toMutableList()
             
-            // Remove deleted job types
+            // Helper to get matching key (same as DifferentialSyncService)
+            fun jobTypeKey(c: JobTypeConfig) = c.sheetsId ?: c.name
+            
+            // Remove deleted job types by matching key
             changes.deleted.forEach { deletedJobType ->
-                currentJobTypes.removeAll { it.id == deletedJobType.id }
+                val deleteKey = jobTypeKey(deletedJobType)
+                currentJobTypes.removeAll { jobTypeKey(it) == deleteKey }
                 println("🗑️ Removed deleted job type: ${deletedJobType.name}")
             }
             
@@ -3582,11 +3809,12 @@ class EventManagerViewModel(
                 println("➕ Added new job type: ${newJobType.name}")
             }
             
-            // Update modified job types
+            // Update modified job types by matching key
             changes.modified.forEach { modifiedJobType ->
-                val index = currentJobTypes.indexOfFirst { it.id == modifiedJobType.id }
+                val modifyKey = jobTypeKey(modifiedJobType)
+                val index = currentJobTypes.indexOfFirst { jobTypeKey(it) == modifyKey }
                 if (index >= 0) {
-                    currentJobTypes[index] = modifiedJobType
+                    currentJobTypes[index] = modifiedJobType.copy(id = currentJobTypes[index].id)
                     println("✏️ Updated job type: ${modifiedJobType.name}")
                 }
             }
@@ -3667,9 +3895,13 @@ class EventManagerViewModel(
         try {
             val currentVenues = _venues.value.toMutableList()
             
-            // Remove deleted venues
+            // Helper to get matching key (same as DifferentialSyncService)
+            fun venueKey(v: VenueEntity) = v.sheetsId ?: v.name
+            
+            // Remove deleted venues by matching key
             changes.deleted.forEach { deletedVenue ->
-                currentVenues.removeAll { it.id == deletedVenue.id }
+                val deleteKey = venueKey(deletedVenue)
+                currentVenues.removeAll { venueKey(it) == deleteKey }
                 println("🗑️ Removed deleted venue: ${deletedVenue.name}")
             }
             
@@ -3679,11 +3911,12 @@ class EventManagerViewModel(
                 println("➕ Added new venue: ${newVenue.name}")
             }
             
-            // Update modified venues
+            // Update modified venues by matching key
             changes.modified.forEach { modifiedVenue ->
-                val index = currentVenues.indexOfFirst { it.id == modifiedVenue.id }
+                val modifyKey = venueKey(modifiedVenue)
+                val index = currentVenues.indexOfFirst { venueKey(it) == modifyKey }
                 if (index >= 0) {
-                    currentVenues[index] = modifiedVenue
+                    currentVenues[index] = modifiedVenue.copy(id = currentVenues[index].id)
                     println("✏️ Updated venue: ${modifiedVenue.name}")
                 }
             }

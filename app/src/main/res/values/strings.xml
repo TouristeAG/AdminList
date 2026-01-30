@@ -371,7 +371,7 @@
     <string name="invitations_count">Invitations</string>
     <string name="total_invitations_count">Total Invitations</string>
     <string name="volunteer_label">Volunteer</string>
-    <string name="invitations_text" formatted="false">%d invitation%s</string>
+    <string name="invitations_text">%d invitations</string>
     <string name="view_benefits">View Benefits</string>
     <string name="delete_guest">Delete guest</string>
     <string name="edit_guest">Edit Guest</string>
