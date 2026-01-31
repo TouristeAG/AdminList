@@ -390,6 +390,7 @@
     <string name="search_volunteers_benefits_placeholder">Search volunteers by name or email...</string>
     <string name="no_rank">No Rank</string>
     <string name="high_rank">High Rank</string>
+    <string name="active_benefits">Active Benefits</string>
     <string name="current_benefits">✨ Current Benefits</string>
     <string name="days_left">%d days left</string>
     <string name="expires_soon">Expires soon</string>
@@ -624,6 +625,7 @@
     <!-- Sleep/Resume Sync Warning -->
     <string name="sync_warning_sleep_resume_title">⚠️ App Not Synced</string>
     <string name="sync_warning_sleep_resume_message">The app is not synced anymore. Please sync it by pressing the resync button at the bottom.</string>
+    <string name="sync_error_sleep_resume_detail">📱 Your device was sleeping, so a new sync is needed. Press the resync button at the bottom of the page.</string>
     
     <!-- Specific Sync Error Types -->
     <string name="sync_error_rate_limit">Rate limit exceeded. Please wait 1-2 minutes before trying again.</string>

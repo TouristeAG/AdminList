@@ -89,7 +89,7 @@ fun VolunteerScreen(
             } ?: true
             
             matchesSearch && matchesFilter
-        }
+        }.sortedBy { it.name.lowercase() }
     }
     
     // Pre-compute responsive values to avoid recalculation

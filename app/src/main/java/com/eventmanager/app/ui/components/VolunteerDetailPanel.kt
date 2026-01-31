@@ -1649,17 +1649,31 @@ private fun buildMultipartEmail(
     sb.append("--${boundary}_alt--\r\n")
     sb.append("\r\n")
     
-    // QR Code attachment with Content-ID
+    // QR Code - First as inline with Content-ID for HTML display
     if (qrFile != null && qrFile.exists()) {
+        val qrBytes = qrFile.readBytes()
+        val qrBase64 = Base64.encodeToString(qrBytes, Base64.NO_WRAP)
+        
+        // Inline version for HTML display (with Content-ID)
         sb.append("--$boundary\r\n")
         sb.append("Content-Type: image/png; name=\"qr_code.png\"\r\n")
         sb.append("Content-Transfer-Encoding: base64\r\n")
         sb.append("Content-Disposition: inline; filename=\"qr_code.png\"\r\n")
         sb.append("Content-ID: <qrcode>\r\n")
         sb.append("\r\n")
+        // Split into 76-character lines (RFC 2045)
+        qrBase64.chunked(76).forEach { line ->
+            sb.append(line)
+            sb.append("\r\n")
+        }
+        sb.append("\r\n")
         
-        val qrBytes = qrFile.readBytes()
-        val qrBase64 = Base64.encodeToString(qrBytes, Base64.NO_WRAP)
+        // Attachment version for download (as actual attachment)
+        sb.append("--$boundary\r\n")
+        sb.append("Content-Type: image/png; name=\"qr_code.png\"\r\n")
+        sb.append("Content-Transfer-Encoding: base64\r\n")
+        sb.append("Content-Disposition: attachment; filename=\"qr_code.png\"\r\n")
+        sb.append("\r\n")
         // Split into 76-character lines (RFC 2045)
         qrBase64.chunked(76).forEach { line ->
             sb.append(line)

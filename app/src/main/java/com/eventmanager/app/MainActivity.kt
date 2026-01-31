@@ -136,13 +136,12 @@ import com.eventmanager.app.ui.components.SyncErrorDialog
 import android.content.Intent
 import android.provider.Settings
 import com.eventmanager.app.ui.components.DeviceTimeErrorDialog
-import com.eventmanager.app.ui.components.SleepResumeSyncWarningDialog
 import com.eventmanager.app.ui.components.SyncStatusDialog
+import com.eventmanager.app.utils.ImageUtils
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import com.eventmanager.app.utils.ImageUtils
 import androidx.compose.ui.graphics.ImageBitmap
 import com.eventmanager.app.data.update.UpdateCheckResult
 import com.eventmanager.app.data.update.DownloadState
@@ -425,10 +424,9 @@ fun EventManagerApp() {
         // State for device time error
         val showDeviceTimeErrorDialog = remember { mutableStateOf(false) }
         
-        // State for sleep/resume sync warning
-        val showSleepResumeWarning = remember { mutableStateOf(false) }
+        // State to track if device was sleeping when sync error occurred
+        val wasDeviceSleeping = remember { mutableStateOf(false) }
         val wasInBackground = remember { mutableStateOf(false) }
-        val justResumed = remember { mutableStateOf(false) }
         
         // Detect app lifecycle changes to track when app resumes from background/sleep
         val lifecycleOwner = LocalLifecycleOwner.current
@@ -442,7 +440,10 @@ fun EventManagerApp() {
                         // App just resumed from background/sleep
                         if (wasInBackground.value) {
                             println("📱 App resumed from background/sleep")
-                            justResumed.value = true
+                            // If there's a sync error when resuming, mark that device was sleeping
+                            if (syncError != null) {
+                                wasDeviceSleeping.value = true
+                            }
                         }
                         wasInBackground.value = false
                     }
@@ -455,25 +456,10 @@ fun EventManagerApp() {
             }
         }
         
-        // Reset justResumed flag after a delay
-        LaunchedEffect(justResumed.value) {
-            if (justResumed.value) {
-                kotlinx.coroutines.delay(5000) // Reset after 5 seconds
-                justResumed.value = false
-            }
-        }
-        
-        // Show warning if sync error occurs after resume from sleep/background
-        // Always show the simple warning dialog instead of the detailed error dialog
-        // This provides a better UX - just tell user to resync at the bottom
-        LaunchedEffect(syncError, justResumed.value, isSyncing) {
-            // If we just resumed and there's a sync error (and not currently syncing), show warning
-            if (justResumed.value && syncError != null && !isSyncing) {
-                println("⚠️ Sync error after resume detected, showing simple warning dialog")
-                // Small delay to ensure UI is ready
-                kotlinx.coroutines.delay(300)
-                // Show warning instead of regular error dialog
-                showSleepResumeWarning.value = true
+        // Reset wasDeviceSleeping when sync error is cleared
+        LaunchedEffect(syncError) {
+            if (syncError == null) {
+                wasDeviceSleeping.value = false
             }
         }
         
@@ -1010,18 +996,9 @@ if (pageAnimationsEnabled) {
             }
         }
         
-        // Sleep/Resume Sync Warning Dialog - Show this INSTEAD of regular error dialog when app resumes
-        SleepResumeSyncWarningDialog(
-            isVisible = showSleepResumeWarning.value && !showDeviceTimeErrorDialog.value,
-            onDismiss = {
-                showSleepResumeWarning.value = false
-                viewModel.dismissSyncErrorDialog()
-            }
-        )
-        
-        // Sync Error Dialog - Only show if NOT showing sleep/resume warning
+        // Sync Error Dialog
         SyncErrorDialog(
-            isVisible = showSyncErrorDialog && !showDeviceTimeErrorDialog.value && !showSleepResumeWarning.value,
+            isVisible = showSyncErrorDialog && !showDeviceTimeErrorDialog.value,
             onDismiss = { viewModel.dismissSyncErrorDialog() },
             onRetry = { viewModel.performFullSync() },
             errorMessage = syncError ?: "",
@@ -1032,7 +1009,8 @@ if (pageAnimationsEnabled) {
                 viewModel.dismissSyncErrorDialog()
             },
             isSyncing = isSyncing,
-            animationsEnabled = pageAnimationsEnabled
+            animationsEnabled = pageAnimationsEnabled,
+            wasDeviceSleeping = wasDeviceSleeping.value
         )
         
         // Device Time Error Dialog

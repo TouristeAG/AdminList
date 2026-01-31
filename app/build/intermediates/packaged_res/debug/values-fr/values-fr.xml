@@ -3,6 +3,7 @@
     <string name="abbreviation">Abréviation</string>
     <string name="actions">Actions</string>
     <string name="active">Actif·ve</string>
+    <string name="active_benefits">Avantages actifs</string>
     <string name="active_benefits_multiple_ranks">Avantages actifs de plusieurs rangs :</string>
     <string name="active_status">Actif·ve</string>
     <string name="active_volunteers">Bénévoles actif·ve·s</string>
@@ -505,6 +506,7 @@
     <string name="sync_error_rate_limit">Limite de taux dépassée. Veuillez attendre 1-2 minutes avant de réessayer.</string>
     <string name="sync_error_retry">Réessayer la synchronisation</string>
     <string name="sync_error_sheet_not_found">Feuille introuvable. Veuillez vérifier les noms des feuilles dans votre configuration.</string>
+    <string name="sync_error_sleep_resume_detail">📱 Votre appareil était en veille, donc une nouvelle synchronisation est nécessaire. Appuyez sur le bouton de resynchronisation en bas de la page.</string>
     <string name="sync_error_spreadsheet_not_found">Feuille de calcul introuvable. Veuillez vérifier l\'ID de la feuille de calcul.</string>
     <string name="sync_error_title">⚠️ Erreur de synchronisation</string>
     <string name="sync_error_unknown">Une erreur inconnue s\'est produite. Veuillez réessayer plus tard.</string>

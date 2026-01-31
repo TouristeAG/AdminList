@@ -343,6 +343,7 @@
     <string name="search_volunteers_benefits_placeholder">Rechercher des bénévoles par nom ou email...</string>
     <string name="no_rank">Pas de rang</string>
     <string name="high_rank">Rang élevé</string>
+    <string name="active_benefits">Avantages actifs</string>
     <string name="current_benefits">✨ Avantages actuels</string>
     <string name="days_left">%d jours restants</string>
     <string name="expires_soon">Expire bientôt</string>
@@ -646,6 +647,7 @@
     <string name="sync_error_retry">Réessayer la synchronisation</string>
     <string name="sync_error_dismiss">Ignorer</string>
     <string name="sync_error_dont_tell_today">Ne plus me le dire aujourd\'hui</string>
+    <string name="sync_error_sleep_resume_detail">📱 Votre appareil était en veille, donc une nouvelle synchronisation est nécessaire. Appuyez sur le bouton de resynchronisation en bas de la page.</string>
     
     <!-- Device Time/Date Error -->
     <string name="sync_error_device_time_title">⏰ Heure/Date de l\'appareil incorrecte</string>

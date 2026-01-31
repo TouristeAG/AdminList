@@ -74,7 +74,7 @@ fun BenefitsScreen(
                 status.rank?.name == filter
             } ?: true
             matchesSearch && matchesFilter
-        }
+        }.sortedBy { (volunteer, _) -> volunteer.name.lowercase() }
     }
     
     // Memoize statistics to avoid recounting on every recomposition (used in all scrollBehavior branches)
@@ -147,7 +147,7 @@ fun BenefitsScreen(
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Active Benefits",
+                                text = context.getString(R.string.active_benefits),
                                 style = getResponsiveBodyTypography(),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -195,7 +195,7 @@ fun BenefitsScreen(
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Active Benefits",
+                                text = context.getString(R.string.active_benefits),
                                 style = getResponsiveBodyTypography(),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -317,7 +317,7 @@ fun BenefitsScreen(
                                         fontWeight = FontWeight.Bold
                                     )
                                     Text(
-                                        text = "Active Benefits",
+                                        text = context.getString(R.string.active_benefits),
                                         style = getResponsiveBodyTypography(),
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -364,7 +364,7 @@ fun BenefitsScreen(
                                         fontWeight = FontWeight.Bold
                                     )
                                     Text(
-                                        text = "Active Benefits",
+                                        text = context.getString(R.string.active_benefits),
                                         style = getResponsiveBodyTypography(),
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -472,7 +472,7 @@ fun BenefitsScreen(
                                         fontWeight = FontWeight.Bold
                                     )
                                     Text(
-                                        text = "Active Benefits",
+                                        text = context.getString(R.string.active_benefits),
                                         style = getResponsiveBodyTypography(),
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -519,7 +519,7 @@ fun BenefitsScreen(
                                         fontWeight = FontWeight.Bold
                                     )
                                     Text(
-                                        text = "Active Benefits",
+                                        text = context.getString(R.string.active_benefits),
                                         style = getResponsiveBodyTypography(),
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -669,7 +669,7 @@ fun BenefitCard(
                     // Status indicator
                     if (!benefit.isActive) {
                         Text(
-                            text = "Expired",
+                            text = context.getString(R.string.expired),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.error
                         )
@@ -687,56 +687,45 @@ fun BenefitCard(
             
             Spacer(modifier = Modifier.height(if (isCompact) 12.dp else 16.dp))
             
-            // Benefits description
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-                )
-            ) {
-                Column(
-                    modifier = Modifier.padding(if (isCompact) 8.dp else 12.dp)
-                ) {
-                        Text(
-                            text = context.getString(R.string.current_benefits),
-                            style = if (isCompact) MaterialTheme.typography.labelLarge else getResponsiveTitleTypography(),
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = benefit.description,
-                            style = getResponsiveBodyTypography()
-                        )
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(if (isCompact) 8.dp else 12.dp))
-            
-            // Benefit details in a column layout
+            // Benefit details section with header
             Column(
-                verticalArrangement = Arrangement.spacedBy(if (isCompact) 4.dp else 8.dp)
+                verticalArrangement = Arrangement.spacedBy(if (isCompact) 8.dp else 12.dp)
             ) {
-                listOfNotNull(
-                    if (benefit.freeEntry) context.getString(R.string.free_entry) else null,
-                    if (benefit.friendInvitation) context.getString(R.string.friend_invitation) else null,
-                    if (benefit.drinkTokens > 0) context.getString(R.string.drink_tokens, benefit.drinkTokens) else null,
-                    if (benefit.barDiscount > 0) context.getString(R.string.bar_discount, benefit.barDiscount) else null,
-                    if (benefit.extraordinaryBenefits) context.getString(R.string.extraordinary_benefits) else null
-                ).forEach { benefitText ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(vertical = if (isCompact) 1.dp else 2.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.CheckCircle,
-                            contentDescription = null,
-                            modifier = Modifier.size(if (isCompact) 14.dp else 16.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.width(if (isCompact) 6.dp else 8.dp))
-                        Text(
-                            text = benefitText,
-                            style = if (isCompact) MaterialTheme.typography.labelSmall else MaterialTheme.typography.bodySmall
-                        )
+                // Section header
+                Text(
+                    text = context.getString(R.string.benefit_details),
+                    style = if (isCompact) MaterialTheme.typography.labelLarge else getResponsiveTitleTypography(),
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                
+                // Benefit details list
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(if (isCompact) 4.dp else 8.dp)
+                ) {
+                    listOfNotNull(
+                        if (benefit.freeEntry) context.getString(R.string.free_entry) else null,
+                        if (benefit.friendInvitation) context.getString(R.string.friend_invitation) else null,
+                        if (benefit.drinkTokens > 0) context.getString(R.string.drink_tokens, benefit.drinkTokens) else null,
+                        if (benefit.barDiscount > 0) context.getString(R.string.bar_discount, benefit.barDiscount) else null,
+                        if (benefit.extraordinaryBenefits) context.getString(R.string.extraordinary_benefits) else null
+                    ).forEach { benefitText ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(vertical = if (isCompact) 1.dp else 2.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                modifier = Modifier.size(if (isCompact) 14.dp else 16.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.width(if (isCompact) 6.dp else 8.dp))
+                            Text(
+                                text = benefitText,
+                                style = if (isCompact) MaterialTheme.typography.labelSmall else MaterialTheme.typography.bodySmall
+                            )
+                        }
                     }
                 }
             }

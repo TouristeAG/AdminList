@@ -179,7 +179,8 @@ fun SyncErrorDialog(
     onDontTellTodayChanged: (Boolean) -> Unit = {},
     // New parameters for retry flow
     isSyncing: Boolean = false,
-    animationsEnabled: Boolean = true
+    animationsEnabled: Boolean = true,
+    wasDeviceSleeping: Boolean = false
 ) {
     var dontTellToday by remember { mutableStateOf(false) }
     var dialogState by remember { mutableStateOf(SyncDialogState.ERROR) }
@@ -308,6 +309,28 @@ fun SyncErrorDialog(
                                         fontWeight = FontWeight.SemiBold,
                                         color = MaterialTheme.colorScheme.onErrorContainer
                                     )
+                                }
+                            }
+                            
+                            // Special message if device was sleeping
+                            if (wasDeviceSleeping) {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                                    )
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.sync_error_sleep_resume_detail),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                                        )
+                                    }
                                 }
                             }
                             
