@@ -38,6 +38,35 @@ object VolunteerActivityManager {
     }
     
     /**
+     * Gets the number of days since the volunteer's last activity.
+     * 
+     * For volunteers who have worked: returns days since last shift.
+     * For volunteers who have never worked: returns days since last profile modification.
+     * 
+     * This is used for cleanup operations to determine if a volunteer should be deleted
+     * based on inactivity, regardless of whether they have worked or not.
+     * 
+     * @return Number of days since last activity, or null if both lastShiftDate and lastModified are invalid
+     */
+    fun getDaysSinceLastActivity(volunteer: Volunteer): Long? {
+        // Prefer last shift date if the volunteer has worked
+        val daysSinceLastShift = getDaysSinceLastShift(volunteer)
+        if (daysSinceLastShift != null) {
+            return daysSinceLastShift
+        }
+        
+        // For volunteers who never worked, use last profile modification date
+        val lastModified = volunteer.lastModified
+        if (lastModified > 0) {
+            val calendar = Calendar.getInstance()
+            val currentTime = calendar.timeInMillis
+            return (currentTime - lastModified) / (1000 * 60 * 60 * 24) // Convert milliseconds to days
+        }
+        
+        return null
+    }
+    
+    /**
      * Gets a human-readable string describing the volunteer's activity status
      */
     fun getActivityStatusText(volunteer: Volunteer): String {

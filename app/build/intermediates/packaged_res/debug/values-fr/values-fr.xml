@@ -516,7 +516,7 @@
     <string name="sync_interval_hint">À quelle fréquence synchroniser avec Google Sheets (1-60 minutes)</string>
     <string name="sync_interval_label">Intervalle de synchronisation (minutes)</string>
     <string name="sync_not_synced_message">L\'application n\'est plus synchronisée. Veuillez utiliser le bouton de resynchronisation pour mettre à jour vos données.</string>
-    <string name="sync_not_synced_title">⚠️ Application non synchronisée</string>
+    <string name="sync_not_synced_title">Application non synchronisée</string>
     <string name="sync_retrying">Nouvelle tentative de synchronisation…</string>
     <string name="sync_status_configured">Google Sheets est configuré et prêt pour la synchronisation</string>
     <string name="sync_status_dialog_title">Statut de synchronisation</string>

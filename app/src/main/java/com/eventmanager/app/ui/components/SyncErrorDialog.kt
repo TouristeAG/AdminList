@@ -240,19 +240,19 @@ fun SyncErrorDialog(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            // Use warning icon and orange color when device was sleeping
+                            // Use warning icon and tertiary colors when device was sleeping
                             if (wasDeviceSleeping) {
                                 Icon(
                                     Icons.Default.Warning,
                                     contentDescription = null,
-                                    tint = Color(0xFFFF9800), // Orange color
+                                    tint = MaterialTheme.colorScheme.tertiary,
                                     modifier = Modifier.size(28.dp)
                                 )
                                 Text(
                                     stringResource(R.string.sync_not_synced_title),
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFFFF9800) // Orange color
+                                    color = MaterialTheme.colorScheme.tertiary
                                 )
                             } else {
                                 Icon(
@@ -315,7 +315,7 @@ fun SyncErrorDialog(
                                 Card(
                                     modifier = Modifier.fillMaxWidth(),
                                     colors = CardDefaults.cardColors(
-                                        containerColor = Color(0xFFFFF3E0) // Light orange background
+                                        containerColor = MaterialTheme.colorScheme.tertiaryContainer
                                     )
                                 ) {
                                     Column(
@@ -325,7 +325,7 @@ fun SyncErrorDialog(
                                             text = stringResource(R.string.sync_not_synced_message),
                                             style = MaterialTheme.typography.bodyMedium,
                                             fontWeight = FontWeight.SemiBold,
-                                            color = Color(0xFFE65100) // Dark orange text
+                                            color = MaterialTheme.colorScheme.onTertiaryContainer
                                         )
                                     }
                                 }
