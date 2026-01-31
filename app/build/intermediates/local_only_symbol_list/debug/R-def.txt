@@ -558,6 +558,8 @@ string sync_error_volunteer_sync_failed
 string sync_error_what_to_do
 string sync_interval_hint
 string sync_interval_label
+string sync_not_synced_message
+string sync_not_synced_title
 string sync_retrying
 string sync_status_configured
 string sync_status_dialog_title
