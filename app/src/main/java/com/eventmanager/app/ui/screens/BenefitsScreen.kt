@@ -74,7 +74,7 @@ fun BenefitsScreen(
                 status.rank?.name == filter
             } ?: true
             matchesSearch && matchesFilter
-        }
+        }.sortedBy { (volunteer, _) -> volunteer.name.lowercase() }
     }
     
     // Memoize statistics to avoid recounting on every recomposition (used in all scrollBehavior branches)

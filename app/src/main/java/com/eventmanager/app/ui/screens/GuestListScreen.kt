@@ -69,7 +69,7 @@ fun GuestListScreen(
     // Filter guests with proper dependency tracking on all inputs
     // Note: derivedStateOf only tracks Compose State objects, not function parameters like 'guests'
     // So we must include 'guests' as a key to remember() to re-filter when sync updates data
-    val filteredGuests = remember(guests, selectedVenueName, searchText, selectedFilter) {
+    val filteredGuests = remember(guests, selectedVenueName, searchText, selectedFilter, volunteersMap) {
         val lowerSearchText = searchText.lowercase()
         guests.filter { guest ->
             val matchesVenue = if (selectedVenueName == null) {
@@ -88,6 +88,13 @@ fun GuestListScreen(
                 else -> true
             }
             matchesVenue && matchesSearch && matchesFilter
+        }.sortedBy { guest ->
+            // Sort alphabetically by volunteer name for volunteer benefits, or by guest name for regular guests
+            if (guest.isVolunteerBenefit && guest.volunteerId != null) {
+                volunteersMap[guest.volunteerId]?.name?.lowercase() ?: guest.name.lowercase()
+            } else {
+                guest.name.lowercase()
+            }
         }
     }
     
