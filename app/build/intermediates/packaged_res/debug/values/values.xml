@@ -17,6 +17,7 @@
     <string name="abbreviation">Abbreviation</string>
     <string name="actions">Actions</string>
     <string name="active">Active</string>
+    <string name="active_benefits">Active Benefits</string>
     <string name="active_benefits_multiple_ranks">Active Benefits from Multiple Ranks:</string>
     <string name="active_status">Active</string>
     <string name="active_volunteers">Active Volunteers</string>
@@ -520,6 +521,7 @@
     <string name="sync_error_rate_limit">Rate limit exceeded. Please wait 1-2 minutes before trying again.</string>
     <string name="sync_error_retry">Retry Sync</string>
     <string name="sync_error_sheet_not_found">Sheet not found. Please check the sheet names in your configuration.</string>
+    <string name="sync_error_sleep_resume_detail">📱 Your device was sleeping, so a new sync is needed. Press the resync button at the bottom of the page.</string>
     <string name="sync_error_spreadsheet_not_found">Spreadsheet not found. Please check the spreadsheet ID.</string>
     <string name="sync_error_title">⚠️ Sync Error</string>
     <string name="sync_error_unknown">An unknown error occurred. Please try again later.</string>

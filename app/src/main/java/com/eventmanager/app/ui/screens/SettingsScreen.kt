@@ -523,11 +523,73 @@ private fun GmailAuthSection(
 ) {
     val gmailAuthService = remember { GmailAuthService(context) }
     val coroutineScope = rememberCoroutineScope()
+    val activity = context as? android.app.Activity
     
     var isAccountSelected by remember { mutableStateOf(gmailAuthService.isAccountSelected()) }
     var selectedEmail by remember { mutableStateOf(gmailAuthService.getSelectedAccountEmail()) }
+    var isCredentialReady by remember { mutableStateOf(gmailAuthService.isCredentialReady()) }
     var isLoading by remember { mutableStateOf(false) }
     var needsPermission by remember { mutableStateOf(false) }
+    var needsAndroidTVAuth by remember { mutableStateOf(false) }
+    
+    val androidTVAuthLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        isLoading = false
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            isCredentialReady = gmailAuthService.isCredentialReady()
+            needsAndroidTVAuth = !isCredentialReady
+            if (isCredentialReady) {
+                Toast.makeText(context, "Gmail API connected!", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            Toast.makeText(context, "Gmail authorization cancelled", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    fun tryAndroidTVAuth() {
+        if (activity == null) return
+        
+        isLoading = true
+        coroutineScope.launch {
+            try {
+                val authIntent = gmailAuthService.tryGetTokenForAndroidTV(activity)
+                if (authIntent != null) {
+                    androidTVAuthLauncher.launch(authIntent)
+                } else {
+                    isCredentialReady = gmailAuthService.isCredentialReady()
+                    needsAndroidTVAuth = !isCredentialReady
+                    isLoading = false
+                    if (isCredentialReady) {
+                        Toast.makeText(context, "Gmail API connected!", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                isLoading = false
+                Toast.makeText(context, "Gmail connection error: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+    
+    LaunchedEffect(Unit) {
+        val settingsAccount = settingsManager.getGmailAccount()
+        if (settingsAccount.isNotEmpty() && selectedEmail == null) {
+            selectedEmail = settingsAccount
+            isAccountSelected = true
+        }
+        
+        if (isAccountSelected && !isCredentialReady) {
+            val delay = if (android.os.Build.VERSION.SDK_INT <= android.os.Build.VERSION_CODES.N_MR1) 500L else 0L
+            if (delay > 0) {
+                kotlinx.coroutines.delay(delay)
+            }
+            
+            isCredentialReady = gmailAuthService.refreshCredential()
+            if (!isCredentialReady) {
+                needsAndroidTVAuth = gmailAuthService.needsAndroidTVAuth()
+            }
+        }
+    }
     
     // Account picker launcher
     val accountPickerLauncher = rememberLauncherForActivityResult(
@@ -538,53 +600,45 @@ private fun GmailAuthSection(
         if (result.resultCode == android.app.Activity.RESULT_OK && result.data != null) {
             val accountName = result.data?.getStringExtra(android.accounts.AccountManager.KEY_ACCOUNT_NAME)
             if (accountName != null) {
-                android.util.Log.d("GmailAuth", "Account selected: $accountName")
                 gmailAuthService.setSelectedAccount(accountName)
                 settingsManager.saveGmailAccount(accountName)
                 isAccountSelected = true
                 selectedEmail = accountName
-                needsPermission = true // Will need to request permission on first use
-                Toast.makeText(
-                    context,
-                    context.getString(R.string.email_gmail_auth_success),
-                    Toast.LENGTH_SHORT
-                ).show()
+                isCredentialReady = gmailAuthService.isCredentialReady()
+                
+                if (!isCredentialReady) {
+                    coroutineScope.launch {
+                        kotlinx.coroutines.delay(500)
+                        isCredentialReady = gmailAuthService.refreshCredential()
+                        if (!isCredentialReady) {
+                            needsAndroidTVAuth = true
+                            tryAndroidTVAuth()
+                        }
+                    }
+                }
+                
+                needsPermission = true
+                Toast.makeText(context, context.getString(R.string.email_gmail_auth_success), Toast.LENGTH_SHORT).show()
             }
         } else {
-            android.util.Log.w("GmailAuth", "Account selection cancelled")
-            Toast.makeText(
-                context,
-                context.getString(R.string.email_gmail_auth_error, "Account selection cancelled"),
-                Toast.LENGTH_SHORT
-            ).show()
+            Toast.makeText(context, context.getString(R.string.email_gmail_auth_error, "Account selection cancelled"), Toast.LENGTH_SHORT).show()
         }
     }
     
-    // Permission request launcher
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
+        needsPermission = false
         if (result.resultCode == android.app.Activity.RESULT_OK) {
-            android.util.Log.d("GmailAuth", "Permission granted")
-            needsPermission = false
-            Toast.makeText(
-                context,
-                "Gmail permission granted!",
-                Toast.LENGTH_SHORT
-            ).show()
+            Toast.makeText(context, "Gmail permission granted!", Toast.LENGTH_SHORT).show()
         } else {
-            android.util.Log.w("GmailAuth", "Permission denied")
-            Toast.makeText(
-                context,
-                "Gmail permission denied",
-                Toast.LENGTH_SHORT
-            ).show()
+            Toast.makeText(context, "Gmail permission denied", Toast.LENGTH_SHORT).show()
         }
     }
     
     // Check and request permission after account selection
     LaunchedEffect(needsPermission, isAccountSelected) {
-        if (needsPermission && isAccountSelected) {
+        if (needsPermission && isAccountSelected && isCredentialReady) {
             val authIntent = gmailAuthService.testPermissionAndGetAuthIntent()
             if (authIntent != null) {
                 permissionLauncher.launch(authIntent)
@@ -595,35 +649,97 @@ private fun GmailAuthSection(
     
     if (isAccountSelected && selectedEmail != null) {
         // Account selected state
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = context.getString(R.string.email_gmail_signed_in_as, selectedEmail!!),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-            OutlinedButton(
-                onClick = {
-                    gmailAuthService.clearSelectedAccount()
-                    settingsManager.clearGmailAuth()
-                    isAccountSelected = false
-                    selectedEmail = null
-                    Toast.makeText(
-                        context,
-                        "Account disconnected",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                },
-                enabled = !isLoading
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Icon(Icons.Default.ExitToApp, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(context.getString(R.string.email_gmail_sign_out))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = context.getString(R.string.email_gmail_signed_in_as, selectedEmail!!),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                OutlinedButton(
+                    onClick = {
+                        gmailAuthService.clearSelectedAccount()
+                        settingsManager.clearGmailAuth()
+                        isAccountSelected = false
+                        selectedEmail = null
+                        isCredentialReady = false
+                        needsAndroidTVAuth = false
+                        Toast.makeText(context, "Account disconnected", Toast.LENGTH_SHORT).show()
+                    },
+                    enabled = !isLoading
+                ) {
+                    Icon(Icons.Default.ExitToApp, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(context.getString(R.string.email_gmail_sign_out))
+                }
+            }
+            
+            // Show warning if credential is not ready (Android TV issue)
+            if (!isCredentialReady) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                            shape = MaterialTheme.shapes.small
+                        )
+                        .padding(12.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.Info,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Gmail API Connection Required",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Your Google account is saved. On Android TV and older devices, " +
+                                "an additional authorization step is needed to connect the Gmail API.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(
+                        onClick = { tryAndroidTVAuth() },
+                        enabled = !isLoading && activity != null,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                        Icon(Icons.Default.Email, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Connect Gmail API")
+                    }
+                    if (activity == null) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Cannot connect: Activity context not available",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
             }
         }
     } else {

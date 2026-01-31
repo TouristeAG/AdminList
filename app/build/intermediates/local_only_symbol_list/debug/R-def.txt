@@ -45,6 +45,7 @@ mipmap ic_launcher_violet
 string abbreviation
 string actions
 string active
+string active_benefits
 string active_benefits_multiple_ranks
 string active_status
 string active_volunteers
@@ -548,6 +549,7 @@ string sync_error_permission
 string sync_error_rate_limit
 string sync_error_retry
 string sync_error_sheet_not_found
+string sync_error_sleep_resume_detail
 string sync_error_spreadsheet_not_found
 string sync_error_title
 string sync_error_unknown
