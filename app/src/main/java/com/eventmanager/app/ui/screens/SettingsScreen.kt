@@ -2779,6 +2779,30 @@ fun SettingsScreen(
                 settingsManager.setCategoryMaintenanceExpanded(showMaintenanceSettings)
             }
         ) {
+            // View Active Volunteers Button
+            Button(
+                onClick = { showActiveVolunteersDialog = true },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.People, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(context.getString(R.string.view_active_volunteers))
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // Cleanup Inactive Volunteers Button
+            Button(
+                onClick = { showCleanupDialog = true },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Delete, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(context.getString(R.string.cleanup_inactive_volunteers))
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
             // Check for updates
             Button(
                 onClick = {
@@ -2811,30 +2835,6 @@ fun SettingsScreen(
                     text = context.getString(R.string.change_update_sources),
                     style = MaterialTheme.typography.bodySmall
                 )
-            }
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            // View Active Volunteers Button
-            Button(
-                onClick = { showActiveVolunteersDialog = true },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(Icons.Default.People, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(context.getString(R.string.view_active_volunteers))
-            }
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            // Cleanup Inactive Volunteers Button
-            Button(
-                onClick = { showCleanupDialog = true },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(Icons.Default.Delete, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(context.getString(R.string.cleanup_inactive_volunteers))
             }
             
             Spacer(modifier = Modifier.height(8.dp))

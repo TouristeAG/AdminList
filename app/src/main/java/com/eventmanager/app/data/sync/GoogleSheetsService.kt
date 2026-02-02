@@ -12,6 +12,7 @@ import com.eventmanager.app.data.models.*
 import com.eventmanager.app.data.models.BenefitSystemType
 import com.eventmanager.app.data.models.ManualRewards
 import com.eventmanager.app.data.sync.GoogleSheetsConfig
+import com.eventmanager.app.data.utils.NanoIdGenerator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.IOException
@@ -401,7 +402,7 @@ class GoogleSheetsService(private val context: Context) {
             ApiRateLimitHandler.executeWithRetry(
                 operation = {
                     val values = listOf(
-                        volunteer.id.toString(),
+                        volunteer.id, // NanoID (String) - no conversion needed
                         volunteer.name,
                         volunteer.lastNameAbbreviation,
                         volunteer.email,
@@ -463,7 +464,7 @@ class GoogleSheetsService(private val context: Context) {
             ApiRateLimitHandler.executeWithRetry(
                 operation = {
                     val values = listOf(
-                        volunteer.id.toString(),
+                        volunteer.id, // NanoID (String) - no conversion needed
                         volunteer.name,
                         volunteer.lastNameAbbreviation,
                         volunteer.email,
@@ -521,7 +522,7 @@ class GoogleSheetsService(private val context: Context) {
                 
                 val values = volunteers.map { volunteer ->
                     listOf(
-                        volunteer.id.toString(),
+                        volunteer.id, // NanoID (String) - no conversion needed
                         volunteer.name,
                         volunteer.lastNameAbbreviation,
                         volunteer.email,
@@ -589,12 +590,27 @@ class GoogleSheetsService(private val context: Context) {
                 val values = response.getValues() ?: emptyList()
                 println("Retrieved ${values.size} volunteer rows from sheets")
                 
-                val volunteers = values.mapIndexedNotNull { index, row ->
+                val volunteers = mutableListOf<Volunteer>()
+                val volunteersToFixInSheets = mutableListOf<Pair<Int, String>>() // (rowNumber, newId)
+                
+                values.forEachIndexed { index, row ->
                     if (row.size >= 10) {
                         try {
                             val rowNumber = index + 2 // +2 because we start from row 2 (after header)
+                            // Column A now contains NanoID (String)
+                            // Validate and fix invalid IDs automatically
+                            val rawId = row[0].toString()
+                            val volunteerName = row[1].toString()
+                            val needsFix = NanoIdGenerator.needsRegeneration(rawId)
+                            val validId = NanoIdGenerator.ensureValidNanoId(rawId, volunteerName)
+                            
+                            // If ID was fixed, mark it for update in Google Sheets
+                            if (needsFix) {
+                                volunteersToFixInSheets.add(Pair(rowNumber, validId))
+                            }
+                            
                             val volunteer = Volunteer(
-                                id = row[0].toString().toLongOrNull() ?: 0L,
+                                id = validId, // Validated NanoID (generated if invalid)
                                 sheetsId = rowNumber.toString(),
                                 name = row[1].toString(),
                                 lastNameAbbreviation = row[2].toString(),
@@ -643,16 +659,39 @@ class GoogleSheetsService(private val context: Context) {
                                     System.currentTimeMillis()
                                 }
                             )
-                            volunteer
+                            volunteers.add(volunteer)
                         } catch (e: Exception) {
                             println("Failed to parse volunteer row ${index + 2}: ${e.message}")
                             println("Row data: ${row.joinToString(", ")}")
-                            null
                         }
                     } else {
                         println("Skipping volunteer row ${index + 2} - insufficient columns: ${row.size} (expected 10)")
                         println("Row data: ${row.joinToString(", ")}")
-                        null
+                    }
+                }
+                
+                // Update Google Sheets with fixed IDs immediately
+                if (volunteersToFixInSheets.isNotEmpty()) {
+                    println("📝 Updating ${volunteersToFixInSheets.size} volunteer(s) with fixed NanoIDs in Google Sheets...")
+                    try {
+                        volunteersToFixInSheets.forEach { (rowNumber, newId) ->
+                            try {
+                                // Update only the ID column (Column A) for the specific row
+                                val valueRange = ValueRange().setValues(listOf(listOf(newId)))
+                                sheetsService?.spreadsheets()?.values()?.update(
+                                    settingsManager.getSpreadsheetId(),
+                                    "${settingsManager.getVolunteerSheet()}!A$rowNumber:A$rowNumber",
+                                    valueRange
+                                )?.setValueInputOption("RAW")?.execute()
+                                println("✅ Updated row $rowNumber with new NanoID: $newId")
+                            } catch (e: Exception) {
+                                println("⚠️ Failed to update row $rowNumber with new NanoID: ${e.message}")
+                            }
+                        }
+                        println("✅ Successfully updated ${volunteersToFixInSheets.size} volunteer ID(s) in Google Sheets")
+                    } catch (e: Exception) {
+                        println("⚠️ Failed to update some volunteer IDs in Google Sheets: ${e.message}")
+                        // Don't throw - we still want to return the volunteers with fixed IDs
                     }
                 }
                 
@@ -681,7 +720,7 @@ class GoogleSheetsService(private val context: Context) {
             val sheetsId = ApiRateLimitHandler.executeWithRetry(
                 operation = {
                     val values = listOf(
-                        job.volunteerId.toString(),
+                        job.volunteerId, // NanoID (String) - no conversion needed
                         job.jobTypeName,
                         job.venueName,
                         job.date.toString(),
@@ -734,7 +773,7 @@ class GoogleSheetsService(private val context: Context) {
             ApiRateLimitHandler.executeWithRetry(
                 operation = {
                     val values = listOf(
-                        job.volunteerId.toString(),
+                        job.volunteerId, // NanoID (String) - no conversion needed
                         job.jobTypeName,
                         job.venueName,
                         job.date.toString(),
@@ -783,7 +822,7 @@ class GoogleSheetsService(private val context: Context) {
                 
                 val values = jobs.map { job ->
                     listOf(
-                        job.volunteerId.toString(),
+                        job.volunteerId, // NanoID (String) - no conversion needed
                         job.jobTypeName, // Use the personalized job type name
                         job.venueName,
                         job.date.toString(),
@@ -848,13 +887,18 @@ class GoogleSheetsService(private val context: Context) {
                             val rowNumber = index + 2 // +2 because we start from row 2 (after header)
                             val jobTypeName = row[1].toString()
                             
+                            // Column A now contains volunteer NanoID (String)
+                            // Validate and fix invalid IDs automatically
+                            val rawVolunteerId = row[0].toString()
+                            val validVolunteerId = NanoIdGenerator.ensureValidNanoId(rawVolunteerId, "job_${rowNumber}")
+                            
                             // For custom job types, always use OTHER as the enum value
                             // The actual job type name is stored in jobTypeName field
                             val jobType = JobType.OTHER
                             
                             Job(
                                 sheetsId = rowNumber.toString(),
-                                volunteerId = row[0].toString().toLongOrNull() ?: 0L,
+                                volunteerId = validVolunteerId, // Validated NanoID (generated if invalid)
                                 jobType = jobType,
                                 jobTypeName = jobTypeName, // Store the actual job type name
                                 venueName = row[2].toString(),

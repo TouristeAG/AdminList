@@ -222,21 +222,20 @@ fun QRScannerDialog(
                                 println("🔍 QR Code scanned - ID: '${qrData.id}', Name: '${qrData.name}'")
                                 println("🔍 Available volunteers (${volunteers.size} total):")
                                 volunteers.forEach { v ->
-                                    println("  - ID: ${v.id} (${v.id.toString()}), Name: ${v.name}, Active: ${v.isActive}")
+                                    println("  - ID: ${v.id}, Name: ${v.name}, Active: ${v.isActive}")
                                 }
                                 
-                                // Find volunteer by ID - try multiple approaches
+                                // Find volunteer by NanoID - direct String comparison
                                 val volunteer = volunteers.find { volunteer ->
-                                    val volunteerIdStr = volunteer.id.toString()
                                     val qrIdStr = qrData.id
-                                    println("🔍 Comparing: volunteer ID '$volunteerIdStr' with QR ID '$qrIdStr'")
+                                    println("🔍 Comparing: volunteer ID '${volunteer.id}' with QR ID '$qrIdStr'")
                                     
-                                    // Check for ID 0 issue
-                                    if (volunteer.id == 0L) {
-                                        println("⚠️ Warning: Volunteer '${volunteer.name}' has ID 0 - this might be a sync issue")
+                                    // Check for empty ID issue
+                                    if (volunteer.id.isBlank()) {
+                                        println("⚠️ Warning: Volunteer '${volunteer.name}' has empty ID - this might be a sync issue")
                                     }
                                     
-                                    volunteerIdStr == qrIdStr
+                                    volunteer.id == qrIdStr
                                 }
                                 
                                 if (volunteer != null) {
@@ -245,7 +244,7 @@ fun QRScannerDialog(
                                     onDismiss()
                                 } else {
                                     println("❌ Volunteer not found for ID: '${qrData.id}'")
-                                    println("❌ Available volunteer IDs: ${volunteers.map { it.id.toString() }}")
+                                    println("❌ Available volunteer IDs: ${volunteers.map { it.id }}")
                                     
                                     // Try fallback matching by name
                                     val volunteerByName = volunteers.find { it.name.equals(qrData.name, ignoreCase = true) }
@@ -798,7 +797,7 @@ fun ManualVolunteerInputDialog(
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
                                 onClick = {
-                                    inputText = volunteer.id.toString()
+                                    inputText = volunteer.id
                                 }
                             ) {
                                 Text(
@@ -816,18 +815,21 @@ fun ManualVolunteerInputDialog(
             Button(
                 onClick = {
                     try {
-                        val volunteerId = inputText.trim().toLongOrNull()
-                        if (volunteerId == null) {
-                            errorMessage = "Please enter a valid number"
+                        val volunteerId = inputText.trim()
+                        if (volunteerId.isBlank()) {
+                            errorMessage = "Please enter a valid volunteer ID"
                             return@Button
                         }
                         
+                        // Find volunteer by NanoID (String) or by name fallback
                         val volunteer = volunteers.find { it.id == volunteerId }
+                            ?: volunteers.find { it.name.equals(volunteerId, ignoreCase = true) }
+                        
                         if (volunteer != null) {
                             onVolunteerFound(volunteer)
                             onDismiss()
                         } else {
-                            errorMessage = "Volunteer with ID $volunteerId not found"
+                            errorMessage = "Volunteer with ID '$volunteerId' not found"
                         }
                     } catch (e: Exception) {
                         errorMessage = "Invalid input: ${e.message}"

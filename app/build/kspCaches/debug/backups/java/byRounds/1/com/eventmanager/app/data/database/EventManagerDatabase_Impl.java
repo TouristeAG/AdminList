@@ -54,21 +54,21 @@ public final class EventManagerDatabase_Impl extends EventManagerDatabase {
   @Override
   @NonNull
   protected SupportSQLiteOpenHelper createOpenHelper(@NonNull final DatabaseConfiguration config) {
-    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(18) {
+    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(19) {
       @Override
       public void createAllTables(@NonNull final SupportSQLiteDatabase db) {
-        db.execSQL("CREATE TABLE IF NOT EXISTS `guests` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sheetsId` TEXT, `name` TEXT NOT NULL, `lastNameAbbreviation` TEXT NOT NULL, `invitations` INTEGER NOT NULL, `venueName` TEXT NOT NULL, `notes` TEXT NOT NULL, `isVolunteerBenefit` INTEGER NOT NULL, `volunteerId` INTEGER, `lastModified` INTEGER NOT NULL)");
+        db.execSQL("CREATE TABLE IF NOT EXISTS `guests` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sheetsId` TEXT, `name` TEXT NOT NULL, `lastNameAbbreviation` TEXT NOT NULL, `invitations` INTEGER NOT NULL, `venueName` TEXT NOT NULL, `notes` TEXT NOT NULL, `isVolunteerBenefit` INTEGER NOT NULL, `volunteerId` TEXT, `lastModified` INTEGER NOT NULL)");
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_guests_sheetsId` ON `guests` (`sheetsId`)");
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_guests_volunteerId` ON `guests` (`volunteerId`)");
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_guests_venueName` ON `guests` (`venueName`)");
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_guests_lastModified` ON `guests` (`lastModified`)");
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_guests_isVolunteerBenefit` ON `guests` (`isVolunteerBenefit`)");
-        db.execSQL("CREATE TABLE IF NOT EXISTS `volunteers` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sheetsId` TEXT, `name` TEXT NOT NULL, `lastNameAbbreviation` TEXT NOT NULL, `email` TEXT NOT NULL, `phoneNumber` TEXT NOT NULL, `dateOfBirth` TEXT NOT NULL, `gender` TEXT, `currentRank` TEXT, `isActive` INTEGER NOT NULL, `lastShiftDate` INTEGER, `lastModified` INTEGER NOT NULL)");
+        db.execSQL("CREATE TABLE IF NOT EXISTS `volunteers` (`id` TEXT NOT NULL, `sheetsId` TEXT, `name` TEXT NOT NULL, `lastNameAbbreviation` TEXT NOT NULL, `email` TEXT NOT NULL, `phoneNumber` TEXT NOT NULL, `dateOfBirth` TEXT NOT NULL, `gender` TEXT, `currentRank` TEXT, `isActive` INTEGER NOT NULL, `lastShiftDate` INTEGER, `lastModified` INTEGER NOT NULL, PRIMARY KEY(`id`))");
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_volunteers_sheetsId` ON `volunteers` (`sheetsId`)");
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_volunteers_isActive` ON `volunteers` (`isActive`)");
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_volunteers_currentRank` ON `volunteers` (`currentRank`)");
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_volunteers_lastModified` ON `volunteers` (`lastModified`)");
-        db.execSQL("CREATE TABLE IF NOT EXISTS `jobs` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sheetsId` TEXT, `volunteerId` INTEGER NOT NULL, `jobType` TEXT NOT NULL, `jobTypeName` TEXT NOT NULL, `venueName` TEXT NOT NULL, `date` INTEGER NOT NULL, `shiftTime` TEXT NOT NULL, `notes` TEXT NOT NULL, `lastModified` INTEGER NOT NULL)");
+        db.execSQL("CREATE TABLE IF NOT EXISTS `jobs` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sheetsId` TEXT, `volunteerId` TEXT NOT NULL, `jobType` TEXT NOT NULL, `jobTypeName` TEXT NOT NULL, `venueName` TEXT NOT NULL, `date` INTEGER NOT NULL, `shiftTime` TEXT NOT NULL, `notes` TEXT NOT NULL, `lastModified` INTEGER NOT NULL)");
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_jobs_volunteerId` ON `jobs` (`volunteerId`)");
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_jobs_date` ON `jobs` (`date`)");
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_jobs_venueName` ON `jobs` (`venueName`)");
@@ -89,7 +89,7 @@ public final class EventManagerDatabase_Impl extends EventManagerDatabase {
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_venues_lastModified` ON `venues` (`lastModified`)");
         db.execSQL("CREATE TABLE IF NOT EXISTS `people_counter` (`id` INTEGER NOT NULL, `count` INTEGER NOT NULL, `lastModified` INTEGER NOT NULL, PRIMARY KEY(`id`))");
         db.execSQL("CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)");
-        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '1a6bbbfb3f742296c4aae75083dbd54e')");
+        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '13c27a7ad8741c7ca4794f962c340641')");
       }
 
       @Override
@@ -152,7 +152,7 @@ public final class EventManagerDatabase_Impl extends EventManagerDatabase {
         _columnsGuests.put("venueName", new TableInfo.Column("venueName", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsGuests.put("notes", new TableInfo.Column("notes", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsGuests.put("isVolunteerBenefit", new TableInfo.Column("isVolunteerBenefit", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
-        _columnsGuests.put("volunteerId", new TableInfo.Column("volunteerId", "INTEGER", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsGuests.put("volunteerId", new TableInfo.Column("volunteerId", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsGuests.put("lastModified", new TableInfo.Column("lastModified", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         final HashSet<TableInfo.ForeignKey> _foreignKeysGuests = new HashSet<TableInfo.ForeignKey>(0);
         final HashSet<TableInfo.Index> _indicesGuests = new HashSet<TableInfo.Index>(5);
@@ -169,7 +169,7 @@ public final class EventManagerDatabase_Impl extends EventManagerDatabase {
                   + " Found:\n" + _existingGuests);
         }
         final HashMap<String, TableInfo.Column> _columnsVolunteers = new HashMap<String, TableInfo.Column>(12);
-        _columnsVolunteers.put("id", new TableInfo.Column("id", "INTEGER", true, 1, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsVolunteers.put("id", new TableInfo.Column("id", "TEXT", true, 1, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsVolunteers.put("sheetsId", new TableInfo.Column("sheetsId", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsVolunteers.put("name", new TableInfo.Column("name", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsVolunteers.put("lastNameAbbreviation", new TableInfo.Column("lastNameAbbreviation", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
@@ -197,7 +197,7 @@ public final class EventManagerDatabase_Impl extends EventManagerDatabase {
         final HashMap<String, TableInfo.Column> _columnsJobs = new HashMap<String, TableInfo.Column>(10);
         _columnsJobs.put("id", new TableInfo.Column("id", "INTEGER", true, 1, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsJobs.put("sheetsId", new TableInfo.Column("sheetsId", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
-        _columnsJobs.put("volunteerId", new TableInfo.Column("volunteerId", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsJobs.put("volunteerId", new TableInfo.Column("volunteerId", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsJobs.put("jobType", new TableInfo.Column("jobType", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsJobs.put("jobTypeName", new TableInfo.Column("jobTypeName", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsJobs.put("venueName", new TableInfo.Column("venueName", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
@@ -282,7 +282,7 @@ public final class EventManagerDatabase_Impl extends EventManagerDatabase {
         }
         return new RoomOpenHelper.ValidationResult(true, null);
       }
-    }, "1a6bbbfb3f742296c4aae75083dbd54e", "13fd248b557f54763e766c3cbebdfe84");
+    }, "13c27a7ad8741c7ca4794f962c340641", "52aac28575d806ae228fa71db3f8b62e");
     final SupportSQLiteOpenHelper.Configuration _sqliteConfig = SupportSQLiteOpenHelper.Configuration.builder(config.context).name(config.name).callback(_openCallback).build();
     final SupportSQLiteOpenHelper _helper = config.sqliteOpenHelperFactory.create(_sqliteConfig);
     return _helper;

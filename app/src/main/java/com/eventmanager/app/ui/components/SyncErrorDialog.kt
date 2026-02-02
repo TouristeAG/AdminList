@@ -270,20 +270,11 @@ fun SyncErrorDialog(
                         }
                     }
                     SyncDialogState.RETRYING -> {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                strokeWidth = 2.dp
-                            )
-                            Text(
-                                stringResource(R.string.sync_retrying),
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                        Text(
+                            stringResource(R.string.sync_retrying),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                     SyncDialogState.SUCCESS -> {
                         Row(

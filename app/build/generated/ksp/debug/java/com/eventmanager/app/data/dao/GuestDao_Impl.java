@@ -73,7 +73,7 @@ public final class GuestDao_Impl implements GuestDao {
         if (entity.getVolunteerId() == null) {
           statement.bindNull(9);
         } else {
-          statement.bindLong(9, entity.getVolunteerId());
+          statement.bindString(9, entity.getVolunteerId());
         }
         statement.bindLong(10, entity.getLastModified());
       }
@@ -117,7 +117,7 @@ public final class GuestDao_Impl implements GuestDao {
         if (entity.getVolunteerId() == null) {
           statement.bindNull(9);
         } else {
-          statement.bindLong(9, entity.getVolunteerId());
+          statement.bindString(9, entity.getVolunteerId());
         }
         statement.bindLong(10, entity.getLastModified());
         statement.bindLong(11, entity.getId());
@@ -347,11 +347,11 @@ public final class GuestDao_Impl implements GuestDao {
             final int _tmp;
             _tmp = _cursor.getInt(_cursorIndexOfIsVolunteerBenefit);
             _tmpIsVolunteerBenefit = _tmp != 0;
-            final Long _tmpVolunteerId;
+            final String _tmpVolunteerId;
             if (_cursor.isNull(_cursorIndexOfVolunteerId)) {
               _tmpVolunteerId = null;
             } else {
-              _tmpVolunteerId = _cursor.getLong(_cursorIndexOfVolunteerId);
+              _tmpVolunteerId = _cursor.getString(_cursorIndexOfVolunteerId);
             }
             final long _tmpLastModified;
             _tmpLastModified = _cursor.getLong(_cursorIndexOfLastModified);
@@ -416,11 +416,11 @@ public final class GuestDao_Impl implements GuestDao {
             final int _tmp;
             _tmp = _cursor.getInt(_cursorIndexOfIsVolunteerBenefit);
             _tmpIsVolunteerBenefit = _tmp != 0;
-            final Long _tmpVolunteerId;
+            final String _tmpVolunteerId;
             if (_cursor.isNull(_cursorIndexOfVolunteerId)) {
               _tmpVolunteerId = null;
             } else {
-              _tmpVolunteerId = _cursor.getLong(_cursorIndexOfVolunteerId);
+              _tmpVolunteerId = _cursor.getString(_cursorIndexOfVolunteerId);
             }
             final long _tmpLastModified;
             _tmpLastModified = _cursor.getLong(_cursorIndexOfLastModified);
@@ -487,11 +487,11 @@ public final class GuestDao_Impl implements GuestDao {
             final int _tmp;
             _tmp = _cursor.getInt(_cursorIndexOfIsVolunteerBenefit);
             _tmpIsVolunteerBenefit = _tmp != 0;
-            final Long _tmpVolunteerId;
+            final String _tmpVolunteerId;
             if (_cursor.isNull(_cursorIndexOfVolunteerId)) {
               _tmpVolunteerId = null;
             } else {
-              _tmpVolunteerId = _cursor.getLong(_cursorIndexOfVolunteerId);
+              _tmpVolunteerId = _cursor.getString(_cursorIndexOfVolunteerId);
             }
             final long _tmpLastModified;
             _tmpLastModified = _cursor.getLong(_cursorIndexOfLastModified);
@@ -557,11 +557,11 @@ public final class GuestDao_Impl implements GuestDao {
             final int _tmp;
             _tmp = _cursor.getInt(_cursorIndexOfIsVolunteerBenefit);
             _tmpIsVolunteerBenefit = _tmp != 0;
-            final Long _tmpVolunteerId;
+            final String _tmpVolunteerId;
             if (_cursor.isNull(_cursorIndexOfVolunteerId)) {
               _tmpVolunteerId = null;
             } else {
-              _tmpVolunteerId = _cursor.getLong(_cursorIndexOfVolunteerId);
+              _tmpVolunteerId = _cursor.getString(_cursorIndexOfVolunteerId);
             }
             final long _tmpLastModified;
             _tmpLastModified = _cursor.getLong(_cursorIndexOfLastModified);
@@ -623,11 +623,11 @@ public final class GuestDao_Impl implements GuestDao {
             final int _tmp;
             _tmp = _cursor.getInt(_cursorIndexOfIsVolunteerBenefit);
             _tmpIsVolunteerBenefit = _tmp != 0;
-            final Long _tmpVolunteerId;
+            final String _tmpVolunteerId;
             if (_cursor.isNull(_cursorIndexOfVolunteerId)) {
               _tmpVolunteerId = null;
             } else {
-              _tmpVolunteerId = _cursor.getLong(_cursorIndexOfVolunteerId);
+              _tmpVolunteerId = _cursor.getString(_cursorIndexOfVolunteerId);
             }
             final long _tmpLastModified;
             _tmpLastModified = _cursor.getLong(_cursorIndexOfLastModified);
@@ -644,12 +644,12 @@ public final class GuestDao_Impl implements GuestDao {
   }
 
   @Override
-  public Object getVolunteerBenefitGuest(final long volunteerId,
+  public Object getVolunteerBenefitGuest(final String volunteerId,
       final Continuation<? super Guest> $completion) {
     final String _sql = "SELECT * FROM guests WHERE isVolunteerBenefit = 1 AND volunteerId = ?";
     final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, 1);
     int _argIndex = 1;
-    _statement.bindLong(_argIndex, volunteerId);
+    _statement.bindString(_argIndex, volunteerId);
     final CancellationSignal _cancellationSignal = DBUtil.createCancellationSignal();
     return CoroutinesRoom.execute(__db, false, _cancellationSignal, new Callable<Guest>() {
       @Override
@@ -691,11 +691,11 @@ public final class GuestDao_Impl implements GuestDao {
             final int _tmp;
             _tmp = _cursor.getInt(_cursorIndexOfIsVolunteerBenefit);
             _tmpIsVolunteerBenefit = _tmp != 0;
-            final Long _tmpVolunteerId;
+            final String _tmpVolunteerId;
             if (_cursor.isNull(_cursorIndexOfVolunteerId)) {
               _tmpVolunteerId = null;
             } else {
-              _tmpVolunteerId = _cursor.getLong(_cursorIndexOfVolunteerId);
+              _tmpVolunteerId = _cursor.getString(_cursorIndexOfVolunteerId);
             }
             final long _tmpLastModified;
             _tmpLastModified = _cursor.getLong(_cursorIndexOfLastModified);
@@ -760,11 +760,11 @@ public final class GuestDao_Impl implements GuestDao {
             final int _tmp;
             _tmp = _cursor.getInt(_cursorIndexOfIsVolunteerBenefit);
             _tmpIsVolunteerBenefit = _tmp != 0;
-            final Long _tmpVolunteerId;
+            final String _tmpVolunteerId;
             if (_cursor.isNull(_cursorIndexOfVolunteerId)) {
               _tmpVolunteerId = null;
             } else {
-              _tmpVolunteerId = _cursor.getLong(_cursorIndexOfVolunteerId);
+              _tmpVolunteerId = _cursor.getString(_cursorIndexOfVolunteerId);
             }
             final long _tmpLastModified;
             _tmpLastModified = _cursor.getLong(_cursorIndexOfLastModified);
@@ -828,11 +828,11 @@ public final class GuestDao_Impl implements GuestDao {
             final int _tmp;
             _tmp = _cursor.getInt(_cursorIndexOfIsVolunteerBenefit);
             _tmpIsVolunteerBenefit = _tmp != 0;
-            final Long _tmpVolunteerId;
+            final String _tmpVolunteerId;
             if (_cursor.isNull(_cursorIndexOfVolunteerId)) {
               _tmpVolunteerId = null;
             } else {
-              _tmpVolunteerId = _cursor.getLong(_cursorIndexOfVolunteerId);
+              _tmpVolunteerId = _cursor.getString(_cursorIndexOfVolunteerId);
             }
             final long _tmpLastModified;
             _tmpLastModified = _cursor.getLong(_cursorIndexOfLastModified);

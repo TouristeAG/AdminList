@@ -779,7 +779,7 @@ fun GuestListScreen(
 @Composable
 fun GuestCard(
     guest: Guest,
-    volunteersMap: Map<Long, Volunteer>,
+    volunteersMap: Map<String, Volunteer>,
     venues: List<VenueEntity>,
     @Suppress("UNUSED_PARAMETER") onDelete: () -> Unit,
     modifier: Modifier = Modifier,

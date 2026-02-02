@@ -68,7 +68,7 @@ public final class JobDao_Impl implements JobDao {
         } else {
           statement.bindString(2, entity.getSheetsId());
         }
-        statement.bindLong(3, entity.getVolunteerId());
+        statement.bindString(3, entity.getVolunteerId());
         final String _tmp = __converters.fromJobType(entity.getJobType());
         statement.bindString(4, _tmp);
         statement.bindString(5, entity.getJobTypeName());
@@ -109,7 +109,7 @@ public final class JobDao_Impl implements JobDao {
         } else {
           statement.bindString(2, entity.getSheetsId());
         }
-        statement.bindLong(3, entity.getVolunteerId());
+        statement.bindString(3, entity.getVolunteerId());
         final String _tmp = __converters.fromJobType(entity.getJobType());
         statement.bindString(4, _tmp);
         statement.bindString(5, entity.getJobTypeName());
@@ -328,8 +328,8 @@ public final class JobDao_Impl implements JobDao {
             } else {
               _tmpSheetsId = _cursor.getString(_cursorIndexOfSheetsId);
             }
-            final long _tmpVolunteerId;
-            _tmpVolunteerId = _cursor.getLong(_cursorIndexOfVolunteerId);
+            final String _tmpVolunteerId;
+            _tmpVolunteerId = _cursor.getString(_cursorIndexOfVolunteerId);
             final JobType _tmpJobType;
             final String _tmp;
             _tmp = _cursor.getString(_cursorIndexOfJobType);
@@ -365,11 +365,11 @@ public final class JobDao_Impl implements JobDao {
   }
 
   @Override
-  public Flow<List<Job>> getJobsByVolunteer(final long volunteerId) {
+  public Flow<List<Job>> getJobsByVolunteer(final String volunteerId) {
     final String _sql = "SELECT * FROM jobs WHERE volunteerId = ? ORDER BY date DESC";
     final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, 1);
     int _argIndex = 1;
-    _statement.bindLong(_argIndex, volunteerId);
+    _statement.bindString(_argIndex, volunteerId);
     return CoroutinesRoom.createFlow(__db, false, new String[] {"jobs"}, new Callable<List<Job>>() {
       @Override
       @NonNull
@@ -397,8 +397,8 @@ public final class JobDao_Impl implements JobDao {
             } else {
               _tmpSheetsId = _cursor.getString(_cursorIndexOfSheetsId);
             }
-            final long _tmpVolunteerId;
-            _tmpVolunteerId = _cursor.getLong(_cursorIndexOfVolunteerId);
+            final String _tmpVolunteerId;
+            _tmpVolunteerId = _cursor.getString(_cursorIndexOfVolunteerId);
             final JobType _tmpJobType;
             final String _tmp;
             _tmp = _cursor.getString(_cursorIndexOfJobType);
@@ -466,8 +466,8 @@ public final class JobDao_Impl implements JobDao {
             } else {
               _tmpSheetsId = _cursor.getString(_cursorIndexOfSheetsId);
             }
-            final long _tmpVolunteerId;
-            _tmpVolunteerId = _cursor.getLong(_cursorIndexOfVolunteerId);
+            final String _tmpVolunteerId;
+            _tmpVolunteerId = _cursor.getString(_cursorIndexOfVolunteerId);
             final JobType _tmpJobType;
             final String _tmp;
             _tmp = _cursor.getString(_cursorIndexOfJobType);
@@ -535,8 +535,8 @@ public final class JobDao_Impl implements JobDao {
             } else {
               _tmpSheetsId = _cursor.getString(_cursorIndexOfSheetsId);
             }
-            final long _tmpVolunteerId;
-            _tmpVolunteerId = _cursor.getLong(_cursorIndexOfVolunteerId);
+            final String _tmpVolunteerId;
+            _tmpVolunteerId = _cursor.getString(_cursorIndexOfVolunteerId);
             final JobType _tmpJobType;
             final String _tmp;
             _tmp = _cursor.getString(_cursorIndexOfJobType);
@@ -603,8 +603,8 @@ public final class JobDao_Impl implements JobDao {
             } else {
               _tmpSheetsId = _cursor.getString(_cursorIndexOfSheetsId);
             }
-            final long _tmpVolunteerId;
-            _tmpVolunteerId = _cursor.getLong(_cursorIndexOfVolunteerId);
+            final String _tmpVolunteerId;
+            _tmpVolunteerId = _cursor.getString(_cursorIndexOfVolunteerId);
             final JobType _tmpJobType;
             final String _tmp;
             _tmp = _cursor.getString(_cursorIndexOfJobType);
@@ -674,8 +674,8 @@ public final class JobDao_Impl implements JobDao {
             } else {
               _tmpSheetsId = _cursor.getString(_cursorIndexOfSheetsId);
             }
-            final long _tmpVolunteerId;
-            _tmpVolunteerId = _cursor.getLong(_cursorIndexOfVolunteerId);
+            final String _tmpVolunteerId;
+            _tmpVolunteerId = _cursor.getString(_cursorIndexOfVolunteerId);
             final JobType _tmpJobType;
             final String _tmp;
             _tmp = _cursor.getString(_cursorIndexOfJobType);
@@ -740,8 +740,8 @@ public final class JobDao_Impl implements JobDao {
             } else {
               _tmpSheetsId = _cursor.getString(_cursorIndexOfSheetsId);
             }
-            final long _tmpVolunteerId;
-            _tmpVolunteerId = _cursor.getLong(_cursorIndexOfVolunteerId);
+            final String _tmpVolunteerId;
+            _tmpVolunteerId = _cursor.getString(_cursorIndexOfVolunteerId);
             final JobType _tmpJobType;
             final String _tmp;
             _tmp = _cursor.getString(_cursorIndexOfJobType);

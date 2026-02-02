@@ -30,6 +30,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.eventmanager.app.ui.components.VolunteerDetailPanel
 import com.eventmanager.app.ui.components.BirthdayDatePicker
+import com.eventmanager.app.ui.components.DeleteVolunteerDialog
 import com.eventmanager.app.data.models.*
 import com.eventmanager.app.data.utils.VolunteerActivityManager
 import com.eventmanager.app.ui.components.SearchBarWithFilter
@@ -47,7 +48,7 @@ fun VolunteerScreen(
     venues: List<VenueEntity>,
     onAddVolunteer: (Volunteer) -> Unit,
     onUpdateVolunteer: (Volunteer) -> Unit,
-    onDeleteVolunteer: (Volunteer) -> Unit,
+    onDeleteVolunteer: (Volunteer, Boolean) -> Unit,
     jobTypeConfigs: List<JobTypeConfig> = emptyList(),
     scrollBehavior: String = SettingsManager.FULL_SCROLL
 ) {
@@ -55,6 +56,7 @@ fun VolunteerScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf<Volunteer?>(null) }
     var showDetailPanel by remember { mutableStateOf<Volunteer?>(null) }
+    var showDeleteDialog by remember { mutableStateOf<Volunteer?>(null) }
     var searchText by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf<String?>(null) }
 
@@ -285,11 +287,28 @@ fun VolunteerScreen(
                 },
                 onDelete = { volunteer ->
                     showDetailPanel = null
-                    onDeleteVolunteer(volunteer)
+                    showDeleteDialog = volunteer
                 },
                 onClose = { showDetailPanel = null }
             )
         }
+    }
+    
+    // Delete Volunteer Dialog
+    showDeleteDialog?.let { volunteerToDelete ->
+        val shiftCount = remember(volunteerToDelete.id, volunteerJobs) {
+            volunteerJobs.count { it.volunteerId == volunteerToDelete.id }
+        }
+        
+        DeleteVolunteerDialog(
+            volunteer = volunteerToDelete,
+            shiftCount = shiftCount,
+            onConfirm = { deleteShifts ->
+                onDeleteVolunteer(volunteerToDelete, deleteShifts)
+                showDeleteDialog = null
+            },
+            onDismiss = { showDeleteDialog = null }
+        )
     }
 }
 

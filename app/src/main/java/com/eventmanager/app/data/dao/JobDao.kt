@@ -11,7 +11,7 @@ interface JobDao {
     fun getAllJobs(): Flow<List<Job>>
 
     @Query("SELECT * FROM jobs WHERE volunteerId = :volunteerId ORDER BY date DESC")
-    fun getJobsByVolunteer(volunteerId: Long): Flow<List<Job>>
+    fun getJobsByVolunteer(volunteerId: String): Flow<List<Job>>
 
     @Query("SELECT * FROM jobs WHERE venueName = :venueName ORDER BY date DESC")
     fun getJobsByVenue(venueName: String): Flow<List<Job>>

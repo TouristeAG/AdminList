@@ -102,10 +102,14 @@ object VolunteerActivityManager {
     }
     
     /**
-     * Optimized version that uses a pre-grouped map of jobs by volunteerId
+     * Optimized version that uses a pre-grouped map of jobs by volunteerId (NanoID)
      * This avoids filtering all jobs for each volunteer (O(1) lookup vs O(m) filter)
+     * 
+     * @param volunteer The volunteer to calculate activity for
+     * @param jobsByVolunteerId Map of volunteer NanoID to list of jobs
+     * @return Updated volunteer with lastShiftDate and isActive calculated
      */
-    fun calculateActivityFromJobsMap(volunteer: Volunteer, jobsByVolunteerId: Map<Long, List<Job>>): Volunteer {
+    fun calculateActivityFromJobsMap(volunteer: Volunteer, jobsByVolunteerId: Map<String, List<Job>>): Volunteer {
         val volunteerJobs = jobsByVolunteerId[volunteer.id] ?: emptyList()
         
         if (volunteerJobs.isEmpty()) {
@@ -120,10 +124,13 @@ object VolunteerActivityManager {
     }
     
     /**
-     * Groups jobs by volunteerId for efficient lookup
+     * Groups jobs by volunteerId (NanoID) for efficient lookup
      * This is a one-time O(m) operation that enables O(1) lookups
+     * 
+     * @param allJobs List of all jobs
+     * @return Map of volunteer NanoID to list of jobs
      */
-    fun groupJobsByVolunteerId(allJobs: List<Job>): Map<Long, List<Job>> {
+    fun groupJobsByVolunteerId(allJobs: List<Job>): Map<String, List<Job>> {
         return allJobs.groupBy { it.volunteerId }
     }
     
@@ -132,7 +139,7 @@ object VolunteerActivityManager {
      * OPTIMIZED: Uses grouped jobs map for O(m + n) instead of O(n*m) complexity
      */
     fun updateVolunteerActivityFromJobs(volunteers: List<Volunteer>, allJobs: List<Job>): List<Volunteer> {
-        // Group jobs by volunteerId once (O(m))
+        // Group jobs by volunteerId (NanoID) once (O(m))
         val jobsByVolunteerId = groupJobsByVolunteerId(allJobs)
         
         // Process each volunteer with O(1) lookup (O(n))

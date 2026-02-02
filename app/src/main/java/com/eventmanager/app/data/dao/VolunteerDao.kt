@@ -17,16 +17,16 @@ interface VolunteerDao {
     fun getInactiveVolunteers(): Flow<List<Volunteer>>
 
     @Query("SELECT * FROM volunteers WHERE id = :id")
-    suspend fun getVolunteerById(id: Long): Volunteer?
+    suspend fun getVolunteerById(id: String): Volunteer?
 
     @Query("SELECT * FROM volunteers WHERE currentRank = :rank AND isActive = 1")
     fun getVolunteersByRank(rank: VolunteerRank): Flow<List<Volunteer>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertVolunteer(volunteer: Volunteer): Long
+    suspend fun insertVolunteer(volunteer: Volunteer)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertVolunteersAll(volunteers: List<Volunteer>): List<Long>
+    suspend fun insertVolunteersAll(volunteers: List<Volunteer>)
 
     @Update
     suspend fun updateVolunteer(volunteer: Volunteer)
@@ -41,13 +41,13 @@ interface VolunteerDao {
     suspend fun deleteVolunteersAll(volunteers: List<Volunteer>)
 
     @Query("DELETE FROM volunteers WHERE id = :id")
-    suspend fun deleteVolunteerById(id: Long)
+    suspend fun deleteVolunteerById(id: String)
 
     @Query("SELECT * FROM volunteers WHERE lastModified > :timestamp")
     suspend fun getVolunteersModifiedAfter(timestamp: Long): List<Volunteer>
 
     @Query("UPDATE volunteers SET isActive = :isActive WHERE id = :id")
-    suspend fun updateVolunteerStatus(id: Long, isActive: Boolean)
+    suspend fun updateVolunteerStatus(id: String, isActive: Boolean)
     
     @Query("SELECT * FROM volunteers WHERE sheetsId = :sheetsId")
     suspend fun getVolunteerBySheetsId(sheetsId: String): Volunteer?

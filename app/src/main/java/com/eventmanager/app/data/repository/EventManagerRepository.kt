@@ -7,6 +7,7 @@ import com.eventmanager.app.data.dao.VenueDao
 import com.eventmanager.app.data.dao.VolunteerDao
 import com.eventmanager.app.data.dao.CounterDao
 import com.eventmanager.app.data.models.*
+import com.eventmanager.app.data.utils.NanoIdGenerator
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 
@@ -58,39 +59,80 @@ class EventManagerRepository(
     // Volunteer operations
     fun getAllActiveVolunteers(): Flow<List<Volunteer>> = volunteerDao.getAllActiveVolunteers()
     fun getAllVolunteers(): Flow<List<Volunteer>> = volunteerDao.getAllVolunteers()
-    suspend fun getVolunteerById(id: Long): Volunteer? = volunteerDao.getVolunteerById(id)
+    suspend fun getVolunteerById(id: String): Volunteer? = volunteerDao.getVolunteerById(id)
     fun getVolunteersByRank(rank: VolunteerRank): Flow<List<Volunteer>> = volunteerDao.getVolunteersByRank(rank)
-    suspend fun insertVolunteer(volunteer: Volunteer): Long {
+    suspend fun insertVolunteer(volunteer: Volunteer) {
+        // Validate and fix invalid NanoID before insertion
+        // This is the data access boundary - validation is essential here
+        val validatedVolunteer = if (NanoIdGenerator.needsRegeneration(volunteer.id)) {
+            val newId = NanoIdGenerator.ensureValidNanoId(volunteer.id, volunteer.name)
+            println("⚠️ Repository: Fixed invalid NanoID for volunteer '${volunteer.name}': '${volunteer.id}' → '$newId'")
+            volunteer.copy(id = newId)
+        } else {
+            volunteer
+        }
+        
         // During sync, if a volunteer with the same name exists, update them instead of error
-        val existingVolunteer = volunteerDao.getVolunteerByName(volunteer.name)
-        return if (existingVolunteer != null) {
+        val existingVolunteer = volunteerDao.getVolunteerByName(validatedVolunteer.name)
+        if (existingVolunteer != null) {
             // Update existing volunteer with new data while preserving ID
-            val updated = volunteer.copy(
+            val updated = validatedVolunteer.copy(
                 id = existingVolunteer.id,
-                sheetsId = volunteer.sheetsId ?: existingVolunteer.sheetsId
+                sheetsId = validatedVolunteer.sheetsId ?: existingVolunteer.sheetsId
             )
             volunteerDao.updateVolunteer(updated)
-            existingVolunteer.id
         } else {
-            volunteerDao.insertVolunteer(volunteer)
+            volunteerDao.insertVolunteer(validatedVolunteer)
         }
     }
     
     suspend fun updateVolunteer(volunteer: Volunteer) {
-        // Check for duplicate names (excluding current volunteer)
-        val existingVolunteer = volunteerDao.getVolunteerByName(volunteer.name)
-        if (existingVolunteer != null && existingVolunteer.id != volunteer.id) {
-            throw IllegalArgumentException("A volunteer with the name '${volunteer.name}' already exists")
+        // Validate and fix invalid NanoID before update
+        val validatedVolunteer = if (NanoIdGenerator.needsRegeneration(volunteer.id)) {
+            val newId = NanoIdGenerator.ensureValidNanoId(volunteer.id, volunteer.name)
+            println("⚠️ Repository: Fixed invalid NanoID for volunteer '${volunteer.name}': '${volunteer.id}' → '$newId'")
+            volunteer.copy(id = newId)
+        } else {
+            volunteer
         }
-        volunteerDao.updateVolunteer(volunteer)
+        
+        // Check for duplicate names (excluding current volunteer)
+        val existingVolunteer = volunteerDao.getVolunteerByName(validatedVolunteer.name)
+        if (existingVolunteer != null && existingVolunteer.id != validatedVolunteer.id) {
+            throw IllegalArgumentException("A volunteer with the name '${validatedVolunteer.name}' already exists")
+        }
+        volunteerDao.updateVolunteer(validatedVolunteer)
     }
     
     suspend fun deleteVolunteer(volunteer: Volunteer) = volunteerDao.deleteVolunteer(volunteer)
-    suspend fun updateVolunteerStatus(id: Long, isActive: Boolean) = volunteerDao.updateVolunteerStatus(id, isActive)
+    suspend fun updateVolunteerStatus(id: String, isActive: Boolean) = volunteerDao.updateVolunteerStatus(id, isActive)
 
     // Batch volunteer operations for optimized sync
-    suspend fun insertVolunteersAll(volunteers: List<Volunteer>): List<Long> = volunteerDao.insertVolunteersAll(volunteers)
-    suspend fun updateVolunteersAll(volunteers: List<Volunteer>) = volunteerDao.updateVolunteersAll(volunteers)
+    suspend fun insertVolunteersAll(volunteers: List<Volunteer>) {
+        // Validate and fix all invalid NanoIDs before batch insertion
+        val validatedVolunteers = volunteers.map { volunteer ->
+            if (NanoIdGenerator.needsRegeneration(volunteer.id)) {
+                val newId = NanoIdGenerator.ensureValidNanoId(volunteer.id, volunteer.name)
+                volunteer.copy(id = newId)
+            } else {
+                volunteer
+            }
+        }
+        volunteerDao.insertVolunteersAll(validatedVolunteers)
+    }
+    
+    suspend fun updateVolunteersAll(volunteers: List<Volunteer>) {
+        // Validate and fix all invalid NanoIDs before batch update
+        val validatedVolunteers = volunteers.map { volunteer ->
+            if (NanoIdGenerator.needsRegeneration(volunteer.id)) {
+                val newId = NanoIdGenerator.ensureValidNanoId(volunteer.id, volunteer.name)
+                volunteer.copy(id = newId)
+            } else {
+                volunteer
+            }
+        }
+        volunteerDao.updateVolunteersAll(validatedVolunteers)
+    }
     suspend fun deleteVolunteersAll(volunteers: List<Volunteer>) = volunteerDao.deleteVolunteersAll(volunteers)
 
     // Job operations
@@ -130,7 +172,7 @@ class EventManagerRepository(
     suspend fun deleteVenuesAll(venues: List<VenueEntity>) = venueDao.deleteVenuesAll(venues)
 
     // Get volunteer benefit status with time-based calculations
-    suspend fun getVolunteerBenefitStatus(volunteerId: Long): VolunteerBenefitStatus? {
+    suspend fun getVolunteerBenefitStatus(volunteerId: String): VolunteerBenefitStatus? {
         val volunteer = getVolunteerById(volunteerId) ?: return null
         val jobs = getAllJobs().first()
         val jobTypeConfigs = getAllActiveJobTypeConfigs().first()
@@ -148,7 +190,8 @@ class EventManagerRepository(
         val ctx = BenefitCalculator.CalculationContext(jobTypeConfigs)
         
         // OPTIMIZED: group jobs once to avoid O(volunteers * jobs) filtering
-        val jobsByVolunteerId = jobs.groupBy { it.volunteerId }
+        // Uses String (NanoID) as the key type
+        val jobsByVolunteerId: Map<String, List<Job>> = jobs.groupBy { it.volunteerId }
         
         return volunteers.map { volunteer ->
             val volunteerJobs = jobsByVolunteerId[volunteer.id] ?: emptyList()
