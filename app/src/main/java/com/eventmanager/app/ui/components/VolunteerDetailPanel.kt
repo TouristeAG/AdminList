@@ -24,6 +24,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.annotation.StringRes
 import android.content.Intent
 import android.graphics.Bitmap
@@ -989,6 +991,13 @@ private fun PersonalInformationSection(
                 value = volunteer.phoneNumber,
                 isPhone = isPhone
             )
+            
+            // NanoID - unique identifier with copy functionality
+            NanoIdInfoRow(
+                label = "NanoID",
+                value = volunteer.id,
+                isPhone = isPhone
+            )
         }
     }
 }
@@ -1381,6 +1390,66 @@ private fun InfoRow(
             modifier = Modifier.weight(1f),
             textAlign = TextAlign.End
         )
+    }
+}
+
+@Composable
+private fun NanoIdInfoRow(
+    label: String,
+    value: String,
+    isPhone: Boolean
+) {
+    val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    var showCopiedToast by remember { mutableStateOf(false) }
+    
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "$label:",
+            style = if (isPhone) getPhonePortraitBodyTypography() else getResponsiveBodyTypography(),
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        
+        Row(
+            modifier = Modifier.weight(1f),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = value,
+                style = if (isPhone) getPhonePortraitBodyTypography() else getResponsiveBodyTypography(),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.End,
+                modifier = Modifier.padding(end = 8.dp)
+            )
+            
+            IconButton(
+                onClick = {
+                    clipboardManager.setText(AnnotatedString(value))
+                    showCopiedToast = true
+                    Toast.makeText(context, "NanoID copied to clipboard", Toast.LENGTH_SHORT).show()
+                    // Hide check icon after 2 seconds
+                    coroutineScope.launch {
+                        kotlinx.coroutines.delay(2000)
+                        showCopiedToast = false
+                    }
+                },
+                modifier = Modifier.size(if (isPhone) 32.dp else 40.dp)
+            ) {
+                Icon(
+                    imageVector = if (showCopiedToast) Icons.Default.Check else Icons.Default.ContentCopy,
+                    contentDescription = if (showCopiedToast) "Copied" else "Copy NanoID",
+                    tint = if (showCopiedToast) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(if (isPhone) 16.dp else 20.dp)
+                )
+            }
+        }
     }
 }
 

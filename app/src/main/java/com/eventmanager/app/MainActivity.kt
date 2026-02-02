@@ -1917,10 +1917,10 @@ fun VolunteerScreenWithViewModel(viewModel: EventManagerViewModel) {
                 }
             } 
         },
-        onDeleteVolunteer = { 
+        onDeleteVolunteer = { volunteer, deleteShifts ->
             coroutineScope.launch { 
                 try {
-                    viewModel.deleteVolunteer(it)
+                    viewModel.deleteVolunteer(volunteer, deleteShifts)
                 } catch (e: Exception) {
                     println("Volunteer deletion failed: ${e.message}")
                 }

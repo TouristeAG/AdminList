@@ -23,7 +23,7 @@ import com.eventmanager.app.data.models.CounterData
 
 @Database(
     entities = [Guest::class, Volunteer::class, Job::class, JobTypeConfig::class, VenueEntity::class, CounterData::class],
-    version = 18,
+    version = 19,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -657,6 +657,178 @@ abstract class EventManagerDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * MIGRATION 18→19: Convert Volunteer IDs from auto-incrementing Long to NanoID (String)
+         * 
+         * This migration:
+         * 1. Creates new volunteers table with String primary key
+         * 2. Generates NanoIDs for existing volunteers and maps old Long IDs to new NanoIDs
+         * 3. Creates new jobs table with String volunteerId
+         * 4. Creates new guests table with String volunteerId
+         * 5. Migrates data while preserving relationships using the ID mapping
+         * 6. Drops old tables and recreates indices
+         */
+        private val MIGRATION_18_19 = object : Migration(18, 19) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                try {
+                    println("Starting migration 18→19: Converting volunteer IDs from Long to NanoID (String)")
+                    
+                    // Step 1: Create a mapping table to store old Long ID → new NanoID mapping
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS volunteer_id_mapping (
+                            old_id INTEGER PRIMARY KEY,
+                            new_id TEXT NOT NULL
+                        )
+                    """)
+                    
+                    // Step 2: Read all existing volunteers and generate NanoIDs for each
+                    val cursor = db.query("SELECT id FROM volunteers")
+                    val idMappings = mutableMapOf<Long, String>()
+                    
+                    while (cursor.moveToNext()) {
+                        val oldId = cursor.getLong(0)
+                        // Generate a NanoID for each volunteer
+                        val newId = generateNanoId()
+                        idMappings[oldId] = newId
+                        db.execSQL("INSERT INTO volunteer_id_mapping (old_id, new_id) VALUES ($oldId, '$newId')")
+                    }
+                    cursor.close()
+                    
+                    println("Generated ${idMappings.size} NanoIDs for existing volunteers")
+                    
+                    // Step 3: Create new volunteers table with TEXT primary key
+                    db.execSQL("""
+                        CREATE TABLE volunteers_new (
+                            id TEXT PRIMARY KEY NOT NULL,
+                            sheetsId TEXT,
+                            name TEXT NOT NULL,
+                            lastNameAbbreviation TEXT NOT NULL,
+                            email TEXT NOT NULL,
+                            phoneNumber TEXT NOT NULL,
+                            dateOfBirth TEXT NOT NULL,
+                            gender TEXT,
+                            currentRank TEXT,
+                            isActive INTEGER NOT NULL,
+                            lastShiftDate INTEGER,
+                            lastModified INTEGER NOT NULL
+                        )
+                    """)
+                    
+                    // Step 4: Migrate volunteers data with new NanoIDs
+                    db.execSQL("""
+                        INSERT INTO volunteers_new (id, sheetsId, name, lastNameAbbreviation, email, phoneNumber, dateOfBirth, gender, currentRank, isActive, lastShiftDate, lastModified)
+                        SELECT m.new_id, v.sheetsId, v.name, v.lastNameAbbreviation, v.email, v.phoneNumber, v.dateOfBirth, v.gender, v.currentRank, v.isActive, v.lastShiftDate, v.lastModified
+                        FROM volunteers v
+                        INNER JOIN volunteer_id_mapping m ON v.id = m.old_id
+                    """)
+                    
+                    // Step 5: Create new jobs table with TEXT volunteerId
+                    db.execSQL("""
+                        CREATE TABLE jobs_new (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                            sheetsId TEXT,
+                            volunteerId TEXT NOT NULL,
+                            jobType TEXT NOT NULL,
+                            jobTypeName TEXT NOT NULL,
+                            venueName TEXT NOT NULL,
+                            date INTEGER NOT NULL,
+                            shiftTime TEXT NOT NULL,
+                            notes TEXT NOT NULL,
+                            lastModified INTEGER NOT NULL
+                        )
+                    """)
+                    
+                    // Step 6: Migrate jobs data with mapped volunteerId
+                    db.execSQL("""
+                        INSERT INTO jobs_new (id, sheetsId, volunteerId, jobType, jobTypeName, venueName, date, shiftTime, notes, lastModified)
+                        SELECT j.id, j.sheetsId, COALESCE(m.new_id, CAST(j.volunteerId AS TEXT)), j.jobType, j.jobTypeName, j.venueName, j.date, j.shiftTime, j.notes, j.lastModified
+                        FROM jobs j
+                        LEFT JOIN volunteer_id_mapping m ON j.volunteerId = m.old_id
+                    """)
+                    
+                    // Step 7: Create new guests table with TEXT volunteerId
+                    db.execSQL("""
+                        CREATE TABLE guests_new (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                            sheetsId TEXT,
+                            name TEXT NOT NULL,
+                            lastNameAbbreviation TEXT NOT NULL,
+                            invitations INTEGER NOT NULL,
+                            venueName TEXT NOT NULL,
+                            notes TEXT NOT NULL,
+                            isVolunteerBenefit INTEGER NOT NULL,
+                            volunteerId TEXT,
+                            lastModified INTEGER NOT NULL
+                        )
+                    """)
+                    
+                    // Step 8: Migrate guests data with mapped volunteerId
+                    db.execSQL("""
+                        INSERT INTO guests_new (id, sheetsId, name, lastNameAbbreviation, invitations, venueName, notes, isVolunteerBenefit, volunteerId, lastModified)
+                        SELECT g.id, g.sheetsId, g.name, g.lastNameAbbreviation, g.invitations, g.venueName, g.notes, g.isVolunteerBenefit, 
+                               CASE WHEN g.volunteerId IS NOT NULL THEN m.new_id ELSE NULL END, g.lastModified
+                        FROM guests g
+                        LEFT JOIN volunteer_id_mapping m ON g.volunteerId = m.old_id
+                    """)
+                    
+                    // Step 9: Drop old tables
+                    db.execSQL("DROP TABLE volunteers")
+                    db.execSQL("DROP TABLE jobs")
+                    db.execSQL("DROP TABLE guests")
+                    db.execSQL("DROP TABLE volunteer_id_mapping")
+                    
+                    // Step 10: Rename new tables
+                    db.execSQL("ALTER TABLE volunteers_new RENAME TO volunteers")
+                    db.execSQL("ALTER TABLE jobs_new RENAME TO jobs")
+                    db.execSQL("ALTER TABLE guests_new RENAME TO guests")
+                    
+                    // Step 11: Recreate all indices for volunteers table
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_volunteers_sheetsId ON volunteers(sheetsId)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_volunteers_isActive ON volunteers(isActive)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_volunteers_currentRank ON volunteers(currentRank)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_volunteers_lastModified ON volunteers(lastModified)")
+                    
+                    // Step 12: Recreate all indices for jobs table
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_jobs_volunteerId ON jobs(volunteerId)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_jobs_date ON jobs(date)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_jobs_venueName ON jobs(venueName)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_jobs_jobTypeName ON jobs(jobTypeName)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_jobs_sheetsId ON jobs(sheetsId)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_jobs_lastModified ON jobs(lastModified)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_jobs_volunteerId_date ON jobs(volunteerId, date)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_jobs_date_shiftTime ON jobs(date, shiftTime)")
+                    
+                    // Step 13: Recreate all indices for guests table
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_guests_sheetsId ON guests(sheetsId)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_guests_volunteerId ON guests(volunteerId)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_guests_venueName ON guests(venueName)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_guests_lastModified ON guests(lastModified)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_guests_isVolunteerBenefit ON guests(isVolunteerBenefit)")
+                    
+                    println("Migration 18→19 completed successfully: Volunteer IDs converted to NanoIDs")
+                    
+                } catch (e: Exception) {
+                    println("Migration 18→19 failed: ${e.message}")
+                    e.printStackTrace()
+                    throw e
+                }
+            }
+            
+            /**
+             * Generate a NanoID-like string for database migration.
+             * Uses a simple implementation since we can't use external libraries in SQLite migration.
+             */
+            private fun generateNanoId(): String {
+                val alphabet = "_-0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                val random = java.security.SecureRandom()
+                val sb = StringBuilder(21)
+                for (i in 0 until 21) {
+                    sb.append(alphabet[random.nextInt(alphabet.length)])
+                }
+                return sb.toString()
+            }
+        }
+
         fun getDatabase(context: Context): EventManagerDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -664,7 +836,7 @@ abstract class EventManagerDatabase : RoomDatabase() {
                     EventManagerDatabase::class.java,
                     "event_manager_database"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19)
                 .fallbackToDestructiveMigration()
                 .build()
                 INSTANCE = instance

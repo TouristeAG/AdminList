@@ -9,7 +9,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.eventmanager.app.data.models.Volunteer
@@ -26,10 +25,12 @@ fun CleanupInactiveVolunteersDialog(
     var showPreview by remember { mutableStateOf(false) }
     
     // Calculate volunteers that would be deleted based on selected years
+    // For volunteers who have worked: check days since last shift
+    // For volunteers who never worked: check days since last profile modification
     val volunteersToDelete = remember(selectedYears) {
         volunteers.filter { volunteer ->
-            val daysSinceLastShift = VolunteerActivityManager.getDaysSinceLastShift(volunteer)
-            daysSinceLastShift != null && daysSinceLastShift >= (selectedYears * 365L)
+            val daysSinceLastActivity = VolunteerActivityManager.getDaysSinceLastActivity(volunteer)
+            daysSinceLastActivity != null && daysSinceLastActivity >= (selectedYears * 365L)
         }
     }
     

@@ -7,6 +7,7 @@ import androidx.room.PrimaryKey
 import androidx.room.TypeConverter
 import androidx.room.TypeConverters
 import kotlinx.parcelize.Parcelize
+import com.eventmanager.app.data.utils.NanoIdGenerator
 
 @Entity(
     tableName = "guests",
@@ -29,7 +30,7 @@ data class Guest(
     val venueName: String, // Store actual venue name for unlimited venue support
     val notes: String = "",
     val isVolunteerBenefit: Boolean = false,
-    val volunteerId: Long? = null, // ID of the volunteer this guest entry represents (for volunteer benefits)
+    val volunteerId: String? = null, // NanoID of the volunteer this guest entry represents (for volunteer benefits)
     val lastModified: Long = System.currentTimeMillis()
 ) : Parcelable
 
@@ -44,8 +45,8 @@ data class Guest(
 )
 @Parcelize
 data class Volunteer(
-    @PrimaryKey(autoGenerate = true)
-    val id: Long = 0,
+    @PrimaryKey
+    val id: String = NanoIdGenerator.generateVolunteerId(), // NanoID generated at object creation
     val sheetsId: String? = null, // Google Sheets row ID for syncing
     val name: String,
     val lastNameAbbreviation: String,
@@ -77,7 +78,7 @@ data class Job(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val sheetsId: String? = null, // Google Sheets row ID for syncing
-    val volunteerId: Long,
+    val volunteerId: String, // NanoID of the volunteer
     val jobType: JobType,
     val jobTypeName: String, // Store the actual job type name for personalized types
     val venueName: String, // Store actual venue name for unlimited venue support
@@ -104,7 +105,7 @@ data class Benefit(
 
 @Parcelize
 data class VolunteerBenefitStatus(
-    val volunteerId: Long,
+    val volunteerId: String, // NanoID of the volunteer
     val rank: VolunteerRank?,
     val benefits: Benefit,
     val activeBenefits: List<Benefit> = emptyList(), // All active benefits from all applicable ranks
@@ -764,6 +765,12 @@ object BenefitCalculator {
      * 
      * OPTIMIZED: Uses pre-computed context and pre-grouped jobs to avoid
      * O(volunteers * jobs) complexity
+     * 
+     * @param volunteers List of volunteers to calculate drinks for
+     * @param jobs List of all jobs
+     * @param jobTypeConfigs List of job type configurations
+     * @param currentTime Current timestamp for calculations
+     * @return Total number of free drinks across all volunteers
      */
     fun calculateTotalFreeDrinks(
         volunteers: List<Volunteer>,
@@ -774,11 +781,11 @@ object BenefitCalculator {
         // OPTIMIZED: Create calculation context once for all volunteers
         val ctx = CalculationContext(jobTypeConfigs, currentTime)
         
-        // OPTIMIZED: Pre-group jobs by volunteer ID once
-        val jobsByVolunteerId = jobs.groupBy { it.volunteerId }
+        // OPTIMIZED: Pre-group jobs by volunteer ID (String/NanoID) once
+        val jobsByVolunteerId: Map<String, List<Job>> = jobs.groupBy { it.volunteerId }
         
         return volunteers.sumOf { volunteer ->
-            // Get pre-filtered jobs for this volunteer
+            // Get pre-filtered jobs for this volunteer using NanoID
             val volunteerJobs = jobsByVolunteerId[volunteer.id] ?: emptyList()
             
             // Calculate benefit status using optimized context

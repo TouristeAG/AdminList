@@ -1689,6 +1689,8 @@ int string sync_error_volunteer_sync_failed 0x7f0e0288
 int string sync_error_what_to_do 0x7f0e0289
 int string sync_interval_hint 0x7f0e028a
 int string sync_interval_label 0x7f0e028b
+int string sync_not_synced_message 0x7f0e0304
+int string sync_not_synced_title 0x7f0e0305
 int string sync_retrying 0x7f0e028c
 int string sync_status_configured 0x7f0e028d
 int string sync_status_dialog_title 0x7f0e028e

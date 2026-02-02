@@ -611,6 +611,8 @@
     <!-- Sync Error Messages -->
     <string name="sync_error_title">⚠️ Sync Error</string>
     <string name="sync_error_occurred">An error occurred during synchronization</string>
+    <string name="sync_not_synced_title">App Not Synced</string>
+    <string name="sync_not_synced_message">The application is no longer synchronized. Please use the resync button to update your data.</string>
     <string name="sync_error_details">Error: %s</string>
     <string name="sync_error_retry">Retry Sync</string>
     <string name="sync_error_dismiss">Dismiss</string>

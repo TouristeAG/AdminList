@@ -643,6 +643,8 @@
     <!-- Sync Error Messages -->
     <string name="sync_error_title">⚠️ Erreur de synchronisation</string>
     <string name="sync_error_occurred">Une erreur s\'est produite pendant la synchronisation</string>
+    <string name="sync_not_synced_title">Application non synchronisée</string>
+    <string name="sync_not_synced_message">L\'application n\'est plus synchronisée. Veuillez utiliser le bouton de resynchronisation pour mettre à jour vos données.</string>
     <string name="sync_error_details">Erreur : %s</string>
     <string name="sync_error_retry">Réessayer la synchronisation</string>
     <string name="sync_error_dismiss">Ignorer</string>

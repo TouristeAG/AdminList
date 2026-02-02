@@ -58,13 +58,13 @@ public final class VolunteerDao_Impl implements VolunteerDao {
       @Override
       @NonNull
       protected String createQuery() {
-        return "INSERT OR REPLACE INTO `volunteers` (`id`,`sheetsId`,`name`,`lastNameAbbreviation`,`email`,`phoneNumber`,`dateOfBirth`,`gender`,`currentRank`,`isActive`,`lastShiftDate`,`lastModified`) VALUES (nullif(?, 0),?,?,?,?,?,?,?,?,?,?,?)";
+        return "INSERT OR REPLACE INTO `volunteers` (`id`,`sheetsId`,`name`,`lastNameAbbreviation`,`email`,`phoneNumber`,`dateOfBirth`,`gender`,`currentRank`,`isActive`,`lastShiftDate`,`lastModified`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)";
       }
 
       @Override
       protected void bind(@NonNull final SupportSQLiteStatement statement,
           @NonNull final Volunteer entity) {
-        statement.bindLong(1, entity.getId());
+        statement.bindString(1, entity.getId());
         if (entity.getSheetsId() == null) {
           statement.bindNull(2);
         } else {
@@ -107,7 +107,7 @@ public final class VolunteerDao_Impl implements VolunteerDao {
       @Override
       protected void bind(@NonNull final SupportSQLiteStatement statement,
           @NonNull final Volunteer entity) {
-        statement.bindLong(1, entity.getId());
+        statement.bindString(1, entity.getId());
       }
     };
     this.__updateAdapterOfVolunteer = new EntityDeletionOrUpdateAdapter<Volunteer>(__db) {
@@ -120,7 +120,7 @@ public final class VolunteerDao_Impl implements VolunteerDao {
       @Override
       protected void bind(@NonNull final SupportSQLiteStatement statement,
           @NonNull final Volunteer entity) {
-        statement.bindLong(1, entity.getId());
+        statement.bindString(1, entity.getId());
         if (entity.getSheetsId() == null) {
           statement.bindNull(2);
         } else {
@@ -151,7 +151,7 @@ public final class VolunteerDao_Impl implements VolunteerDao {
           statement.bindLong(11, entity.getLastShiftDate());
         }
         statement.bindLong(12, entity.getLastModified());
-        statement.bindLong(13, entity.getId());
+        statement.bindString(13, entity.getId());
       }
     };
     this.__preparedStmtOfDeleteVolunteerById = new SharedSQLiteStatement(__db) {
@@ -182,16 +182,16 @@ public final class VolunteerDao_Impl implements VolunteerDao {
 
   @Override
   public Object insertVolunteer(final Volunteer volunteer,
-      final Continuation<? super Long> $completion) {
-    return CoroutinesRoom.execute(__db, true, new Callable<Long>() {
+      final Continuation<? super Unit> $completion) {
+    return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
       @Override
       @NonNull
-      public Long call() throws Exception {
+      public Unit call() throws Exception {
         __db.beginTransaction();
         try {
-          final Long _result = __insertionAdapterOfVolunteer.insertAndReturnId(volunteer);
+          __insertionAdapterOfVolunteer.insert(volunteer);
           __db.setTransactionSuccessful();
-          return _result;
+          return Unit.INSTANCE;
         } finally {
           __db.endTransaction();
         }
@@ -201,16 +201,16 @@ public final class VolunteerDao_Impl implements VolunteerDao {
 
   @Override
   public Object insertVolunteersAll(final List<Volunteer> volunteers,
-      final Continuation<? super List<Long>> $completion) {
-    return CoroutinesRoom.execute(__db, true, new Callable<List<Long>>() {
+      final Continuation<? super Unit> $completion) {
+    return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
       @Override
       @NonNull
-      public List<Long> call() throws Exception {
+      public Unit call() throws Exception {
         __db.beginTransaction();
         try {
-          final List<Long> _result = __insertionAdapterOfVolunteer.insertAndReturnIdsList(volunteers);
+          __insertionAdapterOfVolunteer.insert(volunteers);
           __db.setTransactionSuccessful();
-          return _result;
+          return Unit.INSTANCE;
         } finally {
           __db.endTransaction();
         }
@@ -295,14 +295,14 @@ public final class VolunteerDao_Impl implements VolunteerDao {
   }
 
   @Override
-  public Object deleteVolunteerById(final long id, final Continuation<? super Unit> $completion) {
+  public Object deleteVolunteerById(final String id, final Continuation<? super Unit> $completion) {
     return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
       @Override
       @NonNull
       public Unit call() throws Exception {
         final SupportSQLiteStatement _stmt = __preparedStmtOfDeleteVolunteerById.acquire();
         int _argIndex = 1;
-        _stmt.bindLong(_argIndex, id);
+        _stmt.bindString(_argIndex, id);
         try {
           __db.beginTransaction();
           try {
@@ -320,7 +320,7 @@ public final class VolunteerDao_Impl implements VolunteerDao {
   }
 
   @Override
-  public Object updateVolunteerStatus(final long id, final boolean isActive,
+  public Object updateVolunteerStatus(final String id, final boolean isActive,
       final Continuation<? super Unit> $completion) {
     return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
       @Override
@@ -331,7 +331,7 @@ public final class VolunteerDao_Impl implements VolunteerDao {
         final int _tmp = isActive ? 1 : 0;
         _stmt.bindLong(_argIndex, _tmp);
         _argIndex = 2;
-        _stmt.bindLong(_argIndex, id);
+        _stmt.bindString(_argIndex, id);
         try {
           __db.beginTransaction();
           try {
@@ -396,8 +396,8 @@ public final class VolunteerDao_Impl implements VolunteerDao {
           final List<Volunteer> _result = new ArrayList<Volunteer>(_cursor.getCount());
           while (_cursor.moveToNext()) {
             final Volunteer _item;
-            final long _tmpId;
-            _tmpId = _cursor.getLong(_cursorIndexOfId);
+            final String _tmpId;
+            _tmpId = _cursor.getString(_cursorIndexOfId);
             final String _tmpSheetsId;
             if (_cursor.isNull(_cursorIndexOfSheetsId)) {
               _tmpSheetsId = null;
@@ -483,8 +483,8 @@ public final class VolunteerDao_Impl implements VolunteerDao {
           final List<Volunteer> _result = new ArrayList<Volunteer>(_cursor.getCount());
           while (_cursor.moveToNext()) {
             final Volunteer _item;
-            final long _tmpId;
-            _tmpId = _cursor.getLong(_cursorIndexOfId);
+            final String _tmpId;
+            _tmpId = _cursor.getString(_cursorIndexOfId);
             final String _tmpSheetsId;
             if (_cursor.isNull(_cursorIndexOfSheetsId)) {
               _tmpSheetsId = null;
@@ -570,8 +570,8 @@ public final class VolunteerDao_Impl implements VolunteerDao {
           final List<Volunteer> _result = new ArrayList<Volunteer>(_cursor.getCount());
           while (_cursor.moveToNext()) {
             final Volunteer _item;
-            final long _tmpId;
-            _tmpId = _cursor.getLong(_cursorIndexOfId);
+            final String _tmpId;
+            _tmpId = _cursor.getString(_cursorIndexOfId);
             final String _tmpSheetsId;
             if (_cursor.isNull(_cursorIndexOfSheetsId)) {
               _tmpSheetsId = null;
@@ -633,11 +633,12 @@ public final class VolunteerDao_Impl implements VolunteerDao {
   }
 
   @Override
-  public Object getVolunteerById(final long id, final Continuation<? super Volunteer> $completion) {
+  public Object getVolunteerById(final String id,
+      final Continuation<? super Volunteer> $completion) {
     final String _sql = "SELECT * FROM volunteers WHERE id = ?";
     final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, 1);
     int _argIndex = 1;
-    _statement.bindLong(_argIndex, id);
+    _statement.bindString(_argIndex, id);
     final CancellationSignal _cancellationSignal = DBUtil.createCancellationSignal();
     return CoroutinesRoom.execute(__db, false, _cancellationSignal, new Callable<Volunteer>() {
       @Override
@@ -659,8 +660,8 @@ public final class VolunteerDao_Impl implements VolunteerDao {
           final int _cursorIndexOfLastModified = CursorUtil.getColumnIndexOrThrow(_cursor, "lastModified");
           final Volunteer _result;
           if (_cursor.moveToFirst()) {
-            final long _tmpId;
-            _tmpId = _cursor.getLong(_cursorIndexOfId);
+            final String _tmpId;
+            _tmpId = _cursor.getString(_cursorIndexOfId);
             final String _tmpSheetsId;
             if (_cursor.isNull(_cursorIndexOfSheetsId)) {
               _tmpSheetsId = null;
@@ -750,8 +751,8 @@ public final class VolunteerDao_Impl implements VolunteerDao {
           final List<Volunteer> _result = new ArrayList<Volunteer>(_cursor.getCount());
           while (_cursor.moveToNext()) {
             final Volunteer _item;
-            final long _tmpId;
-            _tmpId = _cursor.getLong(_cursorIndexOfId);
+            final String _tmpId;
+            _tmpId = _cursor.getString(_cursorIndexOfId);
             final String _tmpSheetsId;
             if (_cursor.isNull(_cursorIndexOfSheetsId)) {
               _tmpSheetsId = null;
@@ -841,8 +842,8 @@ public final class VolunteerDao_Impl implements VolunteerDao {
           final List<Volunteer> _result = new ArrayList<Volunteer>(_cursor.getCount());
           while (_cursor.moveToNext()) {
             final Volunteer _item;
-            final long _tmpId;
-            _tmpId = _cursor.getLong(_cursorIndexOfId);
+            final String _tmpId;
+            _tmpId = _cursor.getString(_cursorIndexOfId);
             final String _tmpSheetsId;
             if (_cursor.isNull(_cursorIndexOfSheetsId)) {
               _tmpSheetsId = null;
@@ -927,8 +928,8 @@ public final class VolunteerDao_Impl implements VolunteerDao {
           final int _cursorIndexOfLastModified = CursorUtil.getColumnIndexOrThrow(_cursor, "lastModified");
           final Volunteer _result;
           if (_cursor.moveToFirst()) {
-            final long _tmpId;
-            _tmpId = _cursor.getLong(_cursorIndexOfId);
+            final String _tmpId;
+            _tmpId = _cursor.getString(_cursorIndexOfId);
             final String _tmpSheetsId;
             if (_cursor.isNull(_cursorIndexOfSheetsId)) {
               _tmpSheetsId = null;
@@ -1014,8 +1015,8 @@ public final class VolunteerDao_Impl implements VolunteerDao {
           final int _cursorIndexOfLastModified = CursorUtil.getColumnIndexOrThrow(_cursor, "lastModified");
           final Volunteer _result;
           if (_cursor.moveToFirst()) {
-            final long _tmpId;
-            _tmpId = _cursor.getLong(_cursorIndexOfId);
+            final String _tmpId;
+            _tmpId = _cursor.getString(_cursorIndexOfId);
             final String _tmpSheetsId;
             if (_cursor.isNull(_cursorIndexOfSheetsId)) {
               _tmpSheetsId = null;

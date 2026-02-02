@@ -12,6 +12,7 @@ import com.eventmanager.app.data.sync.SyncManager
 import com.eventmanager.app.data.sync.SyncResult
 import com.eventmanager.app.data.sync.ValidationResult
 import com.eventmanager.app.data.utils.VolunteerActivityManager
+import com.eventmanager.app.data.utils.NanoIdGenerator
 import com.eventmanager.app.data.sync.DifferentialSyncService
 import com.eventmanager.app.data.sync.DifferentialSyncResult
 import com.eventmanager.app.data.sync.VolunteerSyncResult
@@ -289,7 +290,51 @@ class EventManagerViewModel(
         viewModelScope.launch {
             try {
                 repository.getAllVolunteers().collect { volunteers ->
-                    val updatedVolunteers = removeDuplicateVolunteers(volunteers)
+                    // Validate and fix any volunteers with invalid NanoIDs
+                    val validatedVolunteers = mutableListOf<Volunteer>()
+                    val volunteersToFix = mutableListOf<Volunteer>()
+                    
+                    for (volunteer in volunteers) {
+                        if (NanoIdGenerator.needsRegeneration(volunteer.id)) {
+                            val newId = NanoIdGenerator.ensureValidNanoId(volunteer.id, volunteer.name)
+                            println("⚠️ ViewModel: Fixed invalid NanoID for volunteer '${volunteer.name}': '${volunteer.id}' → '$newId'")
+                            val fixedVolunteer = volunteer.copy(id = newId)
+                            validatedVolunteers.add(fixedVolunteer)
+                            volunteersToFix.add(fixedVolunteer)
+                        } else {
+                            validatedVolunteers.add(volunteer)
+                        }
+                    }
+                    
+                    // Update volunteers with fixed IDs in the database and sync to Google Sheets
+                    if (volunteersToFix.isNotEmpty()) {
+                        launch {
+                            try {
+                                // Update all fixed volunteers in the database first
+                                // Note: Repository will validate again, but since we already fixed the IDs,
+                                // the validation will just pass through quickly (defense-in-depth pattern)
+                                volunteersToFix.forEach { fixedVolunteer ->
+                                    repository.updateVolunteer(fixedVolunteer)
+                                }
+                                println("✅ Updated ${volunteersToFix.size} volunteer(s) with fixed NanoIDs in local database")
+                                
+                                // Then sync all volunteers to Google Sheets (includes the fixed IDs)
+                                // This ensures the new IDs are uploaded to Google Sheets
+                                if (isGoogleSheetsConfigured()) {
+                                    try {
+                                        twoWaySyncService?.backupVolunteersToSheets()
+                                        println("✅ Synced all volunteers (including ${volunteersToFix.size} with fixed NanoIDs) to Google Sheets")
+                                    } catch (e: Exception) {
+                                        println("⚠️ Failed to sync fixed NanoIDs to Google Sheets: ${e.message}")
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                println("Failed to update volunteers with fixed IDs: ${e.message}")
+                            }
+                        }
+                    }
+                    
+                    val updatedVolunteers = removeDuplicateVolunteers(validatedVolunteers)
                     println("🔄 loadData() - Repository changed! Updating volunteers UI: ${updatedVolunteers.size} volunteers")
                     _volunteers.value = updatedVolunteers
                     println("🔄 loadData() - StateFlow updated! UI should show: ${_volunteers.value.size} volunteers")
@@ -434,11 +479,56 @@ class EventManagerViewModel(
         }
     }
 
-    fun deleteVolunteer(volunteer: Volunteer) {
+    fun deleteVolunteer(volunteer: Volunteer, deleteShifts: Boolean = false) {
         viewModelScope.launch {
             try {
+                // If deleteShifts is true, delete all associated jobs/shifts first
+                if (deleteShifts) {
+                    val allJobs = repository.getAllJobs().first()
+                    val volunteerJobs = allJobs.filter { it.volunteerId == volunteer.id }
+                    
+                    println("Deleting ${volunteerJobs.size} job(s) for volunteer ${volunteer.name}")
+                    
+                    // Delete each job following the same pattern as deleteJob()
+                    for (job in volunteerJobs) {
+                        try {
+                            // Track deletion first (same as deleteJob)
+                            deletionTracker?.trackJobDeletion(job.id.toString(), job.sheetsId)
+                            
+                            // Delete from local database
+                            repository.deleteJob(job)
+                            
+                            // Delete individual job from Google Sheets if sheetsId exists
+                            if (job.sheetsId != null) {
+                                try {
+                                    googleSheetsService.deleteJobFromSheets(job.id.toString(), job.sheetsId)
+                                    println("Successfully deleted job from Google Sheets: ${job.jobTypeName}")
+                                } catch (e: Exception) {
+                                    println("Individual job deletion failed, falling back to backup mode: ${e.message}")
+                                    // Fallback to backup mode if individual deletion fails
+                                    twoWaySyncService?.backupJobsToSheets()
+                                }
+                            } else {
+                                // If no sheetsId, use backup mode
+                                println("No sheetsId found, using backup mode for job deletion")
+                                twoWaySyncService?.backupJobsToSheets()
+                            }
+                            
+                            println("Deleted job: ${job.jobTypeName} (ID: ${job.id}) for volunteer ${volunteer.name}")
+                        } catch (e: Exception) {
+                            println("Failed to delete job ${job.id} (${job.jobTypeName}) for volunteer ${volunteer.name}: ${e.message}")
+                            // Continue with other jobs even if one fails
+                        }
+                    }
+                    
+                    // Small delay to ensure database commits are complete before syncing
+                    if (volunteerJobs.isNotEmpty()) {
+                        delay(100)
+                    }
+                }
+                
                 // Track the deletion
-                deletionTracker?.trackVolunteerDeletion(volunteer.id.toString(), volunteer.sheetsId)
+                deletionTracker?.trackVolunteerDeletion(volunteer.id, volunteer.sheetsId)
                 
                 // Delete from local database
                 repository.deleteVolunteer(volunteer)
@@ -1420,7 +1510,7 @@ class EventManagerViewModel(
         for (remoteVolunteer in remoteVolunteers) {
             // Check if this item was deleted locally
             val isDeleted = deletedVolunteers.any { 
-                it.sheetsId == remoteVolunteer.sheetsId || it.id == remoteVolunteer.id.toString() 
+                it.sheetsId == remoteVolunteer.sheetsId || it.id == remoteVolunteer.id 
             }
             
             if (isDeleted) {
@@ -1665,7 +1755,7 @@ class EventManagerViewModel(
         for (remoteVolunteer in remoteVolunteers) {
             // OPTIMIZED: Use set lookup instead of any (O(1) vs O(n))
             val isDeleted = (remoteVolunteer.sheetsId != null && remoteVolunteer.sheetsId in deletedSheetsIds) ||
-                            (remoteVolunteer.id.toString() in deletedIds)
+                            (remoteVolunteer.id in deletedIds)
             
             if (isDeleted) {
                 println("Skipping deleted volunteer: ${remoteVolunteer.name}")
@@ -1781,7 +1871,7 @@ class EventManagerViewModel(
         for (remoteVolunteer in remoteVolunteers) {
             // OPTIMIZED: Use set lookup instead of any (O(1) vs O(n))
             val isDeleted = (remoteVolunteer.sheetsId != null && remoteVolunteer.sheetsId in deletedSheetsIds) ||
-                            (remoteVolunteer.id.toString() in deletedIds)
+                            (remoteVolunteer.id in deletedIds)
 
             if (isDeleted) {
                 println("Skipping deleted volunteer: ${remoteVolunteer.name}")
@@ -3013,65 +3103,135 @@ class EventManagerViewModel(
         }
     }
     
-    // Cleanup inactive volunteers (customizable years without shift)
+    /**
+     * Cleans up inactive volunteers based on customizable inactivity threshold.
+     * 
+     * For volunteers who have worked: uses days since last shift.
+     * For volunteers who never worked: uses days since last profile modification.
+     * 
+     * Deletes volunteers and all their associated jobs/shifts, following the same
+     * deletion mechanism as deleteVolunteer() and deleteJob() for Google Sheets sync.
+     * 
+     * @param yearsInactive Number of years of inactivity required for deletion (default: 4)
+     */
     fun cleanupInactiveVolunteers(yearsInactive: Int = 4) {
         viewModelScope.launch {
             try {
-                val volunteers = repository.getAllVolunteers().first()
+                // Use StateFlow volunteers to match what the dialog preview shows
+                // This ensures consistency between preview and actual cleanup
+                val volunteers = _volunteers.value
                 val jobs = repository.getAllJobs().first()
                 
+                println("DEBUG: Total volunteers from StateFlow: ${volunteers.size}")
+                
                 // Find volunteers that have been inactive for the specified number of years
+                // Use the exact same calculation as the dialog preview
                 val volunteersToCleanup = volunteers.filter { volunteer ->
-                    val daysSinceLastShift = VolunteerActivityManager.getDaysSinceLastShift(volunteer)
-                    daysSinceLastShift != null && daysSinceLastShift >= (yearsInactive * 365L)
+                    val daysSinceLastActivity = VolunteerActivityManager.getDaysSinceLastActivity(volunteer)
+                    val shouldDelete = daysSinceLastActivity != null && daysSinceLastActivity >= (yearsInactive * 365L)
+                    
+                    // Debug logging for each volunteer
+                    if (daysSinceLastActivity != null) {
+                        println("DEBUG: Volunteer ${volunteer.name} (ID: ${volunteer.id}): daysSinceLastActivity=$daysSinceLastActivity, threshold=${yearsInactive * 365L}, shouldDelete=$shouldDelete, lastShiftDate=${volunteer.lastShiftDate}, lastModified=${volunteer.lastModified}")
+                    } else {
+                        println("DEBUG: Volunteer ${volunteer.name} (ID: ${volunteer.id}): daysSinceLastActivity=null, lastShiftDate=${volunteer.lastShiftDate}, lastModified=${volunteer.lastModified}")
+                    }
+                    
+                    shouldDelete
                 }
                 
                 println("Found ${volunteersToCleanup.size} volunteers to cleanup (inactive for $yearsInactive+ years)")
                 
+                if (volunteersToCleanup.isEmpty()) {
+                    _syncError.value = "No volunteers found that have been inactive for $yearsInactive+ years"
+                    return@launch
+                }
+                
+                // Optimize job lookup: create a map of volunteerId -> jobs for O(1) access instead of O(n) filtering
+                val jobsByVolunteerId = jobs.groupBy { it.volunteerId }
+                
                 var volunteersDeleted = 0
                 var jobsDeleted = 0
+                val failedVolunteers = mutableListOf<String>()
+                val failedJobs = mutableListOf<String>()
                 
-                volunteersToCleanup.forEach { volunteer ->
+                // Process each volunteer: delete all their jobs first, then delete the volunteer
+                // Use proper coroutine handling to ensure deletions are awaited
+                for (volunteer in volunteersToCleanup) {
                     try {
-                        // Find and delete all jobs associated with this volunteer
-                        val volunteerJobs = jobs.filter { it.volunteerId == volunteer.id }
-                        volunteerJobs.forEach { job ->
+                        // Get all jobs/shifts associated with this volunteer
+                        val volunteerJobs = jobsByVolunteerId[volunteer.id] ?: emptyList()
+                        
+                        // Delete all jobs/shifts for this volunteer
+                        // Follows the same deletion pattern as deleteJob() for consistency
+                        for (job in volunteerJobs) {
                             try {
+                                // Track deletion first (same as deleteJob)
+                                deletionTracker?.trackJobDeletion(job.id.toString(), job.sheetsId)
+                                
+                                // Delete from local database
                                 repository.deleteJob(job)
                                 jobsDeleted++
-                                println("Deleted job: ${job.jobTypeName} for volunteer ${volunteer.name}")
+                                
+                                println("Deleted job: ${job.jobTypeName} (ID: ${job.id}) for volunteer ${volunteer.name}")
                             } catch (e: Exception) {
-                                println("Failed to delete job ${job.id} for volunteer ${volunteer.name}: ${e.message}")
+                                val errorMsg = "Failed to delete job ${job.id} (${job.jobTypeName}) for volunteer ${volunteer.name}: ${e.message}"
+                                println(errorMsg)
+                                failedJobs.add(errorMsg)
                             }
                         }
                         
-                        // Track the deletion
-                        deletionTracker?.trackVolunteerDeletion(volunteer.id.toString(), volunteer.sheetsId)
-                        
-                        // Delete volunteer from local database
+                        // Delete the volunteer after all their jobs are deleted
+                        // Follows the same deletion pattern as deleteVolunteer() for consistency
+                        deletionTracker?.trackVolunteerDeletion(volunteer.id, volunteer.sheetsId)
                         repository.deleteVolunteer(volunteer)
                         volunteersDeleted++
                         
-                        println("Successfully cleaned up inactive volunteer: ${volunteer.name} and ${volunteerJobs.size} associated jobs")
+                        println("Successfully cleaned up inactive volunteer: ${volunteer.name} (ID: ${volunteer.id}) and ${volunteerJobs.size} associated job(s)")
                     } catch (e: Exception) {
-                        println("Failed to cleanup volunteer ${volunteer.name}: ${e.message}")
+                        val errorMsg = "Failed to cleanup volunteer ${volunteer.name} (ID: ${volunteer.id}): ${e.message}"
+                        println(errorMsg)
+                        failedVolunteers.add(errorMsg)
                     }
                 }
                 
-                if (volunteersDeleted > 0) {
-                    // Refresh data to reflect changes
+                if (volunteersDeleted > 0 || jobsDeleted > 0) {
+                    // Small delay to ensure database commits are complete before syncing
+                    delay(100)
+                    
+                    // Sync deletions to Google Sheets using backup mode
+                    // This follows the same deletion mechanism used in deleteVolunteer() and deleteJob()
+                    try {
+                        twoWaySyncService?.backupVolunteersToSheets()
+                        twoWaySyncService?.backupJobsToSheets()
+                        println("Successfully synced deletions to Google Sheets")
+                    } catch (e: Exception) {
+                        println("Warning: Failed to sync deletions to Google Sheets: ${e.message}")
+                        // Continue even if sync fails - local deletion was successful
+                    }
+                    
+                    // Refresh data to reflect changes (after sync)
                     refreshAllData()
                     
-                    // BACKUP MODE: Upload entire volunteer and job datasets to ensure cleanup is reflected
-                    twoWaySyncService?.backupVolunteersToSheets()
-                    twoWaySyncService?.backupJobsToSheets()
+                    // Recalculate volunteer guest list (same as deleteVolunteer)
+                    recalcAndUploadVolunteerGuestList()
                     
-                    _syncError.value = "Cleaned up $volunteersDeleted volunteer${if (volunteersDeleted != 1) "s" else ""} and $jobsDeleted job${if (jobsDeleted != 1) "s" else ""} (inactive for $yearsInactive+ years)"
+                    // Build success message
+                    val volunteerText = "$volunteersDeleted volunteer${if (volunteersDeleted != 1) "s" else ""}"
+                    val jobText = if (jobsDeleted > 0) " and $jobsDeleted job${if (jobsDeleted != 1) "s" else ""}" else ""
+                    val warningText = if (failedVolunteers.isNotEmpty() || failedJobs.isNotEmpty()) {
+                        ". Some deletions failed - check logs for details."
+                    } else {
+                        ""
+                    }
+                    
+                    _syncError.value = "Cleaned up $volunteerText$jobText (inactive for $yearsInactive+ years)$warningText"
                 } else {
-                    _syncError.value = "No volunteers found that have been inactive for $yearsInactive+ years"
+                    _syncError.value = "No volunteers or jobs were deleted. Check logs for errors."
                 }
             } catch (e: Exception) {
                 println("Failed to cleanup inactive volunteers: ${e.message}")
+                e.printStackTrace()
                 _syncError.value = "Failed to cleanup inactive volunteers: ${e.message}"
             }
         }
