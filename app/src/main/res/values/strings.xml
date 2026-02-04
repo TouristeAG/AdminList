@@ -209,6 +209,7 @@
     <!-- Instructions Dialog -->
     <string name="google_sheets_setup_instructions">Google Sheets Setup Instructions</string>
     <string name="setup_instructions_intro">Follow these steps to set up Google Sheets synchronization:</string>
+    <string name="open_google_cloud_console">Open Google Cloud Console</string>
     <string name="got_it">Got it!</string>
     
     <!-- Instruction Steps -->
@@ -251,6 +252,16 @@
     <string name="cleanup_warning" formatted="false">This action will permanently delete %d volunteer%s and all their associated job records. This cannot be undone!</string>
     <string name="delete_volunteers" formatted="false">Delete %d Volunteer%s</string>
     <string name="cancel">Cancel</string>
+    
+    <!-- Delete Volunteer Dialog -->
+    <string name="delete_volunteer_title">Delete Volunteer</string>
+    <string name="delete_volunteer_confirm">Are you sure you want to delete %s?</string>
+    <string name="delete_volunteer_shift_count_one">This volunteer has %d shift recorded.</string>
+    <string name="delete_volunteer_shift_count_other">This volunteer has %d shifts recorded.</string>
+    <string name="delete_volunteer_also_delete_shifts_one">Also delete the %d shift</string>
+    <string name="delete_volunteer_also_delete_shifts_other">Also delete all %d shifts</string>
+    <string name="delete_volunteer_warning">⚠️ Warning: This action cannot be undone!</string>
+    <string name="delete_volunteer_graph_warning">Note: Suspending a volunteer will affect the home page statistics graphs. Deleting their shifts will have an even greater impact on the accuracy of the graphs.</string>
     
     <!-- Upload Status Messages -->
     <string name="validating_file">Validating file...</string>
@@ -651,7 +662,7 @@
     <string name="sync_error_backup_failed">Backup failed</string>
     
     <!-- Sync Success Messages -->
-    <string name="sync_success_title">✓ Sync Successful</string>
+    <string name="sync_success_title">Sync Successful</string>
     <string name="sync_success_message">Synchronization completed successfully</string>
     <string name="sync_retrying">Retrying synchronization…</string>
     
@@ -742,4 +753,11 @@
     <!-- Easter Egg Games -->
     <string name="easter_egg_drive_nocturne">Nocturnal Drive</string>
     <string name="easter_egg_flappy_nocturne">Nocturnal Flappy</string>
+    
+    <!-- Activity Status -->
+    <string name="activity_status_never_worked">Never worked</string>
+    <string name="activity_status_active_today">Active (today)</string>
+    <string name="activity_status_active_days_ago">Active (%d days ago)</string>
+    <string name="activity_status_active_months_ago">Active (%d months ago)</string>
+    <string name="activity_status_inactive_years_ago">Inactive (%d years ago)</string>
 </resources>

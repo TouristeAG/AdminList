@@ -162,6 +162,16 @@
     <string name="cleanup_warning" formatted="false">Cette action supprimera définitivement %d bénévole%s et tous leurs enregistrements de travail associés. Cette action ne peut pas être annulée !</string>
     <string name="delete_volunteers" formatted="false">Supprimer %d bénévole%s</string>
     
+    <!-- Delete Volunteer Dialog -->
+    <string name="delete_volunteer_title">Supprimer le·la bénévole</string>
+    <string name="delete_volunteer_confirm">Êtes-vous sûr·e de vouloir supprimer %s ?</string>
+    <string name="delete_volunteer_shift_count_one">Ce·tte bénévole a %d shift enregistré.</string>
+    <string name="delete_volunteer_shift_count_other">Ce·tte bénévole a %d shifts enregistrés.</string>
+    <string name="delete_volunteer_also_delete_shifts_one">Supprimer également le %d shift</string>
+    <string name="delete_volunteer_also_delete_shifts_other">Supprimer également les %d shifts</string>
+    <string name="delete_volunteer_warning">⚠️ Attention : Cette action ne peut pas être annulée !</string>
+    <string name="delete_volunteer_graph_warning">Note : La suspension d\'un·e bénévole faussera les graphiques de statistiques de la page d\'accueil. La suppression de ses shifts aura un impact encore plus important sur la précision des graphiques.</string>
+    
     <!-- Upload Status Messages -->
     <string name="validating_file">Validation du fichier...</string>
     <string name="file_validated_uploading">Fichier validé ! Téléchargement...</string>
@@ -234,6 +244,7 @@
     <!-- Instructions Dialog -->
     <string name="google_sheets_setup_instructions">Instructions de configuration Google Sheets</string>
     <string name="setup_instructions_intro">Suivez ces étapes pour configurer la synchronisation Google Sheets :</string>
+    <string name="open_google_cloud_console">Ouvrir la Console Google Cloud</string>
     <string name="got_it">Compris !</string>
     
     <!-- Instruction Steps -->
@@ -679,7 +690,7 @@
     <string name="sync_error_backup_failed">Échec de la sauvegarde</string>
     
     <!-- Sync Success Messages -->
-    <string name="sync_success_title">✓ Synchronisation réussie</string>
+    <string name="sync_success_title">Synchronisation réussie</string>
     <string name="sync_success_message">La synchronisation s\'est terminée avec succès</string>
     <string name="sync_retrying">Nouvelle tentative de synchronisation…</string>
     
@@ -740,4 +751,11 @@
     <!-- Easter Egg Games -->
     <string name="easter_egg_drive_nocturne">Drive Nocturne</string>
     <string name="easter_egg_flappy_nocturne">Flappy Nocturne</string>
+    
+    <!-- Activity Status -->
+    <string name="activity_status_never_worked">Jamais travaillé</string>
+    <string name="activity_status_active_today">Actif (aujourd\'hui)</string>
+    <string name="activity_status_active_days_ago">Actif (il y a %d jours)</string>
+    <string name="activity_status_active_months_ago">Actif (il y a %d mois)</string>
+    <string name="activity_status_inactive_years_ago">Inactif (il y a %d ans)</string>
 </resources>

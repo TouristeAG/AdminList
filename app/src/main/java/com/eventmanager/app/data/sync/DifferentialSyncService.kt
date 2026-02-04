@@ -137,6 +137,7 @@ class DifferentialSyncService(
         }
     
     private fun hasVolunteerChanged(old: Volunteer, new: Volunteer): Boolean =
+        old.id != new.id || // NanoID change - Google Sheets is source of truth
         old.name != new.name ||
         old.email != new.email ||
         old.phoneNumber != new.phoneNumber ||

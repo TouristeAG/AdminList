@@ -205,7 +205,7 @@ fun SyncErrorDialog(
     LaunchedEffect(dialogState) {
         if (dialogState == SyncDialogState.SUCCESS) {
             // Wait for animation to complete, then auto-dismiss
-            delay(1800L)
+            delay(1000L)
             onDismiss()
         }
         // Track retrying state

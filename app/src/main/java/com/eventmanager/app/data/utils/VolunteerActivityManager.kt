@@ -1,5 +1,7 @@
 package com.eventmanager.app.data.utils
 
+import android.content.Context
+import com.eventmanager.app.R
 import com.eventmanager.app.data.models.Volunteer
 import com.eventmanager.app.data.models.Job
 import java.util.Calendar
@@ -69,15 +71,14 @@ object VolunteerActivityManager {
     /**
      * Gets a human-readable string describing the volunteer's activity status
      */
-    fun getActivityStatusText(volunteer: Volunteer): String {
-        val daysSince = getDaysSinceLastShift(volunteer) ?: return "Never worked"
+    fun getActivityStatusText(volunteer: Volunteer, context: Context): String {
+        val daysSince = getDaysSinceLastShift(volunteer) ?: return context.getString(R.string.activity_status_never_worked)
         
         return when {
-            daysSince == 0L -> "Active (today)"
-            daysSince < 7 -> "Active (${daysSince} days ago)"
-            daysSince < 30 -> "Active (${daysSince} days ago)"
-            daysSince < 365 -> "Active (${daysSince / 30} months ago)"
-            else -> "Inactive (${daysSince / 365} years ago)"
+            daysSince == 0L -> context.getString(R.string.activity_status_active_today)
+            daysSince < 30 -> context.getString(R.string.activity_status_active_days_ago, daysSince.toInt())
+            daysSince < 365 -> context.getString(R.string.activity_status_active_months_ago, (daysSince / 30).toInt())
+            else -> context.getString(R.string.activity_status_inactive_years_ago, (daysSince / 365).toInt())
         }
     }
     

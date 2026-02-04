@@ -9,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.eventmanager.app.data.models.Volunteer
@@ -21,6 +22,7 @@ fun CleanupInactiveVolunteersDialog(
     onConfirm: (Int) -> Unit, // Int represents years of inactivity
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
     var selectedYears by remember { mutableStateOf(4) } // Default to 4 years
     var showPreview by remember { mutableStateOf(false) }
     
@@ -140,7 +142,7 @@ fun CleanupInactiveVolunteersDialog(
                                         )
                                         Spacer(modifier = Modifier.weight(1f))
                                         Text(
-                                            text = VolunteerActivityManager.getActivityStatusText(volunteer),
+                                            text = VolunteerActivityManager.getActivityStatusText(volunteer, context),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onErrorContainer
                                         )

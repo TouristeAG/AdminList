@@ -51,5 +51,12 @@ interface JobDao {
     
     @Query("DELETE FROM jobs")
     suspend fun deleteAllJobs()
+    
+    /**
+     * Updates all jobs referencing an old volunteer ID to use a new volunteer ID.
+     * Used when a volunteer's NanoID changes during sync (Google Sheets is source of truth).
+     */
+    @Query("UPDATE jobs SET volunteerId = :newVolunteerId WHERE volunteerId = :oldVolunteerId")
+    suspend fun updateJobsVolunteerId(oldVolunteerId: String, newVolunteerId: String)
 }
 

@@ -16,6 +16,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.eventmanager.app.data.models.*
@@ -593,7 +594,7 @@ fun BenefitCard(
                         containerColor = when (status.rank) {
                             VolunteerRank.NOVA -> MaterialTheme.colorScheme.primary
                             VolunteerRank.ETOILE -> MaterialTheme.colorScheme.secondary
-                            VolunteerRank.GALAXIE -> MaterialTheme.colorScheme.tertiary
+                            VolunteerRank.GALAXIE -> Color(0xFF7C3AED) // Deep purple for galaxy - always readable
                             VolunteerRank.ORION -> MaterialTheme.colorScheme.error
                             VolunteerRank.VETERAN -> MaterialTheme.colorScheme.surfaceVariant
                             VolunteerRank.SPECIAL -> MaterialTheme.colorScheme.primaryContainer
@@ -612,7 +613,7 @@ fun BenefitCard(
                             color = when (status.rank) {
                                 VolunteerRank.NOVA -> MaterialTheme.colorScheme.onPrimary
                                 VolunteerRank.ETOILE -> MaterialTheme.colorScheme.onSecondary
-                                VolunteerRank.GALAXIE -> MaterialTheme.colorScheme.onTertiary
+                                VolunteerRank.GALAXIE -> Color.White // White on deep purple - always readable
                                 VolunteerRank.ORION -> MaterialTheme.colorScheme.onError
                                 VolunteerRank.VETERAN -> MaterialTheme.colorScheme.onSurfaceVariant
                                 VolunteerRank.SPECIAL -> MaterialTheme.colorScheme.onPrimaryContainer
@@ -657,12 +658,14 @@ fun BenefitCard(
                             containerColor = when (status.rank) {
                                 VolunteerRank.NOVA -> MaterialTheme.colorScheme.primaryContainer
                                 VolunteerRank.ETOILE -> MaterialTheme.colorScheme.secondaryContainer
-                                VolunteerRank.GALAXIE -> MaterialTheme.colorScheme.tertiaryContainer
+                                VolunteerRank.GALAXIE -> Color(0xFFEDE9FE) // Light purple container - always readable
                                 VolunteerRank.ORION -> MaterialTheme.colorScheme.errorContainer
                                 VolunteerRank.VETERAN -> MaterialTheme.colorScheme.surfaceVariant
                                 VolunteerRank.SPECIAL -> MaterialTheme.colorScheme.primaryContainer
                                 null -> MaterialTheme.colorScheme.surfaceVariant
-                            }
+                            },
+                            labelColor = if (status.rank == VolunteerRank.GALAXIE) Color(0xFF5B21B6) else Color.Unspecified,
+                            leadingIconContentColor = if (status.rank == VolunteerRank.GALAXIE) Color(0xFF5B21B6) else Color.Unspecified
                         )
                     )
                     

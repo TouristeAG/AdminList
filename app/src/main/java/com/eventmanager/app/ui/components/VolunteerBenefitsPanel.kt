@@ -114,7 +114,7 @@ fun VolunteerBenefitsPanel(
                                         containerColor = when (volunteerBenefitStatus.rank) {
                                             VolunteerRank.NOVA -> MaterialTheme.colorScheme.primary
                                             VolunteerRank.ETOILE -> MaterialTheme.colorScheme.secondary
-                                            VolunteerRank.GALAXIE -> MaterialTheme.colorScheme.tertiary
+                                            VolunteerRank.GALAXIE -> Color(0xFF7C3AED) // Deep purple for galaxy - always readable
                                             VolunteerRank.ORION -> MaterialTheme.colorScheme.error
                                             VolunteerRank.VETERAN -> MaterialTheme.colorScheme.surfaceVariant
                                             VolunteerRank.SPECIAL -> MaterialTheme.colorScheme.primaryContainer
@@ -133,7 +133,7 @@ fun VolunteerBenefitsPanel(
                                             color = when (volunteerBenefitStatus.rank) {
                                                 VolunteerRank.NOVA -> MaterialTheme.colorScheme.onPrimary
                                                 VolunteerRank.ETOILE -> MaterialTheme.colorScheme.onSecondary
-                                                VolunteerRank.GALAXIE -> MaterialTheme.colorScheme.onTertiary
+                                                VolunteerRank.GALAXIE -> Color.White // White on deep purple - always readable
                                                 VolunteerRank.ORION -> MaterialTheme.colorScheme.onError
                                                 VolunteerRank.VETERAN -> MaterialTheme.colorScheme.onSurfaceVariant
                                                 VolunteerRank.SPECIAL -> MaterialTheme.colorScheme.onPrimaryContainer
@@ -205,12 +205,14 @@ fun VolunteerBenefitsPanel(
                                     containerColor = when (volunteerBenefitStatus.rank) {
                                         VolunteerRank.NOVA -> MaterialTheme.colorScheme.primaryContainer
                                         VolunteerRank.ETOILE -> MaterialTheme.colorScheme.secondaryContainer
-                                        VolunteerRank.GALAXIE -> MaterialTheme.colorScheme.tertiaryContainer
+                                        VolunteerRank.GALAXIE -> Color(0xFFEDE9FE) // Light purple container - always readable
                                         VolunteerRank.ORION -> MaterialTheme.colorScheme.errorContainer
                                         VolunteerRank.VETERAN -> MaterialTheme.colorScheme.surfaceVariant
                                         VolunteerRank.SPECIAL -> MaterialTheme.colorScheme.primaryContainer
                                         null -> MaterialTheme.colorScheme.surfaceVariant
-                                    }
+                                    },
+                                    labelColor = if (volunteerBenefitStatus.rank == VolunteerRank.GALAXIE) Color(0xFF5B21B6) else Color.Unspecified,
+                                    leadingIconContentColor = if (volunteerBenefitStatus.rank == VolunteerRank.GALAXIE) Color(0xFF5B21B6) else Color.Unspecified
                                 )
                             )
                             

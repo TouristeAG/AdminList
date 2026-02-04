@@ -11,6 +11,11 @@
     <string name="active_volunteers_description">Nombre de bénévoles qui ont eu un shift au cours de la dernière année à chaque moment</string>
     <string name="active_volunteers_graph">Graphique des bénévoles actif·ve·s</string>
     <string name="active_volunteers_graph_description">Montre combien de bénévoles étaient considéré·e·s comme actif·ve·s (ont eu un shift au cours de la dernière année) à chaque date</string>
+    <string name="activity_status_active_days_ago">Actif (il y a %d jours)</string>
+    <string name="activity_status_active_months_ago">Actif (il y a %d mois)</string>
+    <string name="activity_status_active_today">Actif (aujourd\'hui)</string>
+    <string name="activity_status_inactive_years_ago">Inactif (il y a %d ans)</string>
+    <string name="activity_status_never_worked">Jamais travaillé</string>
     <string name="add">Ajouter</string>
     <string name="add_guest">Ajouter un·e invité·e</string>
     <string name="add_job">Ajouter un job</string>
@@ -138,7 +143,15 @@
     <string name="debug_mode_title">Mode de débogage</string>
     <string name="delete">Supprimer</string>
     <string name="delete_guest">Supprimer l\'invité·e</string>
+    <string name="delete_volunteer_also_delete_shifts_one">Supprimer également le %d shift</string>
+    <string name="delete_volunteer_also_delete_shifts_other">Supprimer également les %d shifts</string>
     <string name="delete_volunteer_button">Supprimer le·la bénévole</string>
+    <string name="delete_volunteer_confirm">Êtes-vous sûr·e de vouloir supprimer %s ?</string>
+    <string name="delete_volunteer_graph_warning">Note : La suspension d\'un·e bénévole faussera les graphiques de statistiques de la page d\'accueil. La suppression de ses shifts aura un impact encore plus important sur la précision des graphiques.</string>
+    <string name="delete_volunteer_shift_count_one">Ce·tte bénévole a %d shift enregistré.</string>
+    <string name="delete_volunteer_shift_count_other">Ce·tte bénévole a %d shifts enregistrés.</string>
+    <string name="delete_volunteer_title">Supprimer le·la bénévole</string>
+    <string name="delete_volunteer_warning">⚠️ Attention : Cette action ne peut pas être annulée !</string>
     <string formatted="false" name="delete_volunteers">Supprimer %d bénévole%s</string>
     <string name="download_complete">Téléchargement terminé</string>
     <string name="download_error_message">Impossible de télécharger la mise à jour : %s</string>
@@ -523,7 +536,7 @@
     <string name="sync_status_error">Erreur lors du test du statut de synchronisation : %s</string>
     <string name="sync_status_not_configured">Google Sheets n\'est pas configuré. Veuillez vérifier vos paramètres.</string>
     <string name="sync_success_message">La synchronisation s\'est terminée avec succès</string>
-    <string name="sync_success_title">✓ Synchronisation réussie</string>
+    <string name="sync_success_title">Synchronisation réussie</string>
     <string name="synced_days_ago">Il y a %d j</string>
     <string name="synced_hours_ago">Il y a %d h</string>
     <string name="synced_minutes_ago">Il y a %d min</string>

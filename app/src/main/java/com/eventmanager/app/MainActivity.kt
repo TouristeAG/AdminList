@@ -65,6 +65,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
@@ -1073,7 +1074,15 @@ if (pageAnimationsEnabled) {
                 }
                 is DownloadState.Downloaded -> {
                     AlertDialog(
-                        onDismissRequest = { showUpdateDialog = false },
+                        onDismissRequest = if (isRequired) { {} } else { { showUpdateDialog = false } },
+                        properties = if (isRequired) {
+                            DialogProperties(
+                                dismissOnBackPress = false,
+                                dismissOnClickOutside = false
+                            )
+                        } else {
+                            DialogProperties()
+                        },
                         title = {
                             Text(text = context.getString(R.string.download_complete))
                         },
@@ -1088,16 +1097,18 @@ if (pageAnimationsEnabled) {
                                 Text(context.getString(R.string.install_update))
                             }
                         },
-                        dismissButton = {
-                            TextButton(onClick = { showUpdateDialog = false }) {
-                                Text(context.getString(R.string.later))
+                        dismissButton = if (!isRequired) {
+                            {
+                                TextButton(onClick = { showUpdateDialog = false }) {
+                                    Text(context.getString(R.string.later))
+                                }
                             }
-                        }
+                        } else null
                     )
                 }
                 is DownloadState.Error -> {
                     AlertDialog(
-                        onDismissRequest = { showUpdateDialog = false },
+                        onDismissRequest = if (isRequired) { {} } else { { showUpdateDialog = false } },
                         title = {
                             Text(text = context.getString(R.string.download_error_title))
                         },
@@ -1114,7 +1125,7 @@ if (pageAnimationsEnabled) {
                 else -> {
                     // Show update available dialog
                     AlertDialog(
-                        onDismissRequest = { showUpdateDialog = false },
+                        onDismissRequest = if (isRequired) { {} } else { { showUpdateDialog = false } },
                         title = {
                             Text(text = context.getString(R.string.update_available_title, manifest.latestVersionName))
                         },

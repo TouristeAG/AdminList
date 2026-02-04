@@ -98,7 +98,7 @@ fun VolunteerDetailPanel(
     // Calculate statistics
     val totalShifts = volunteerJobs.size
     val isActive = VolunteerActivityManager.isVolunteerActive(volunteer)
-    val activityStatusText = VolunteerActivityManager.getActivityStatusText(volunteer)
+    val activityStatusText = VolunteerActivityManager.getActivityStatusText(volunteer, context)
     
     // Calculate current rank dynamically
     val settingsManager = remember { com.eventmanager.app.data.sync.SettingsManager(context) }

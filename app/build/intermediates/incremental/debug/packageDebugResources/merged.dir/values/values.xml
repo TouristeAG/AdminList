@@ -25,6 +25,11 @@
     <string name="active_volunteers_description">Number of volunteers who had a shift within the last year at each point in time</string>
     <string name="active_volunteers_graph">Active Volunteers Graph</string>
     <string name="active_volunteers_graph_description">Shows how many volunteers were considered active (had a shift within the last year) at each date</string>
+    <string name="activity_status_active_days_ago">Active (%d days ago)</string>
+    <string name="activity_status_active_months_ago">Active (%d months ago)</string>
+    <string name="activity_status_active_today">Active (today)</string>
+    <string name="activity_status_inactive_years_ago">Inactive (%d years ago)</string>
+    <string name="activity_status_never_worked">Never worked</string>
     <string name="add">Add</string>
     <string name="add_guest">Add Guest</string>
     <string name="add_job">Add Job</string>
@@ -152,7 +157,15 @@
     <string name="debug_mode_title">Debug Mode</string>
     <string name="delete">Delete</string>
     <string name="delete_guest">Delete guest</string>
+    <string name="delete_volunteer_also_delete_shifts_one">Also delete the %d shift</string>
+    <string name="delete_volunteer_also_delete_shifts_other">Also delete all %d shifts</string>
     <string name="delete_volunteer_button">Delete Volunteer</string>
+    <string name="delete_volunteer_confirm">Are you sure you want to delete %s?</string>
+    <string name="delete_volunteer_graph_warning">Note: Suspending a volunteer will affect the home page statistics graphs. Deleting their shifts will have an even greater impact on the accuracy of the graphs.</string>
+    <string name="delete_volunteer_shift_count_one">This volunteer has %d shift recorded.</string>
+    <string name="delete_volunteer_shift_count_other">This volunteer has %d shifts recorded.</string>
+    <string name="delete_volunteer_title">Delete Volunteer</string>
+    <string name="delete_volunteer_warning">⚠️ Warning: This action cannot be undone!</string>
     <string formatted="false" name="delete_volunteers">Delete %d Volunteer%s</string>
     <string name="download_complete">Download complete</string>
     <string name="download_error_message">Could not download update: %s</string>
@@ -538,7 +551,7 @@
     <string name="sync_status_error">Error testing sync status: %s</string>
     <string name="sync_status_not_configured">Google Sheets is not configured. Please check your settings.</string>
     <string name="sync_success_message">Synchronization completed successfully</string>
-    <string name="sync_success_title">✓ Sync Successful</string>
+    <string name="sync_success_title">Sync Successful</string>
     <string name="sync_warning_sleep_resume_message">The app is not synced anymore. Please sync it by pressing the resync button at the bottom.</string>
     <string name="sync_warning_sleep_resume_title">⚠️ App Not Synced</string>
     <string name="synced_days_ago">%dd ago</string>

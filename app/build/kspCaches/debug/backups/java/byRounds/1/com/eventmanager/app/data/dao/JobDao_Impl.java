@@ -50,6 +50,8 @@ public final class JobDao_Impl implements JobDao {
 
   private final SharedSQLiteStatement __preparedStmtOfDeleteAllJobs;
 
+  private final SharedSQLiteStatement __preparedStmtOfUpdateJobsVolunteerId;
+
   public JobDao_Impl(@NonNull final RoomDatabase __db) {
     this.__db = __db;
     this.__insertionAdapterOfJob = new EntityInsertionAdapter<Job>(__db) {
@@ -135,6 +137,14 @@ public final class JobDao_Impl implements JobDao {
       @NonNull
       public String createQuery() {
         final String _query = "DELETE FROM jobs";
+        return _query;
+      }
+    };
+    this.__preparedStmtOfUpdateJobsVolunteerId = new SharedSQLiteStatement(__db) {
+      @Override
+      @NonNull
+      public String createQuery() {
+        final String _query = "UPDATE jobs SET volunteerId = ? WHERE volunteerId = ?";
         return _query;
       }
     };
@@ -292,6 +302,34 @@ public final class JobDao_Impl implements JobDao {
           }
         } finally {
           __preparedStmtOfDeleteAllJobs.release(_stmt);
+        }
+      }
+    }, $completion);
+  }
+
+  @Override
+  public Object updateJobsVolunteerId(final String oldVolunteerId, final String newVolunteerId,
+      final Continuation<? super Unit> $completion) {
+    return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
+      @Override
+      @NonNull
+      public Unit call() throws Exception {
+        final SupportSQLiteStatement _stmt = __preparedStmtOfUpdateJobsVolunteerId.acquire();
+        int _argIndex = 1;
+        _stmt.bindString(_argIndex, newVolunteerId);
+        _argIndex = 2;
+        _stmt.bindString(_argIndex, oldVolunteerId);
+        try {
+          __db.beginTransaction();
+          try {
+            _stmt.executeUpdateDelete();
+            __db.setTransactionSuccessful();
+            return Unit.INSTANCE;
+          } finally {
+            __db.endTransaction();
+          }
+        } finally {
+          __preparedStmtOfUpdateJobsVolunteerId.release(_stmt);
         }
       }
     }, $completion);
