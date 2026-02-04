@@ -327,7 +327,7 @@
     <string name="minutes_ago">Il y a %d minutes</string>
     <string name="hours_ago">Il y a %d heures</string>
     <string name="days_ago">Il y a %d jours</string>
-    <string name="search_guests_placeholder">Rechercher des invité·e·s par nom...</string>
+    <string name="search_guests_placeholder">Rechercher par nom, email ou téléphone...</string>
     <string name="filter_volunteer_benefits">Avantages bénévoles</string>
     <string name="filter_regular_guests">Invité·e·s régulier·ère·s</string>
     <string name="guests_count">Invité·e·s</string>
@@ -343,6 +343,10 @@
     <string name="update_guest">Mettre à jour l\'invité·e</string>
     <string name="guest_information">Informations sur l\'invité·e</string>
     <string name="guest_name">Nom de l\'invité·e</string>
+    <string name="guest_email">Email</string>
+    <string name="guest_email_placeholder">email@exemple.com</string>
+    <string name="guest_phone_number">Numéro de téléphone</string>
+    <string name="guest_phone_placeholder">+33 6 12 34 56 78</string>
     <string name="number_of_invitations">Nombre d\'invitations</string>
     <string name="venue">Lieu</string>
     <string name="notes">Notes</string>
@@ -457,10 +461,39 @@
     <string name="send_by_mail">Envoyer par email</string>
     <string name="failed_to_generate_qr_code">Échec de la génération du QR code</string>
     
+    <!-- Guest QR Code Related -->
+    <string name="guest_qr_code">QR Code Invité·e</string>
+    <string name="qr_code_for_guest">QR Code pour l\'invité·e : %s</string>
+    <string name="qr_code_subject_guest">QR Code invité·e - %s</string>
+    <string name="scan_guest_qr_code">Scanner le QR Code Invité·e</string>
+    <string name="invalid_guest_qr_code">QR code invalide. Ce n\'est pas un QR code d\'invité·e.</string>
+    <string name="guest_not_found">Invité·e \'%s\' introuvable dans la base de données.</string>
+    <string name="enter_guest_name_manually">Entrez le nom de l\'invité·e manuellement :</string>
+    <string name="manual_guest_input">Entrer le Nom de l\'Invité·e</string>
+    <string name="find_guest">Trouver un·e invité·e</string>
+    <string name="available_guests">Invité·es disponibles :</string>
+    <string name="please_enter_guest_name">Veuillez entrer un nom d\'invité·e valide</string>
+    <string name="invalid_input">Entrée invalide : %s</string>
+    <string name="guest_email_input_title">Entrer l\'Adresse Email</string>
+    <string name="guest_email_input_message">Cet·te invité·e n\'a pas d\'adresse email dans la base de données. Veuillez entrer une adresse email pour envoyer le QR code :</string>
+    <string name="continue_button">Continuer</string>
+    <string name="grant_permission">Autoriser</string>
+    
+    <!-- Guest Email Settings -->
+    <string name="guest_email_subject_default">Votre QR Code Invité·e</string>
+    <string name="guest_email_content_before_default">Bonjour !\n\nVoici votre QR code personnel pour l\'entrée invité·e. Gardez-le à portée de main et présentez-le à votre arrivée à l\'entrée.</string>
+    <string name="guest_email_content_after_default">Si vous avez des questions, n\'hésitez pas à nous contacter. Nous avons hâte de vous voir !</string>
+    <string name="guest_email_html_header">Votre QR Code Invité·e</string>
+    <string name="guest_email_html_footer">Ce message a été envoyé automatiquement. Gardez votre QR code en sécurité.</string>
+    
     <!-- Email QR Code Settings -->
     <string name="settings_category_email">Paramètres Email</string>
     <string name="email_qr_settings_title">Paramètres Email QR Code</string>
-    <string name="email_qr_settings_description">Configurer le contenu des emails lors de l\'envoi de QR codes aux bénévoles</string>
+    <string name="email_qr_settings_description">Configurer le contenu des emails lors de l\'envoi de QR codes</string>
+    <string name="email_tab_volunteer">Bénévoles</string>
+    <string name="email_tab_guest">Invité·es</string>
+    <string name="email_shared_settings_title">Paramètres partagés</string>
+    <string name="email_shared_settings_description">Ces paramètres s\'appliquent aux emails des bénévoles et des invité·es</string>
     <string name="email_subject_label">Objet de l\'email</string>
     <string name="email_subject_hint">Ligne d\'objet pour l\'email QR code</string>
     <string name="email_subject_default">Votre QR Code de Profil Bénévole</string>

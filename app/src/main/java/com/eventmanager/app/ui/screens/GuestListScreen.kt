@@ -81,6 +81,8 @@ fun GuestListScreen(
             }
             val matchesSearch = searchText.isEmpty() || 
                 guest.name.lowercase().contains(lowerSearchText) ||
+                guest.email.lowercase().contains(lowerSearchText) ||
+                guest.phoneNumber.lowercase().contains(lowerSearchText) ||
                 guest.notes.lowercase().contains(lowerSearchText)
             val matchesFilter = when (selectedFilter) {
                 filterVolunteerBenefits -> guest.isVolunteerBenefit
@@ -704,9 +706,11 @@ fun GuestListScreen(
         AddGuestDialog(
             venues = venues,
             onDismiss = { showAddDialog = false },
-            onConfirm = { name, invitations, venueName, notes ->
+            onConfirm = { name, email, phoneNumber, invitations, venueName, notes ->
                 val newGuest = Guest(
                     name = name,
+                    email = email,
+                    phoneNumber = phoneNumber,
                     invitations = invitations,
                     venueName = venueName,
                     notes = notes
@@ -952,10 +956,12 @@ fun GuestCard(
 fun AddGuestDialog(
     venues: List<VenueEntity>,
     onDismiss: () -> Unit,
-    onConfirm: (String, Int, String, String) -> Unit
+    onConfirm: (String, String, String, Int, String, String) -> Unit // name, email, phoneNumber, invitations, venueName, notes
 ) {
     val context = LocalContext.current
     var name by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var phoneNumber by remember { mutableStateOf("") }
     var invitations by remember { mutableStateOf("1") }
     var selectedVenueName by remember { mutableStateOf<String?>(null) }
     var notes by remember { mutableStateOf("") }
@@ -1013,6 +1019,24 @@ fun AddGuestDialog(
                             onValueChange = { name = it },
                             label = { Text(context.getString(R.string.guest_name)) },
                             modifier = Modifier.fillMaxWidth()
+                        )
+
+                        OutlinedTextField(
+                            value = email,
+                            onValueChange = { email = it },
+                            label = { Text(context.getString(R.string.guest_email)) },
+                            placeholder = { Text(context.getString(R.string.guest_email_placeholder)) },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+
+                        OutlinedTextField(
+                            value = phoneNumber,
+                            onValueChange = { phoneNumber = it },
+                            label = { Text(context.getString(R.string.guest_phone_number)) },
+                            placeholder = { Text(context.getString(R.string.guest_phone_placeholder)) },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
                         )
 
                         OutlinedTextField(
@@ -1097,7 +1121,7 @@ fun AddGuestDialog(
                             onClick = {
                                 val invitationCount = invitations.toIntOrNull() ?: 1
                                 val defaultVenue = activeVenues.firstOrNull()?.name ?: "GROOVE"
-                                onConfirm(name, invitationCount, selectedVenueName ?: defaultVenue, notes)
+                                onConfirm(name, email, phoneNumber, invitationCount, selectedVenueName ?: defaultVenue, notes)
                             },
                             enabled = name.isNotBlank()
                         ) {
@@ -1120,6 +1144,8 @@ fun EditGuestDialog(
 ) {
     val context = LocalContext.current
     var name by remember { mutableStateOf(guest.name) }
+    var email by remember { mutableStateOf(guest.email) }
+    var phoneNumber by remember { mutableStateOf(guest.phoneNumber) }
     var invitations by remember { mutableStateOf(guest.invitations.toString()) }
     var selectedVenueName by remember { mutableStateOf<String?>(guest.venueName) }
     var notes by remember { mutableStateOf(guest.notes) }
@@ -1177,6 +1203,24 @@ fun EditGuestDialog(
                             onValueChange = { name = it },
                             label = { Text(context.getString(R.string.guest_name)) },
                             modifier = Modifier.fillMaxWidth()
+                        )
+
+                        OutlinedTextField(
+                            value = email,
+                            onValueChange = { email = it },
+                            label = { Text(context.getString(R.string.guest_email)) },
+                            placeholder = { Text(context.getString(R.string.guest_email_placeholder)) },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+
+                        OutlinedTextField(
+                            value = phoneNumber,
+                            onValueChange = { phoneNumber = it },
+                            label = { Text(context.getString(R.string.guest_phone_number)) },
+                            placeholder = { Text(context.getString(R.string.guest_phone_placeholder)) },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
                         )
 
                         OutlinedTextField(
@@ -1263,6 +1307,8 @@ fun EditGuestDialog(
                                 val defaultVenue = activeVenues.firstOrNull()?.name ?: "GROOVE"
                                 val updatedGuest = guest.copy(
                                     name = name,
+                                    email = email,
+                                    phoneNumber = phoneNumber,
                                     lastNameAbbreviation = "", // Permanent guests don't have abbreviations
                                     invitations = invitationCount,
                                     venueName = selectedVenueName ?: defaultVenue,

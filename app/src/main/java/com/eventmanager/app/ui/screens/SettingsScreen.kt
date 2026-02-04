@@ -149,7 +149,9 @@ private fun ExpandableSettingsCategory(
 /**
  * Optimized Email Settings composable - extracted to reduce recomposition scope
  * and improve performance by only loading settings when needed.
+ * Now includes tabbed interface for Volunteer and Guest email settings.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun EmailSettingsContent(
     settingsManager: SettingsManager,
@@ -184,21 +186,54 @@ private fun EmailSettingsContent(
         )
     }
     
-    // Initialize with defaults for immediate UI render
-    var emailSubject by remember { mutableStateOf(strings.subjectDefault) }
-    var emailContentBefore by remember { mutableStateOf(strings.contentBeforeDefault) }
-    var emailIncludeQr by remember { mutableStateOf(true) }
-    var emailContentAfter by remember { mutableStateOf(strings.contentAfterDefault) }
+    // Guest email defaults
+    val guestStrings = remember {
+        GuestEmailSettingsStrings(
+            subjectDefault = context.getString(R.string.guest_email_subject_default),
+            contentBeforeDefault = context.getString(R.string.guest_email_content_before_default),
+            contentAfterDefault = context.getString(R.string.guest_email_content_after_default)
+        )
+    }
+    
+    // Tab state: 0 = Volunteer, 1 = Guest
+    var selectedTabIndex by remember { mutableStateOf(0) }
+    val tabLabels = listOf(
+        context.getString(R.string.email_tab_volunteer),
+        context.getString(R.string.email_tab_guest)
+    )
+    
+    // Volunteer email settings
+    var volunteerSubject by remember { mutableStateOf(strings.subjectDefault) }
+    var volunteerContentBefore by remember { mutableStateOf(strings.contentBeforeDefault) }
+    var volunteerIncludeQr by remember { mutableStateOf(true) }
+    var volunteerContentAfter by remember { mutableStateOf(strings.contentAfterDefault) }
+    
+    // Guest email settings
+    var guestSubject by remember { mutableStateOf(guestStrings.subjectDefault) }
+    var guestContentBefore by remember { mutableStateOf(guestStrings.contentBeforeDefault) }
+    var guestIncludeQr by remember { mutableStateOf(true) }
+    var guestContentAfter by remember { mutableStateOf(guestStrings.contentAfterDefault) }
+    
+    // Shared settings
     var emailSignature by remember { mutableStateOf(strings.signatureDefault) }
     var emailIncludeLogo by remember { mutableStateOf(false) }
     var emailLogoUri by remember { mutableStateOf("") }
     
     // Load settings asynchronously only once
     LaunchedEffect(Unit) {
-        emailSubject = settingsManager.getEmailSubject().ifEmpty { strings.subjectDefault }
-        emailContentBefore = settingsManager.getEmailContentBefore().ifEmpty { strings.contentBeforeDefault }
-        emailIncludeQr = settingsManager.isEmailIncludeQrEnabled()
-        emailContentAfter = settingsManager.getEmailContentAfter().ifEmpty { strings.contentAfterDefault }
+        // Volunteer settings
+        volunteerSubject = settingsManager.getEmailSubject().ifEmpty { strings.subjectDefault }
+        volunteerContentBefore = settingsManager.getEmailContentBefore().ifEmpty { strings.contentBeforeDefault }
+        volunteerIncludeQr = settingsManager.isEmailIncludeQrEnabled()
+        volunteerContentAfter = settingsManager.getEmailContentAfter().ifEmpty { strings.contentAfterDefault }
+        
+        // Guest settings
+        guestSubject = settingsManager.getGuestEmailSubject().ifEmpty { guestStrings.subjectDefault }
+        guestContentBefore = settingsManager.getGuestEmailContentBefore().ifEmpty { guestStrings.contentBeforeDefault }
+        guestIncludeQr = settingsManager.isGuestEmailIncludeQrEnabled()
+        guestContentAfter = settingsManager.getGuestEmailContentAfter().ifEmpty { guestStrings.contentAfterDefault }
+        
+        // Shared settings
         emailSignature = settingsManager.getEmailSignature().ifEmpty { strings.signatureDefault }
         emailIncludeLogo = settingsManager.isEmailIncludeLogoEnabled()
         emailLogoUri = settingsManager.getEmailLogoUri()
@@ -252,77 +287,98 @@ private fun EmailSettingsContent(
         
         HorizontalDivider()
         
-        // Email Subject
-        OutlinedTextField(
-            value = emailSubject,
-            onValueChange = { 
-                emailSubject = it
-                debouncedSave { settingsManager.saveEmailSubject(it) }
-            },
-            label = { Text(strings.subjectLabel) },
-            placeholder = { Text(strings.subjectHint) },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            leadingIcon = { Icon(Icons.Default.Subject, contentDescription = null) }
-        )
-        
-        // Content Before QR Code
-        OutlinedTextField(
-            value = emailContentBefore,
-            onValueChange = { 
-                emailContentBefore = it
-                debouncedSave { settingsManager.saveEmailContentBefore(it) }
-            },
-            label = { Text(strings.contentBeforeLabel) },
-            placeholder = { Text(strings.contentBeforeHint) },
-            modifier = Modifier.fillMaxWidth(),
-            minLines = 3,
-            maxLines = 6,
-            leadingIcon = { Icon(Icons.Default.TextFields, contentDescription = null) }
-        )
-        
-        // Include QR Code Toggle
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+        // Tab Row for Volunteer / Guest selection
+        SingleChoiceSegmentedButtonRow(
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = strings.includeQrLabel,
-                    style = MaterialTheme.typography.titleSmall
-                )
-                Text(
-                    text = strings.includeQrDescription,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Switch(
-                checked = emailIncludeQr,
-                onCheckedChange = {
-                    emailIncludeQr = it
-                    settingsManager.setEmailIncludeQrEnabled(it)
+            tabLabels.forEachIndexed { index, label ->
+                SegmentedButton(
+                    selected = selectedTabIndex == index,
+                    onClick = { selectedTabIndex = index },
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = tabLabels.size),
+                    icon = {
+                        if (selectedTabIndex == index) {
+                            Icon(
+                                imageVector = if (index == 0) Icons.Default.VolunteerActivism else Icons.Default.Person,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                ) {
+                    Text(label)
                 }
+            }
+        }
+        
+        // Tab-specific content
+        if (selectedTabIndex == 0) {
+            // Volunteer Email Settings
+            VolunteerEmailFields(
+                subject = volunteerSubject,
+                onSubjectChange = { 
+                    volunteerSubject = it
+                    debouncedSave { settingsManager.saveEmailSubject(it) }
+                },
+                contentBefore = volunteerContentBefore,
+                onContentBeforeChange = { 
+                    volunteerContentBefore = it
+                    debouncedSave { settingsManager.saveEmailContentBefore(it) }
+                },
+                includeQr = volunteerIncludeQr,
+                onIncludeQrChange = {
+                    volunteerIncludeQr = it
+                    settingsManager.setEmailIncludeQrEnabled(it)
+                },
+                contentAfter = volunteerContentAfter,
+                onContentAfterChange = { 
+                    volunteerContentAfter = it
+                    debouncedSave { settingsManager.saveEmailContentAfter(it) }
+                },
+                strings = strings
+            )
+        } else {
+            // Guest Email Settings
+            GuestEmailFields(
+                subject = guestSubject,
+                onSubjectChange = { 
+                    guestSubject = it
+                    debouncedSave { settingsManager.saveGuestEmailSubject(it) }
+                },
+                contentBefore = guestContentBefore,
+                onContentBeforeChange = { 
+                    guestContentBefore = it
+                    debouncedSave { settingsManager.saveGuestEmailContentBefore(it) }
+                },
+                includeQr = guestIncludeQr,
+                onIncludeQrChange = {
+                    guestIncludeQr = it
+                    settingsManager.setGuestEmailIncludeQrEnabled(it)
+                },
+                contentAfter = guestContentAfter,
+                onContentAfterChange = { 
+                    guestContentAfter = it
+                    debouncedSave { settingsManager.saveGuestEmailContentAfter(it) }
+                },
+                strings = strings
             )
         }
         
-        // Content After QR Code
-        OutlinedTextField(
-            value = emailContentAfter,
-            onValueChange = { 
-                emailContentAfter = it
-                debouncedSave { settingsManager.saveEmailContentAfter(it) }
-            },
-            label = { Text(strings.contentAfterLabel) },
-            placeholder = { Text(strings.contentAfterHint) },
-            modifier = Modifier.fillMaxWidth(),
-            minLines = 2,
-            maxLines = 4,
-            leadingIcon = { Icon(Icons.Default.TextFields, contentDescription = null) }
+        HorizontalDivider()
+        
+        // Shared Settings Header
+        Text(
+            text = context.getString(R.string.email_shared_settings_title),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold
+        )
+        Text(
+            text = context.getString(R.string.email_shared_settings_description),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         
-        // Signature
+        // Signature (shared)
         OutlinedTextField(
             value = emailSignature,
             onValueChange = { 
@@ -339,7 +395,7 @@ private fun EmailSettingsContent(
         
         HorizontalDivider()
         
-        // Include Logo Toggle
+        // Include Logo Toggle (shared)
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -481,36 +537,210 @@ private fun EmailSettingsContent(
         
         HorizontalDivider()
         
-        // Reset to Defaults Button - batch all saves
+        // Reset to Defaults Button - resets current tab only
         OutlinedButton(
             onClick = {
-                emailSubject = strings.subjectDefault
-                emailContentBefore = strings.contentBeforeDefault
-                emailIncludeQr = true
-                emailContentAfter = strings.contentAfterDefault
-                emailSignature = strings.signatureDefault
-                emailIncludeLogo = false
-                emailLogoUri = ""
-                
-                // Batch all saves in a single operation
-                coroutineScope.launch {
-                    settingsManager.saveEmailSubject(emailSubject)
-                    settingsManager.saveEmailContentBefore(emailContentBefore)
-                    settingsManager.setEmailIncludeQrEnabled(emailIncludeQr)
-                    settingsManager.saveEmailContentAfter(emailContentAfter)
-                    settingsManager.saveEmailSignature(emailSignature)
-                    settingsManager.setEmailIncludeLogoEnabled(emailIncludeLogo)
-                    settingsManager.saveEmailLogoUri(emailLogoUri)
+                if (selectedTabIndex == 0) {
+                    // Reset volunteer settings
+                    volunteerSubject = strings.subjectDefault
+                    volunteerContentBefore = strings.contentBeforeDefault
+                    volunteerIncludeQr = true
+                    volunteerContentAfter = strings.contentAfterDefault
+                    
+                    coroutineScope.launch {
+                        settingsManager.saveEmailSubject(volunteerSubject)
+                        settingsManager.saveEmailContentBefore(volunteerContentBefore)
+                        settingsManager.setEmailIncludeQrEnabled(volunteerIncludeQr)
+                        settingsManager.saveEmailContentAfter(volunteerContentAfter)
+                    }
+                } else {
+                    // Reset guest settings
+                    guestSubject = guestStrings.subjectDefault
+                    guestContentBefore = guestStrings.contentBeforeDefault
+                    guestIncludeQr = true
+                    guestContentAfter = guestStrings.contentAfterDefault
+                    
+                    coroutineScope.launch {
+                        settingsManager.saveGuestEmailSubject(guestSubject)
+                        settingsManager.saveGuestEmailContentBefore(guestContentBefore)
+                        settingsManager.setGuestEmailIncludeQrEnabled(guestIncludeQr)
+                        settingsManager.saveGuestEmailContentAfter(guestContentAfter)
+                    }
                 }
             },
             modifier = Modifier.fillMaxWidth()
         ) {
             Icon(Icons.Default.Refresh, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text(strings.resetDefaults)
+            Text(strings.resetDefaults + " (${tabLabels[selectedTabIndex]})")
         }
     }
 }
+
+/**
+ * Volunteer email fields composable
+ */
+@Composable
+private fun VolunteerEmailFields(
+    subject: String,
+    onSubjectChange: (String) -> Unit,
+    contentBefore: String,
+    onContentBeforeChange: (String) -> Unit,
+    includeQr: Boolean,
+    onIncludeQrChange: (Boolean) -> Unit,
+    contentAfter: String,
+    onContentAfterChange: (String) -> Unit,
+    strings: EmailSettingsStrings
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Email Subject
+        OutlinedTextField(
+            value = subject,
+            onValueChange = onSubjectChange,
+            label = { Text(strings.subjectLabel) },
+            placeholder = { Text(strings.subjectHint) },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            leadingIcon = { Icon(Icons.Default.Subject, contentDescription = null) }
+        )
+        
+        // Content Before QR Code
+        OutlinedTextField(
+            value = contentBefore,
+            onValueChange = onContentBeforeChange,
+            label = { Text(strings.contentBeforeLabel) },
+            placeholder = { Text(strings.contentBeforeHint) },
+            modifier = Modifier.fillMaxWidth(),
+            minLines = 3,
+            maxLines = 6,
+            leadingIcon = { Icon(Icons.Default.TextFields, contentDescription = null) }
+        )
+        
+        // Include QR Code Toggle
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = strings.includeQrLabel,
+                    style = MaterialTheme.typography.titleSmall
+                )
+                Text(
+                    text = strings.includeQrDescription,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Switch(
+                checked = includeQr,
+                onCheckedChange = onIncludeQrChange
+            )
+        }
+        
+        // Content After QR Code
+        OutlinedTextField(
+            value = contentAfter,
+            onValueChange = onContentAfterChange,
+            label = { Text(strings.contentAfterLabel) },
+            placeholder = { Text(strings.contentAfterHint) },
+            modifier = Modifier.fillMaxWidth(),
+            minLines = 2,
+            maxLines = 4,
+            leadingIcon = { Icon(Icons.Default.TextFields, contentDescription = null) }
+        )
+    }
+}
+
+/**
+ * Guest email fields composable
+ */
+@Composable
+private fun GuestEmailFields(
+    subject: String,
+    onSubjectChange: (String) -> Unit,
+    contentBefore: String,
+    onContentBeforeChange: (String) -> Unit,
+    includeQr: Boolean,
+    onIncludeQrChange: (Boolean) -> Unit,
+    contentAfter: String,
+    onContentAfterChange: (String) -> Unit,
+    strings: EmailSettingsStrings
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Email Subject
+        OutlinedTextField(
+            value = subject,
+            onValueChange = onSubjectChange,
+            label = { Text(strings.subjectLabel) },
+            placeholder = { Text(strings.subjectHint) },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            leadingIcon = { Icon(Icons.Default.Subject, contentDescription = null) }
+        )
+        
+        // Content Before QR Code
+        OutlinedTextField(
+            value = contentBefore,
+            onValueChange = onContentBeforeChange,
+            label = { Text(strings.contentBeforeLabel) },
+            placeholder = { Text(strings.contentBeforeHint) },
+            modifier = Modifier.fillMaxWidth(),
+            minLines = 3,
+            maxLines = 6,
+            leadingIcon = { Icon(Icons.Default.TextFields, contentDescription = null) }
+        )
+        
+        // Include QR Code Toggle
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = strings.includeQrLabel,
+                    style = MaterialTheme.typography.titleSmall
+                )
+                Text(
+                    text = strings.includeQrDescription,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Switch(
+                checked = includeQr,
+                onCheckedChange = onIncludeQrChange
+            )
+        }
+        
+        // Content After QR Code
+        OutlinedTextField(
+            value = contentAfter,
+            onValueChange = onContentAfterChange,
+            label = { Text(strings.contentAfterLabel) },
+            placeholder = { Text(strings.contentAfterHint) },
+            modifier = Modifier.fillMaxWidth(),
+            minLines = 2,
+            maxLines = 4,
+            leadingIcon = { Icon(Icons.Default.TextFields, contentDescription = null) }
+        )
+    }
+}
+
+/**
+ * Data class for guest email settings strings
+ */
+private data class GuestEmailSettingsStrings(
+    val subjectDefault: String,
+    val contentBeforeDefault: String,
+    val contentAfterDefault: String
+)
 
 /**
  * Gmail Authentication Section using AccountManager

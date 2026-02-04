@@ -374,7 +374,7 @@
     <string name="minutes_ago">%d minutes ago</string>
     <string name="hours_ago">%d hours ago</string>
     <string name="days_ago">%d days ago</string>
-    <string name="search_guests_placeholder">Search guests by name...</string>
+    <string name="search_guests_placeholder">Search guests by name, email, or phone...</string>
     <string name="filter_volunteer_benefits">Volunteer Benefits</string>
     <string name="filter_regular_guests">Regular Guests</string>
     <string name="guests_count">Guests</string>
@@ -390,6 +390,10 @@
     <string name="update_guest">Update Guest</string>
     <string name="guest_information">Guest Information</string>
     <string name="guest_name">Guest Name</string>
+    <string name="guest_email">Email</string>
+    <string name="guest_email_placeholder">email@example.com</string>
+    <string name="guest_phone_number">Phone Number</string>
+    <string name="guest_phone_placeholder">+1 234 567 8900</string>
     <string name="number_of_invitations">Number of Invitations</string>
     <string name="venue">Venue</string>
     <string name="notes">Notes</string>
@@ -454,10 +458,39 @@
     <string name="send_by_mail">Send by mail</string>
     <string name="failed_to_generate_qr_code">Failed to generate QR code</string>
     
+    <!-- Guest QR Code Related -->
+    <string name="guest_qr_code">Guest QR Code</string>
+    <string name="qr_code_for_guest">QR Code for guest: %s</string>
+    <string name="qr_code_subject_guest">Guest QR Code - %s</string>
+    <string name="scan_guest_qr_code">Scan Guest QR Code</string>
+    <string name="invalid_guest_qr_code">Invalid QR code. This is not a guest QR code.</string>
+    <string name="guest_not_found">Guest \'%s\' not found in database.</string>
+    <string name="enter_guest_name_manually">Enter guest name manually:</string>
+    <string name="manual_guest_input">Enter Guest Name</string>
+    <string name="find_guest">Find Guest</string>
+    <string name="available_guests">Available guests:</string>
+    <string name="please_enter_guest_name">Please enter a valid guest name</string>
+    <string name="invalid_input">Invalid input: %s</string>
+    <string name="guest_email_input_title">Enter Email Address</string>
+    <string name="guest_email_input_message">This guest doesn\'t have an email address in the database. Please enter an email address to send the QR code to:</string>
+    <string name="continue_button">Continue</string>
+    <string name="grant_permission">Grant Permission</string>
+    
+    <!-- Guest Email Settings -->
+    <string name="guest_email_subject_default">Your Guest QR Code</string>
+    <string name="guest_email_content_before_default">Hello!\n\nHere is your personal QR code for guest entry. Please keep it handy and show it when you arrive at the entrance.</string>
+    <string name="guest_email_content_after_default">If you have any questions, feel free to reach out to us. We look forward to seeing you!</string>
+    <string name="guest_email_html_header">Your Guest QR Code</string>
+    <string name="guest_email_html_footer">This email was sent automatically. Please keep your QR code safe.</string>
+    
     <!-- Email QR Code Settings -->
     <string name="settings_category_email">Email Settings</string>
     <string name="email_qr_settings_title">QR Code Email Settings</string>
-    <string name="email_qr_settings_description">Configure the content of emails when sending QR codes to volunteers</string>
+    <string name="email_qr_settings_description">Configure the content of emails when sending QR codes</string>
+    <string name="email_tab_volunteer">Volunteers</string>
+    <string name="email_tab_guest">Guests</string>
+    <string name="email_shared_settings_title">Shared Settings</string>
+    <string name="email_shared_settings_description">These settings apply to both volunteer and guest emails</string>
     <string name="email_subject_label">Email Subject</string>
     <string name="email_subject_hint">Subject line for the QR code email</string>
     <string name="email_subject_default">Your Volunteer Profile QR Code</string>

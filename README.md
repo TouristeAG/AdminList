@@ -149,7 +149,7 @@ The application is specifically designed for tablet use with:
 ## Data Models
 
 ### Guest
-- Name, invitation count, venue assignment
+- Name, email, phone number, invitation count, venue assignment
 - Support for volunteer benefit guests
 - Notes field for additional information
 

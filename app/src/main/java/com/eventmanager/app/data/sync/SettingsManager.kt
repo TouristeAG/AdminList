@@ -62,6 +62,13 @@ class SettingsManager(context: Context) {
         private const val KEY_EMAIL_GMAIL_AUTH_TOKEN = "email_gmail_auth_token"
         private const val KEY_CATEGORY_EMAIL_EXPANDED = "category_email_expanded"
         
+        // Guest Email Settings Keys
+        private const val KEY_GUEST_EMAIL_SUBJECT = "guest_email_subject"
+        private const val KEY_GUEST_EMAIL_CONTENT_BEFORE = "guest_email_content_before"
+        private const val KEY_GUEST_EMAIL_INCLUDE_QR = "guest_email_include_qr"
+        private const val KEY_GUEST_EMAIL_CONTENT_AFTER = "guest_email_content_after"
+        private const val KEY_GUEST_EMAIL_SIGNATURE = "guest_email_signature"
+        
         // Page Scroll Behavior Configuration Constants
         const val HEADER_PINNED = "header_pinned"
         const val FULL_SCROLL = "full_scroll"
@@ -444,6 +451,47 @@ class SettingsManager(context: Context) {
     
     fun setCategoryEmailExpanded(expanded: Boolean) {
         prefs.edit().putBoolean(KEY_CATEGORY_EMAIL_EXPANDED, expanded).apply()
+    }
+    
+    // Guest Email Settings Configuration
+    fun getGuestEmailSubject(): String {
+        return prefs.getString(KEY_GUEST_EMAIL_SUBJECT, "") ?: ""
+    }
+    
+    fun saveGuestEmailSubject(subject: String) {
+        prefs.edit().putString(KEY_GUEST_EMAIL_SUBJECT, subject).apply()
+    }
+    
+    fun getGuestEmailContentBefore(): String {
+        return prefs.getString(KEY_GUEST_EMAIL_CONTENT_BEFORE, "") ?: ""
+    }
+    
+    fun saveGuestEmailContentBefore(content: String) {
+        prefs.edit().putString(KEY_GUEST_EMAIL_CONTENT_BEFORE, content).apply()
+    }
+    
+    fun isGuestEmailIncludeQrEnabled(): Boolean {
+        return prefs.getBoolean(KEY_GUEST_EMAIL_INCLUDE_QR, true) // Include QR by default
+    }
+    
+    fun setGuestEmailIncludeQrEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_GUEST_EMAIL_INCLUDE_QR, enabled).apply()
+    }
+    
+    fun getGuestEmailContentAfter(): String {
+        return prefs.getString(KEY_GUEST_EMAIL_CONTENT_AFTER, "") ?: ""
+    }
+    
+    fun saveGuestEmailContentAfter(content: String) {
+        prefs.edit().putString(KEY_GUEST_EMAIL_CONTENT_AFTER, content).apply()
+    }
+    
+    fun getGuestEmailSignature(): String {
+        return prefs.getString(KEY_GUEST_EMAIL_SIGNATURE, "") ?: ""
+    }
+    
+    fun saveGuestEmailSignature(signature: String) {
+        prefs.edit().putString(KEY_GUEST_EMAIL_SIGNATURE, signature).apply()
     }
     
     // Clear all settings

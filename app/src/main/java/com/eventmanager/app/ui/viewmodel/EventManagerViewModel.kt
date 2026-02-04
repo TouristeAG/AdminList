@@ -2938,6 +2938,12 @@ class EventManagerViewModel(
     private var lastJobsHash: Int? = null
     private var cachedUniqueJobs: List<Job>? = null
     
+    /**
+     * Remove duplicate guests based on the following rules:
+     * 1. If ID is the same → keep the OLDER one (lower lastModified)
+     * 2. If ID is different BUT all info is exactly the same → keep the OLDER one
+     * 3. Everything else should NOT be filtered
+     */
     private fun removeDuplicateGuests(guests: List<Guest>): List<Guest> {
         // Use content hash for caching (simple but effective for this use case)
         val currentHash = guests.hashCode()
@@ -2945,15 +2951,23 @@ class EventManagerViewModel(
             return cachedUniqueGuests!!
         }
         
-        val seen = mutableSetOf<String>()
-        val result = guests.filter { guest ->
-            val key = "${guest.name}_${guest.venueName}_${guest.invitations}"
-            if (seen.contains(key)) {
-                false
-            } else {
-                seen.add(key)
-                true
-            }
+        // Group by ID first to handle same-ID duplicates
+        val byId = guests.groupBy { it.id }
+        
+        // For each ID group, keep only the oldest (lowest lastModified)
+        val uniqueById = byId.values.map { group ->
+            group.minByOrNull { it.lastModified } ?: group.first()
+        }
+        
+        // Now check for content duplicates (different ID but same info)
+        // Content key = all identifying fields except ID and timestamps
+        fun contentKey(g: Guest) = "${g.name}_${g.email}_${g.phoneNumber}_${g.venueName}_${g.invitations}_${g.notes}_${g.isVolunteerBenefit}"
+        
+        val byContent = uniqueById.groupBy { contentKey(it) }
+        
+        // For each content group, keep only the oldest (lowest lastModified)
+        val result = byContent.values.map { group ->
+            group.minByOrNull { it.lastModified } ?: group.first()
         }
         
         lastGuestsHash = currentHash
@@ -2961,21 +2975,35 @@ class EventManagerViewModel(
         return result
     }
     
+    /**
+     * Remove duplicate volunteers based on the following rules:
+     * 1. If NanoID is the same → keep the OLDER one (lower lastModified)
+     * 2. If NanoID is different BUT all info is exactly the same → keep the OLDER one
+     * 3. Everything else should NOT be filtered
+     */
     private fun removeDuplicateVolunteers(volunteers: List<Volunteer>): List<Volunteer> {
         val currentHash = volunteers.hashCode()
         if (lastVolunteersHash == currentHash && cachedUniqueVolunteers != null) {
             return cachedUniqueVolunteers!!
         }
         
-        val seen = mutableSetOf<String>()
-        val result = volunteers.filter { volunteer ->
-            val key = "${volunteer.name}_${volunteer.email}_${volunteer.phoneNumber}"
-            if (seen.contains(key)) {
-                false
-            } else {
-                seen.add(key)
-                true
-            }
+        // Group by NanoID first to handle same-ID duplicates
+        val byNanoId = volunteers.groupBy { it.id }
+        
+        // For each NanoID group, keep only the oldest (lowest lastModified)
+        val uniqueByNanoId = byNanoId.values.map { group ->
+            group.minByOrNull { it.lastModified } ?: group.first()
+        }
+        
+        // Now check for content duplicates (different NanoID but same info)
+        // Content key = all identifying fields except NanoID and timestamps
+        fun contentKey(v: Volunteer) = "${v.name}_${v.lastNameAbbreviation}_${v.email}_${v.phoneNumber}_${v.dateOfBirth}_${v.gender}_${v.currentRank}_${v.isActive}"
+        
+        val byContent = uniqueByNanoId.groupBy { contentKey(it) }
+        
+        // For each content group, keep only the oldest (lowest lastModified)
+        val result = byContent.values.map { group ->
+            group.minByOrNull { it.lastModified } ?: group.first()
         }
         
         lastVolunteersHash = currentHash
@@ -2983,25 +3011,35 @@ class EventManagerViewModel(
         return result
     }
     
+    /**
+     * Remove duplicate jobs based on the following rules:
+     * 1. If ID is the same → keep the OLDER one (lower lastModified)
+     * 2. If ID is different BUT all info is exactly the same → keep the OLDER one
+     * 3. Everything else should NOT be filtered
+     */
     private fun removeDuplicateJobs(jobs: List<Job>): List<Job> {
         val currentHash = jobs.hashCode()
         if (lastJobsHash == currentHash && cachedUniqueJobs != null) {
             return cachedUniqueJobs!!
         }
         
-        val seen = mutableSetOf<String>()
-        val result = jobs.filter { job ->
-            // Prefer Sheets row identity when available to avoid mismatches after sync/delete
-            val key = when {
-                job.sheetsId != null -> "sheets_${job.sheetsId}"
-                else -> "local_${job.volunteerId}_${job.jobTypeName}_${job.date}_${job.venueName}_${job.shiftTime}"
-            }
-            if (seen.contains(key)) {
-                false
-            } else {
-                seen.add(key)
-                true
-            }
+        // Group by ID first to handle same-ID duplicates
+        val byId = jobs.groupBy { it.id }
+        
+        // For each ID group, keep only the oldest (lowest lastModified)
+        val uniqueById = byId.values.map { group ->
+            group.minByOrNull { it.lastModified } ?: group.first()
+        }
+        
+        // Now check for content duplicates (different ID but same info)
+        // Content key = all identifying fields except ID and timestamps
+        fun contentKey(j: Job) = "${j.volunteerId}_${j.jobTypeName}_${j.venueName}_${j.date}_${j.shiftTime}_${j.notes}"
+        
+        val byContent = uniqueById.groupBy { contentKey(it) }
+        
+        // For each content group, keep only the oldest (lowest lastModified)
+        val result = byContent.values.map { group ->
+            group.minByOrNull { it.lastModified } ?: group.first()
         }
         
         lastJobsHash = currentHash
@@ -3009,31 +3047,55 @@ class EventManagerViewModel(
         return result
     }
     
+    /**
+     * Remove duplicate job types based on the following rules:
+     * 1. If ID is the same → keep the OLDER one (lower lastModified)
+     * 2. If ID is different BUT all info is exactly the same → keep the OLDER one
+     * 3. Everything else should NOT be filtered
+     */
     private fun removeDuplicateJobTypes(jobTypes: List<JobTypeConfig>): List<JobTypeConfig> {
-        // Job types are typically small lists, no caching needed
-        val seen = mutableSetOf<String>()
-        return jobTypes.filter { jobType ->
-            val key = jobType.name
-            if (seen.contains(key)) {
-                false
-            } else {
-                seen.add(key)
-                true
-            }
+        // Group by ID first to handle same-ID duplicates
+        val byId = jobTypes.groupBy { it.id }
+        
+        // For each ID group, keep only the oldest (lowest lastModified)
+        val uniqueById = byId.values.map { group ->
+            group.minByOrNull { it.lastModified } ?: group.first()
+        }
+        
+        // Now check for content duplicates (different ID but same info)
+        fun contentKey(j: JobTypeConfig) = "${j.name}_${j.isActive}_${j.isShiftJob}_${j.isOrionJob}_${j.requiresShiftTime}_${j.description}"
+        
+        val byContent = uniqueById.groupBy { contentKey(it) }
+        
+        // For each content group, keep only the oldest (lowest lastModified)
+        return byContent.values.map { group ->
+            group.minByOrNull { it.lastModified } ?: group.first()
         }
     }
 
+    /**
+     * Remove duplicate venues based on the following rules:
+     * 1. If ID is the same → keep the OLDER one (lower lastModified)
+     * 2. If ID is different BUT all info is exactly the same → keep the OLDER one
+     * 3. Everything else should NOT be filtered
+     */
     private fun removeDuplicateVenues(venues: List<VenueEntity>): List<VenueEntity> {
-        // Venues are typically small lists, no caching needed
-        val seen = mutableSetOf<String>()
-        return venues.filter { venue ->
-            val key = venue.name
-            if (seen.contains(key)) {
-                false
-            } else {
-                seen.add(key)
-                true
-            }
+        // Group by ID first to handle same-ID duplicates
+        val byId = venues.groupBy { it.id }
+        
+        // For each ID group, keep only the oldest (lowest lastModified)
+        val uniqueById = byId.values.map { group ->
+            group.minByOrNull { it.lastModified } ?: group.first()
+        }
+        
+        // Now check for content duplicates (different ID but same info)
+        fun contentKey(v: VenueEntity) = "${v.name}_${v.description}_${v.isActive}"
+        
+        val byContent = uniqueById.groupBy { contentKey(it) }
+        
+        // For each content group, keep only the oldest (lowest lastModified)
+        return byContent.values.map { group ->
+            group.minByOrNull { it.lastModified } ?: group.first()
         }
     }
 

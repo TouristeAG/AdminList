@@ -183,8 +183,11 @@ class TwoWaySyncService(
             }
             
             // Keep local volunteers that don't exist in remote data
+            // Also check by name to avoid preserving volunteers that exist in sheets with different sheetsId
+            val remoteVolunteerNames = remoteVolunteers.map { it.name }.toSet()
             val localVolunteersToKeep = localVolunteers.filter { localVolunteer ->
-                localVolunteer.sheetsId == null || remoteVolunteersMap[localVolunteer.sheetsId] == null
+                (localVolunteer.sheetsId == null || remoteVolunteersMap[localVolunteer.sheetsId] == null) &&
+                !remoteVolunteerNames.contains(localVolunteer.name)
             }
             
             // Re-insert local volunteers that weren't in remote data (batch)
@@ -955,7 +958,7 @@ class TwoWaySyncService(
                 diagnostics["guests"] = mapOf(
                     "status" to "OK",
                     "count" to guests.size,
-                    "headers" to listOf("Name", "Invitations", "Venue", "Notes", "Volunteer Benefit", "Last Modified")
+                    "headers" to listOf("Name", "Email", "Phone", "Invitations", "Venue", "Notes", "Volunteer Benefit", "Last Modified")
                 )
             } catch (e: Exception) {
                 diagnostics["guests"] = mapOf("status" to "ERROR", "message" to e.message)

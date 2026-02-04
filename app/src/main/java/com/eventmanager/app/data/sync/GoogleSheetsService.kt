@@ -90,6 +90,8 @@ class GoogleSheetsService(private val context: Context) {
                 operation = {
                     val values = listOf(
                         guest.name,
+                        guest.email,
+                        guest.phoneNumber,
                         guest.invitations.toString(),
                         guest.venueName,
                         guest.notes,
@@ -101,7 +103,7 @@ class GoogleSheetsService(private val context: Context) {
                     
                     val response = sheetsService?.spreadsheets()?.values()?.append(
                         settingsManager.getSpreadsheetId(),
-                        "${settingsManager.getGuestListSheet()}!A:F",
+                        "${settingsManager.getGuestListSheet()}!A:H",
                         valueRange
                     )?.setValueInputOption("RAW")?.execute()
                     
@@ -111,7 +113,7 @@ class GoogleSheetsService(private val context: Context) {
                     
                     // Update the guest with the sheets ID (row number)
                     val sheetsId = response.updates?.updatedRange?.let { range ->
-                        val match = Regex(".*!A(\\d+):F\\d+").find(range)
+                        val match = Regex(".*!A(\\d+):H\\d+").find(range)
                         match?.groupValues?.get(1)?.toIntOrNull()
                     }?.toString() ?: "1"
                     
@@ -194,6 +196,8 @@ class GoogleSheetsService(private val context: Context) {
                 operation = {
                     val values = listOf(
                         guest.name,
+                        guest.email,
+                        guest.phoneNumber,
                         guest.invitations.toString(),
                         guest.venueName,
                         guest.notes,
@@ -206,7 +210,7 @@ class GoogleSheetsService(private val context: Context) {
                     
                     val response = sheetsService?.spreadsheets()?.values()?.update(
                         settingsManager.getSpreadsheetId(),
-                        "${settingsManager.getGuestListSheet()}!A$rowNumber:F$rowNumber",
+                        "${settingsManager.getGuestListSheet()}!A$rowNumber:H$rowNumber",
                         valueRange
                     )?.setValueInputOption("RAW")?.execute()
                     
@@ -241,6 +245,8 @@ class GoogleSheetsService(private val context: Context) {
                 val values = guests.filter { !it.isVolunteerBenefit }.map { guest ->
                     listOf(
                         guest.name,
+                        guest.email,
+                        guest.phoneNumber,
                         guest.invitations.toString(),
                         guest.venueName,
                         guest.notes,
@@ -250,7 +256,7 @@ class GoogleSheetsService(private val context: Context) {
                 }
                 
                 val valueRange = ValueRange()
-                    .setValues(listOf(listOf("Name", "Invitations", "Venue", "Notes", "Volunteer Benefit", "Last Modified")) + values)
+                    .setValues(listOf(listOf("Name", "Email", "Phone", "Invitations", "Venue", "Notes", "Volunteer Benefit", "Last Modified")) + values)
                 
                 val response = sheetsService?.spreadsheets()?.values()?.update(
                     settingsManager.getSpreadsheetId(),
@@ -337,7 +343,7 @@ class GoogleSheetsService(private val context: Context) {
                 operation = {
                 val spreadsheetId = settingsManager.getSpreadsheetId()
                 val sheetName = settingsManager.getGuestListSheet()
-                val range = "${sheetName}!A2:F"
+                val range = "${sheetName}!A2:H"
                 
                 println("Reading from spreadsheet: $spreadsheetId, range: $range")
                 
@@ -354,12 +360,34 @@ class GoogleSheetsService(private val context: Context) {
                 println("Retrieved ${values.size} guest rows from sheets")
                 
                 val guests = values.mapIndexedNotNull { index, row ->
-                    if (row.size >= 6) {
+                    if (row.size >= 8) {
                         try {
                             val rowNumber = index + 2 // +2 because we start from row 2 (after header)
                             val guest = Guest(
                                 sheetsId = rowNumber.toString(),
                                 name = row[0].toString(),
+                                email = row[1].toString(),
+                                phoneNumber = row[2].toString(),
+                                invitations = row[3].toString().toIntOrNull() ?: 1,
+                                venueName = row[4].toString(),
+                                notes = row[5].toString(),
+                                isVolunteerBenefit = row[6].toString().equals("Yes", ignoreCase = true),
+                                lastModified = row[7].toString().toLongOrNull() ?: System.currentTimeMillis()
+                            )
+                            guest
+                        } catch (e: Exception) {
+                            println("Failed to parse guest row ${index + 2}: ${e.message}")
+                            null
+                        }
+                    } else if (row.size >= 6) {
+                        // Backward compatibility: support old format without email and phone
+                        try {
+                            val rowNumber = index + 2
+                            val guest = Guest(
+                                sheetsId = rowNumber.toString(),
+                                name = row[0].toString(),
+                                email = "",
+                                phoneNumber = "",
                                 invitations = row[1].toString().toIntOrNull() ?: 1,
                                 venueName = row[2].toString(),
                                 notes = row[3].toString(),
@@ -368,7 +396,7 @@ class GoogleSheetsService(private val context: Context) {
                             )
                             guest
                         } catch (e: Exception) {
-                            println("Failed to parse guest row ${index + 2}: ${e.message}")
+                            println("Failed to parse guest row ${index + 2} (old format): ${e.message}")
                             null
                         }
                     } else {
@@ -1357,7 +1385,7 @@ class GoogleSheetsService(private val context: Context) {
                 // Test guest sheet access
                 try {
                     val guestResponse = sheetsService?.spreadsheets()?.values()?.get(
-                        spreadsheetId, "${guestSheetName}!A1:F1"
+                        spreadsheetId, "${guestSheetName}!A1:H1"
                     )?.execute()
                     println("✅ Guest sheet accessible, headers: ${guestResponse?.getValues()?.firstOrNull()}")
                 } catch (e: Exception) {

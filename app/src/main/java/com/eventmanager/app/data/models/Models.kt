@@ -26,6 +26,8 @@ data class Guest(
     val sheetsId: String? = null, // Google Sheets row ID for syncing
     val name: String,
     val lastNameAbbreviation: String = "", // Last name abbreviation for volunteer guests
+    val email: String = "", // Guest email address
+    val phoneNumber: String = "", // Guest phone number
     val invitations: Int,
     val venueName: String, // Store actual venue name for unlimited venue support
     val notes: String = "",

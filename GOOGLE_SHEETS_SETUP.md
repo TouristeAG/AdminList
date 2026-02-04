@@ -135,6 +135,8 @@ The app will automatically create the following columns in your sheets:
 
 ### Guest List Sheet
 - Name
+- Email
+- Phone
 - Invitations
 - Venue
 - Notes
