@@ -45,6 +45,7 @@ import com.journeyapps.barcodescanner.DefaultDecoderFactory
 import com.journeyapps.barcodescanner.BarcodeCallback
 import com.journeyapps.barcodescanner.BarcodeResult
 import com.eventmanager.app.data.models.Volunteer
+import com.eventmanager.app.data.models.Guest
 import com.eventmanager.app.ui.utils.*
 import com.eventmanager.app.R
 import kotlinx.coroutines.delay
@@ -843,6 +844,370 @@ fun ManualVolunteerInputDialog(
         dismissButton = {
             OutlinedButton(onClick = onDismiss) {
                 Text("Cancel")
+            }
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun GuestQRScannerDialog(
+    onDismiss: () -> Unit,
+    onGuestFound: (Guest) -> Unit,
+    guests: List<Guest>
+) {
+    val context = LocalContext.current
+    var hasPermission by remember { mutableStateOf(false) }
+    var cameraAvailable by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var showManualInput by remember { mutableStateOf(false) }
+    
+    // Check camera permission
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        hasPermission = isGranted
+        if (!isGranted) {
+            errorMessage = context.getString(R.string.camera_permission_required)
+        } else {
+            // Check camera availability after permission is granted
+            cameraAvailable = isCameraAvailable(context)
+            if (!cameraAvailable) {
+                println("🔍 Standard camera check failed, trying alternative method...")
+                cameraAvailable = tryAlternativeCameraInitialization(context)
+                if (!cameraAvailable) {
+                    errorMessage = context.getString(R.string.camera_not_available)
+                }
+            }
+        }
+    }
+    
+    // Check permission and camera availability on first load
+    LaunchedEffect(Unit) {
+        hasPermission = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
+        
+        if (hasPermission) {
+            cameraAvailable = isCameraAvailable(context)
+            if (!cameraAvailable) {
+                println("🔍 Standard camera check failed, trying alternative method...")
+                cameraAvailable = tryAlternativeCameraInitialization(context)
+                if (!cameraAvailable) {
+                    errorMessage = context.getString(R.string.camera_not_available)
+                }
+            }
+        } else {
+            permissionLauncher.launch(Manifest.permission.CAMERA)
+        }
+    }
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = context.getString(R.string.scan_guest_qr_code),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                if (hasPermission && cameraAvailable) {
+                    QRScannerView(
+                        onQRCodeScanned = { qrData ->
+                            try {
+                                // Debug logging
+                                println("🔍 Guest QR Code scanned - Type: '${qrData.type}', Name: '${qrData.name}'")
+                                println("🔍 Available guests (${guests.size} total):")
+                                guests.take(10).forEach { g ->
+                                    println("  - Name: ${g.name}, IsVolunteerBenefit: ${g.isVolunteerBenefit}")
+                                }
+                                
+                                // Only process guest type QR codes
+                                if (qrData.type != "guest") {
+                                    errorMessage = context.getString(R.string.invalid_guest_qr_code)
+                                    return@QRScannerView
+                                }
+                                
+                                // Find guest by name (case-insensitive) - only permanent guests
+                                val guest = guests.find { guest ->
+                                    !guest.isVolunteerBenefit && 
+                                    guest.name.equals(qrData.name, ignoreCase = true)
+                                }
+                                
+                                if (guest != null) {
+                                    println("✅ Found guest: ${guest.name}")
+                                    onGuestFound(guest)
+                                    onDismiss()
+                                } else {
+                                    println("❌ Guest not found for name: '${qrData.name}'")
+                                    
+                                    // Try partial matching by name
+                                    val guestByPartialName = guests.find { g ->
+                                        !g.isVolunteerBenefit &&
+                                        (g.name.contains(qrData.name, ignoreCase = true) ||
+                                         qrData.name.contains(g.name, ignoreCase = true))
+                                    }
+                                    if (guestByPartialName != null) {
+                                        println("✅ Found guest by partial name match: ${guestByPartialName.name}")
+                                        onGuestFound(guestByPartialName)
+                                        onDismiss()
+                                    } else {
+                                        println("❌ No guest found with name '${qrData.name}'")
+                                        errorMessage = context.getString(R.string.guest_not_found, qrData.name)
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                println("❌ Error processing QR code: ${e.message}")
+                                errorMessage = context.getString(R.string.error_processing_qr_code, e.message ?: "")
+                            }
+                        },
+                        onError = { message ->
+                            errorMessage = message
+                        }
+                    )
+                } else {
+                    // Permission denied state (polished)
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(300.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        ),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.QrCodeScanner,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(56.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = context.getString(R.string.camera_permission_title),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Center
+                                )
+                                Text(
+                                    text = context.getString(R.string.camera_permission_required),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center
+                                )
+                                Button(
+                                    onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) }
+                                ) {
+                                    Text(context.getString(R.string.grant_permission))
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Error message
+                errorMessage?.let { error ->
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                            Text(
+                                text = error,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                        }
+                    }
+                }
+                
+                // Manual input option
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedButton(
+                    onClick = { showManualInput = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.Keyboard, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(context.getString(R.string.enter_guest_name_manually))
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss) {
+                Text(context.getString(R.string.cancel))
+            }
+        }
+    )
+    
+    // Manual input dialog
+    if (showManualInput) {
+        ManualGuestInputDialog(
+            onDismiss = { showManualInput = false },
+            onGuestFound = { guest ->
+                onGuestFound(guest)
+                showManualInput = false
+                onDismiss()
+            },
+            guests = guests
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ManualGuestInputDialog(
+    onDismiss: () -> Unit,
+    onGuestFound: (Guest) -> Unit,
+    guests: List<Guest>
+) {
+    val context = LocalContext.current
+    var inputText by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    
+    // Filter to only permanent guests (not volunteer benefits)
+    val permanentGuests = remember(guests) { guests.filter { !it.isVolunteerBenefit } }
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = context.getString(R.string.manual_guest_input),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = context.getString(R.string.enter_guest_name_manually),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                
+                OutlinedTextField(
+                    value = inputText,
+                    onValueChange = { 
+                        inputText = it
+                        errorMessage = null
+                    },
+                    label = { Text(context.getString(R.string.guest_name)) },
+                    placeholder = { Text("e.g., John Doe") },
+                    isError = errorMessage != null,
+                    supportingText = errorMessage?.let { { Text(it) } },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                
+                if (permanentGuests.isNotEmpty()) {
+                    Text(
+                        text = context.getString(R.string.available_guests),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    
+                    // Filter guests based on input
+                    val filteredGuests = remember(inputText, permanentGuests) {
+                        if (inputText.isBlank()) {
+                            permanentGuests.take(10)
+                        } else {
+                            permanentGuests.filter { 
+                                it.name.contains(inputText, ignoreCase = true) 
+                            }.take(10)
+                        }
+                    }
+                    
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(150.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        items(
+                            items = filteredGuests,
+                            key = { guest -> guest.id }
+                        ) { guest ->
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = {
+                                    inputText = guest.name
+                                }
+                            ) {
+                                Text(
+                                    text = guest.name,
+                                    modifier = Modifier.padding(8.dp),
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    try {
+                        val guestName = inputText.trim()
+                        if (guestName.isBlank()) {
+                            errorMessage = context.getString(R.string.please_enter_guest_name)
+                            return@Button
+                        }
+                        
+                        // Find guest by name (case-insensitive)
+                        val guest = permanentGuests.find { it.name.equals(guestName, ignoreCase = true) }
+                            ?: permanentGuests.find { it.name.contains(guestName, ignoreCase = true) }
+                        
+                        if (guest != null) {
+                            onGuestFound(guest)
+                            onDismiss()
+                        } else {
+                            errorMessage = context.getString(R.string.guest_not_found, guestName)
+                        }
+                    } catch (e: Exception) {
+                        errorMessage = context.getString(R.string.invalid_input, e.message ?: "")
+                    }
+                },
+                enabled = inputText.isNotBlank()
+            ) {
+                Text(context.getString(R.string.find_guest))
+            }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss) {
+                Text(context.getString(R.string.cancel))
             }
         }
     )

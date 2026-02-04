@@ -23,7 +23,7 @@ import com.eventmanager.app.data.models.CounterData
 
 @Database(
     entities = [Guest::class, Volunteer::class, Job::class, JobTypeConfig::class, VenueEntity::class, CounterData::class],
-    version = 19,
+    version = 20,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -829,6 +829,35 @@ abstract class EventManagerDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * MIGRATION 19→20: Add email and phoneNumber fields to guests table
+         * 
+         * This migration adds two new columns to store guest contact information:
+         * - email: Guest's email address (optional)
+         * - phoneNumber: Guest's phone number (optional)
+         */
+        private val MIGRATION_19_20 = object : Migration(19, 20) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                try {
+                    println("Starting migration 19→20: Adding email and phoneNumber to guests table")
+                    
+                    // Add email column with empty default
+                    db.execSQL("ALTER TABLE guests ADD COLUMN email TEXT NOT NULL DEFAULT ''")
+                    println("Added email column to guests table")
+                    
+                    // Add phoneNumber column with empty default
+                    db.execSQL("ALTER TABLE guests ADD COLUMN phoneNumber TEXT NOT NULL DEFAULT ''")
+                    println("Added phoneNumber column to guests table")
+                    
+                    println("Migration 19→20 completed successfully")
+                } catch (e: Exception) {
+                    println("Migration 19→20 failed: ${e.message}")
+                    e.printStackTrace()
+                    throw e
+                }
+            }
+        }
+
         fun getDatabase(context: Context): EventManagerDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -836,7 +865,7 @@ abstract class EventManagerDatabase : RoomDatabase() {
                     EventManagerDatabase::class.java,
                     "event_manager_database"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20)
                 .fallbackToDestructiveMigration()
                 .build()
                 INSTANCE = instance

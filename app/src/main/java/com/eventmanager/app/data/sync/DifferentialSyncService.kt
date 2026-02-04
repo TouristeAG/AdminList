@@ -96,6 +96,8 @@ class DifferentialSyncService(
     
     private fun hasGuestChanged(old: Guest, new: Guest): Boolean =
         old.name != new.name ||
+        old.email != new.email ||
+        old.phoneNumber != new.phoneNumber ||
         old.invitations != new.invitations ||
         old.venueName != new.venueName ||
         old.notes != new.notes ||
@@ -105,32 +107,51 @@ class DifferentialSyncService(
     
     /**
      * Compare TEMP_DB volunteers with MAIN_DB volunteers
+     * Uses multiple matching strategies to handle volunteers with or without sheetsId
      */
     suspend fun compareVolunteers(tempVolunteers: List<Volunteer>, mainVolunteers: List<Volunteer>): SyncChanges<Volunteer> =
         withContext(Dispatchers.Default) {
-            val mainMap = mainVolunteers.associateBy { it.sheetsId ?: "${it.name}_${it.email}_${it.phoneNumber}" }
-            val tempMap = tempVolunteers.associateBy { it.sheetsId ?: "${it.name}_${it.email}_${it.phoneNumber}" }
+            // Create multiple lookup maps for flexible matching
+            val mainBySheetsId = mainVolunteers.filter { it.sheetsId != null }.associateBy { it.sheetsId!! }
+            val mainByName = mainVolunteers.associateBy { it.name }
+            val mainByCompositeKey = mainVolunteers.associateBy { "${it.name}_${it.email}_${it.phoneNumber}" }
             
             val new = mutableListOf<Volunteer>()
             val modified = mutableListOf<Volunteer>()
             val unchanged = mutableListOf<Volunteer>()
+            val matchedMainIds = mutableSetOf<String>() // Track which main volunteers were matched
             
-            // Find new and modified items in TEMP_DB
-            for ((key, tempVolunteer) in tempMap) {
-                val mainVolunteer = mainMap[key]
+            // Find new and modified items in TEMP_DB (remote volunteers)
+            for (tempVolunteer in tempVolunteers) {
+                // Try to find matching main (local) volunteer using multiple strategies:
+                // 1. Match by sheetsId first (most reliable)
+                // 2. Then try matching by name (handles case where local has no sheetsId yet)
+                // 3. Finally try composite key as fallback
+                val mainVolunteer = tempVolunteer.sheetsId?.let { mainBySheetsId[it] }
+                    ?: mainByName[tempVolunteer.name]
+                    ?: mainByCompositeKey["${tempVolunteer.name}_${tempVolunteer.email}_${tempVolunteer.phoneNumber}"]
+                
                 if (mainVolunteer == null) {
+                    // No matching local volunteer found - this is new from sheets
                     new.add(tempVolunteer)
-                } else if (hasVolunteerChanged(mainVolunteer, tempVolunteer)) {
-                    modified.add(tempVolunteer)
                 } else {
-                    unchanged.add(tempVolunteer)
+                    // Mark this local volunteer as matched
+                    matchedMainIds.add(mainVolunteer.id)
+                    
+                    if (hasVolunteerChanged(mainVolunteer, tempVolunteer)) {
+                        // Volunteer exists locally but has changes (including NanoID changes)
+                        modified.add(tempVolunteer)
+                    } else {
+                        unchanged.add(tempVolunteer)
+                    }
                 }
             }
             
-            // Find deleted items (in MAIN_DB but not in TEMP_DB)
+            // Find deleted items (in MAIN_DB but not matched by any TEMP_DB volunteer)
+            // Also check by name to avoid incorrectly marking as deleted if sheetsId changed
+            val tempNames = tempVolunteers.map { it.name }.toSet()
             val deleted = mainVolunteers.filter { mainVolunteer ->
-                val key = mainVolunteer.sheetsId ?: "${mainVolunteer.name}_${mainVolunteer.email}_${mainVolunteer.phoneNumber}"
-                !tempMap.containsKey(key)
+                !matchedMainIds.contains(mainVolunteer.id) && !tempNames.contains(mainVolunteer.name)
             }
             
             SyncChanges(new, modified, deleted, unchanged)
