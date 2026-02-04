@@ -1,8 +1,8 @@
 {
-  "latestVersionCode": 7,
-  "latestVersionName": "0.9.6",
-  "minSupportedVersionCode": "7",
-  "changelogShort": "New NanoID identification system for volunteers and shifts.",
-  "downloadUrl": "https://github.com/TouristeAG/AdminList/releases/download/0.9.6/app-release-0.9.6.apk",
+  "latestVersionCode": 8,
+  "latestVersionName": "0.9.7",
+  "minSupportedVersionCode": "8",
+  "changelogShort": "Sync system fixes.",
+  "downloadUrl": "https://github.com/TouristeAG/AdminList/releases/download/0.9.7/app-release-0.9.7.apk",
   "storeUrl": "https://play.google.com/store/apps/details?id=com.eventmanager.app"
 }
