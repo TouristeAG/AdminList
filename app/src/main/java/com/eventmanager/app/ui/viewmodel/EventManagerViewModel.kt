@@ -1530,8 +1530,17 @@ class EventManagerViewModel(
                 }
             } else if (remoteVolunteer.lastModified > localVolunteer.lastModified) {
                 // Remote version is newer
+                // Google Sheets is source of truth for NanoIDs - adopt the remote ID
                 try {
-                    repository.updateVolunteer(remoteVolunteer.copy(id = localVolunteer.id))
+                    if (localVolunteer.id != remoteVolunteer.id) {
+                        // NanoID changed - need to update jobs that reference this volunteer
+                        println("🔄 Volunteer '${remoteVolunteer.name}' NanoID changed: '${localVolunteer.id}' → '${remoteVolunteer.id}'")
+                        repository.updateJobsVolunteerId(localVolunteer.id, remoteVolunteer.id)
+                        repository.deleteVolunteer(localVolunteer)
+                        repository.insertVolunteer(remoteVolunteer)
+                    } else {
+                        repository.updateVolunteer(remoteVolunteer)
+                    }
                     volunteersUpdated++
                     println("Updated volunteer: ${remoteVolunteer.name}")
                 } catch (e: Exception) {
@@ -1778,13 +1787,22 @@ class EventManagerViewModel(
                 }
             } else if (remoteVolunteer.lastModified > localVolunteer.lastModified) {
                 // Remote version is newer
+                // Google Sheets is source of truth for NanoIDs - adopt the remote ID
                 try {
                     // Calculate activity based on job assignments - OPTIMIZED: uses map lookup
                     val updatedVolunteer = VolunteerActivityManager.calculateActivityFromJobsMap(remoteVolunteer, jobsByVolunteerId)
-                    repository.updateVolunteer(updatedVolunteer.copy(id = localVolunteer.id))
+                    if (localVolunteer.id != remoteVolunteer.id) {
+                        // NanoID changed - need to update jobs that reference this volunteer
+                        println("🔄 Volunteer '${remoteVolunteer.name}' NanoID changed: '${localVolunteer.id}' → '${remoteVolunteer.id}'")
+                        repository.updateJobsVolunteerId(localVolunteer.id, remoteVolunteer.id)
+                        repository.deleteVolunteer(localVolunteer)
+                        repository.insertVolunteer(updatedVolunteer)
+                    } else {
+                        repository.updateVolunteer(updatedVolunteer)
+                    }
                     volunteersUpdated++
                     println("Updated volunteer: ${remoteVolunteer.name}")
-        } catch (e: Exception) {
+                } catch (e: Exception) {
                     println("Failed to update volunteer: ${remoteVolunteer.name} - ${e.message}")
                 }
             } else {
@@ -1894,10 +1912,19 @@ class EventManagerViewModel(
                 }
             } else {
                 // Always use remote version (sheets priority)
+                // Google Sheets is source of truth for NanoIDs - adopt the remote ID
                 try {
                     // Calculate activity based on job assignments - OPTIMIZED: uses map lookup
                     val updatedVolunteer = VolunteerActivityManager.calculateActivityFromJobsMap(remoteVolunteer, jobsByVolunteerId)
-                    repository.updateVolunteer(updatedVolunteer.copy(id = localVolunteer.id))
+                    if (localVolunteer.id != remoteVolunteer.id) {
+                        // NanoID changed - need to update jobs that reference this volunteer
+                        println("🔄 Volunteer '${remoteVolunteer.name}' NanoID changed: '${localVolunteer.id}' → '${remoteVolunteer.id}'")
+                        repository.updateJobsVolunteerId(localVolunteer.id, remoteVolunteer.id)
+                        repository.deleteVolunteer(localVolunteer)
+                        repository.insertVolunteer(updatedVolunteer)
+                    } else {
+                        repository.updateVolunteer(updatedVolunteer)
+                    }
                     volunteersUpdated++
                     println("Updated volunteer from sheets: ${remoteVolunteer.name}")
                 } catch (e: Exception) {
@@ -3367,11 +3394,13 @@ class EventManagerViewModel(
                 currentVolunteers.addAll(changes.volunteers.new)
                 
                 // Update modified volunteers by matching key
+                // Google Sheets is source of truth for NanoIDs - use the ID from sheets
                 changes.volunteers.modified.forEach { modifiedVolunteer ->
                     val modifyKey = volunteerKey(modifiedVolunteer)
                     val index = currentVolunteers.indexOfFirst { volunteerKey(it) == modifyKey }
                     if (index >= 0) {
-                        currentVolunteers[index] = modifiedVolunteer.copy(id = currentVolunteers[index].id)
+                        // Use the NanoID from Google Sheets (modifiedVolunteer.id)
+                        currentVolunteers[index] = modifiedVolunteer
                     }
                 }
                 
@@ -3572,11 +3601,13 @@ class EventManagerViewModel(
             }
             
             // Update modified volunteers by matching key
+            // Google Sheets is source of truth for NanoIDs - use the ID from sheets
             changes.modified.forEach { modifiedVolunteer ->
                 val modifyKey = volunteerKey(modifiedVolunteer)
                 val index = currentVolunteers.indexOfFirst { volunteerKey(it) == modifyKey }
                 if (index >= 0) {
-                    currentVolunteers[index] = modifiedVolunteer.copy(id = currentVolunteers[index].id)
+                    // Use the NanoID from Google Sheets (modifiedVolunteer.id)
+                    currentVolunteers[index] = modifiedVolunteer
                     println("✏️ Updated volunteer: ${modifiedVolunteer.name}")
                 }
             }

@@ -1076,6 +1076,11 @@ string active_volunteers_count
 string active_volunteers_description
 string active_volunteers_graph
 string active_volunteers_graph_description
+string activity_status_active_days_ago
+string activity_status_active_months_ago
+string activity_status_active_today
+string activity_status_inactive_years_ago
+string activity_status_never_worked
 string add
 string add_guest
 string add_job
@@ -1234,7 +1239,15 @@ string default_popup_window_title
 string define_zxingandroidembedded
 string delete
 string delete_guest
+string delete_volunteer_also_delete_shifts_one
+string delete_volunteer_also_delete_shifts_other
 string delete_volunteer_button
+string delete_volunteer_confirm
+string delete_volunteer_graph_warning
+string delete_volunteer_shift_count_one
+string delete_volunteer_shift_count_other
+string delete_volunteer_title
+string delete_volunteer_warning
 string delete_volunteers
 string download_complete
 string download_error_message

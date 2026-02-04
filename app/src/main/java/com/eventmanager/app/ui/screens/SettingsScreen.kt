@@ -3093,7 +3093,15 @@ fun SettingsScreen(
                     }
                     is com.eventmanager.app.data.update.DownloadState.Downloaded -> {
                         AlertDialog(
-                            onDismissRequest = { showUpdateResultDialog = false },
+                            onDismissRequest = if (isRequired) { {} } else { { showUpdateResultDialog = false } },
+                            properties = if (isRequired) {
+                                DialogProperties(
+                                    dismissOnBackPress = false,
+                                    dismissOnClickOutside = false
+                                )
+                            } else {
+                                DialogProperties()
+                            },
                             title = {
                                 Text(text = context.getString(R.string.download_complete))
                             },
@@ -3108,16 +3116,18 @@ fun SettingsScreen(
                                     Text(context.getString(R.string.install_update))
                                 }
                             },
-                            dismissButton = {
-                                TextButton(onClick = { showUpdateResultDialog = false }) {
-                                    Text(context.getString(R.string.later))
+                            dismissButton = if (!isRequired) {
+                                {
+                                    TextButton(onClick = { showUpdateResultDialog = false }) {
+                                        Text(context.getString(R.string.later))
+                                    }
                                 }
-                            }
+                            } else null
                         )
                     }
                     is com.eventmanager.app.data.update.DownloadState.Error -> {
                         AlertDialog(
-                            onDismissRequest = { showUpdateResultDialog = false },
+                            onDismissRequest = if (isRequired) { {} } else { { showUpdateResultDialog = false } },
                             title = {
                                 Text(text = context.getString(R.string.download_error_title))
                             },
@@ -3134,7 +3144,7 @@ fun SettingsScreen(
                     else -> {
                         // Show update available dialog
                         AlertDialog(
-                            onDismissRequest = { showUpdateResultDialog = false },
+                            onDismissRequest = if (isRequired) { {} } else { { showUpdateResultDialog = false } },
                             title = {
                                 Text(text = context.getString(R.string.update_available_title, manifest.latestVersionName))
                             },
@@ -3374,6 +3384,24 @@ fun GoogleSheetsInstructionsDialog(
                 }
                 
                 item {
+                    OutlinedButton(
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://console.cloud.google.com/"))
+                            context.startActivity(intent)
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            Icons.Default.OpenInNew,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(context.getString(R.string.open_google_cloud_console))
+                    }
+                }
+                
+                item {
                     InstructionStep(
                         number = "1",
                         title = context.getString(R.string.step_1_title),
@@ -3560,7 +3588,7 @@ fun ActiveVolunteersDialog(
                             )
                             Spacer(modifier = Modifier.weight(1f))
                             Text(
-                                text = VolunteerActivityManager.getActivityStatusText(volunteer),
+                                text = VolunteerActivityManager.getActivityStatusText(volunteer, context),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color(0xFF4CAF50)
                             )
@@ -3599,7 +3627,7 @@ fun ActiveVolunteersDialog(
                                 )
                                 Spacer(modifier = Modifier.weight(1f))
                                 Text(
-                                    text = VolunteerActivityManager.getActivityStatusText(volunteer),
+                                    text = VolunteerActivityManager.getActivityStatusText(volunteer, context),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = Color(0xFF9E9E9E)
                                 )
