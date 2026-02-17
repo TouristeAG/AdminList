@@ -754,14 +754,15 @@ class GoogleSheetsService(private val context: Context) {
                         job.date.toString(),
                         job.shiftTime.name,
                         job.notes,
-                        job.lastModified.toString()
+                        job.lastModified.toString(),
+                        when (job.benefitUsed) { true -> "Yes"; false -> "No"; null -> "" }
                     )
                     
                     val valueRange = ValueRange().setValues(listOf(values))
                     
                     val response = sheetsService?.spreadsheets()?.values()?.append(
                         settingsManager.getSpreadsheetId(),
-                        "${settingsManager.getJobsSheet()}!A:G",
+                        "${settingsManager.getJobsSheet()}!A:H",
                         valueRange
                     )?.setValueInputOption("RAW")?.execute()
                     
@@ -771,7 +772,7 @@ class GoogleSheetsService(private val context: Context) {
                     
                     // Update the job with the sheets ID (row number)
                     val sheetsId = response.updates?.updatedRange?.let { range ->
-                        val match = Regex(".*!A(\\d+):G\\d+").find(range)
+                        val match = Regex(".*!A(\\d+):[A-Z]+\\d+").find(range)
                         match?.groupValues?.get(1)?.toIntOrNull()
                     }?.toString() ?: "1"
                     
@@ -807,7 +808,8 @@ class GoogleSheetsService(private val context: Context) {
                         job.date.toString(),
                         job.shiftTime.name,
                         job.notes,
-                        job.lastModified.toString()
+                        job.lastModified.toString(),
+                        when (job.benefitUsed) { true -> "Yes"; false -> "No"; null -> "" }
                     )
                     
                     val valueRange = ValueRange().setValues(listOf(values))
@@ -815,7 +817,7 @@ class GoogleSheetsService(private val context: Context) {
                     
                     val response = sheetsService?.spreadsheets()?.values()?.update(
                         settingsManager.getSpreadsheetId(),
-                        "${settingsManager.getJobsSheet()}!A$rowNumber:G$rowNumber",
+                        "${settingsManager.getJobsSheet()}!A$rowNumber:H$rowNumber",
                         valueRange
                     )?.setValueInputOption("RAW")?.execute()
                     
@@ -856,12 +858,13 @@ class GoogleSheetsService(private val context: Context) {
                         job.date.toString(),
                         job.shiftTime.name,
                         job.notes,
-                        job.lastModified.toString()
+                        job.lastModified.toString(),
+                        when (job.benefitUsed) { true -> "Yes"; false -> "No"; null -> "" }
                     )
                 }
                 
                 val valueRange = ValueRange()
-                    .setValues(listOf(listOf("Volunteer ID", "Job Type", "Venue", "Date", "Shift Time", "Notes", "Last Modified")) + values)
+                    .setValues(listOf(listOf("Volunteer ID", "Job Type", "Venue", "Date", "Shift Time", "Notes", "Last Modified", "Used")) + values)
                 
                 println("📤 Sending ${values.size + 1} rows (including header) to Google Sheets...")
                 
@@ -899,7 +902,7 @@ class GoogleSheetsService(private val context: Context) {
                 operation = {
                 val response = sheetsService?.spreadsheets()?.values()?.get(
                     settingsManager.getSpreadsheetId(),
-                    "${settingsManager.getJobsSheet()}!A2:G"
+                    "${settingsManager.getJobsSheet()}!A2:H"
                 )?.execute()
                 
                 if (response == null) {
@@ -924,6 +927,14 @@ class GoogleSheetsService(private val context: Context) {
                             // The actual job type name is stored in jobTypeName field
                             val jobType = JobType.OTHER
                             
+                            // Parse benefitUsed from column H (index 7) if present
+                            val benefitUsedRaw = if (row.size > 7) row[7].toString().trim() else ""
+                            val benefitUsed: Boolean? = when (benefitUsedRaw.lowercase()) {
+                                "yes" -> true
+                                "no" -> false
+                                else -> null
+                            }
+                            
                             Job(
                                 sheetsId = rowNumber.toString(),
                                 volunteerId = validVolunteerId, // Validated NanoID (generated if invalid)
@@ -932,6 +943,7 @@ class GoogleSheetsService(private val context: Context) {
                                 venueName = row[2].toString(),
                                 date = row[3].toString().toLongOrNull() ?: System.currentTimeMillis(),
                                 shiftTime = ShiftTime.valueOf(row[4].toString()),
+                                benefitUsed = benefitUsed,
                                 notes = row[5].toString(),
                                 lastModified = row[6].toString().toLongOrNull() ?: System.currentTimeMillis()
                             )
@@ -976,6 +988,10 @@ class GoogleSheetsService(private val context: Context) {
                         if (config.isShiftJob) "Yes" else "No",
                         if (config.isOrionJob) "Yes" else "No",
                         if (config.requiresShiftTime) "Yes" else "No",
+                        config.benefitSystemType.name,
+                        config.manualRewards?.let { rewards ->
+                            "${rewards.durationDays}|${rewards.freeDrinks}|${rewards.barDiscountPercentage}|${rewards.freeEntry}|${rewards.invites}|${rewards.otherNotes}"
+                        } ?: "",
                         config.description,
                         config.lastModified.toString()
                     )
@@ -984,7 +1000,7 @@ class GoogleSheetsService(private val context: Context) {
                     
                     val response = sheetsService?.spreadsheets()?.values()?.append(
                         settingsManager.getSpreadsheetId(),
-                        "JobTypes!A:G",
+                        "JobTypes!A:I",
                         valueRange
                     )?.setValueInputOption("RAW")?.execute()
                     
@@ -992,9 +1008,8 @@ class GoogleSheetsService(private val context: Context) {
                         throw IOException("Failed to add job type to Google Sheets - no response received")
                     }
                     
-                    // Update the job type with the sheets ID (row number)
                     val sheetsId = response.updates?.updatedRange?.let { range ->
-                        val match = Regex(".*!A(\\d+):G\\d+").find(range)
+                        val match = Regex(".*!A(\\d+):I\\d+").find(range)
                         match?.groupValues?.get(1)?.toIntOrNull()
                     }?.toString() ?: "1"
                     
@@ -1027,6 +1042,10 @@ class GoogleSheetsService(private val context: Context) {
                         if (config.isShiftJob) "Yes" else "No",
                         if (config.isOrionJob) "Yes" else "No",
                         if (config.requiresShiftTime) "Yes" else "No",
+                        config.benefitSystemType.name,
+                        config.manualRewards?.let { rewards ->
+                            "${rewards.durationDays}|${rewards.freeDrinks}|${rewards.barDiscountPercentage}|${rewards.freeEntry}|${rewards.invites}|${rewards.otherNotes}"
+                        } ?: "",
                         config.description,
                         config.lastModified.toString()
                     )
@@ -1036,7 +1055,7 @@ class GoogleSheetsService(private val context: Context) {
                     
                     val response = sheetsService?.spreadsheets()?.values()?.update(
                         settingsManager.getSpreadsheetId(),
-                        "JobTypes!A$rowNumber:G$rowNumber",
+                        "JobTypes!A$rowNumber:I$rowNumber",
                         valueRange
                     )?.setValueInputOption("RAW")?.execute()
                     
@@ -1395,7 +1414,7 @@ class GoogleSheetsService(private val context: Context) {
                 // Test volunteer sheet access
                 try {
                     val volunteerResponse = sheetsService?.spreadsheets()?.values()?.get(
-                        spreadsheetId, "${volunteerSheetName}!A1:H1"
+                        spreadsheetId, "${volunteerSheetName}!A1:J1"
                     )?.execute()
                     println("✅ Volunteer sheet accessible, headers: ${volunteerResponse?.getValues()?.firstOrNull()}")
                 } catch (e: Exception) {
@@ -1405,7 +1424,7 @@ class GoogleSheetsService(private val context: Context) {
                 // Test jobs sheet access
                 try {
                     val jobsResponse = sheetsService?.spreadsheets()?.values()?.get(
-                        spreadsheetId, "${jobsSheetName}!A1:G1"
+                        spreadsheetId, "${jobsSheetName}!A1:H1"
                     )?.execute()
                     println("✅ Jobs sheet accessible, headers: ${jobsResponse?.getValues()?.firstOrNull()}")
                 } catch (e: Exception) {
@@ -1415,7 +1434,7 @@ class GoogleSheetsService(private val context: Context) {
                 // Test JobTypes sheet access
                 try {
                     val jobTypesResponse = sheetsService?.spreadsheets()?.values()?.get(
-                        spreadsheetId, "JobTypes!A1:G1"
+                        spreadsheetId, "JobTypes!A1:I1"
                     )?.execute()
                     println("✅ JobTypes sheet accessible, headers: ${jobTypesResponse?.getValues()?.firstOrNull()}")
                 } catch (e: Exception) {
@@ -1522,6 +1541,165 @@ class GoogleSheetsService(private val context: Context) {
         }
     }
     
+    // ── Sheet Structure Validation & Repair ─────────────────────────────────
+
+    private data class SheetDefinition(val name: String, val headers: List<String>)
+
+    private fun getSheetDefinitions(): List<SheetDefinition> = listOf(
+        SheetDefinition(settingsManager.getGuestListSheet(),
+            listOf("Name", "Email", "Phone", "Invitations", "Venue", "Notes", "Volunteer Benefit", "Last Modified")),
+        SheetDefinition(settingsManager.getVolunteerGuestListSheet(),
+            listOf("Name", "Last Name Abbreviation", "Invitations", "Venue", "Notes", "Volunteer Benefit", "Last Modified")),
+        SheetDefinition(settingsManager.getVolunteerSheet(),
+            listOf("ID", "Name", "Abbreviation", "Email", "Phone", "Date of Birth", "Gender", "Rank", "Active", "Last Modified")),
+        SheetDefinition(settingsManager.getJobsSheet(),
+            listOf("Volunteer ID", "Job Type", "Venue", "Date", "Shift Time", "Notes", "Last Modified", "Used")),
+        SheetDefinition("JobTypes",
+            listOf("Name", "Status", "Shift Type", "Orion Type", "Requires Time", "Benefit System", "Manual Rewards", "Description", "Last Modified")),
+        SheetDefinition(settingsManager.getVenuesSheet(),
+            listOf("Name", "Description", "Status", "Last Modified"))
+    )
+
+    /**
+     * Validates every expected sheet tab exists with correct headers, repairing
+     * as needed. Data rows are never modified -- when a header is missing and
+     * row 1 contains data, a new row is inserted at the top so existing data
+     * shifts down.
+     *
+     * API budget: 2 calls when everything is OK (metadata + batchGet),
+     * up to 4 when repairs are needed.
+     *
+     * @return true on success (with or without repairs), false on error.
+     */
+    suspend fun validateAndRepairSheetsStructure(): Boolean = withContext(Dispatchers.IO) {
+        try {
+            if (sheetsService == null) initializeSheetsService()
+
+            val spreadsheetId = settingsManager.getSpreadsheetId()
+            if (spreadsheetId.isBlank() || spreadsheetId == "YOUR_SPREADSHEET_ID_HERE") {
+                return@withContext false
+            }
+
+            val definitions = getSheetDefinitions()
+
+            // Step 1 -- get metadata (1 API call)
+            val spreadsheet = sheetsService?.spreadsheets()?.get(spreadsheetId)?.execute()
+                ?: throw IOException("Failed to get spreadsheet metadata")
+            val existingNames = spreadsheet.sheets
+                ?.mapNotNull { it.properties?.title }?.toHashSet() ?: hashSetOf()
+
+            // Step 2 -- create missing tabs (0-1 API call)
+            val (existing, missing) = definitions.partition { it.name in existingNames }
+
+            if (missing.isNotEmpty()) {
+                println("➕ Creating ${missing.size} missing sheet tab(s)")
+                sheetsService?.spreadsheets()?.batchUpdate(spreadsheetId,
+                    BatchUpdateSpreadsheetRequest().setRequests(missing.map { def ->
+                        Request().setAddSheet(AddSheetRequest().setProperties(
+                            SheetProperties().setTitle(def.name)))
+                    })
+                )?.execute()
+            }
+
+            // Step 3 -- read row 1 from existing tabs (1 API call via batchGet)
+            val currentHeaders: List<Pair<SheetDefinition, List<String>>> =
+                if (existing.isNotEmpty()) {
+                    val ranges = existing.map { "'${it.name}'!A1:Z1" }
+                    val batchGet = sheetsService?.spreadsheets()?.values()
+                        ?.batchGet(spreadsheetId)?.setRanges(ranges)?.execute()
+                    existing.mapIndexed { i, def ->
+                        val row = batchGet?.valueRanges?.getOrNull(i)
+                            ?.getValues()?.firstOrNull()
+                            ?.map { it.toString() } ?: emptyList()
+                        def to row
+                    }
+                } else emptyList()
+
+            // Step 4 -- decide repairs
+            val headerWrites = mutableListOf<ValueRange>()
+            val rowInsertSheetIds = mutableListOf<Int>()
+
+            // New tabs always need headers written
+            for (def in missing) {
+                headerWrites.add(ValueRange()
+                    .setRange("'${def.name}'!A1")
+                    .setValues(listOf(def.headers)))
+            }
+
+            // Only fetch updated metadata when we need sheet IDs for row inserts
+            var metaForInsert: com.google.api.services.sheets.v4.model.Spreadsheet? = null
+
+            for ((def, row) in currentHeaders) {
+                if (row == def.headers) continue // already correct
+
+                if (row.isEmpty()) {
+                    // Empty sheet -- just write headers
+                    headerWrites.add(ValueRange()
+                        .setRange("'${def.name}'!A1")
+                        .setValues(listOf(def.headers)))
+                    continue
+                }
+
+                // Count how many cells match expected headers (integer math, no floats)
+                val matchCount = row.zip(def.headers).count { (c, e) ->
+                    c.equals(e, ignoreCase = true)
+                }
+                val isCorruptedHeader = matchCount * 5 >= def.headers.size * 2 // ≥ 40 %
+
+                if (isCorruptedHeader) {
+                    // Partial header match -- safe to overwrite row 1
+                    println("🔧 '${def.name}' header corrupted ($matchCount/${def.headers.size} match) - overwriting")
+                    headerWrites.add(ValueRange()
+                        .setRange("'${def.name}'!A1")
+                        .setValues(listOf(def.headers)))
+                } else {
+                    // Row 1 is actual data -- insert a new row to preserve it
+                    println("⚠️ '${def.name}' header missing (row 1 is data) - inserting header row")
+                    if (metaForInsert == null) {
+                        metaForInsert = if (missing.isNotEmpty()) {
+                            sheetsService?.spreadsheets()?.get(spreadsheetId)?.execute()
+                        } else spreadsheet
+                    }
+                    val sheetId = metaForInsert?.sheets
+                        ?.find { it.properties?.title == def.name }
+                        ?.properties?.sheetId
+                    if (sheetId != null) {
+                        rowInsertSheetIds.add(sheetId)
+                        headerWrites.add(ValueRange()
+                            .setRange("'${def.name}'!A1")
+                            .setValues(listOf(def.headers)))
+                    }
+                }
+            }
+
+            // Step 5 -- insert rows first so data shifts down (0-1 API call)
+            if (rowInsertSheetIds.isNotEmpty()) {
+                sheetsService?.spreadsheets()?.batchUpdate(spreadsheetId,
+                    BatchUpdateSpreadsheetRequest().setRequests(rowInsertSheetIds.map { sid ->
+                        Request().setInsertDimension(InsertDimensionRequest().setRange(
+                            DimensionRange().setSheetId(sid)
+                                .setDimension("ROWS").setStartIndex(0).setEndIndex(1)))
+                    })
+                )?.execute()
+            }
+
+            // Step 6 -- write all headers in one batch (0-1 API call)
+            if (headerWrites.isNotEmpty()) {
+                sheetsService?.spreadsheets()?.values()?.batchUpdate(spreadsheetId,
+                    BatchUpdateValuesRequest()
+                        .setValueInputOption("RAW")
+                        .setData(headerWrites)
+                )?.execute()
+                println("✅ Repaired ${headerWrites.size} sheet header(s)")
+            }
+
+            true
+        } catch (e: Exception) {
+            println("❌ Sheet structure validation failed: ${e.message}")
+            false
+        }
+    }
+
     /**
      * Clear a specific range in a Google Sheet to prevent duplicate data
      */

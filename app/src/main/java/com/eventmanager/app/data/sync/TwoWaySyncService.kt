@@ -50,6 +50,9 @@ class TwoWaySyncService(
             
             googleSheetsService.initializeSheetsService()
             
+            // Validate and repair sheet structure before backup
+            googleSheetsService.validateAndRepairSheetsStructure()
+            
             // Get all local data
             val guests = repository.getAllGuests().first()
             val volunteers = repository.getAllVolunteers().first() // Get ALL volunteers (active and inactive)
@@ -93,6 +96,9 @@ class TwoWaySyncService(
             }
             
             googleSheetsService.initializeSheetsService()
+            
+            // Validate and repair sheet structure before reading
+            googleSheetsService.validateAndRepairSheetsStructure()
             
             println("Starting sync from Google Sheets...")
             
@@ -154,19 +160,20 @@ class TwoWaySyncService(
             val localVolunteers = repository.getAllVolunteers().first()
             val remoteVolunteersMap = remoteVolunteers.associateBy { it.sheetsId }
             val localVolunteersBySheetsId = localVolunteers.associateBy { it.sheetsId }
-            val localVolunteersByName = localVolunteers.associateBy { it.name }
+            // Use name + abbreviation as key to allow multiple volunteers with same first name
+            val localVolunteersByFullName = localVolunteers.associateBy { "${it.name}_${it.lastNameAbbreviation}" }
             
             // Process each remote volunteer - Google Sheets NanoID is source of truth
             for (volunteer in remoteVolunteers) {
-                // Try to find existing volunteer by sheetsId first, then by name
+                // Try to find existing volunteer by sheetsId first, then by name+abbreviation
                 val existingVolunteer = localVolunteersBySheetsId[volunteer.sheetsId]
-                    ?: localVolunteersByName[volunteer.name]
+                    ?: localVolunteersByFullName["${volunteer.name}_${volunteer.lastNameAbbreviation}"]
                 
                 if (existingVolunteer != null) {
                     if (existingVolunteer.id != volunteer.id) {
                         // NanoID changed - Google Sheets has the correct ID
                         // Update all jobs that reference the old NanoID to use the new one
-                        println("🔄 Volunteer '${volunteer.name}' NanoID changed: '${existingVolunteer.id}' → '${volunteer.id}' (adopting Google Sheets ID)")
+                        println("🔄 Volunteer '${volunteer.name} ${volunteer.lastNameAbbreviation}' NanoID changed: '${existingVolunteer.id}' → '${volunteer.id}' (adopting Google Sheets ID)")
                         repository.updateJobsVolunteerId(existingVolunteer.id, volunteer.id)
                         
                         // Delete old record and insert new one with correct NanoID
@@ -183,11 +190,11 @@ class TwoWaySyncService(
             }
             
             // Keep local volunteers that don't exist in remote data
-            // Also check by name to avoid preserving volunteers that exist in sheets with different sheetsId
-            val remoteVolunteerNames = remoteVolunteers.map { it.name }.toSet()
+            // Check by sheetsId and name+abbreviation to avoid preserving duplicates
+            val remoteVolunteerFullNames = remoteVolunteers.map { "${it.name}_${it.lastNameAbbreviation}" }.toSet()
             val localVolunteersToKeep = localVolunteers.filter { localVolunteer ->
                 (localVolunteer.sheetsId == null || remoteVolunteersMap[localVolunteer.sheetsId] == null) &&
-                !remoteVolunteerNames.contains(localVolunteer.name)
+                !remoteVolunteerFullNames.contains("${localVolunteer.name}_${localVolunteer.lastNameAbbreviation}")
             }
             
             // Re-insert local volunteers that weren't in remote data (batch)
@@ -245,6 +252,9 @@ class TwoWaySyncService(
             }
             
             googleSheetsService.initializeSheetsService()
+            
+            // Validate and repair sheet structure before reading
+            googleSheetsService.validateAndRepairSheetsStructure()
             
             println("🔄 Starting differential sync from Google Sheets...")
             
@@ -482,19 +492,20 @@ class TwoWaySyncService(
             // Create maps for efficient lookup - Google Sheets is source of truth for NanoIDs
             val remoteVolunteersMap = remoteVolunteers.associateBy { it.sheetsId }
             val localVolunteersBySheetsId = localVolunteers.associateBy { it.sheetsId }
-            val localVolunteersByName = localVolunteers.associateBy { it.name }
+            // Use name + abbreviation as key to allow multiple volunteers with same first name
+            val localVolunteersByFullName = localVolunteers.associateBy { "${it.name}_${it.lastNameAbbreviation}" }
             
             // Update or insert remote volunteers - use NanoID from Google Sheets
             for (volunteer in remoteVolunteers) {
                 try {
-                    // Try to find existing volunteer by sheetsId first, then by name
+                    // Try to find existing volunteer by sheetsId first, then by name+abbreviation
                     val existingVolunteer = localVolunteersBySheetsId[volunteer.sheetsId]
-                        ?: localVolunteersByName[volunteer.name]
+                        ?: localVolunteersByFullName["${volunteer.name}_${volunteer.lastNameAbbreviation}"]
                     
                     if (existingVolunteer != null) {
                         if (existingVolunteer.id != volunteer.id) {
                             // NanoID changed - Google Sheets has the correct ID
-                            println("🔄 Volunteer '${volunteer.name}' NanoID changed: '${existingVolunteer.id}' → '${volunteer.id}' (adopting Google Sheets ID)")
+                            println("🔄 Volunteer '${volunteer.name} ${volunteer.lastNameAbbreviation}' NanoID changed: '${existingVolunteer.id}' → '${volunteer.id}' (adopting Google Sheets ID)")
                             repository.updateJobsVolunteerId(existingVolunteer.id, volunteer.id)
                             repository.deleteVolunteer(existingVolunteer)
                             repository.insertVolunteer(volunteer)
@@ -502,24 +513,24 @@ class TwoWaySyncService(
                             // Same NanoID - just update the data
                             repository.updateVolunteer(volunteer)
                         }
-                        println("Updated volunteer: ${volunteer.name} (ID: ${volunteer.id}, Active: ${volunteer.isActive})")
+                        println("Updated volunteer: ${volunteer.name} ${volunteer.lastNameAbbreviation} (ID: ${volunteer.id}, Active: ${volunteer.isActive})")
                     } else {
                         // New volunteer from sheets - use NanoID from sheets as-is
                         repository.insertVolunteer(volunteer)
-                        println("Inserted new volunteer: ${volunteer.name} (ID: ${volunteer.id}, Active: ${volunteer.isActive})")
+                        println("Inserted new volunteer: ${volunteer.name} ${volunteer.lastNameAbbreviation} (ID: ${volunteer.id}, Active: ${volunteer.isActive})")
                     }
                 } catch (e: Exception) {
-                    println("Failed to sync volunteer ${volunteer.name}: ${e.message}")
+                    println("Failed to sync volunteer ${volunteer.name} ${volunteer.lastNameAbbreviation}: ${e.message}")
                     // Continue with other volunteers even if one fails
                 }
             }
             
             // Keep local volunteers that don't exist in remote data (preserve inactive volunteers)
-            // Also check by name to avoid preserving volunteers that exist in sheets with different sheetsId
-            val remoteVolunteerNames = remoteVolunteers.map { it.name }.toSet()
+            // Check by sheetsId and name+abbreviation to avoid preserving duplicates
+            val remoteVolunteerFullNames = remoteVolunteers.map { "${it.name}_${it.lastNameAbbreviation}" }.toSet()
             val localVolunteersToKeep = localVolunteers.filter { localVolunteer ->
                 (localVolunteer.sheetsId == null || remoteVolunteersMap[localVolunteer.sheetsId] == null) &&
-                !remoteVolunteerNames.contains(localVolunteer.name)
+                !remoteVolunteerFullNames.contains("${localVolunteer.name}_${localVolunteer.lastNameAbbreviation}")
             }
             
             // Re-insert local volunteers that weren't in remote data

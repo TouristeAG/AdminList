@@ -536,6 +536,7 @@ string shifts_past_month
 string shifts_sheet_label
 string shifts_title
 string show_advanced_settings
+string slide_to_confirm
 string spreadsheet_id_hint
 string spreadsheet_id_label
 string start_admin
@@ -668,6 +669,8 @@ string upload_failed
 string upload_key_description
 string upload_key_file
 string upload_key_file_description
+string validate_entry
+string validate_entry_description
 string validating_file
 string validation_failed
 string venue

@@ -1,10 +1,10 @@
 {
     "logs": [
         {
-            "outputFile": "com.eventmanager.app-mergeDebugResources-68:/values-v24/values-v24.xml",
+            "outputFile": "com.eventmanager.app-mergeDebugResources-2:/values-v24/values-v24.xml",
             "map": [
                 {
-                    "source": "/Users/leonardomondada/.gradle/caches/8.10/transforms/c9fab00c6a35168cc6ee949a43590418/transformed/appcompat-1.6.1/res/values-v24/values-v24.xml",
+                    "source": "/private/var/folders/_1/6v50lr7521x6nrp75vj936rh0000gq/T/cursor-sandbox-cache/63ca1eb9af4ba2ef88ce9299342fdfa6/gradle/caches/8.10/transforms/765fbe5211548b3aaad6d9a3f65f54fe/transformed/appcompat-1.6.1/res/values-v24/values-v24.xml",
                     "from": {
                         "startLines": "2,3",
                         "startColumns": "4,4",

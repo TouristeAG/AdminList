@@ -86,6 +86,7 @@ data class Job(
     val venueName: String, // Store actual venue name for unlimited venue support
     val date: Long, // Store as timestamp
     val shiftTime: ShiftTime,
+    val benefitUsed: Boolean? = null, // null = not an after-midnight shift, false = benefit not yet redeemed, true = benefit redeemed
     val notes: String = "",
     val lastModified: Long = System.currentTimeMillis()
 ) : Parcelable
@@ -430,12 +431,22 @@ object BenefitCalculator {
             }
         }
         
-        // Check for ETOILE rank
+        // Check for ETOILE rank.
+        // Only include the ETOILE benefit when the volunteer still has at least
+        // one unused after-midnight shift entry. Once every shift's benefit has
+        // been redeemed (benefitUsed == true), the ETOILE contribution is removed
+        // so the UI correctly reflects the consumed state.
         if (hasAfterMidnightShiftOptimized(volunteerJobs, ctx)) {
-            val benefit = calculateBenefitsForRankOptimized(VolunteerRank.ETOILE, volunteerJobs, orionJobs, ctx)
-            if (benefit.isActive) {
-                allApplicableBenefits.add(benefit)
-                if (primaryRank == null) primaryRank = VolunteerRank.ETOILE
+            val allAfterMidnightUsed = volunteerJobs
+                .filter { it.shiftTime == ShiftTime.AFTER_MIDNIGHT && ctx.shiftJobTypeNames.contains(it.jobTypeName) }
+                .all { it.benefitUsed == true }
+
+            if (!allAfterMidnightUsed) {
+                val benefit = calculateBenefitsForRankOptimized(VolunteerRank.ETOILE, volunteerJobs, orionJobs, ctx)
+                if (benefit.isActive) {
+                    allApplicableBenefits.add(benefit)
+                    if (primaryRank == null) primaryRank = VolunteerRank.ETOILE
+                }
             }
         }
         

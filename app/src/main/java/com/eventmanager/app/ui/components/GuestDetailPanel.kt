@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.platform.LocalContext
 import android.content.Intent
 import android.graphics.Bitmap
@@ -174,138 +175,179 @@ fun GuestDetailPanel(
     var emailInputValue by remember { mutableStateOf("") }
 
     if (showQrDialog) {
-        AlertDialog(
+        val tabletMaxWidth = getTabletConstrainedDialogMaxWidth()
+        val tabletQrSize = getTabletConstrainedQRCodeSize()
+        val tabletDialogPadding = getTabletConstrainedDialogPadding()
+        val isTabletDevice = isTablet()
+        
+        Dialog(
             onDismissRequest = { showQrDialog = false },
-            title = {
-                Text(
-                    text = getStringResource(R.string.guest_qr_code),
-                    style = if (isPhone) getPhonePortraitTypography() else getResponsiveTitleTypography(),
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                val payload = remember(guest) {
-                    val data = mapOf(
-                        "type" to "guest",
-                        "version" to 1,
-                        "name" to guest.name,
-                        "abbr" to guest.lastNameAbbreviation
-                    )
-                    val json = Gson().toJson(data)
-                    println("🔍 Generating QR code for guest: ${guest.name}")
-                    println("🔍 QR code JSON: '$json'")
-                    json
-                }
-                val qrImage = remember(payload) { QRCodeUtils.generateQrImageBitmap(payload, 1024) }
-                val qrContext = LocalContext.current
-                
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState()),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    if (qrImage != null) {
-                        Image(
-                            bitmap = qrImage,
-                            contentDescription = getStringResource(R.string.guest_qr_code),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .aspectRatio(1f)
-                                .clip(RoundedCornerShape(if (isPhone) 8.dp else 12.dp))
-                                .background(Color.White)
-                        )
-                        Spacer(modifier = Modifier.height(if (isPhone) 8.dp else 12.dp))
-                        Text(
-                            text = guest.name,
-                            style = if (isPhone) getPhonePortraitBodyTypography() else getResponsiveBodyTypography(),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-
-                        Spacer(modifier = Modifier.height(if (isPhone) 8.dp else 12.dp))
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            OutlinedButton(
-                                onClick = {
-                                    qrImage?.let { bitmap ->
-                                        try {
-                                            val file = File(qrContext.cacheDir, "qr_code_guest_${guest.id}.png")
-                                            val outputStream = FileOutputStream(file)
-                                            bitmap.asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, outputStream)
-                                            outputStream.close()
-                                            
-                                            val uri = FileProvider.getUriForFile(
-                                                qrContext,
-                                                "${qrContext.packageName}.fileprovider",
-                                                file
-                                            )
-                                            
-                                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                                type = "image/png"
-                                                putExtra(Intent.EXTRA_STREAM, uri)
-                                                putExtra(Intent.EXTRA_SUBJECT, qrContext.getString(R.string.qr_code_subject_guest, guest.name))
-                                                putExtra(Intent.EXTRA_TEXT, qrContext.getString(R.string.qr_code_for_guest, guest.name))
-                                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                            }
-                                            qrContext.startActivity(Intent.createChooser(shareIntent, qrContext.getString(R.string.share_qr_code)))
-                                        } catch (e: Exception) {
-                                            // Fallback to text sharing if image sharing fails
-                                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                                type = "text/plain"
-                                                putExtra(Intent.EXTRA_SUBJECT, "Guest QR")
-                                                putExtra(
-                                                    Intent.EXTRA_TEXT,
-                                                    "Guest: ${guest.name}\nPayload: $payload"
-                                                )
-                                            }
-                                            qrContext.startActivity(Intent.createChooser(shareIntent, qrContext.getString(R.string.share_qr_code)))
-                                        }
-                                    }
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(64.dp)
-                            ) {
-                                Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(getStringResource(R.string.share))
-                            }
-                            OutlinedButton(
-                                onClick = {
-                                    // Check if guest has email
-                                    if (guest.email.isNotBlank()) {
-                                        showEmailConfirmDialog = true
-                                    } else {
-                                        // Ask for email address
-                                        emailInputValue = ""
-                                        showEmailInputDialog = true
-                                    }
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(64.dp)
-                            ) {
-                                Icon(Icons.Default.Email, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(getStringResource(R.string.send_by_mail))
-                            }
+            properties = DialogProperties(
+                usePlatformDefaultWidth = !isTabletDevice,
+                dismissOnBackPress = true,
+                dismissOnClickOutside = true
+            )
+        ) {
+            Card(
+                modifier = Modifier
+                    .then(
+                        if (isTabletDevice) {
+                            Modifier.widthIn(max = tabletMaxWidth)
+                        } else {
+                            Modifier.fillMaxWidth(0.92f)
                         }
-                    } else {
-                        Text(
-                            text = getStringResource(R.string.failed_to_generate_qr_code),
-                            color = MaterialTheme.colorScheme.error
+                    )
+                    .padding(tabletDialogPadding),
+                shape = RoundedCornerShape(28.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Title
+                    Text(
+                        text = getStringResource(R.string.guest_qr_code),
+                        style = if (isPhone) getPhonePortraitTypography() else getTabletConstrainedTitleTypography(),
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    val payload = remember(guest) {
+                        val data = mapOf(
+                            "type" to "guest",
+                            "version" to 1,
+                            "name" to guest.name,
+                            "abbr" to guest.lastNameAbbreviation
                         )
+                        val json = Gson().toJson(data)
+                        println("🔍 Generating QR code for guest: ${guest.name}")
+                        println("🔍 QR code JSON: '$json'")
+                        json
+                    }
+                    val qrImage = remember(payload) { QRCodeUtils.generateQrImageBitmap(payload, 1024) }
+                    val qrContext = LocalContext.current
+                    
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState()),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        if (qrImage != null) {
+                            Image(
+                                bitmap = qrImage,
+                                contentDescription = getStringResource(R.string.guest_qr_code),
+                                modifier = Modifier
+                                    .then(
+                                        if (isTabletDevice) {
+                                            Modifier.size(tabletQrSize)
+                                        } else {
+                                            Modifier.fillMaxWidth().aspectRatio(1f)
+                                        }
+                                    )
+                                    .clip(RoundedCornerShape(if (isPhone) 8.dp else 12.dp))
+                                    .background(Color.White)
+                            )
+                            Spacer(modifier = Modifier.height(if (isPhone) 8.dp else 12.dp))
+                            Text(
+                                text = guest.name,
+                                style = if (isPhone) getPhonePortraitBodyTypography() else getTabletConstrainedBodyTypography(),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            Spacer(modifier = Modifier.height(if (isPhone) 8.dp else 12.dp))
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(if (isTabletDevice) 8.dp else 12.dp)
+                            ) {
+                                OutlinedButton(
+                                    onClick = {
+                                        qrImage?.let { bitmap ->
+                                            try {
+                                                val file = File(qrContext.cacheDir, "qr_code_guest_${guest.id}.png")
+                                                val outputStream = FileOutputStream(file)
+                                                bitmap.asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+                                                outputStream.close()
+                                                
+                                                val uri = FileProvider.getUriForFile(
+                                                    qrContext,
+                                                    "${qrContext.packageName}.fileprovider",
+                                                    file
+                                                )
+                                                
+                                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                                    type = "image/png"
+                                                    putExtra(Intent.EXTRA_STREAM, uri)
+                                                    putExtra(Intent.EXTRA_SUBJECT, qrContext.getString(R.string.qr_code_subject_guest, guest.name))
+                                                    putExtra(Intent.EXTRA_TEXT, qrContext.getString(R.string.qr_code_for_guest, guest.name))
+                                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                                }
+                                                qrContext.startActivity(Intent.createChooser(shareIntent, qrContext.getString(R.string.share_qr_code)))
+                                            } catch (e: Exception) {
+                                                // Fallback to text sharing if image sharing fails
+                                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                                    type = "text/plain"
+                                                    putExtra(Intent.EXTRA_SUBJECT, "Guest QR")
+                                                    putExtra(
+                                                        Intent.EXTRA_TEXT,
+                                                        "Guest: ${guest.name}\nPayload: $payload"
+                                                    )
+                                                }
+                                                qrContext.startActivity(Intent.createChooser(shareIntent, qrContext.getString(R.string.share_qr_code)))
+                                            }
+                                        }
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(if (isTabletDevice) 48.dp else 64.dp)
+                                ) {
+                                    Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(getStringResource(R.string.share))
+                                }
+                                OutlinedButton(
+                                    onClick = {
+                                        // Check if guest has email
+                                        if (guest.email.isNotBlank()) {
+                                            showEmailConfirmDialog = true
+                                        } else {
+                                            // Ask for email address
+                                            emailInputValue = ""
+                                            showEmailInputDialog = true
+                                        }
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(if (isTabletDevice) 48.dp else 64.dp)
+                                ) {
+                                    Icon(Icons.Default.Email, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(getStringResource(R.string.send_by_mail))
+                                }
+                            }
+                        } else {
+                            Text(
+                                text = getStringResource(R.string.failed_to_generate_qr_code),
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                    
+                    // Close button
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(onClick = { showQrDialog = false }) {
+                            Text(getStringResource(R.string.close))
+                        }
                     }
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = { showQrDialog = false }) {
-                    Text(getStringResource(R.string.close))
-                }
             }
-        )
+        }
     }
     
     // Email Input Dialog (for guests without email)

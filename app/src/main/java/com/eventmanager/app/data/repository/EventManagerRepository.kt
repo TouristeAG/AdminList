@@ -72,14 +72,22 @@ class EventManagerRepository(
             volunteer
         }
         
-        // During sync, if a volunteer with the same name exists, handle the NanoID properly
-        // Google Sheets is the source of truth for NanoIDs - always use the incoming ID if valid
-        val existingVolunteer = volunteerDao.getVolunteerByName(validatedVolunteer.name)
+        // Find existing volunteer - use sheetsId first (most reliable), then name+abbreviation
+        // This allows multiple volunteers with the same first name but different last names
+        val existingVolunteer = if (validatedVolunteer.sheetsId != null) {
+            volunteerDao.getVolunteerBySheetsId(validatedVolunteer.sheetsId!!)
+        } else {
+            null
+        } ?: volunteerDao.getVolunteerByNameAndAbbreviation(
+            validatedVolunteer.name,
+            validatedVolunteer.lastNameAbbreviation
+        )
+        
         if (existingVolunteer != null) {
             if (existingVolunteer.id != validatedVolunteer.id) {
                 // NanoID differs - Google Sheets has a different (but valid) NanoID
                 // We need to: 1) Delete old record, 2) Insert new record, 3) Update jobs
-                println("🔄 Volunteer '${validatedVolunteer.name}' NanoID changed: '${existingVolunteer.id}' → '${validatedVolunteer.id}' (adopting Google Sheets ID)")
+                println("🔄 Volunteer '${validatedVolunteer.name} ${validatedVolunteer.lastNameAbbreviation}' NanoID changed: '${existingVolunteer.id}' → '${validatedVolunteer.id}' (adopting Google Sheets ID)")
                 
                 // Update all jobs that reference the old volunteer ID to use the new one
                 jobDao.updateJobsVolunteerId(existingVolunteer.id, validatedVolunteer.id)
@@ -116,13 +124,21 @@ class EventManagerRepository(
             volunteer
         }
         
-        // Check if volunteer exists with same name but different NanoID
-        // Google Sheets is source of truth for NanoIDs - adopt the incoming ID
-        val existingVolunteer = volunteerDao.getVolunteerByName(validatedVolunteer.name)
+        // Find existing volunteer - use sheetsId first (most reliable), then name+abbreviation
+        // This allows multiple volunteers with the same first name but different last names
+        val existingVolunteer = if (validatedVolunteer.sheetsId != null) {
+            volunteerDao.getVolunteerBySheetsId(validatedVolunteer.sheetsId!!)
+        } else {
+            null
+        } ?: volunteerDao.getVolunteerByNameAndAbbreviation(
+            validatedVolunteer.name,
+            validatedVolunteer.lastNameAbbreviation
+        )
+        
         if (existingVolunteer != null && existingVolunteer.id != validatedVolunteer.id) {
             // NanoID differs - Google Sheets has the correct NanoID
             // We need to: 1) Update jobs, 2) Delete old record, 3) Insert new record
-            println("🔄 Repository: Volunteer '${validatedVolunteer.name}' NanoID changed: '${existingVolunteer.id}' → '${validatedVolunteer.id}' (adopting Google Sheets ID)")
+            println("🔄 Repository: Volunteer '${validatedVolunteer.name} ${validatedVolunteer.lastNameAbbreviation}' NanoID changed: '${existingVolunteer.id}' → '${validatedVolunteer.id}' (adopting Google Sheets ID)")
             
             // Update all jobs that reference the old volunteer ID to use the new one
             jobDao.updateJobsVolunteerId(existingVolunteer.id, validatedVolunteer.id)
@@ -168,11 +184,20 @@ class EventManagerRepository(
                 volunteer
             }
             
-            // Check if volunteer exists with same name but different NanoID
-            val existingVolunteer = volunteerDao.getVolunteerByName(validatedVolunteer.name)
+            // Find existing volunteer - use sheetsId first (most reliable), then name+abbreviation
+            // This allows multiple volunteers with the same first name but different last names
+            val existingVolunteer = if (validatedVolunteer.sheetsId != null) {
+                volunteerDao.getVolunteerBySheetsId(validatedVolunteer.sheetsId!!)
+            } else {
+                null
+            } ?: volunteerDao.getVolunteerByNameAndAbbreviation(
+                validatedVolunteer.name,
+                validatedVolunteer.lastNameAbbreviation
+            )
+            
             if (existingVolunteer != null && existingVolunteer.id != validatedVolunteer.id) {
                 // NanoID differs - Google Sheets has the correct NanoID
-                println("🔄 Repository (batch): Volunteer '${validatedVolunteer.name}' NanoID changed: '${existingVolunteer.id}' → '${validatedVolunteer.id}'")
+                println("🔄 Repository (batch): Volunteer '${validatedVolunteer.name} ${validatedVolunteer.lastNameAbbreviation}' NanoID changed: '${existingVolunteer.id}' → '${validatedVolunteer.id}'")
                 jobDao.updateJobsVolunteerId(existingVolunteer.id, validatedVolunteer.id)
                 volunteerDao.deleteVolunteer(existingVolunteer)
                 volunteerDao.insertVolunteer(validatedVolunteer)

@@ -785,6 +785,11 @@
     <string name="easter_egg_drive_nocturne">Drive Nocturne</string>
     <string name="easter_egg_flappy_nocturne">Flappy Nocturne</string>
     
+    <!-- Entry Validation -->
+    <string name="validate_entry">Valider l\'entrée</string>
+    <string name="validate_entry_description">Ce bénévole a une entrée gratuite non utilisée grâce à un shift après minuit. Glissez pour confirmer son entrée.</string>
+    <string name="slide_to_confirm">Glisser pour confirmer</string>
+    
     <!-- Activity Status -->
     <string name="activity_status_never_worked">Jamais travaillé</string>
     <string name="activity_status_active_today">Actif (aujourd\'hui)</string>

@@ -493,6 +493,7 @@
     <string name="shifts_sheet_label">Feuille des Shifts</string>
     <string name="shifts_title">Shifts</string>
     <string name="show_advanced_settings">Afficher les paramètres avancés</string>
+    <string name="slide_to_confirm">Glisser pour confirmer</string>
     <string name="spreadsheet_id_hint">Obtenez ceci depuis l\'URL de votre Google Sheets : https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit</string>
     <string name="spreadsheet_id_label">ID de la feuille de calcul</string>
     <string name="start_admin">Démarrer Admin</string>
@@ -623,6 +624,8 @@
     <string name="upload_key_description">Téléchargez votre fichier de clé JSON du compte de service Google</string>
     <string name="upload_key_file">Télécharger le fichier de clé</string>
     <string name="upload_key_file_description">Téléchargez votre fichier de clé JSON du compte de service Google</string>
+    <string name="validate_entry">Valider l\'entrée</string>
+    <string name="validate_entry_description">Ce bénévole a une entrée gratuite non utilisée grâce à un shift après minuit. Glissez pour confirmer son entrée.</string>
     <string name="validating_file">Validation du fichier...</string>
     <string name="validation_failed">Échec de la validation : %s</string>
     <string name="venue">Lieu</string>

@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.eventmanager.app.data.models.*
 import com.eventmanager.app.data.utils.DateTimeUtils
@@ -145,35 +146,18 @@ fun JobTrackingScreen(
                         }
                     }
                 } else {
-                    // Side by side on tablets
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = context.getString(R.string.shift_tracking),
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        
+                    // Tablet layout: Title + button on first row, filters below
+                    Column(verticalArrangement = Arrangement.spacedBy(responsiveSpacing)) {
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.horizontalScroll(rememberScrollState())
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Venue Filter
-                            val venueFilterOptions = generateVenueFilterOptions(venues)
-                            venueFilterOptions.forEach { venueOption ->
-                                FilterChip(
-                                    onClick = { 
-                                        selectedVenueName = if (selectedVenueName == venueOption.venueName) null else venueOption.venueName
-                                    },
-                                    label = { Text(venueOption.displayName) },
-                                    selected = selectedVenueName == venueOption.venueName
-                                )
-                            }
-                            
-                            Spacer(modifier = Modifier.width(16.dp))
+                            Text(
+                                text = context.getString(R.string.shift_tracking),
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold
+                            )
                             
                             Button(
                                 onClick = { showAddDialog = true },
@@ -182,6 +166,23 @@ fun JobTrackingScreen(
                                 Icon(Icons.Default.Add, contentDescription = null)
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(context.getString(R.string.add_shift))
+                            }
+                        }
+                        
+                        // Venue Filter below title
+                        val venueFilterOptions = generateVenueFilterOptions(venues)
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.horizontalScroll(rememberScrollState())
+                        ) {
+                            venueFilterOptions.forEach { venueOption ->
+                                FilterChip(
+                                    onClick = { 
+                                        selectedVenueName = if (selectedVenueName == venueOption.venueName) null else venueOption.venueName
+                                    },
+                                    label = { Text(venueOption.displayName) },
+                                    selected = selectedVenueName == venueOption.venueName
+                                )
                             }
                         }
                     }
@@ -279,33 +280,18 @@ fun JobTrackingScreen(
                             }
                         }
                     } else {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = context.getString(R.string.shift_tracking),
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            
+                        // Tablet layout: Title + button on first row, filters below
+                        Column(verticalArrangement = Arrangement.spacedBy(responsiveSpacing)) {
                             Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.horizontalScroll(rememberScrollState())
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                val venueFilterOptions = generateVenueFilterOptions(venues)
-                                venueFilterOptions.forEach { venueOption ->
-                                    FilterChip(
-                                        onClick = { 
-                                            selectedVenueName = if (selectedVenueName == venueOption.venueName) null else venueOption.venueName
-                                        },
-                                        label = { Text(venueOption.displayName) },
-                                        selected = selectedVenueName == venueOption.venueName
-                                    )
-                                }
-                                
-                                Spacer(modifier = Modifier.width(16.dp))
+                                Text(
+                                    text = context.getString(R.string.shift_tracking),
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
                                 
                                 Button(
                                     onClick = { showAddDialog = true },
@@ -314,6 +300,23 @@ fun JobTrackingScreen(
                                     Icon(Icons.Default.Add, contentDescription = null)
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(context.getString(R.string.add_shift))
+                                }
+                            }
+                            
+                            // Venue Filter below title
+                            val venueFilterOptions = generateVenueFilterOptions(venues)
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.horizontalScroll(rememberScrollState())
+                            ) {
+                                venueFilterOptions.forEach { venueOption ->
+                                    FilterChip(
+                                        onClick = { 
+                                            selectedVenueName = if (selectedVenueName == venueOption.venueName) null else venueOption.venueName
+                                        },
+                                        label = { Text(venueOption.displayName) },
+                                        selected = selectedVenueName == venueOption.venueName
+                                    )
                                 }
                             }
                         }
@@ -416,33 +419,18 @@ fun JobTrackingScreen(
                             }
                         }
                     } else {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = context.getString(R.string.shift_tracking),
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            
+                        // Tablet layout: Title + button on first row, filters below
+                        Column(verticalArrangement = Arrangement.spacedBy(responsiveSpacing)) {
                             Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.horizontalScroll(rememberScrollState())
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                val venueFilterOptions = generateVenueFilterOptions(venues)
-                                venueFilterOptions.forEach { venueOption ->
-                                    FilterChip(
-                                        onClick = { 
-                                            selectedVenueName = if (selectedVenueName == venueOption.venueName) null else venueOption.venueName
-                                        },
-                                        label = { Text(venueOption.displayName) },
-                                        selected = selectedVenueName == venueOption.venueName
-                                    )
-                                }
-                                
-                                Spacer(modifier = Modifier.width(16.dp))
+                                Text(
+                                    text = context.getString(R.string.shift_tracking),
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
                                 
                                 Button(
                                     onClick = { showAddDialog = true },
@@ -451,6 +439,23 @@ fun JobTrackingScreen(
                                     Icon(Icons.Default.Add, contentDescription = null)
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(context.getString(R.string.add_shift))
+                                }
+                            }
+                            
+                            // Venue Filter below title
+                            val venueFilterOptions = generateVenueFilterOptions(venues)
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.horizontalScroll(rememberScrollState())
+                            ) {
+                                venueFilterOptions.forEach { venueOption ->
+                                    FilterChip(
+                                        onClick = { 
+                                            selectedVenueName = if (selectedVenueName == venueOption.venueName) null else venueOption.venueName
+                                        },
+                                        label = { Text(venueOption.displayName) },
+                                        selected = selectedVenueName == venueOption.venueName
+                                    )
                                 }
                             }
                         }
@@ -695,12 +700,29 @@ fun AddJobDialog(
 
     val isCompact = isCompactScreen()
     val scrollState = rememberScrollState()
+    val isTabletDevice = isTablet()
+    val tabletMaxWidth = getTabletConstrainedDialogMaxWidth()
+    val tabletMaxHeight = getTabletConstrainedDialogMaxHeight()
 
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = !isTabletDevice
+        )
+    ) {
         Card(
             modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.9f)
+                .then(
+                    if (isTabletDevice) {
+                        Modifier
+                            .widthIn(max = tabletMaxWidth)
+                            .heightIn(max = tabletMaxHeight)
+                    } else {
+                        Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(0.9f)
+                    }
+                )
                 .padding(16.dp),
             shape = RoundedCornerShape(16.dp)
         ) {
@@ -717,7 +739,7 @@ fun AddJobDialog(
                 ) {
             Text(
                 text = if (isCompact) context.getString(R.string.add_shift) else context.getString(R.string.add_new_shift),
-                        style = getResponsiveTypography(),
+                        style = if (isTabletDevice) getTabletConstrainedTitleTypography() else getResponsiveTypography(),
                         fontWeight = FontWeight.Bold
                     )
                     
@@ -971,12 +993,29 @@ fun EditJobDialog(
 
     val isCompact = isCompactScreen()
     val scrollState = rememberScrollState()
+    val isTabletDevice = isTablet()
+    val tabletMaxWidth = getTabletConstrainedDialogMaxWidth()
+    val tabletMaxHeight = getTabletConstrainedDialogMaxHeight()
 
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = !isTabletDevice
+        )
+    ) {
         Card(
             modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.9f)
+                .then(
+                    if (isTabletDevice) {
+                        Modifier
+                            .widthIn(max = tabletMaxWidth)
+                            .heightIn(max = tabletMaxHeight)
+                    } else {
+                        Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(0.9f)
+                    }
+                )
                 .padding(16.dp),
             shape = RoundedCornerShape(16.dp)
         ) {
@@ -993,7 +1032,7 @@ fun EditJobDialog(
                 ) {
                     Text(
                         text = if (isCompact) context.getString(R.string.edit_shift) else context.getString(R.string.edit_shift_details),
-                        style = getResponsiveTypography(),
+                        style = if (isTabletDevice) getTabletConstrainedTitleTypography() else getResponsiveTypography(),
                         fontWeight = FontWeight.Bold
                     )
                     

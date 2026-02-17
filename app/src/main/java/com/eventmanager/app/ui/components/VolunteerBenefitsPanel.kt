@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.platform.LocalContext
 import android.content.Intent
 import android.graphics.Bitmap
@@ -58,7 +59,8 @@ fun VolunteerBenefitsPanel(
     volunteerJobs: List<Job>,
     venues: List<VenueEntity>,
     onClose: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onConfirmEntry: ((Job) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val isPhone = !isTablet()
@@ -236,6 +238,38 @@ fun VolunteerBenefitsPanel(
                     }
                 }
                 
+                // Pre-compute unused benefit job for slide-to-confirm (must be in @Composable scope).
+                // Only show the slider for shifts whose event night has already passed.
+                // On the night of the shift the volunteer is working and needs no validation.
+                //
+                // We "latch" the value: once a valid job is found the reference is kept
+                // even after the data refreshes (benefitUsed flips to true), so the
+                // check animation has time to play before the card disappears.
+                val currentUnusedJob = remember(volunteerJobs) {
+                    val todayStart = java.util.Calendar.getInstance().apply {
+                        set(java.util.Calendar.HOUR_OF_DAY, 0)
+                        set(java.util.Calendar.MINUTE, 0)
+                        set(java.util.Calendar.SECOND, 0)
+                        set(java.util.Calendar.MILLISECOND, 0)
+                    }.timeInMillis
+                    volunteerJobs
+                        .filter {
+                            it.shiftTime == ShiftTime.AFTER_MIDNIGHT &&
+                                it.benefitUsed == false &&
+                                it.date < todayStart
+                        }
+                        .maxByOrNull { it.date }
+                }
+                var latchedBenefitJob by remember { mutableStateOf(currentUnusedJob) }
+                // Keep the latched value alive while the confirm animation plays;
+                // update it only when a new unused job appears.
+                LaunchedEffect(currentUnusedJob) {
+                    if (currentUnusedJob != null) {
+                        latchedBenefitJob = currentUnusedJob
+                    }
+                }
+                val unusedBenefitJob = latchedBenefitJob
+                
                 // Scrollable content (SCROLLS BELOW HEADER)
                 LazyColumn(
                     modifier = Modifier
@@ -394,6 +428,70 @@ fun VolunteerBenefitsPanel(
                         }
                     }
                     
+                    // Slide-to-confirm entry validation
+                    // Only show if there is an unused after-midnight benefit
+                    if (unusedBenefitJob != null && onConfirmEntry != null) {
+                        item {
+                            var isConfirmed by remember { mutableStateOf(false) }
+                            val confirmScope = rememberCoroutineScope()
+                            
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(if (isPhone) 12.dp else 16.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                                ),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(if (isPhone) 12.dp else 16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(if (isPhone) 8.dp else 12.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.ConfirmationNumber,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(if (isPhone) 20.dp else 24.dp),
+                                            tint = MaterialTheme.colorScheme.onSecondaryContainer
+                                        )
+                                        Text(
+                                            text = context.getString(R.string.validate_entry),
+                                            style = if (isPhone) getPhonePortraitTypography() else getResponsiveTitleTypography(),
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                                        )
+                                    }
+                                    
+                                    Text(
+                                        text = context.getString(R.string.validate_entry_description),
+                                        style = if (isPhone) getPhonePortraitBodyTypography() else getResponsiveBodyTypography(),
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+                                    )
+                                    
+                                    SlideToConfirmButton(
+                                        text = context.getString(R.string.slide_to_confirm),
+                                        onConfirm = {
+                                            isConfirmed = true
+                                            // Delay the data update so the check animation
+                                            // has time to play before the card disappears.
+                                            confirmScope.launch {
+                                                kotlinx.coroutines.delay(1200L)
+                                                onConfirmEntry(unusedBenefitJob)
+                                                // Clear the latch so the card disappears
+                                                latchedBenefitJob = null
+                                            }
+                                        },
+                                        isConfirmed = isConfirmed,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    
                     // Shift History Section
                     item {
                         Column(
@@ -418,135 +516,176 @@ fun VolunteerBenefitsPanel(
     var showNoEmailDialog by remember { mutableStateOf(false) }
 
     if (showQrDialog) {
-        AlertDialog(
+        val tabletMaxWidth = getTabletConstrainedDialogMaxWidth()
+        val tabletQrSize = getTabletConstrainedQRCodeSize()
+        val tabletDialogPadding = getTabletConstrainedDialogPadding()
+        val isTabletDevice = isTablet()
+        
+        Dialog(
             onDismissRequest = { showQrDialog = false },
-            title = {
-                Text(
-                    text = context.getString(R.string.volunteer_qr_code),
-                    style = if (isPhone) getPhonePortraitTypography() else getResponsiveTitleTypography(),
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                val payload = remember(volunteer) {
-                    Gson().toJson(
-                        mapOf(
-                            "type" to "volunteer",
-                            "version" to 1,
-                            "id" to volunteer.id,
-                            "sheetsId" to (volunteer.sheetsId ?: ""),
-                            "name" to volunteer.name,
-                            "abbr" to volunteer.lastNameAbbreviation
-                        )
-                    )
-                }
-                val qrImage = remember(payload) { QRCodeUtils.generateQrImageBitmap(payload, 1024) }
-                val qrContext = LocalContext.current
-                
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState()),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    if (qrImage != null) {
-                        Image(
-                            bitmap = qrImage,
-                            contentDescription = qrContext.getString(R.string.volunteer_qr_code),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .aspectRatio(1f)
-                                .clip(RoundedCornerShape(if (isPhone) 8.dp else 12.dp))
-                                .background(Color.White)
-                        )
-                        Spacer(modifier = Modifier.height(if (isPhone) 8.dp else 12.dp))
-                        Text(
-                            text = volunteer.name,
-                            style = if (isPhone) getPhonePortraitBodyTypography() else getResponsiveBodyTypography(),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(if (isPhone) 8.dp else 12.dp))
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            OutlinedButton(
-                                onClick = {
-                                    qrImage?.let { bitmap ->
-                                        try {
-                                            val file = File(qrContext.cacheDir, "qr_code_${volunteer.id}.png")
-                                            val outputStream = FileOutputStream(file)
-                                            bitmap.asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, outputStream)
-                                            outputStream.close()
-                                            
-                                            val uri = FileProvider.getUriForFile(
-                                                qrContext,
-                                                "${qrContext.packageName}.fileprovider",
-                                                file
-                                            )
-                                            
-                                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                                type = "image/png"
-                                                putExtra(Intent.EXTRA_STREAM, uri)
-                                                putExtra(Intent.EXTRA_SUBJECT, qrContext.getString(R.string.qr_code_subject, volunteer.name))
-                                                putExtra(Intent.EXTRA_TEXT, qrContext.getString(R.string.qr_code_for_volunteer, volunteer.name))
-                                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                            }
-                                            qrContext.startActivity(Intent.createChooser(shareIntent, qrContext.getString(R.string.share_qr_code)))
-                                        } catch (e: Exception) {
-                                            // Fallback to text sharing if image sharing fails
-                                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                                type = "text/plain"
-                                                putExtra(Intent.EXTRA_SUBJECT, "Volunteer QR")
-                                                putExtra(
-                                                    Intent.EXTRA_TEXT,
-                                                    "Volunteer: ${volunteer.name}\nID: ${volunteer.id}\nPayload: $payload"
-                                                )
-                                            }
-                                            qrContext.startActivity(Intent.createChooser(shareIntent, "Share via"))
-                                        }
-                                    }
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(64.dp)
-                            ) {
-                                Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(qrContext.getString(R.string.share))
-                            }
-                            OutlinedButton(
-                                onClick = {
-                                    // Check if volunteer has email
-                                    if (volunteer.email.isNotBlank()) {
-                                        showEmailConfirmDialog = true
-                                    } else {
-                                        showNoEmailDialog = true
-                                    }
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(64.dp)
-                            ) {
-                                Icon(Icons.Default.Email, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(qrContext.getString(R.string.send_by_mail))
-                            }
+            properties = DialogProperties(
+                usePlatformDefaultWidth = !isTabletDevice,
+                dismissOnBackPress = true,
+                dismissOnClickOutside = true
+            )
+        ) {
+            Card(
+                modifier = Modifier
+                    .then(
+                        if (isTabletDevice) {
+                            Modifier.widthIn(max = tabletMaxWidth)
+                        } else {
+                            Modifier.fillMaxWidth(0.92f)
                         }
-                    } else {
-                        Text(
-                            text = qrContext.getString(R.string.failed_to_generate_qr_code),
-                            color = MaterialTheme.colorScheme.error
+                    )
+                    .padding(tabletDialogPadding),
+                shape = RoundedCornerShape(28.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Title
+                    Text(
+                        text = context.getString(R.string.volunteer_qr_code),
+                        style = if (isPhone) getPhonePortraitTypography() else getTabletConstrainedTitleTypography(),
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    val payload = remember(volunteer) {
+                        Gson().toJson(
+                            mapOf(
+                                "type" to "volunteer",
+                                "version" to 1,
+                                "id" to volunteer.id,
+                                "sheetsId" to (volunteer.sheetsId ?: ""),
+                                "name" to volunteer.name,
+                                "abbr" to volunteer.lastNameAbbreviation
+                            )
                         )
                     }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showQrDialog = false }) {
-                    Text(context.getString(R.string.close))
+                    val qrImage = remember(payload) { QRCodeUtils.generateQrImageBitmap(payload, 1024) }
+                    val qrContext = LocalContext.current
+                    
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState()),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        if (qrImage != null) {
+                            Image(
+                                bitmap = qrImage,
+                                contentDescription = qrContext.getString(R.string.volunteer_qr_code),
+                                modifier = Modifier
+                                    .then(
+                                        if (isTabletDevice) {
+                                            Modifier.size(tabletQrSize)
+                                        } else {
+                                            Modifier.fillMaxWidth().aspectRatio(1f)
+                                        }
+                                    )
+                                    .clip(RoundedCornerShape(if (isPhone) 8.dp else 12.dp))
+                                    .background(Color.White)
+                            )
+                            Spacer(modifier = Modifier.height(if (isPhone) 8.dp else 12.dp))
+                            Text(
+                                text = volunteer.name,
+                                style = if (isPhone) getPhonePortraitBodyTypography() else getTabletConstrainedBodyTypography(),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(if (isPhone) 8.dp else 12.dp))
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(if (isTabletDevice) 8.dp else 12.dp)
+                            ) {
+                                OutlinedButton(
+                                    onClick = {
+                                        qrImage?.let { bitmap ->
+                                            try {
+                                                val file = File(qrContext.cacheDir, "qr_code_${volunteer.id}.png")
+                                                val outputStream = FileOutputStream(file)
+                                                bitmap.asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+                                                outputStream.close()
+                                                
+                                                val uri = FileProvider.getUriForFile(
+                                                    qrContext,
+                                                    "${qrContext.packageName}.fileprovider",
+                                                    file
+                                                )
+                                                
+                                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                                    type = "image/png"
+                                                    putExtra(Intent.EXTRA_STREAM, uri)
+                                                    putExtra(Intent.EXTRA_SUBJECT, qrContext.getString(R.string.qr_code_subject, volunteer.name))
+                                                    putExtra(Intent.EXTRA_TEXT, qrContext.getString(R.string.qr_code_for_volunteer, volunteer.name))
+                                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                                }
+                                                qrContext.startActivity(Intent.createChooser(shareIntent, qrContext.getString(R.string.share_qr_code)))
+                                            } catch (e: Exception) {
+                                                // Fallback to text sharing if image sharing fails
+                                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                                    type = "text/plain"
+                                                    putExtra(Intent.EXTRA_SUBJECT, "Volunteer QR")
+                                                    putExtra(
+                                                        Intent.EXTRA_TEXT,
+                                                        "Volunteer: ${volunteer.name}\nID: ${volunteer.id}\nPayload: $payload"
+                                                    )
+                                                }
+                                                qrContext.startActivity(Intent.createChooser(shareIntent, "Share via"))
+                                            }
+                                        }
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(if (isTabletDevice) 48.dp else 64.dp)
+                                ) {
+                                    Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(qrContext.getString(R.string.share))
+                                }
+                                OutlinedButton(
+                                    onClick = {
+                                        // Check if volunteer has email
+                                        if (volunteer.email.isNotBlank()) {
+                                            showEmailConfirmDialog = true
+                                        } else {
+                                            showNoEmailDialog = true
+                                        }
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(if (isTabletDevice) 48.dp else 64.dp)
+                                ) {
+                                    Icon(Icons.Default.Email, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(qrContext.getString(R.string.send_by_mail))
+                                }
+                            }
+                        } else {
+                            Text(
+                                text = qrContext.getString(R.string.failed_to_generate_qr_code),
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                    
+                    // Close button
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(onClick = { showQrDialog = false }) {
+                            Text(context.getString(R.string.close))
+                        }
+                    }
                 }
             }
-        )
+        }
     }
     
     // Email Confirmation Dialog

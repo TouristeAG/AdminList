@@ -549,9 +549,14 @@ class EventManagerViewModel(
     fun addJob(job: Job) {
         viewModelScope.launch {
             try {
+                // Automatically set benefitUsed for after-midnight shifts
+                val jobWithBenefit = if (job.shiftTime == ShiftTime.AFTER_MIDNIGHT && job.benefitUsed == null) {
+                    job.copy(benefitUsed = false) // Mark as unused benefit
+                } else job
+                
                 // Insert job into local database first
-                val jobId = repository.insertJob(job)
-                val jobWithId = job.copy(id = jobId)
+                val jobId = repository.insertJob(jobWithBenefit)
+                val jobWithId = jobWithBenefit.copy(id = jobId)
                 
                 // Add individual job to Google Sheets and get sheetsId
                 val sheetsId = googleSheetsService.addJobToSheets(jobWithId, _venues.value)
@@ -637,6 +642,48 @@ class EventManagerViewModel(
             } catch (e: Exception) {
                 println("Failed to delete job: ${e.message}")
                 _syncError.value = "Failed to delete job: ${e.message}"
+            }
+        }
+    }
+
+    /**
+     * Mark an after-midnight shift's entry benefit as used (redeemed).
+     * Updates the job locally and in Google Sheets, then recalculates the guest list.
+     */
+    fun markBenefitAsUsed(job: Job) {
+        viewModelScope.launch {
+            try {
+                val updatedJob = job.copy(
+                    benefitUsed = true,
+                    lastModified = System.currentTimeMillis()
+                )
+                
+                // Update job in local database
+                repository.updateJob(updatedJob)
+                
+                // Immediately refresh the jobs StateFlow so every open panel
+                // (benefits, volunteer detail) recomposes with the updated data.
+                refreshJobData()
+                
+                // Update individual job in Google Sheets if sheetsId exists
+                if (updatedJob.sheetsId != null) {
+                    try {
+                        googleSheetsService.updateJobInSheets(updatedJob, _venues.value)
+                        println("Successfully marked benefit as used in Google Sheets: ${updatedJob.jobTypeName}")
+                    } catch (e: Exception) {
+                        println("Individual job update failed, falling back to backup mode: ${e.message}")
+                        twoWaySyncService?.backupJobsToSheets()
+                    }
+                } else {
+                    println("No sheetsId found, using backup mode for benefit used update")
+                    twoWaySyncService?.backupJobsToSheets()
+                }
+                
+                println("Successfully marked benefit as used for job: ${updatedJob.jobTypeName}")
+                recalcAndUploadVolunteerGuestList()
+            } catch (e: Exception) {
+                println("Failed to mark benefit as used: ${e.message}")
+                _syncError.value = "Failed to mark benefit as used: ${e.message}"
             }
         }
     }
@@ -1755,7 +1802,8 @@ class EventManagerViewModel(
         
         // OPTIMIZED: Create lookup maps for O(1) access instead of O(n) find operations
         val localVolunteersBySheetsId = localVolunteers.filter { it.sheetsId != null }.associateBy { it.sheetsId!! }
-        val localVolunteersByName = localVolunteers.associateBy { it.name }
+        // Use name + abbreviation as key to allow multiple volunteers with same first name
+        val localVolunteersByFullName = localVolunteers.associateBy { "${it.name}_${it.lastNameAbbreviation}" }
         
         // OPTIMIZED: Create sets for O(1) deletion checks instead of O(n) any operations
         val deletedSheetsIds = deletedVolunteers.mapNotNullTo(mutableSetOf()) { it.sheetsId }
@@ -1767,13 +1815,13 @@ class EventManagerViewModel(
                             (remoteVolunteer.id in deletedIds)
             
             if (isDeleted) {
-                println("Skipping deleted volunteer: ${remoteVolunteer.name}")
+                println("Skipping deleted volunteer: ${remoteVolunteer.name} ${remoteVolunteer.lastNameAbbreviation}")
                 continue
             }
             
             // OPTIMIZED: Use map lookup instead of find (O(1) vs O(n))
             val localVolunteer = remoteVolunteer.sheetsId?.let { localVolunteersBySheetsId[it] }
-                ?: localVolunteersByName[remoteVolunteer.name]
+                ?: localVolunteersByFullName["${remoteVolunteer.name}_${remoteVolunteer.lastNameAbbreviation}"]
             if (localVolunteer == null) {
                 // New volunteer from sheets
                 try {
@@ -1880,7 +1928,8 @@ class EventManagerViewModel(
 
         // OPTIMIZED: Create lookup maps for O(1) access instead of O(n) find operations
         val localVolunteersBySheetsId = localVolunteers.filter { it.sheetsId != null }.associateBy { it.sheetsId!! }
-        val localVolunteersByName = localVolunteers.associateBy { it.name }
+        // Use name + abbreviation as key to allow multiple volunteers with same first name
+        val localVolunteersByFullName = localVolunteers.associateBy { "${it.name}_${it.lastNameAbbreviation}" }
 
         // OPTIMIZED: Create sets for O(1) deletion checks instead of O(n) any operations
         val deletedSheetsIds = deletedVolunteers.mapNotNullTo(mutableSetOf()) { it.sheetsId }
@@ -1892,13 +1941,13 @@ class EventManagerViewModel(
                             (remoteVolunteer.id in deletedIds)
 
             if (isDeleted) {
-                println("Skipping deleted volunteer: ${remoteVolunteer.name}")
+                println("Skipping deleted volunteer: ${remoteVolunteer.name} ${remoteVolunteer.lastNameAbbreviation}")
                 continue
             }
 
             // OPTIMIZED: Use map lookup instead of find (O(1) vs O(n))
             val localVolunteer = remoteVolunteer.sheetsId?.let { localVolunteersBySheetsId[it] }
-                ?: localVolunteersByName[remoteVolunteer.name]
+                ?: localVolunteersByFullName["${remoteVolunteer.name}_${remoteVolunteer.lastNameAbbreviation}"]
             if (localVolunteer == null) {
                 // New volunteer from sheets
                 try {
@@ -2270,6 +2319,10 @@ class EventManagerViewModel(
             val allVolunteers = repository.getAllVolunteers().first()
             val volunteersById = allVolunteers.associateBy { it.id }
             
+            // Load all jobs to check benefit usage status
+            val allJobs = _jobs.value
+            val jobsByVolunteerId = allJobs.groupBy { it.volunteerId }
+            
             println("Computing volunteer guest entries from ${statuses.size} volunteer benefit statuses with ${allVolunteers.size} volunteers")
             
             for (status in statuses) {
@@ -2277,6 +2330,24 @@ class EventManagerViewModel(
                 if (benefits.isActive && benefits.guestListAccess && (benefits.validUntil == null || now < benefits.validUntil)) {
                     val volunteer = volunteersById[status.volunteerId]
                     if (volunteer != null) {
+                        // Check if ETOILE benefit entry has been used
+                        // If the volunteer's guest list access comes only from ETOILE (after-midnight shifts)
+                        // and all their after-midnight shift benefits have been redeemed, skip them
+                        val volunteerJobs = jobsByVolunteerId[status.volunteerId] ?: emptyList()
+                        val hasUnusedAfterMidnightBenefit = volunteerJobs.any {
+                            it.shiftTime == ShiftTime.AFTER_MIDNIGHT && it.benefitUsed == false
+                        }
+                        val hasNonEtoileGuestAccess = status.activeBenefits.any {
+                            it.rank != VolunteerRank.ETOILE && it.rank != VolunteerRank.NOVA && it.guestListAccess && it.isActive
+                        }
+                        
+                        if (!hasNonEtoileGuestAccess && !hasUnusedAfterMidnightBenefit && status.isEligibleForEtoile) {
+                            println("Skipping ${volunteer.name} - all ETOILE entry benefits have been used")
+                            continue
+                        }
+                        
+                        // BenefitCalculator already excludes ETOILE when all
+                        // after-midnight shifts are used, so inviteCount is correct.
                         val invitations = status.benefits.inviteCount
                         entries.add(
                             Guest(
@@ -3023,24 +3094,12 @@ class EventManagerViewModel(
             return cachedUniqueJobs!!
         }
         
-        // Group by ID first to handle same-ID duplicates
-        val byId = jobs.groupBy { it.id }
-        
-        // For each ID group, keep only the oldest (lowest lastModified)
-        val uniqueById = byId.values.map { group ->
-            group.minByOrNull { it.lastModified } ?: group.first()
-        }
-        
-        // Now check for content duplicates (different ID but same info)
-        // Content key = all identifying fields except ID and timestamps
-        fun contentKey(j: Job) = "${j.volunteerId}_${j.jobTypeName}_${j.venueName}_${j.date}_${j.shiftTime}_${j.notes}"
-        
-        val byContent = uniqueById.groupBy { contentKey(it) }
-        
-        // For each content group, keep only the oldest (lowest lastModified)
-        val result = byContent.values.map { group ->
-            group.minByOrNull { it.lastModified } ?: group.first()
-        }
+        // Only remove true duplicates: same database row appearing more than
+        // once (identical primary key). A volunteer can legitimately have
+        // multiple shifts with the same type/venue/date, so content-based
+        // dedup must NOT be used -- it would silently drop valid data.
+        val seen = HashSet<Long>(jobs.size)
+        val result = jobs.filter { seen.add(it.id) }
         
         lastJobsHash = currentHash
         cachedUniqueJobs = result

@@ -787,6 +787,11 @@
     <string name="easter_egg_drive_nocturne">Nocturnal Drive</string>
     <string name="easter_egg_flappy_nocturne">Nocturnal Flappy</string>
     
+    <!-- Entry Validation -->
+    <string name="validate_entry">Validate Entry</string>
+    <string name="validate_entry_description">This volunteer has an unused free entry benefit from an after-midnight shift. Slide to confirm their entry.</string>
+    <string name="slide_to_confirm">Slide to confirm entry</string>
+    
     <!-- Activity Status -->
     <string name="activity_status_never_worked">Never worked</string>
     <string name="activity_status_active_today">Active (today)</string>

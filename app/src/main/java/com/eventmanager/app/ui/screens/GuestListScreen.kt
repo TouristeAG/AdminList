@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.eventmanager.app.data.models.*
 import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.ui.components.SearchBarWithFilter
@@ -39,6 +40,7 @@ fun GuestListScreen(
     onAddGuest: (Guest) -> Unit,
     onUpdateGuest: (Guest) -> Unit,
     onDeleteGuest: (Guest) -> Unit,
+    onConfirmEntry: ((Job) -> Unit)? = null,
     @Suppress("UNUSED_PARAMETER") isSyncing: Boolean = false,
     @Suppress("UNUSED_PARAMETER") lastSyncTime: Long = 0L,
     scrollBehavior: String = SettingsManager.FULL_SCROLL
@@ -742,7 +744,8 @@ fun GuestListScreen(
                 volunteerBenefitStatus = memoizedBenefitStatus,
                 volunteerJobs = memoizedVolunteerJobs,
                 venues = venues,
-                onClose = { showVolunteerBenefits = null }
+                onClose = { showVolunteerBenefits = null },
+                onConfirmEntry = onConfirmEntry
             )
         }
     }
@@ -969,15 +972,32 @@ fun AddGuestDialog(
 
     val isCompact = isCompactScreen()
     val scrollState = rememberScrollState()
+    val isTabletDevice = isTablet()
+    val tabletMaxWidth = getTabletConstrainedDialogMaxWidth()
+    val tabletMaxHeight = getTabletConstrainedDialogMaxHeight()
     
     // Memoize active venues to avoid repeated filtering
     val activeVenues = remember(venues) { venues.filter { it.isActive } }
 
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = !isTabletDevice
+        )
+    ) {
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.9f)
+                .then(
+                    if (isTabletDevice) {
+                        Modifier
+                            .widthIn(max = tabletMaxWidth)
+                            .heightIn(max = tabletMaxHeight)
+                    } else {
+                        Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(0.9f)
+                    }
+                )
                 .padding(16.dp)
         ) {
             Card(
@@ -997,7 +1017,7 @@ fun AddGuestDialog(
                     ) {
                         Text(
                             text = if (isCompact) context.getString(R.string.add_guest) else context.getString(R.string.add_new_guest),
-                            style = getResponsiveTypography(),
+                            style = if (isTabletDevice) getTabletConstrainedTitleTypography() else getResponsiveTypography(),
                             fontWeight = FontWeight.Bold
                         )
                         
@@ -1153,15 +1173,32 @@ fun EditGuestDialog(
 
     val isCompact = isCompactScreen()
     val scrollState = rememberScrollState()
+    val isTabletDevice = isTablet()
+    val tabletMaxWidth = getTabletConstrainedDialogMaxWidth()
+    val tabletMaxHeight = getTabletConstrainedDialogMaxHeight()
     
     // Memoize active venues to avoid repeated filtering
     val activeVenues = remember(venues) { venues.filter { it.isActive } }
 
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = !isTabletDevice
+        )
+    ) {
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.9f)
+                .then(
+                    if (isTabletDevice) {
+                        Modifier
+                            .widthIn(max = tabletMaxWidth)
+                            .heightIn(max = tabletMaxHeight)
+                    } else {
+                        Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(0.9f)
+                    }
+                )
                 .padding(16.dp)
         ) {
             Card(
@@ -1181,7 +1218,7 @@ fun EditGuestDialog(
                     ) {
                         Text(
                             text = if (isCompact) context.getString(R.string.edit_guest) else context.getString(R.string.edit_guest_details),
-                            style = getResponsiveTypography(),
+                            style = if (isTabletDevice) getTabletConstrainedTitleTypography() else getResponsiveTypography(),
                             fontWeight = FontWeight.Bold
                         )
                         
