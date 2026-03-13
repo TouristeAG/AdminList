@@ -82,6 +82,10 @@ class GoogleSheetsService(private val context: Context) {
     // Single Guest Operations (App Priority)
     suspend fun addGuestToSheets(guest: Guest, venues: List<VenueEntity>) = withContext(Dispatchers.IO) {
         try {
+            if (guest.isTemporaryGuest) {
+                println("Skipping addGuestToSheets for temporary guest: ${guest.name}")
+                return@withContext null
+            }
             if (sheetsService == null) {
                 initializeSheetsService()
             }
@@ -184,6 +188,10 @@ class GoogleSheetsService(private val context: Context) {
 
     suspend fun updateGuestInSheets(guest: Guest, venues: List<VenueEntity>) = withContext(Dispatchers.IO) {
         try {
+            if (guest.isTemporaryGuest) {
+                println("Skipping updateGuestInSheets for temporary guest: ${guest.name}")
+                return@withContext
+            }
             if (sheetsService == null) {
                 initializeSheetsService()
             }
@@ -241,8 +249,8 @@ class GoogleSheetsService(private val context: Context) {
                 clearSheetRange("${settingsManager.getGuestListSheet()}!A:Z")
                 println("🧹 Cleared entire guests sheet to prevent duplicates")
                 
-                // Only upload regular guests here; volunteer benefits go to their own sheet
-                val values = guests.filter { !it.isVolunteerBenefit }.map { guest ->
+                // Only upload regular guests here; volunteer benefits and temporary guests go to their own sheets
+                val values = guests.filter { !it.isVolunteerBenefit && !it.isTemporaryGuest }.map { guest ->
                     listOf(
                         guest.name,
                         guest.email,
@@ -1546,19 +1554,223 @@ class GoogleSheetsService(private val context: Context) {
     private data class SheetDefinition(val name: String, val headers: List<String>)
 
     private fun getSheetDefinitions(): List<SheetDefinition> = listOf(
-        SheetDefinition(settingsManager.getGuestListSheet(),
-            listOf("Name", "Email", "Phone", "Invitations", "Venue", "Notes", "Volunteer Benefit", "Last Modified")),
-        SheetDefinition(settingsManager.getVolunteerGuestListSheet(),
-            listOf("Name", "Last Name Abbreviation", "Invitations", "Venue", "Notes", "Volunteer Benefit", "Last Modified")),
-        SheetDefinition(settingsManager.getVolunteerSheet(),
-            listOf("ID", "Name", "Abbreviation", "Email", "Phone", "Date of Birth", "Gender", "Rank", "Active", "Last Modified")),
-        SheetDefinition(settingsManager.getJobsSheet(),
-            listOf("Volunteer ID", "Job Type", "Venue", "Date", "Shift Time", "Notes", "Last Modified", "Used")),
-        SheetDefinition("JobTypes",
-            listOf("Name", "Status", "Shift Type", "Orion Type", "Requires Time", "Benefit System", "Manual Rewards", "Description", "Last Modified")),
-        SheetDefinition(settingsManager.getVenuesSheet(),
-            listOf("Name", "Description", "Status", "Last Modified"))
+        SheetDefinition(
+            settingsManager.getGuestListSheet(),
+            listOf("Name", "Email", "Phone", "Invitations", "Venue", "Notes", "Volunteer Benefit", "Last Modified")
+        ),
+        SheetDefinition(
+            settingsManager.getVolunteerGuestListSheet(),
+            listOf("Name", "Last Name Abbreviation", "Invitations", "Venue", "Notes", "Volunteer Benefit", "Last Modified")
+        ),
+        SheetDefinition(
+            settingsManager.getVolunteerSheet(),
+            listOf("ID", "Name", "Abbreviation", "Email", "Phone", "Date of Birth", "Gender", "Rank", "Active", "Last Modified")
+        ),
+        SheetDefinition(
+            settingsManager.getJobsSheet(),
+            listOf("Volunteer ID", "Job Type", "Venue", "Date", "Shift Time", "Notes", "Last Modified", "Used")
+        ),
+        SheetDefinition(
+            "JobTypes",
+            listOf("Name", "Status", "Shift Type", "Orion Type", "Requires Time", "Benefit System", "Manual Rewards", "Description", "Last Modified")
+        ),
+        SheetDefinition(
+            settingsManager.getVenuesSheet(),
+            listOf("Name", "Description", "Status", "Last Modified")
+        ),
+        SheetDefinition(
+            settingsManager.getTempGuestListSheet(),
+            listOf(
+                "Modification Date",
+                "Event Date",
+                "Artist/Group",
+                "Artist Contact Phone",
+                "Guest Name",
+                "Comment"
+            )
+        )
     )
+
+    data class TempGuestRow(
+        val rowNumber: Int,
+        val modificationDate: java.time.LocalDate,
+        val eventDate: java.time.LocalDate,
+        val artistName: String,
+        val artistContactPhone: String,
+        val guestName: String,
+        val comment: String
+    )
+
+    suspend fun syncTempGuestsFromSheets(): List<TempGuestRow> = withContext(Dispatchers.IO) {
+        try {
+            if (sheetsService == null) {
+                initializeSheetsService()
+            }
+
+            ApiRateLimitHandler.executeWithRetry(
+                operation = {
+                    val spreadsheetId = settingsManager.getSpreadsheetId()
+                    val sheetName = settingsManager.getTempGuestListSheet()
+                    val range = "${sheetName}!A2:F"
+
+                    val response = sheetsService?.spreadsheets()?.values()?.get(
+                        spreadsheetId,
+                        range
+                    )?.execute()
+
+                    if (response == null) {
+                        throw IOException("Failed to retrieve temporary guests from Google Sheets - no response received")
+                    }
+
+                    val values = response.getValues() ?: emptyList()
+                    println("Retrieved ${values.size} temporary guest rows from sheets")
+
+                    val formatter = java.time.format.DateTimeFormatter.ISO_LOCAL_DATE
+
+                    values.mapIndexedNotNull { index, row ->
+                        if (row.size >= 5) {
+                            try {
+                                val modificationDate = java.time.LocalDate.parse(row[0].toString().trim(), formatter)
+                                val eventDate = java.time.LocalDate.parse(row[1].toString().trim(), formatter)
+                                TempGuestRow(
+                                    rowNumber = index + 2,
+                                    modificationDate = modificationDate,
+                                    eventDate = eventDate,
+                                    artistName = row[2].toString(),
+                                    artistContactPhone = row[3].toString(),
+                                    guestName = row[4].toString(),
+                                    comment = if (row.size > 5) row[5].toString() else ""
+                                )
+                            } catch (e: Exception) {
+                                println("Failed to parse temp guest row ${index + 2}: ${e.message}")
+                                null
+                            }
+                        } else {
+                            println("Skipping temp guest row ${index + 2} - insufficient columns: ${row.size}")
+                            null
+                        }
+                    }
+                },
+                operationName = "sync temp guests from sheets"
+            )
+        } catch (e: Exception) {
+            println("Failed to sync temp guests from sheets: ${e.message}")
+            if (e.message?.contains("429") == true || e.message?.contains("Rate limit") == true) {
+                throw IOException(ApiRateLimitHandler.getBriefRateLimitMessage(), e)
+            } else {
+                throw IOException(createNetworkErrorMessage("sync temp guests from Google Sheets", e), e)
+            }
+        }
+    }
+
+    suspend fun updateTemporaryGuestInSheets(guest: Guest) = withContext(Dispatchers.IO) {
+        try {
+            if (!guest.isTemporaryGuest) {
+                println("Skipping updateTemporaryGuestInSheets for non-temporary guest: ${guest.name}")
+                return@withContext
+            }
+            if (sheetsService == null) {
+                initializeSheetsService()
+            }
+
+            ApiRateLimitHandler.executeWithRetry(
+                operation = {
+                    val spreadsheetId = settingsManager.getSpreadsheetId()
+                    val sheetName = settingsManager.getTempGuestListSheet()
+                    val zone = java.time.ZoneId.of("Europe/Zurich")
+                    val formatter = java.time.format.DateTimeFormatter.ISO_LOCAL_DATE
+
+                    val rowNumber = guest.sheetsId?.toIntOrNull()
+                    if (rowNumber == null) {
+                        throw IOException("Temporary guest has no valid sheets row ID for update: ${guest.sheetsId}")
+                    }
+
+                    val eventDate = guest.temporaryEventDate?.let {
+                        java.time.Instant.ofEpochMilli(it).atZone(zone).toLocalDate().format(formatter)
+                    } ?: throw IOException("Temporary guest has no event date")
+
+                    val today = java.time.LocalDate.now(zone).format(formatter)
+                    val values = listOf(
+                        today,
+                        eventDate,
+                        guest.temporaryArtistName,
+                        guest.temporaryContactPhone,
+                        guest.name,
+                        guest.notes
+                    )
+
+                    val valueRange = ValueRange().setValues(listOf(values))
+                    sheetsService?.spreadsheets()?.values()?.update(
+                        spreadsheetId,
+                        "${sheetName}!A$rowNumber:F$rowNumber",
+                        valueRange
+                    )?.setValueInputOption("RAW")?.execute()
+
+                    println("Successfully updated temporary guest in sheets at row $rowNumber: ${guest.name}")
+                },
+                operationName = "update temporary guest in sheets"
+            )
+        } catch (e: Exception) {
+            println("Failed to update temporary guest in sheets: ${e.message}")
+            if (e.message?.contains("429") == true || e.message?.contains("Rate limit") == true) {
+                throw IOException(ApiRateLimitHandler.getBriefRateLimitMessage(), e)
+            } else {
+                throw IOException(createNetworkErrorMessage("update temporary guest in Google Sheets", e), e)
+            }
+        }
+    }
+
+    suspend fun deleteTemporaryGuestFromSheets(sheetsId: String?) = withContext(Dispatchers.IO) {
+        try {
+            if (sheetsId == null) {
+                println("Cannot delete temporary guest from sheets - no sheetsId provided")
+                return@withContext
+            }
+            if (sheetsService == null) {
+                initializeSheetsService()
+            }
+
+            ApiRateLimitHandler.executeWithRetry(
+                operation = {
+                    val spreadsheetId = settingsManager.getSpreadsheetId()
+                    val sheetName = settingsManager.getTempGuestListSheet()
+                    val rowNumber = sheetsId.toIntOrNull()
+                        ?: throw IOException("Invalid sheetsId format for temporary guest: $sheetsId")
+
+                    val spreadsheet = sheetsService?.spreadsheets()?.get(spreadsheetId)?.execute()
+                    val sheetId = spreadsheet?.sheets
+                        ?.find { it.properties?.title == sheetName }
+                        ?.properties?.sheetId
+                        ?: throw IOException("Could not find sheet ID for sheet: $sheetName")
+
+                    val deleteRequest = Request()
+                        .setDeleteDimension(
+                            DeleteDimensionRequest().setRange(
+                                DimensionRange()
+                                    .setSheetId(sheetId)
+                                    .setDimension("ROWS")
+                                    .setStartIndex(rowNumber - 1)
+                                    .setEndIndex(rowNumber)
+                            )
+                        )
+
+                    val batchUpdateRequest = BatchUpdateSpreadsheetRequest()
+                        .setRequests(listOf(deleteRequest))
+
+                    sheetsService?.spreadsheets()?.batchUpdate(spreadsheetId, batchUpdateRequest)?.execute()
+                    println("Successfully deleted temporary guest from sheets at row $rowNumber")
+                },
+                operationName = "delete temporary guest from sheets"
+            )
+        } catch (e: Exception) {
+            println("Failed to delete temporary guest from sheets: ${e.message}")
+            if (e.message?.contains("429") == true || e.message?.contains("Rate limit") == true) {
+                throw IOException(ApiRateLimitHandler.getBriefRateLimitMessage(), e)
+            } else {
+                throw IOException(createNetworkErrorMessage("delete temporary guest from Google Sheets", e), e)
+            }
+        }
+    }
 
     /**
      * Validates every expected sheet tab exists with correct headers, repairing

@@ -307,9 +307,10 @@ class TwoWaySyncService(
             println("📊 Current local data: ${mainGuests.size} guests (${mainGuests.count { it.isVolunteerBenefit }} volunteer benefits), ${mainVolunteers.size} volunteers, ${mainJobs.size} jobs, ${mainJobTypeConfigs.size} job types, ${mainVenues.size} venues")
             
             // STEP 3: Compare TEMP_DB vs MAIN_DB - OPTIMIZED: parallel comparisons
-            // CRITICAL: Exclude volunteer benefit guests from comparison - they're managed separately
-            // and are not synced from Google Sheets (computed locally from volunteer ranks)
-            val regularMainGuests = mainGuests.filter { !it.isVolunteerBenefit }
+            // CRITICAL: Exclude both volunteer benefits and temporary guests from comparison.
+            // - Volunteer benefits are computed locally.
+            // - Temporary guests come from a dedicated sheet and must not be deleted by regular guest sync.
+            val regularMainGuests = mainGuests.filter { !it.isVolunteerBenefit && !it.isTemporaryGuest }
             
             val (guestChanges, volunteerChanges, jobChanges, jobTypeChanges, venueChanges) = coroutineScope {
                 val guestChangesDeferred = async { differentialSyncService.compareGuests(remoteGuests, regularMainGuests) }
@@ -444,9 +445,10 @@ class TwoWaySyncService(
             
             // STEP 2: Get current local guests (MAIN_DB)
             val mainGuests = repository.getAllGuests().first()
-            // CRITICAL: Exclude volunteer benefit guests - they're managed separately
-            val regularMainGuests = mainGuests.filter { !it.isVolunteerBenefit }
-            println("📊 Current local data: ${mainGuests.size} guests (${mainGuests.size - regularMainGuests.size} volunteer benefits excluded from comparison)")
+            // CRITICAL: Exclude volunteer benefits and temporary guests from regular guest comparison.
+            // Temporary guests are managed from the dedicated temporary guest sheet.
+            val regularMainGuests = mainGuests.filter { !it.isVolunteerBenefit && !it.isTemporaryGuest }
+            println("📊 Current local data: ${mainGuests.size} guests (${mainGuests.size - regularMainGuests.size} volunteer/temporary guests excluded from comparison)")
             
             // STEP 3: Compare TEMP_DB vs MAIN_DB (regular guests only)
             val guestChanges = differentialSyncService.compareGuests(remoteGuests, regularMainGuests)

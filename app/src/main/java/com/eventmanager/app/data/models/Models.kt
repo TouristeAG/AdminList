@@ -33,7 +33,11 @@ data class Guest(
     val notes: String = "",
     val isVolunteerBenefit: Boolean = false,
     val volunteerId: String? = null, // NanoID of the volunteer this guest entry represents (for volunteer benefits)
-    val lastModified: Long = System.currentTimeMillis()
+    val lastModified: Long = System.currentTimeMillis(),
+    val isTemporaryGuest: Boolean = false,
+    val temporaryArtistName: String = "",
+    val temporaryEventDate: Long? = null,
+    val temporaryContactPhone: String = ""
 ) : Parcelable
 
 @Entity(
@@ -437,11 +441,15 @@ object BenefitCalculator {
         // been redeemed (benefitUsed == true), the ETOILE contribution is removed
         // so the UI correctly reflects the consumed state.
         if (hasAfterMidnightShiftOptimized(volunteerJobs, ctx)) {
-            val allAfterMidnightUsed = volunteerJobs
-                .filter { it.shiftTime == ShiftTime.AFTER_MIDNIGHT && ctx.shiftJobTypeNames.contains(it.jobTypeName) }
-                .all { it.benefitUsed == true }
+            // Single-pass check: look for any unredeemed after-midnight shift.
+            // Using `any` with the negated condition avoids allocating a filtered list.
+            val hasUnusedAfterMidnight = volunteerJobs.any {
+                it.shiftTime == ShiftTime.AFTER_MIDNIGHT &&
+                    ctx.shiftJobTypeNames.contains(it.jobTypeName) &&
+                    it.benefitUsed != true
+            }
 
-            if (!allAfterMidnightUsed) {
+            if (hasUnusedAfterMidnight) {
                 val benefit = calculateBenefitsForRankOptimized(VolunteerRank.ETOILE, volunteerJobs, orionJobs, ctx)
                 if (benefit.isActive) {
                     allApplicableBenefits.add(benefit)

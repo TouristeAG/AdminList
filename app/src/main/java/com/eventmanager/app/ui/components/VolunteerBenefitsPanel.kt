@@ -238,35 +238,30 @@ fun VolunteerBenefitsPanel(
                     }
                 }
                 
-                // Pre-compute unused benefit job for slide-to-confirm (must be in @Composable scope).
+                // Pre-compute unused benefit job for slide-to-confirm.
                 // Only show the slider for shifts whose event night has already passed.
-                // On the night of the shift the volunteer is working and needs no validation.
-                //
-                // We "latch" the value: once a valid job is found the reference is kept
-                // even after the data refreshes (benefitUsed flips to true), so the
-                // check animation has time to play before the card disappears.
-                val currentUnusedJob = remember(volunteerJobs) {
-                    val todayStart = java.util.Calendar.getInstance().apply {
+                // todayStart is stable for the lifetime of this composable (midnight today).
+                val todayStart = remember {
+                    java.util.Calendar.getInstance().apply {
                         set(java.util.Calendar.HOUR_OF_DAY, 0)
                         set(java.util.Calendar.MINUTE, 0)
                         set(java.util.Calendar.SECOND, 0)
                         set(java.util.Calendar.MILLISECOND, 0)
                     }.timeInMillis
-                    volunteerJobs
-                        .filter {
-                            it.shiftTime == ShiftTime.AFTER_MIDNIGHT &&
-                                it.benefitUsed == false &&
-                                it.date < todayStart
-                        }
-                        .maxByOrNull { it.date }
+                }
+                // We "latch" the value: once a valid job is found the reference is
+                // kept even after the data refreshes (benefitUsed flips to true), so
+                // the check animation has time to play before the card disappears.
+                val currentUnusedJob = remember(volunteerJobs, todayStart) {
+                    volunteerJobs.filter {
+                        it.shiftTime == ShiftTime.AFTER_MIDNIGHT &&
+                            it.benefitUsed == false &&
+                            it.date < todayStart
+                    }.maxByOrNull { it.date }
                 }
                 var latchedBenefitJob by remember { mutableStateOf(currentUnusedJob) }
-                // Keep the latched value alive while the confirm animation plays;
-                // update it only when a new unused job appears.
                 LaunchedEffect(currentUnusedJob) {
-                    if (currentUnusedJob != null) {
-                        latchedBenefitJob = currentUnusedJob
-                    }
+                    if (currentUnusedJob != null) latchedBenefitJob = currentUnusedJob
                 }
                 val unusedBenefitJob = latchedBenefitJob
                 

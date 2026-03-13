@@ -1885,6 +1885,9 @@ fun GuestListScreenWithViewModel(viewModel: EventManagerViewModel) {
                 }
             } 
         },
+        onRefreshTemporaryGuests = {
+            viewModel.refreshTemporaryGuests()
+        },
         onConfirmEntry = { job ->
             coroutineScope.launch {
                 try {

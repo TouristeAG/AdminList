@@ -81,65 +81,14 @@ fun GuestDetailPanel(
             Column(
                 modifier = Modifier.fillMaxSize()
             ) {
-                // Modern header with guest name (FIXED AT TOP)
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(responsivePadding)
-                        .padding(bottom = if (isPhone) 8.dp else 12.dp),
-                    shape = RoundedCornerShape(if (isPhone) 12.dp else 16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(if (isPhone) 12.dp else 20.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(
-                                    text = guest.name,
-                                    style = if (isPhone) getPhonePortraitTypography() else getResponsiveTypography(),
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                                
-                                if (guest.lastNameAbbreviation.isNotEmpty()) {
-                                    Spacer(modifier = Modifier.height(if (isPhone) 2.dp else 4.dp))
-                                    
-                                    Text(
-                                        text = guest.lastNameAbbreviation,
-                                        style = if (isPhone) getPhonePortraitBodyTypography() else getResponsiveBodyTypography(),
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
-                                }
-                            }
-                            
-                            IconButton(onClick = onClose) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = context.getString(R.string.close),
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                            }
-                        }
-                    }
-                }
-                
-                // Scrollable content (SCROLLS BELOW HEADER)
+                // Scrollable content
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(if (isPhone) 8.dp else 12.dp),
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth(),
                     contentPadding = PaddingValues(
+                        top = responsivePadding,
                         start = responsivePadding,
                         end = responsivePadding,
                         bottom = responsivePadding
@@ -150,7 +99,8 @@ fun GuestDetailPanel(
                         GuestInformationSection(
                             guest = guest,
                             venues = venues,
-                            isPhone = isPhone
+                            isPhone = isPhone,
+                            onClose = onClose
                         )
                     }
                     
@@ -879,10 +829,170 @@ fun GuestDetailPanel(
 private fun GuestInformationSection(
     guest: Guest,
     venues: List<VenueEntity>,
-    isPhone: Boolean
+    isPhone: Boolean,
+    onClose: () -> Unit
 ) {
+    val context = LocalContext.current
     val responsivePadding = if (isPhone) getPhonePortraitCardPadding() else getResponsiveCardPadding()
     
+    if (guest.isTemporaryGuest) {
+        TemporaryGuestInformationSection(
+            guest = guest,
+            isPhone = isPhone,
+            onClose = onClose
+        )
+    } else {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(if (isPhone) 12.dp else 16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(responsivePadding)
+            ) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(if (isPhone) 12.dp else 14.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(if (isPhone) 14.dp else 18.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                text = context.getString(R.string.guest_information),
+                                style = if (isPhone) MaterialTheme.typography.labelLarge else MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                            Text(
+                                text = guest.name,
+                                style = if (isPhone) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                            if (guest.lastNameAbbreviation.isNotEmpty()) {
+                                Text(
+                                    text = guest.lastNameAbbreviation,
+                                    style = if (isPhone) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                        }
+                        IconButton(onClick = onClose) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = context.getString(R.string.close),
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(if (isPhone) 10.dp else 14.dp))
+
+                val detailItems = buildList {
+                    add(
+                        Triple(
+                            context.getString(R.string.invitations),
+                            guest.invitations.toString(),
+                            Icons.Default.People
+                        )
+                    )
+                    add(
+                        Triple(
+                            context.getString(R.string.venue),
+                            getVenueDisplayString(guest.venueName, venues),
+                            Icons.Default.LocationOn
+                        )
+                    )
+                    if (guest.email.isNotEmpty()) {
+                        add(
+                            Triple(
+                                context.getString(R.string.guest_email),
+                                guest.email,
+                                Icons.Default.Email
+                            )
+                        )
+                    }
+                    if (guest.phoneNumber.isNotEmpty()) {
+                        add(
+                            Triple(
+                                context.getString(R.string.guest_phone_number),
+                                guest.phoneNumber,
+                                Icons.Default.Phone
+                            )
+                        )
+                    }
+                    if (guest.notes.isNotEmpty()) {
+                        add(
+                            Triple(
+                                context.getString(R.string.notes),
+                                guest.notes,
+                                Icons.Default.Notes
+                            )
+                        )
+                    }
+                }
+
+                if (isPhone) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        detailItems.forEach { (label, value, icon) ->
+                            DetailTile(
+                                label = label,
+                                value = value,
+                                icon = icon
+                            )
+                        }
+                    }
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        detailItems.chunked(2).forEach { rowItems ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                rowItems.forEach { (label, value, icon) ->
+                                    DetailTile(
+                                        label = label,
+                                        value = value,
+                                        icon = icon,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                                if (rowItems.size == 1) {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TemporaryGuestInformationSection(
+    guest: Guest,
+    isPhone: Boolean,
+    onClose: () -> Unit
+) {
+    val context = LocalContext.current
+    val responsivePadding = if (isPhone) getPhonePortraitCardPadding() else getResponsiveCardPadding()
+    val eventDateText = remember(guest.temporaryEventDate) {
+        guest.temporaryEventDate?.let { com.eventmanager.app.data.utils.DateTimeUtils.formatGenevaDateOnly(it) } ?: "-"
+    }
+    val artistText = guest.temporaryArtistName.ifBlank { "-" }
+    val contactText = guest.temporaryContactPhone.ifBlank { "-" }
+    val notesText = guest.notes.ifBlank { "-" }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(if (isPhone) 12.dp else 16.dp),
@@ -894,81 +1004,160 @@ private fun GuestInformationSection(
         Column(
             modifier = Modifier.padding(responsivePadding)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(if (isPhone) 12.dp else 14.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Person,
-                    contentDescription = null,
-                    modifier = Modifier.size(if (isPhone) 20.dp else 24.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(if (isPhone) 14.dp else 18.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        AssistChip(
+                            onClick = { },
+                            label = { Text(context.getString(R.string.temp_guest_chip_label), fontWeight = FontWeight.SemiBold) },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Event,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            },
+                            colors = AssistChipDefaults.assistChipColors(
+                                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                                labelColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                                leadingIconContentColor = MaterialTheme.colorScheme.onTertiaryContainer
+                            )
+                        )
+                        Text(
+                            text = guest.name,
+                            style = if (isPhone) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Text(
+                            text = artistText,
+                            style = if (isPhone) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                    IconButton(onClick = onClose) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = context.getString(R.string.close),
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(if (isPhone) 10.dp else 14.dp))
+
+            if (isPhone) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    DetailTile(
+                        label = context.getString(R.string.temp_guest_event_date_label),
+                        value = eventDateText,
+                        icon = Icons.Default.DateRange
+                    )
+                    DetailTile(
+                        label = context.getString(R.string.temp_guest_artist_label),
+                        value = artistText,
+                        icon = Icons.Default.Group
+                    )
+                    DetailTile(
+                        label = context.getString(R.string.temp_guest_contact_phone_label),
+                        value = contactText,
+                        icon = Icons.Default.Phone
+                    )
+                    DetailTile(
+                        label = context.getString(R.string.notes),
+                        value = notesText,
+                        icon = Icons.Default.Notes
+                    )
+                }
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        DetailTile(
+                            label = context.getString(R.string.temp_guest_event_date_label),
+                            value = eventDateText,
+                            icon = Icons.Default.DateRange,
+                            modifier = Modifier.weight(1f)
+                        )
+                        DetailTile(
+                            label = context.getString(R.string.temp_guest_artist_label),
+                            value = artistText,
+                            icon = Icons.Default.Group,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        DetailTile(
+                            label = context.getString(R.string.temp_guest_contact_phone_label),
+                            value = contactText,
+                            icon = Icons.Default.Phone,
+                            modifier = Modifier.weight(1f)
+                        )
+                        DetailTile(
+                            label = context.getString(R.string.notes),
+                            value = notesText,
+                            icon = Icons.Default.Notes,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DetailTile(
+    label: String,
+    value: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
                 Text(
-                    text = LocalContext.current.getString(R.string.guest_information),
-                    style = if (isPhone) getPhonePortraitTypography() else getResponsiveTitleTypography(),
-                    fontWeight = FontWeight.Bold,
+                    text = label,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(if (isPhone) 8.dp else 12.dp))
-            
-            // Name
-            InfoRow(
-                label = LocalContext.current.getString(R.string.name),
-                value = guest.name,
-                isPhone = isPhone
-            )
-            
-            // Last name abbreviation (if exists)
-            if (guest.lastNameAbbreviation.isNotEmpty()) {
-                InfoRow(
-                    label = LocalContext.current.getString(R.string.abbreviation),
-                    value = guest.lastNameAbbreviation,
-                    isPhone = isPhone
-                )
-            }
-            
-            // Email (if exists)
-            if (guest.email.isNotEmpty()) {
-                InfoRow(
-                    label = LocalContext.current.getString(R.string.guest_email),
-                    value = guest.email,
-                    isPhone = isPhone
-                )
-            }
-            
-            // Phone Number (if exists)
-            if (guest.phoneNumber.isNotEmpty()) {
-                InfoRow(
-                    label = LocalContext.current.getString(R.string.guest_phone_number),
-                    value = guest.phoneNumber,
-                    isPhone = isPhone
-                )
-            }
-            
-            // Invitations
-            InfoRow(
-                label = LocalContext.current.getString(R.string.invitations),
-                value = guest.invitations.toString(),
-                isPhone = isPhone
-            )
-            
-            // Venue
-            InfoRow(
-                label = LocalContext.current.getString(R.string.venue),
-                value = getVenueDisplayString(guest.venueName, venues),
-                isPhone = isPhone
-            )
-            
-            // Notes (if exists)
-            if (guest.notes.isNotEmpty()) {
-                InfoRow(
-                    label = LocalContext.current.getString(R.string.notes),
-                    value = guest.notes,
-                    isPhone = isPhone
                 )
             }
         }
@@ -1024,13 +1213,15 @@ private fun ActionButtonsSection(
                 Column(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    OutlinedButton(
-                        onClick = onShowQr,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(Icons.Default.QrCode, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(context.getString(R.string.qr_code))
+                    if (!guest.isTemporaryGuest) {
+                        OutlinedButton(
+                            onClick = onShowQr,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.QrCode, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(context.getString(R.string.qr_code))
+                        }
                     }
                     
                     OutlinedButton(
@@ -1060,13 +1251,15 @@ private fun ActionButtonsSection(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    OutlinedButton(
-                        onClick = onShowQr,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(Icons.Default.QrCode, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(context.getString(R.string.qr_code))
+                    if (!guest.isTemporaryGuest) {
+                        OutlinedButton(
+                            onClick = onShowQr,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.QrCode, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(context.getString(R.string.qr_code))
+                        }
                     }
                     
                     OutlinedButton(

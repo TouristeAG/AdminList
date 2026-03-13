@@ -16,6 +16,7 @@
     <string name="volunteer_sheet_label">Feuille des bénévoles</string>
     <string name="shifts_sheet_label">Feuille des Shifts</string>
     <string name="volunteer_guest_list_sheet_label">Feuille liste invité·e·s bénévoles</string>
+    <string name="temp_guest_list_sheet_label">Feuille guest-list temporaire</string>
     <string name="shift_types_sheet_label">Feuille types de Shifts</string>
     <string name="venues_sheet_label">Feuille Lieux</string>
     <string name="save_settings">Enregistrer les paramètres</string>
@@ -259,7 +260,7 @@
     <string name="step_5_title">Créer une feuille de calcul Google</string>
     <string name="step_5_description">Créez une nouvelle feuille de calcul Google et copiez son ID depuis l\'URL.</string>
     <string name="step_6_title">Créer les feuilles requises</string>
-    <string name="step_6_description">Créez cinq feuilles : \'Guest List\', \'Volunteers\', \'Shifts\', \'Shift Types\' et \'Volunteer Guest List\'</string>
+    <string name="step_6_description">Créez les feuilles : \'Guest List\', \'Volunteers\', \'Shifts\', \'Shift Types\', \'Volunteer Guest List\', \'Venues\' et \'Temp Guest List\' (les dates dans \'Temp Guest List\' doivent utiliser le format YYYY-MM-DD).</string>
     <string name="step_7_title">Configurer les en-têtes des feuilles</string>
     <string name="step_7_description">Ajoutez les en-têtes à chaque feuille. L\'application les créera automatiquement, mais vous pouvez les configurer manuellement si nécessaire.</string>
     <string name="step_8_title">Partager avec le compte de service</string>
@@ -428,6 +429,35 @@
     <string name="edit_venue_configuration">Modifier la configuration du lieu</string>
     <string name="venue_all">TOUS</string>
     <string name="venue_both">LES DEUX</string>
+
+    <!-- Temporary Guest List -->
+    <string name="temp_guest_artist_label">Artiste / Groupe</string>
+    <string name="temp_guest_event_date_label">Date de l’événement</string>
+    <string name="temp_guest_contact_phone_label">Numéro de téléphone d’urgence</string>
+    <string name="temp_guest_chip_label">Temp</string>
+    <string name="temp_guest_timeline_button">Futurs / Historique</string>
+    <string name="temp_guest_timeline_title">Guest-list temporaire</string>
+    <string name="temp_guest_tab_temp">Temporaire</string>
+    <string name="temp_guest_tab_volunteer">Bénévole</string>
+    <string name="temp_guest_range_label">Période</string>
+    <string name="temp_guest_range_three_days">+/- 3 jours</string>
+    <string name="temp_guest_range_three_days_short">±3j</string>
+    <string name="temp_guest_range_one_week">1 semaine</string>
+    <string name="temp_guest_range_one_week_short">1sem</string>
+    <string name="temp_guest_range_two_weeks">2 semaines</string>
+    <string name="temp_guest_range_two_weeks_short">2sem</string>
+    <string name="temp_guest_range_one_month">1 mois</string>
+    <string name="temp_guest_range_one_month_short">1m</string>
+    <string name="temp_guest_range_six_months">6 mois</string>
+    <string name="temp_guest_range_six_months_short">6m</string>
+    <string name="temp_guest_range_one_year">1 an</string>
+    <string name="temp_guest_range_one_year_short">1a</string>
+    <string name="temp_guest_range_all_time">Depuis toujours</string>
+    <string name="temp_guest_range_all_time_short">Tous</string>
+    <string name="temp_guest_section_upcoming">Futurs invités</string>
+    <string name="temp_guest_section_past">Historique</string>
+    <string name="temp_guest_none_upcoming">Aucun invité futur pour ce filtre.</string>
+    <string name="temp_guest_none_past">Aucun invité passé pour ce filtre.</string>
     
     <!-- App Information -->
     <string name="app_info_title">Informations sur l\'application</string>

@@ -1,4 +1,4 @@
-#Tue Feb 17 01:26:21 CET 2026
+#Fri Mar 13 18:08:04 CET 2026
 base.0=/Users/leonardomondada/EventManagerApp/app/build/intermediates/dex/debug/mergeExtDexDebug/classes.dex
 base.1=/Users/leonardomondada/EventManagerApp/app/build/intermediates/dex/debug/mergeProjectDexDebug/0/classes.dex
 base.10=/Users/leonardomondada/EventManagerApp/app/build/intermediates/dex/debug/mergeExtDexDebug/classes2.dex

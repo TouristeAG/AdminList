@@ -12,12 +12,13 @@ package com.eventmanager.app.data.sync
  * 4. Download the service account JSON key file
  * 5. Place the JSON file in app/src/main/assets/ as "service_account_key.json"
  * 6. Update the SPREADSHEET_ID below with your actual spreadsheet ID
- *    - "Guest List" (columns: Name, Invitations, Venue, Notes, Volunteer Benefit, Last Modified)
+ *    - "Guest List" (columns: Name, Email, Phone, Invitations, Venue, Notes, Volunteer Benefit, Last Modified)
  *    - "Volunteers" (columns: ID, Name, Abbreviation, Email, Phone, Date of Birth, Gender, Rank, Active, Last Modified)
  *    - "Shifts" (columns: Volunteer ID, Shift Type, Venue, Date, Shift Time, Notes, Last Modified)
  *    - "Shift Types" (columns: Name, Status, Shift Type, Orion Type, Requires Time, Description, Last Modified)
  *    - "Volunteer Guest List" (columns: Name, Last Name Abbreviation, Invitations, Venue, Notes, Volunteer Benefit, Last Modified)
  *    - "Venues" (columns: Name, Description, Active, Last Modified)
+ *    - "Temp Guest List" (columns: Modification Date [YYYY-MM-DD], Event Date [YYYY-MM-DD], Artist/Group, Artist Contact Phone, Guest Name, Comment)
  */
 object GoogleSheetsConfig { 
     // Replace with your actual Google Spreadsheet ID
@@ -30,6 +31,7 @@ object GoogleSheetsConfig {
     const val JOBS_SHEET = "Shifts"
     const val JOB_TYPES_SHEET = "Shift Types"
     const val VENUES_SHEET = "Venues"
+    const val TEMP_GUEST_LIST_SHEET = "Temp Guest List"
     
     // Service account key file name (should be placed in assets folder)
     const val SERVICE_ACCOUNT_KEY_FILE = "service_account_key.json"

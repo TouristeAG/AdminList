@@ -416,11 +416,18 @@ class EventManagerViewModel(
             try {
                 // Update lastModified timestamp
                 val updatedGuest = guest.copy(lastModified = System.currentTimeMillis())
-                repository.updateGuest(updatedGuest)
-                // BACKUP MODE: Upload entire guest dataset to Google Sheets
-                twoWaySyncService?.backupGuestsToSheets()
-                // Keep volunteer list in sync
-                recalcAndUploadVolunteerGuestList()
+                if (updatedGuest.isTemporaryGuest) {
+                    // Temporary guests are managed in their dedicated Google Sheet
+                    googleSheetsService.updateTemporaryGuestInSheets(updatedGuest)
+                    repository.updateGuest(updatedGuest)
+                    refreshTemporaryGuestsFromSheets()
+                } else {
+                    repository.updateGuest(updatedGuest)
+                    // BACKUP MODE: Upload entire guest dataset to Google Sheets
+                    twoWaySyncService?.backupGuestsToSheets()
+                    // Keep volunteer list in sync
+                    recalcAndUploadVolunteerGuestList()
+                }
             } catch (e: Exception) {
                 println("Failed to update guest: ${e.message}")
                 _syncError.value = "Failed to update guest: ${e.message}"
@@ -431,18 +438,26 @@ class EventManagerViewModel(
     fun deleteGuest(guest: Guest) {
         viewModelScope.launch {
             try {
-                // Track the deletion
-                deletionTracker?.trackGuestDeletion(guest.id.toString(), guest.sheetsId)
-                
-                // Delete from local database
-                repository.deleteGuest(guest)
-                
-                // BACKUP MODE: Upload entire guest dataset to Google Sheets
-                twoWaySyncService?.backupGuestsToSheets()
-                
-                println("Successfully deleted guest: ${guest.name}")
-                // Keep volunteer list in sync
-                recalcAndUploadVolunteerGuestList()
+                if (guest.isTemporaryGuest) {
+                    // Temporary guests are managed in their dedicated Google Sheet
+                    googleSheetsService.deleteTemporaryGuestFromSheets(guest.sheetsId)
+                    repository.deleteGuest(guest)
+                    refreshTemporaryGuestsFromSheets()
+                    println("Successfully deleted temporary guest: ${guest.name}")
+                } else {
+                    // Track the deletion
+                    deletionTracker?.trackGuestDeletion(guest.id.toString(), guest.sheetsId)
+
+                    // Delete from local database
+                    repository.deleteGuest(guest)
+
+                    // BACKUP MODE: Upload entire guest dataset to Google Sheets
+                    twoWaySyncService?.backupGuestsToSheets()
+
+                    println("Successfully deleted guest: ${guest.name}")
+                    // Keep volunteer list in sync
+                    recalcAndUploadVolunteerGuestList()
+                }
             } catch (e: Exception) {
                 println("Failed to delete guest: ${e.message}")
                 _syncError.value = "Failed to delete guest: ${e.message}"
@@ -658,31 +673,25 @@ class EventManagerViewModel(
                     lastModified = System.currentTimeMillis()
                 )
                 
-                // Update job in local database
                 repository.updateJob(updatedJob)
                 
                 // Immediately refresh the jobs StateFlow so every open panel
                 // (benefits, volunteer detail) recomposes with the updated data.
                 refreshJobData()
                 
-                // Update individual job in Google Sheets if sheetsId exists
+                // Sync to Google Sheets
                 if (updatedJob.sheetsId != null) {
                     try {
                         googleSheetsService.updateJobInSheets(updatedJob, _venues.value)
-                        println("Successfully marked benefit as used in Google Sheets: ${updatedJob.jobTypeName}")
                     } catch (e: Exception) {
-                        println("Individual job update failed, falling back to backup mode: ${e.message}")
                         twoWaySyncService?.backupJobsToSheets()
                     }
                 } else {
-                    println("No sheetsId found, using backup mode for benefit used update")
                     twoWaySyncService?.backupJobsToSheets()
                 }
                 
-                println("Successfully marked benefit as used for job: ${updatedJob.jobTypeName}")
                 recalcAndUploadVolunteerGuestList()
             } catch (e: Exception) {
-                println("Failed to mark benefit as used: ${e.message}")
                 _syncError.value = "Failed to mark benefit as used: ${e.message}"
             }
         }
@@ -1703,6 +1712,69 @@ class EventManagerViewModel(
             throw e
         }
     }
+
+    private suspend fun refreshTemporaryGuestsFromSheets() = withContext(Dispatchers.IO) {
+        try {
+            val ctx = context ?: return@withContext
+            val settingsManager = SettingsManager(ctx)
+
+            if (!settingsManager.isConfigured()) {
+                println("Skipping temporary guest refresh - Google Sheets not configured")
+                return@withContext
+            }
+
+            val tempService = googleSheetsService
+            if (tempService.getSheetsService() == null) {
+                tempService.initializeSheetsService()
+            }
+
+            val tempGuestsRaw = tempService.syncTempGuestsFromSheets()
+
+            // Respect the custom “day change” offset from settings (e.g. 3h → day switches at 03:00)
+            val offsetHours = settingsManager.getDateChangeOffsetHours()
+            val zone = java.time.ZoneId.of("Europe/Zurich")
+            val now = java.time.ZonedDateTime.now(zone)
+            val effectiveNow = if (offsetHours != 0 && now.hour < offsetHours) {
+                now.minusDays(1)
+            } else {
+                now
+            }
+            val effectiveToday = effectiveNow.toLocalDate()
+
+            val guests = tempGuestsRaw.map { temp ->
+                Guest(
+                    sheetsId = temp.rowNumber.toString(),
+                    name = temp.guestName,
+                    email = "",
+                    phoneNumber = "",
+                    invitations = 1,
+                    venueName = "BOTH",
+                    notes = temp.comment,
+                    isVolunteerBenefit = false,
+                    volunteerId = null,
+                    lastModified = temp.modificationDate.atStartOfDay(zone).toEpochSecond() * 1000,
+                    isTemporaryGuest = true,
+                    temporaryArtistName = temp.artistName,
+                    temporaryEventDate = temp.eventDate.atStartOfDay(zone).toEpochSecond() * 1000,
+                    temporaryContactPhone = temp.artistContactPhone
+                )
+            }
+
+            repository.replaceTemporaryGuests(guests)
+            withContext(Dispatchers.Main) {
+                refreshGuestData()
+            }
+            println("Refreshed ${guests.size} temporary guests from sheets (effective today: $effectiveToday, offsetHours=$offsetHours)")
+        } catch (e: Exception) {
+            println("Failed to refresh temporary guests from sheets: ${e.message}")
+        }
+    }
+
+    fun refreshTemporaryGuests() {
+        viewModelScope.launch {
+            refreshTemporaryGuestsFromSheets()
+        }
+    }
     
     private suspend fun downloadVolunteersFromSheets(): List<Volunteer> {
         try {
@@ -2280,6 +2352,9 @@ class EventManagerViewModel(
                     
                     // Recalculate volunteer guest list
                     recalcAndUploadVolunteerGuestList()
+
+                    // Refresh temporary guests from dedicated sheet for artist/entourage invites
+                    refreshTemporaryGuestsFromSheets()
                     
                     // Update sync time
                     updateSyncTime()
@@ -2323,52 +2398,42 @@ class EventManagerViewModel(
             val allJobs = _jobs.value
             val jobsByVolunteerId = allJobs.groupBy { it.volunteerId }
             
-            println("Computing volunteer guest entries from ${statuses.size} volunteer benefit statuses with ${allVolunteers.size} volunteers")
-            
             for (status in statuses) {
                 val benefits = status.benefits
-                if (benefits.isActive && benefits.guestListAccess && (benefits.validUntil == null || now < benefits.validUntil)) {
-                    val volunteer = volunteersById[status.volunteerId]
-                    if (volunteer != null) {
-                        // Check if ETOILE benefit entry has been used
-                        // If the volunteer's guest list access comes only from ETOILE (after-midnight shifts)
-                        // and all their after-midnight shift benefits have been redeemed, skip them
-                        val volunteerJobs = jobsByVolunteerId[status.volunteerId] ?: emptyList()
-                        val hasUnusedAfterMidnightBenefit = volunteerJobs.any {
-                            it.shiftTime == ShiftTime.AFTER_MIDNIGHT && it.benefitUsed == false
-                        }
-                        val hasNonEtoileGuestAccess = status.activeBenefits.any {
-                            it.rank != VolunteerRank.ETOILE && it.rank != VolunteerRank.NOVA && it.guestListAccess && it.isActive
-                        }
-                        
-                        if (!hasNonEtoileGuestAccess && !hasUnusedAfterMidnightBenefit && status.isEligibleForEtoile) {
-                            println("Skipping ${volunteer.name} - all ETOILE entry benefits have been used")
-                            continue
-                        }
-                        
-                        // BenefitCalculator already excludes ETOILE when all
-                        // after-midnight shifts are used, so inviteCount is correct.
-                        val invitations = status.benefits.inviteCount
-                        entries.add(
-                            Guest(
-                                name = volunteer.name,
-                                lastNameAbbreviation = volunteer.lastNameAbbreviation,
-                                invitations = invitations,
-                                venueName = "BOTH",
-                                notes = "Volunteer benefit - ${getRankDisplayName(status.rank)}",
-                                isVolunteerBenefit = true,
-                                volunteerId = volunteer.id
-                            )
-                        )
-                        println("Added volunteer to guest list: ${volunteer.name} (${getRankDisplayName(status.rank)}) - ${invitations} invitations")
-                    } else {
-                        println("Warning: Volunteer with ID ${status.volunteerId} not found for benefit status")
-                    }
+                if (!benefits.isActive || !benefits.guestListAccess) continue
+                if (benefits.validUntil != null && now >= benefits.validUntil) continue
+
+                val volunteer = volunteersById[status.volunteerId] ?: continue
+
+                // If guest-list access comes only from ETOILE (after-midnight shifts)
+                // and all benefits have been redeemed, skip the volunteer.
+                val volunteerJobs = jobsByVolunteerId[status.volunteerId] ?: emptyList()
+                val hasUnusedAfterMidnightBenefit = volunteerJobs.any {
+                    it.shiftTime == ShiftTime.AFTER_MIDNIGHT && it.benefitUsed == false
                 }
-                // Benefits not active or not eligible for guest list - skip silently
+                val hasNonEtoileGuestAccess = status.activeBenefits.any {
+                    it.rank != VolunteerRank.ETOILE && it.rank != VolunteerRank.NOVA &&
+                        it.guestListAccess && it.isActive
+                }
+                if (!hasNonEtoileGuestAccess && !hasUnusedAfterMidnightBenefit && status.isEligibleForEtoile) {
+                    continue
+                }
+
+                // BenefitCalculator already excludes ETOILE when all
+                // after-midnight shifts are used, so inviteCount is correct.
+                entries.add(
+                    Guest(
+                        name = volunteer.name,
+                        lastNameAbbreviation = volunteer.lastNameAbbreviation,
+                        invitations = benefits.inviteCount,
+                        venueName = "BOTH",
+                        notes = "Volunteer benefit - ${getRankDisplayName(status.rank)}",
+                        isVolunteerBenefit = true,
+                        volunteerId = volunteer.id
+                    )
+                )
             }
             
-            println("Computed ${entries.size} volunteer guest entries")
             return entries
         } catch (e: Exception) {
             println("Error computing volunteer guest entries: ${e.message}")
@@ -3098,8 +3163,20 @@ class EventManagerViewModel(
         // once (identical primary key). A volunteer can legitimately have
         // multiple shifts with the same type/venue/date, so content-based
         // dedup must NOT be used -- it would silently drop valid data.
+        //
+        // Fast path: when no duplicates exist (common case) return the
+        // original list to avoid an unnecessary allocation.
         val seen = HashSet<Long>(jobs.size)
-        val result = jobs.filter { seen.add(it.id) }
+        var hasDuplicates = false
+        for (job in jobs) {
+            if (!seen.add(job.id)) { hasDuplicates = true; break }
+        }
+        val result = if (hasDuplicates) {
+            seen.clear()
+            jobs.filter { seen.add(it.id) }
+        } else {
+            jobs
+        }
         
         lastJobsHash = currentHash
         cachedUniqueJobs = result
@@ -3428,6 +3505,9 @@ class EventManagerViewModel(
                     // This handles: new volunteers, rank changes from jobs, initial sync, etc.
                     // Uses differential updates internally so it won't cause full refresh
                     recalcAndUploadVolunteerGuestList()
+
+                    // Refresh temporary guests from dedicated sheet for artist/entourage invites
+                    refreshTemporaryGuestsFromSheets()
                     
                     // Update sync time
                     updateSyncTime()

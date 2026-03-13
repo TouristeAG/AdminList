@@ -53,6 +53,13 @@ class EventManagerRepository(
     suspend fun updateGuestsAll(guests: List<Guest>) = guestDao.updateGuestsAll(guests)
     suspend fun deleteGuestsAll(guests: List<Guest>) = guestDao.deleteGuestsAll(guests)
 
+    suspend fun replaceTemporaryGuests(guests: List<Guest>) {
+        guestDao.deleteTemporaryGuests()
+        if (guests.isNotEmpty()) {
+            guestDao.insertGuestsAll(guests)
+        }
+    }
+
     // Volunteer-benefit guest helpers
     suspend fun getVolunteerBenefitGuests(): List<Guest> = guestDao.getVolunteerBenefitGuests()
 
