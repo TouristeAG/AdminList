@@ -1,8 +1,8 @@
 {
-  "latestVersionCode": 9,
-  "latestVersionName": "0.9.8",
+  "latestVersionCode": 10,
+  "latestVersionName": "0.9.9",
   "minSupportedVersionCode": "9",
-  "changelogShort": "QR code for Guests.",
-  "downloadUrl": "https://github.com/TouristeAG/AdminList/releases/download/0.9.8/app-release-0.9.8.apk",
+  "changelogShort": "New after midnight entry validation dialog, New temporary guest feature.",
+  "downloadUrl": "https://github.com/TouristeAG/AdminList/releases/download/0.9.9/app-release-0.9.9.apk",
   "storeUrl": "https://play.google.com/store/apps/details?id=com.eventmanager.app"
 }
