@@ -53,5 +53,8 @@ interface GuestDao {
     
     @Query("DELETE FROM guests")
     suspend fun deleteAllGuests()
+
+    @Query("DELETE FROM guests WHERE isTemporaryGuest = 1")
+    suspend fun deleteTemporaryGuests()
 }
 

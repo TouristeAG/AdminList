@@ -1074,6 +1074,95 @@ public final class VolunteerDao_Impl implements VolunteerDao {
     }, $completion);
   }
 
+  @Override
+  public Object getVolunteerByNameAndAbbreviation(final String name,
+      final String lastNameAbbreviation, final Continuation<? super Volunteer> $completion) {
+    final String _sql = "SELECT * FROM volunteers WHERE name = ? AND lastNameAbbreviation = ?";
+    final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, 2);
+    int _argIndex = 1;
+    _statement.bindString(_argIndex, name);
+    _argIndex = 2;
+    _statement.bindString(_argIndex, lastNameAbbreviation);
+    final CancellationSignal _cancellationSignal = DBUtil.createCancellationSignal();
+    return CoroutinesRoom.execute(__db, false, _cancellationSignal, new Callable<Volunteer>() {
+      @Override
+      @Nullable
+      public Volunteer call() throws Exception {
+        final Cursor _cursor = DBUtil.query(__db, _statement, false, null);
+        try {
+          final int _cursorIndexOfId = CursorUtil.getColumnIndexOrThrow(_cursor, "id");
+          final int _cursorIndexOfSheetsId = CursorUtil.getColumnIndexOrThrow(_cursor, "sheetsId");
+          final int _cursorIndexOfName = CursorUtil.getColumnIndexOrThrow(_cursor, "name");
+          final int _cursorIndexOfLastNameAbbreviation = CursorUtil.getColumnIndexOrThrow(_cursor, "lastNameAbbreviation");
+          final int _cursorIndexOfEmail = CursorUtil.getColumnIndexOrThrow(_cursor, "email");
+          final int _cursorIndexOfPhoneNumber = CursorUtil.getColumnIndexOrThrow(_cursor, "phoneNumber");
+          final int _cursorIndexOfDateOfBirth = CursorUtil.getColumnIndexOrThrow(_cursor, "dateOfBirth");
+          final int _cursorIndexOfGender = CursorUtil.getColumnIndexOrThrow(_cursor, "gender");
+          final int _cursorIndexOfCurrentRank = CursorUtil.getColumnIndexOrThrow(_cursor, "currentRank");
+          final int _cursorIndexOfIsActive = CursorUtil.getColumnIndexOrThrow(_cursor, "isActive");
+          final int _cursorIndexOfLastShiftDate = CursorUtil.getColumnIndexOrThrow(_cursor, "lastShiftDate");
+          final int _cursorIndexOfLastModified = CursorUtil.getColumnIndexOrThrow(_cursor, "lastModified");
+          final Volunteer _result;
+          if (_cursor.moveToFirst()) {
+            final String _tmpId;
+            _tmpId = _cursor.getString(_cursorIndexOfId);
+            final String _tmpSheetsId;
+            if (_cursor.isNull(_cursorIndexOfSheetsId)) {
+              _tmpSheetsId = null;
+            } else {
+              _tmpSheetsId = _cursor.getString(_cursorIndexOfSheetsId);
+            }
+            final String _tmpName;
+            _tmpName = _cursor.getString(_cursorIndexOfName);
+            final String _tmpLastNameAbbreviation;
+            _tmpLastNameAbbreviation = _cursor.getString(_cursorIndexOfLastNameAbbreviation);
+            final String _tmpEmail;
+            _tmpEmail = _cursor.getString(_cursorIndexOfEmail);
+            final String _tmpPhoneNumber;
+            _tmpPhoneNumber = _cursor.getString(_cursorIndexOfPhoneNumber);
+            final String _tmpDateOfBirth;
+            _tmpDateOfBirth = _cursor.getString(_cursorIndexOfDateOfBirth);
+            final Gender _tmpGender;
+            final String _tmp;
+            if (_cursor.isNull(_cursorIndexOfGender)) {
+              _tmp = null;
+            } else {
+              _tmp = _cursor.getString(_cursorIndexOfGender);
+            }
+            _tmpGender = __converters.toGender(_tmp);
+            final VolunteerRank _tmpCurrentRank;
+            final String _tmp_1;
+            if (_cursor.isNull(_cursorIndexOfCurrentRank)) {
+              _tmp_1 = null;
+            } else {
+              _tmp_1 = _cursor.getString(_cursorIndexOfCurrentRank);
+            }
+            _tmpCurrentRank = __converters.toVolunteerRank(_tmp_1);
+            final boolean _tmpIsActive;
+            final int _tmp_2;
+            _tmp_2 = _cursor.getInt(_cursorIndexOfIsActive);
+            _tmpIsActive = _tmp_2 != 0;
+            final Long _tmpLastShiftDate;
+            if (_cursor.isNull(_cursorIndexOfLastShiftDate)) {
+              _tmpLastShiftDate = null;
+            } else {
+              _tmpLastShiftDate = _cursor.getLong(_cursorIndexOfLastShiftDate);
+            }
+            final long _tmpLastModified;
+            _tmpLastModified = _cursor.getLong(_cursorIndexOfLastModified);
+            _result = new Volunteer(_tmpId,_tmpSheetsId,_tmpName,_tmpLastNameAbbreviation,_tmpEmail,_tmpPhoneNumber,_tmpDateOfBirth,_tmpGender,_tmpCurrentRank,_tmpIsActive,_tmpLastShiftDate,_tmpLastModified);
+          } else {
+            _result = null;
+          }
+          return _result;
+        } finally {
+          _cursor.close();
+          _statement.release();
+        }
+      }
+    }, $completion);
+  }
+
   @NonNull
   public static List<Class<?>> getRequiredConverters() {
     return Collections.emptyList();

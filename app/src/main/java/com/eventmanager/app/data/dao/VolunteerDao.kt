@@ -55,6 +55,9 @@ interface VolunteerDao {
     @Query("SELECT * FROM volunteers WHERE name = :name")
     suspend fun getVolunteerByName(name: String): Volunteer?
     
+    @Query("SELECT * FROM volunteers WHERE name = :name AND lastNameAbbreviation = :lastNameAbbreviation")
+    suspend fun getVolunteerByNameAndAbbreviation(name: String, lastNameAbbreviation: String): Volunteer?
+    
     @Query("DELETE FROM volunteers")
     suspend fun deleteAllVolunteers()
 }

@@ -13,6 +13,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -429,13 +430,30 @@ fun AddJobTypeConfigDialog(
 
     val isCompact = isCompactScreen()
     val scrollState = rememberScrollState()
+    val isTabletDevice = isTablet()
+    val tabletMaxWidth = getTabletConstrainedDialogMaxWidth()
+    val tabletMaxHeight = getTabletConstrainedDialogMaxHeight()
 
     // Custom Dialog with proper scrolling
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = !isTabletDevice
+        )
+    ) {
         Card(
             modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.9f)
+                .then(
+                    if (isTabletDevice) {
+                        Modifier
+                            .widthIn(max = tabletMaxWidth)
+                            .heightIn(max = tabletMaxHeight)
+                    } else {
+                        Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(0.9f)
+                    }
+                )
                 .padding(16.dp),
             shape = RoundedCornerShape(16.dp)
         ) {
@@ -452,7 +470,7 @@ fun AddJobTypeConfigDialog(
                 ) {
                     Text(
                         text = if (isCompact) "Add Shift Type" else "Add New Shift Type",
-                        style = getResponsiveTypography(),
+                        style = if (isTabletDevice) getTabletConstrainedTitleTypography() else getResponsiveTypography(),
                         fontWeight = FontWeight.Bold
                     )
                     
@@ -815,13 +833,30 @@ fun EditJobTypeConfigDialog(
 
     val isCompact = isCompactScreen()
     val scrollState = rememberScrollState()
+    val isTabletDevice = isTablet()
+    val tabletMaxWidth = getTabletConstrainedDialogMaxWidth()
+    val tabletMaxHeight = getTabletConstrainedDialogMaxHeight()
 
     // Custom Dialog with proper scrolling
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = !isTabletDevice
+        )
+    ) {
         Card(
             modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.9f)
+                .then(
+                    if (isTabletDevice) {
+                        Modifier
+                            .widthIn(max = tabletMaxWidth)
+                            .heightIn(max = tabletMaxHeight)
+                    } else {
+                        Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(0.9f)
+                    }
+                )
                 .padding(16.dp),
             shape = RoundedCornerShape(16.dp)
         ) {
@@ -838,7 +873,7 @@ fun EditJobTypeConfigDialog(
                 ) {
                     Text(
                         text = if (isCompact) "Edit Shift Type" else "Edit Shift Type Configuration",
-                        style = getResponsiveTypography(),
+                        style = if (isTabletDevice) getTabletConstrainedTitleTypography() else getResponsiveTypography(),
                         fontWeight = FontWeight.Bold
                     )
                     

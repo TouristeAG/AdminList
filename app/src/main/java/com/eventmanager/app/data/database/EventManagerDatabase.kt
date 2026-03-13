@@ -23,7 +23,7 @@ import com.eventmanager.app.data.models.CounterData
 
 @Database(
     entities = [Guest::class, Volunteer::class, Job::class, JobTypeConfig::class, VenueEntity::class, CounterData::class],
-    version = 20,
+    version = 22,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -830,8 +830,6 @@ abstract class EventManagerDatabase : RoomDatabase() {
         }
 
         /**
-         * MIGRATION 19→20: Add email and phoneNumber fields to guests table
-         * 
          * This migration adds two new columns to store guest contact information:
          * - email: Guest's email address (optional)
          * - phoneNumber: Guest's phone number (optional)
@@ -858,6 +856,51 @@ abstract class EventManagerDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * MIGRATION 20→21: Add benefitUsed column to jobs table.
+         * Tracks whether an after-midnight shift's free entry benefit has been redeemed.
+         * null = not applicable, 0 (false) = not yet used, 1 (true) = used.
+         */
+        private val MIGRATION_20_21 = object : Migration(20, 21) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                try {
+                    println("Starting migration 20→21: Adding benefitUsed column to jobs table")
+                    
+                    // Add nullable benefitUsed column (Room stores Boolean? as nullable INTEGER)
+                    db.execSQL("ALTER TABLE jobs ADD COLUMN benefitUsed INTEGER")
+                    
+                    // Set benefitUsed = 0 (false / not used) for existing after-midnight shifts
+                    db.execSQL("UPDATE jobs SET benefitUsed = 0 WHERE shiftTime = 'AFTER_MIDNIGHT'")
+                    
+                    println("Migration 20→21 completed successfully")
+                } catch (e: Exception) {
+                    println("Migration 20→21 failed: ${e.message}")
+                    e.printStackTrace()
+                    throw e
+                }
+            }
+        }
+
+        /**
+         * MIGRATION 21→22: Add temporary guest metadata columns to guests table.
+         */
+        private val MIGRATION_21_22 = object : Migration(21, 22) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                try {
+                    println("Starting migration 21→22: Adding temporary guest columns to guests table")
+                    db.execSQL("ALTER TABLE guests ADD COLUMN isTemporaryGuest INTEGER NOT NULL DEFAULT 0")
+                    db.execSQL("ALTER TABLE guests ADD COLUMN temporaryArtistName TEXT NOT NULL DEFAULT ''")
+                    db.execSQL("ALTER TABLE guests ADD COLUMN temporaryEventDate INTEGER")
+                    db.execSQL("ALTER TABLE guests ADD COLUMN temporaryContactPhone TEXT NOT NULL DEFAULT ''")
+                    println("Migration 21→22 completed successfully")
+                } catch (e: Exception) {
+                    println("Migration 21→22 failed: ${e.message}")
+                    e.printStackTrace()
+                    throw e
+                }
+            }
+        }
+
         fun getDatabase(context: Context): EventManagerDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -865,7 +908,29 @@ abstract class EventManagerDatabase : RoomDatabase() {
                     EventManagerDatabase::class.java,
                     "event_manager_database"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20)
+                .addMigrations(
+                    MIGRATION_1_2,
+                    MIGRATION_2_3,
+                    MIGRATION_3_4,
+                    MIGRATION_4_5,
+                    MIGRATION_5_6,
+                    MIGRATION_6_7,
+                    MIGRATION_7_8,
+                    MIGRATION_8_9,
+                    MIGRATION_9_10,
+                    MIGRATION_10_11,
+                    MIGRATION_11_12,
+                    MIGRATION_12_13,
+                    MIGRATION_13_14,
+                    MIGRATION_14_15,
+                    MIGRATION_15_16,
+                    MIGRATION_16_17,
+                    MIGRATION_17_18,
+                    MIGRATION_18_19,
+                    MIGRATION_19_20,
+                    MIGRATION_20_21,
+                    MIGRATION_21_22
+                )
                 .fallbackToDestructiveMigration()
                 .build()
                 INSTANCE = instance

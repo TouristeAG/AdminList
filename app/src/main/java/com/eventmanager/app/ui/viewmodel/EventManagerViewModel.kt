@@ -416,11 +416,18 @@ class EventManagerViewModel(
             try {
                 // Update lastModified timestamp
                 val updatedGuest = guest.copy(lastModified = System.currentTimeMillis())
-                repository.updateGuest(updatedGuest)
-                // BACKUP MODE: Upload entire guest dataset to Google Sheets
-                twoWaySyncService?.backupGuestsToSheets()
-                // Keep volunteer list in sync
-                recalcAndUploadVolunteerGuestList()
+                if (updatedGuest.isTemporaryGuest) {
+                    // Temporary guests are managed in their dedicated Google Sheet
+                    googleSheetsService.updateTemporaryGuestInSheets(updatedGuest)
+                    repository.updateGuest(updatedGuest)
+                    refreshTemporaryGuestsFromSheets()
+                } else {
+                    repository.updateGuest(updatedGuest)
+                    // BACKUP MODE: Upload entire guest dataset to Google Sheets
+                    twoWaySyncService?.backupGuestsToSheets()
+                    // Keep volunteer list in sync
+                    recalcAndUploadVolunteerGuestList()
+                }
             } catch (e: Exception) {
                 println("Failed to update guest: ${e.message}")
                 _syncError.value = "Failed to update guest: ${e.message}"
@@ -431,18 +438,26 @@ class EventManagerViewModel(
     fun deleteGuest(guest: Guest) {
         viewModelScope.launch {
             try {
-                // Track the deletion
-                deletionTracker?.trackGuestDeletion(guest.id.toString(), guest.sheetsId)
-                
-                // Delete from local database
-                repository.deleteGuest(guest)
-                
-                // BACKUP MODE: Upload entire guest dataset to Google Sheets
-                twoWaySyncService?.backupGuestsToSheets()
-                
-                println("Successfully deleted guest: ${guest.name}")
-                // Keep volunteer list in sync
-                recalcAndUploadVolunteerGuestList()
+                if (guest.isTemporaryGuest) {
+                    // Temporary guests are managed in their dedicated Google Sheet
+                    googleSheetsService.deleteTemporaryGuestFromSheets(guest.sheetsId)
+                    repository.deleteGuest(guest)
+                    refreshTemporaryGuestsFromSheets()
+                    println("Successfully deleted temporary guest: ${guest.name}")
+                } else {
+                    // Track the deletion
+                    deletionTracker?.trackGuestDeletion(guest.id.toString(), guest.sheetsId)
+
+                    // Delete from local database
+                    repository.deleteGuest(guest)
+
+                    // BACKUP MODE: Upload entire guest dataset to Google Sheets
+                    twoWaySyncService?.backupGuestsToSheets()
+
+                    println("Successfully deleted guest: ${guest.name}")
+                    // Keep volunteer list in sync
+                    recalcAndUploadVolunteerGuestList()
+                }
             } catch (e: Exception) {
                 println("Failed to delete guest: ${e.message}")
                 _syncError.value = "Failed to delete guest: ${e.message}"
@@ -549,9 +564,14 @@ class EventManagerViewModel(
     fun addJob(job: Job) {
         viewModelScope.launch {
             try {
+                // Automatically set benefitUsed for after-midnight shifts
+                val jobWithBenefit = if (job.shiftTime == ShiftTime.AFTER_MIDNIGHT && job.benefitUsed == null) {
+                    job.copy(benefitUsed = false) // Mark as unused benefit
+                } else job
+                
                 // Insert job into local database first
-                val jobId = repository.insertJob(job)
-                val jobWithId = job.copy(id = jobId)
+                val jobId = repository.insertJob(jobWithBenefit)
+                val jobWithId = jobWithBenefit.copy(id = jobId)
                 
                 // Add individual job to Google Sheets and get sheetsId
                 val sheetsId = googleSheetsService.addJobToSheets(jobWithId, _venues.value)
@@ -637,6 +657,42 @@ class EventManagerViewModel(
             } catch (e: Exception) {
                 println("Failed to delete job: ${e.message}")
                 _syncError.value = "Failed to delete job: ${e.message}"
+            }
+        }
+    }
+
+    /**
+     * Mark an after-midnight shift's entry benefit as used (redeemed).
+     * Updates the job locally and in Google Sheets, then recalculates the guest list.
+     */
+    fun markBenefitAsUsed(job: Job) {
+        viewModelScope.launch {
+            try {
+                val updatedJob = job.copy(
+                    benefitUsed = true,
+                    lastModified = System.currentTimeMillis()
+                )
+                
+                repository.updateJob(updatedJob)
+                
+                // Immediately refresh the jobs StateFlow so every open panel
+                // (benefits, volunteer detail) recomposes with the updated data.
+                refreshJobData()
+                
+                // Sync to Google Sheets
+                if (updatedJob.sheetsId != null) {
+                    try {
+                        googleSheetsService.updateJobInSheets(updatedJob, _venues.value)
+                    } catch (e: Exception) {
+                        twoWaySyncService?.backupJobsToSheets()
+                    }
+                } else {
+                    twoWaySyncService?.backupJobsToSheets()
+                }
+                
+                recalcAndUploadVolunteerGuestList()
+            } catch (e: Exception) {
+                _syncError.value = "Failed to mark benefit as used: ${e.message}"
             }
         }
     }
@@ -1656,6 +1712,69 @@ class EventManagerViewModel(
             throw e
         }
     }
+
+    private suspend fun refreshTemporaryGuestsFromSheets() = withContext(Dispatchers.IO) {
+        try {
+            val ctx = context ?: return@withContext
+            val settingsManager = SettingsManager(ctx)
+
+            if (!settingsManager.isConfigured()) {
+                println("Skipping temporary guest refresh - Google Sheets not configured")
+                return@withContext
+            }
+
+            val tempService = googleSheetsService
+            if (tempService.getSheetsService() == null) {
+                tempService.initializeSheetsService()
+            }
+
+            val tempGuestsRaw = tempService.syncTempGuestsFromSheets()
+
+            // Respect the custom “day change” offset from settings (e.g. 3h → day switches at 03:00)
+            val offsetHours = settingsManager.getDateChangeOffsetHours()
+            val zone = java.time.ZoneId.of("Europe/Zurich")
+            val now = java.time.ZonedDateTime.now(zone)
+            val effectiveNow = if (offsetHours != 0 && now.hour < offsetHours) {
+                now.minusDays(1)
+            } else {
+                now
+            }
+            val effectiveToday = effectiveNow.toLocalDate()
+
+            val guests = tempGuestsRaw.map { temp ->
+                Guest(
+                    sheetsId = temp.rowNumber.toString(),
+                    name = temp.guestName,
+                    email = "",
+                    phoneNumber = "",
+                    invitations = 1,
+                    venueName = "BOTH",
+                    notes = temp.comment,
+                    isVolunteerBenefit = false,
+                    volunteerId = null,
+                    lastModified = temp.modificationDate.atStartOfDay(zone).toEpochSecond() * 1000,
+                    isTemporaryGuest = true,
+                    temporaryArtistName = temp.artistName,
+                    temporaryEventDate = temp.eventDate.atStartOfDay(zone).toEpochSecond() * 1000,
+                    temporaryContactPhone = temp.artistContactPhone
+                )
+            }
+
+            repository.replaceTemporaryGuests(guests)
+            withContext(Dispatchers.Main) {
+                refreshGuestData()
+            }
+            println("Refreshed ${guests.size} temporary guests from sheets (effective today: $effectiveToday, offsetHours=$offsetHours)")
+        } catch (e: Exception) {
+            println("Failed to refresh temporary guests from sheets: ${e.message}")
+        }
+    }
+
+    fun refreshTemporaryGuests() {
+        viewModelScope.launch {
+            refreshTemporaryGuestsFromSheets()
+        }
+    }
     
     private suspend fun downloadVolunteersFromSheets(): List<Volunteer> {
         try {
@@ -1755,7 +1874,8 @@ class EventManagerViewModel(
         
         // OPTIMIZED: Create lookup maps for O(1) access instead of O(n) find operations
         val localVolunteersBySheetsId = localVolunteers.filter { it.sheetsId != null }.associateBy { it.sheetsId!! }
-        val localVolunteersByName = localVolunteers.associateBy { it.name }
+        // Use name + abbreviation as key to allow multiple volunteers with same first name
+        val localVolunteersByFullName = localVolunteers.associateBy { "${it.name}_${it.lastNameAbbreviation}" }
         
         // OPTIMIZED: Create sets for O(1) deletion checks instead of O(n) any operations
         val deletedSheetsIds = deletedVolunteers.mapNotNullTo(mutableSetOf()) { it.sheetsId }
@@ -1767,13 +1887,13 @@ class EventManagerViewModel(
                             (remoteVolunteer.id in deletedIds)
             
             if (isDeleted) {
-                println("Skipping deleted volunteer: ${remoteVolunteer.name}")
+                println("Skipping deleted volunteer: ${remoteVolunteer.name} ${remoteVolunteer.lastNameAbbreviation}")
                 continue
             }
             
             // OPTIMIZED: Use map lookup instead of find (O(1) vs O(n))
             val localVolunteer = remoteVolunteer.sheetsId?.let { localVolunteersBySheetsId[it] }
-                ?: localVolunteersByName[remoteVolunteer.name]
+                ?: localVolunteersByFullName["${remoteVolunteer.name}_${remoteVolunteer.lastNameAbbreviation}"]
             if (localVolunteer == null) {
                 // New volunteer from sheets
                 try {
@@ -1880,7 +2000,8 @@ class EventManagerViewModel(
 
         // OPTIMIZED: Create lookup maps for O(1) access instead of O(n) find operations
         val localVolunteersBySheetsId = localVolunteers.filter { it.sheetsId != null }.associateBy { it.sheetsId!! }
-        val localVolunteersByName = localVolunteers.associateBy { it.name }
+        // Use name + abbreviation as key to allow multiple volunteers with same first name
+        val localVolunteersByFullName = localVolunteers.associateBy { "${it.name}_${it.lastNameAbbreviation}" }
 
         // OPTIMIZED: Create sets for O(1) deletion checks instead of O(n) any operations
         val deletedSheetsIds = deletedVolunteers.mapNotNullTo(mutableSetOf()) { it.sheetsId }
@@ -1892,13 +2013,13 @@ class EventManagerViewModel(
                             (remoteVolunteer.id in deletedIds)
 
             if (isDeleted) {
-                println("Skipping deleted volunteer: ${remoteVolunteer.name}")
+                println("Skipping deleted volunteer: ${remoteVolunteer.name} ${remoteVolunteer.lastNameAbbreviation}")
                 continue
             }
 
             // OPTIMIZED: Use map lookup instead of find (O(1) vs O(n))
             val localVolunteer = remoteVolunteer.sheetsId?.let { localVolunteersBySheetsId[it] }
-                ?: localVolunteersByName[remoteVolunteer.name]
+                ?: localVolunteersByFullName["${remoteVolunteer.name}_${remoteVolunteer.lastNameAbbreviation}"]
             if (localVolunteer == null) {
                 // New volunteer from sheets
                 try {
@@ -2231,6 +2352,9 @@ class EventManagerViewModel(
                     
                     // Recalculate volunteer guest list
                     recalcAndUploadVolunteerGuestList()
+
+                    // Refresh temporary guests from dedicated sheet for artist/entourage invites
+                    refreshTemporaryGuestsFromSheets()
                     
                     // Update sync time
                     updateSyncTime()
@@ -2270,34 +2394,46 @@ class EventManagerViewModel(
             val allVolunteers = repository.getAllVolunteers().first()
             val volunteersById = allVolunteers.associateBy { it.id }
             
-            println("Computing volunteer guest entries from ${statuses.size} volunteer benefit statuses with ${allVolunteers.size} volunteers")
+            // Load all jobs to check benefit usage status
+            val allJobs = _jobs.value
+            val jobsByVolunteerId = allJobs.groupBy { it.volunteerId }
             
             for (status in statuses) {
                 val benefits = status.benefits
-                if (benefits.isActive && benefits.guestListAccess && (benefits.validUntil == null || now < benefits.validUntil)) {
-                    val volunteer = volunteersById[status.volunteerId]
-                    if (volunteer != null) {
-                        val invitations = status.benefits.inviteCount
-                        entries.add(
-                            Guest(
-                                name = volunteer.name,
-                                lastNameAbbreviation = volunteer.lastNameAbbreviation,
-                                invitations = invitations,
-                                venueName = "BOTH",
-                                notes = "Volunteer benefit - ${getRankDisplayName(status.rank)}",
-                                isVolunteerBenefit = true,
-                                volunteerId = volunteer.id
-                            )
-                        )
-                        println("Added volunteer to guest list: ${volunteer.name} (${getRankDisplayName(status.rank)}) - ${invitations} invitations")
-                    } else {
-                        println("Warning: Volunteer with ID ${status.volunteerId} not found for benefit status")
-                    }
+                if (!benefits.isActive || !benefits.guestListAccess) continue
+                if (benefits.validUntil != null && now >= benefits.validUntil) continue
+
+                val volunteer = volunteersById[status.volunteerId] ?: continue
+
+                // If guest-list access comes only from ETOILE (after-midnight shifts)
+                // and all benefits have been redeemed, skip the volunteer.
+                val volunteerJobs = jobsByVolunteerId[status.volunteerId] ?: emptyList()
+                val hasUnusedAfterMidnightBenefit = volunteerJobs.any {
+                    it.shiftTime == ShiftTime.AFTER_MIDNIGHT && it.benefitUsed == false
                 }
-                // Benefits not active or not eligible for guest list - skip silently
+                val hasNonEtoileGuestAccess = status.activeBenefits.any {
+                    it.rank != VolunteerRank.ETOILE && it.rank != VolunteerRank.NOVA &&
+                        it.guestListAccess && it.isActive
+                }
+                if (!hasNonEtoileGuestAccess && !hasUnusedAfterMidnightBenefit && status.isEligibleForEtoile) {
+                    continue
+                }
+
+                // BenefitCalculator already excludes ETOILE when all
+                // after-midnight shifts are used, so inviteCount is correct.
+                entries.add(
+                    Guest(
+                        name = volunteer.name,
+                        lastNameAbbreviation = volunteer.lastNameAbbreviation,
+                        invitations = benefits.inviteCount,
+                        venueName = "BOTH",
+                        notes = "Volunteer benefit - ${getRankDisplayName(status.rank)}",
+                        isVolunteerBenefit = true,
+                        volunteerId = volunteer.id
+                    )
+                )
             }
             
-            println("Computed ${entries.size} volunteer guest entries")
             return entries
         } catch (e: Exception) {
             println("Error computing volunteer guest entries: ${e.message}")
@@ -3023,23 +3159,23 @@ class EventManagerViewModel(
             return cachedUniqueJobs!!
         }
         
-        // Group by ID first to handle same-ID duplicates
-        val byId = jobs.groupBy { it.id }
-        
-        // For each ID group, keep only the oldest (lowest lastModified)
-        val uniqueById = byId.values.map { group ->
-            group.minByOrNull { it.lastModified } ?: group.first()
+        // Only remove true duplicates: same database row appearing more than
+        // once (identical primary key). A volunteer can legitimately have
+        // multiple shifts with the same type/venue/date, so content-based
+        // dedup must NOT be used -- it would silently drop valid data.
+        //
+        // Fast path: when no duplicates exist (common case) return the
+        // original list to avoid an unnecessary allocation.
+        val seen = HashSet<Long>(jobs.size)
+        var hasDuplicates = false
+        for (job in jobs) {
+            if (!seen.add(job.id)) { hasDuplicates = true; break }
         }
-        
-        // Now check for content duplicates (different ID but same info)
-        // Content key = all identifying fields except ID and timestamps
-        fun contentKey(j: Job) = "${j.volunteerId}_${j.jobTypeName}_${j.venueName}_${j.date}_${j.shiftTime}_${j.notes}"
-        
-        val byContent = uniqueById.groupBy { contentKey(it) }
-        
-        // For each content group, keep only the oldest (lowest lastModified)
-        val result = byContent.values.map { group ->
-            group.minByOrNull { it.lastModified } ?: group.first()
+        val result = if (hasDuplicates) {
+            seen.clear()
+            jobs.filter { seen.add(it.id) }
+        } else {
+            jobs
         }
         
         lastJobsHash = currentHash
@@ -3369,6 +3505,9 @@ class EventManagerViewModel(
                     // This handles: new volunteers, rank changes from jobs, initial sync, etc.
                     // Uses differential updates internally so it won't cause full refresh
                     recalcAndUploadVolunteerGuestList()
+
+                    // Refresh temporary guests from dedicated sheet for artist/entourage invites
+                    refreshTemporaryGuestsFromSheets()
                     
                     // Update sync time
                     updateSyncTime()

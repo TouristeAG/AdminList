@@ -759,39 +759,36 @@ fun EventManagerApp() {
                                 hasSwiped = false
                             },
                             onDrag = { change, _ ->
-                                // Only enable swipe gestures on phones
-                                if (isPhone) {
-                                    val deltaX = change.position.x - startX
-                                    val threshold = 100f
-                                    
-                                    if (!hasSwiped) {
-                                        when {
-                                            deltaX > threshold -> {
-                                            // Swipe right - go to previous tab
-                                            if (selectedTab > 0) {
-                                                    // Close any open settings dialogs when swiping to a different tab
-                                                    showJobTypeManagement = false
-                                                    showVenueManagement = false
-                                                    // Very subtle haptic feedback for page change
-                                                    performSubtleHaptic(capturedVibrator)
-                                                    previousTab = selectedTab
-                                                    selectedTab = selectedTab - 1
-                                                    hasSwiped = true
-                                            }
-                                            }
-                                            deltaX < -threshold -> {
-                                            // Swipe left - go to next tab
-                                            if (selectedTab < 5) {
-                                                    // Close any open settings dialogs when swiping to a different tab
-                                                    showJobTypeManagement = false
-                                                    showVenueManagement = false
-                                                    // Very subtle haptic feedback for page change
-                                                    performSubtleHaptic(capturedVibrator)
-                                                    previousTab = selectedTab
-                                                    selectedTab = selectedTab + 1
-                                                    hasSwiped = true
-                                            }
-                                            }
+                                val deltaX = change.position.x - startX
+                                val threshold = 100f
+                                
+                                if (!hasSwiped) {
+                                    when {
+                                        deltaX > threshold -> {
+                                        // Swipe right - go to previous tab
+                                        if (selectedTab > 0) {
+                                                // Close any open settings dialogs when swiping to a different tab
+                                                showJobTypeManagement = false
+                                                showVenueManagement = false
+                                                // Very subtle haptic feedback for page change
+                                                performSubtleHaptic(capturedVibrator)
+                                                previousTab = selectedTab
+                                                selectedTab = selectedTab - 1
+                                                hasSwiped = true
+                                        }
+                                        }
+                                        deltaX < -threshold -> {
+                                        // Swipe left - go to next tab
+                                        if (selectedTab < 5) {
+                                                // Close any open settings dialogs when swiping to a different tab
+                                                showJobTypeManagement = false
+                                                showVenueManagement = false
+                                                // Very subtle haptic feedback for page change
+                                                performSubtleHaptic(capturedVibrator)
+                                                previousTab = selectedTab
+                                                selectedTab = selectedTab + 1
+                                                hasSwiped = true
+                                        }
                                         }
                                     }
                                 }
@@ -992,7 +989,8 @@ if (pageAnimationsEnabled) {
                     volunteerBenefitStatus = memoizedBenefitStatus,
                     volunteerJobs = memoizedVolunteerJobs,
                     venues = venues,
-                    onClose = { showVolunteerBenefits = null }
+                    onClose = { showVolunteerBenefits = null },
+                    onConfirmEntry = { job -> viewModel.markBenefitAsUsed(job) }
                 )
             }
         }
@@ -1886,6 +1884,18 @@ fun GuestListScreenWithViewModel(viewModel: EventManagerViewModel) {
                     println("Guest deletion failed: ${e.message}")
                 }
             } 
+        },
+        onRefreshTemporaryGuests = {
+            viewModel.refreshTemporaryGuests()
+        },
+        onConfirmEntry = { job ->
+            coroutineScope.launch {
+                try {
+                    viewModel.markBenefitAsUsed(job)
+                } catch (e: Exception) {
+                    println("Benefit confirmation failed: ${e.message}")
+                }
+            }
         }
     )
 }

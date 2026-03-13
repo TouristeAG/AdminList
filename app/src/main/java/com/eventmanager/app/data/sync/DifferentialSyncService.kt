@@ -113,8 +113,9 @@ class DifferentialSyncService(
         withContext(Dispatchers.Default) {
             // Create multiple lookup maps for flexible matching
             val mainBySheetsId = mainVolunteers.filter { it.sheetsId != null }.associateBy { it.sheetsId!! }
-            val mainByName = mainVolunteers.associateBy { it.name }
-            val mainByCompositeKey = mainVolunteers.associateBy { "${it.name}_${it.email}_${it.phoneNumber}" }
+            // Use name + abbreviation as key to allow multiple volunteers with same first name
+            val mainByFullName = mainVolunteers.associateBy { "${it.name}_${it.lastNameAbbreviation}" }
+            val mainByCompositeKey = mainVolunteers.associateBy { "${it.name}_${it.lastNameAbbreviation}_${it.email}_${it.phoneNumber}" }
             
             val new = mutableListOf<Volunteer>()
             val modified = mutableListOf<Volunteer>()
@@ -125,11 +126,11 @@ class DifferentialSyncService(
             for (tempVolunteer in tempVolunteers) {
                 // Try to find matching main (local) volunteer using multiple strategies:
                 // 1. Match by sheetsId first (most reliable)
-                // 2. Then try matching by name (handles case where local has no sheetsId yet)
+                // 2. Then try matching by name+abbreviation (handles case where local has no sheetsId yet)
                 // 3. Finally try composite key as fallback
                 val mainVolunteer = tempVolunteer.sheetsId?.let { mainBySheetsId[it] }
-                    ?: mainByName[tempVolunteer.name]
-                    ?: mainByCompositeKey["${tempVolunteer.name}_${tempVolunteer.email}_${tempVolunteer.phoneNumber}"]
+                    ?: mainByFullName["${tempVolunteer.name}_${tempVolunteer.lastNameAbbreviation}"]
+                    ?: mainByCompositeKey["${tempVolunteer.name}_${tempVolunteer.lastNameAbbreviation}_${tempVolunteer.email}_${tempVolunteer.phoneNumber}"]
                 
                 if (mainVolunteer == null) {
                     // No matching local volunteer found - this is new from sheets
@@ -148,10 +149,11 @@ class DifferentialSyncService(
             }
             
             // Find deleted items (in MAIN_DB but not matched by any TEMP_DB volunteer)
-            // Also check by name to avoid incorrectly marking as deleted if sheetsId changed
-            val tempNames = tempVolunteers.map { it.name }.toSet()
+            // Check by name+abbreviation to avoid incorrectly marking as deleted if sheetsId changed
+            val tempFullNames = tempVolunteers.map { "${it.name}_${it.lastNameAbbreviation}" }.toSet()
             val deleted = mainVolunteers.filter { mainVolunteer ->
-                !matchedMainIds.contains(mainVolunteer.id) && !tempNames.contains(mainVolunteer.name)
+                !matchedMainIds.contains(mainVolunteer.id) && 
+                !tempFullNames.contains("${mainVolunteer.name}_${mainVolunteer.lastNameAbbreviation}")
             }
             
             SyncChanges(new, modified, deleted, unchanged)
@@ -211,6 +213,7 @@ class DifferentialSyncService(
         old.venueName != new.venueName ||
         old.date != new.date ||
         old.shiftTime != new.shiftTime ||
+        old.benefitUsed != new.benefitUsed ||
         old.notes != new.notes
     
     // ========== JOB TYPE CONFIG COMPARISON ==========

@@ -13,6 +13,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -332,13 +333,30 @@ fun AddVenueConfigDialog(
 
     val isCompact = isCompactScreen()
     val scrollState = rememberScrollState()
+    val isTabletDevice = isTablet()
+    val tabletMaxWidth = getTabletConstrainedDialogMaxWidth()
+    val tabletMaxHeight = getTabletConstrainedDialogMaxHeight()
 
     // Custom Dialog with proper scrolling
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = !isTabletDevice
+        )
+    ) {
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.9f)
+                .then(
+                    if (isTabletDevice) {
+                        Modifier
+                            .widthIn(max = tabletMaxWidth)
+                            .heightIn(max = tabletMaxHeight)
+                    } else {
+                        Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(0.9f)
+                    }
+                )
                 .padding(16.dp)
         ) {
             Card(
@@ -358,7 +376,7 @@ fun AddVenueConfigDialog(
                     ) {
                         Text(
                             text = if (isCompact) stringResource(R.string.add_venue) else stringResource(R.string.add_new_venue),
-                            style = getResponsiveTypography(),
+                            style = if (isTabletDevice) getTabletConstrainedTitleTypography() else getResponsiveTypography(),
                             fontWeight = FontWeight.Bold
                         )
                         
@@ -439,13 +457,30 @@ fun EditVenueConfigDialog(
 
     val isCompact = isCompactScreen()
     val scrollState = rememberScrollState()
+    val isTabletDevice = isTablet()
+    val tabletMaxWidth = getTabletConstrainedDialogMaxWidth()
+    val tabletMaxHeight = getTabletConstrainedDialogMaxHeight()
 
     // Custom Dialog with proper scrolling
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = !isTabletDevice
+        )
+    ) {
         Card(
             modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.9f)
+                .then(
+                    if (isTabletDevice) {
+                        Modifier
+                            .widthIn(max = tabletMaxWidth)
+                            .heightIn(max = tabletMaxHeight)
+                    } else {
+                        Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(0.9f)
+                    }
+                )
                 .padding(16.dp),
             shape = RoundedCornerShape(16.dp)
         ) {
@@ -462,7 +497,7 @@ fun EditVenueConfigDialog(
                 ) {
                     Text(
                         text = if (isCompact) stringResource(R.string.edit) else stringResource(R.string.edit_venue_configuration),
-                        style = getResponsiveTypography(),
+                        style = if (isTabletDevice) getTabletConstrainedTitleTypography() else getResponsiveTypography(),
                         fontWeight = FontWeight.Bold
                     )
                     

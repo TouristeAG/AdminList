@@ -16,6 +16,7 @@
     <string name="volunteer_sheet_label">Volunteer Sheet</string>
     <string name="shifts_sheet_label">Shifts Sheet</string>
     <string name="volunteer_guest_list_sheet_label">Volunteer Guest List Sheet</string>
+    <string name="temp_guest_list_sheet_label">Temp Guest List Sheet</string>
     <string name="shift_types_sheet_label">Shift Types Sheet</string>
     <string name="venues_sheet_label">Venues Sheet</string>
     <string name="save_settings">Save Settings</string>
@@ -196,6 +197,35 @@
     <string name="edit_venue_configuration">Edit Venue Configuration</string>
     <string name="venue_all">ALL</string>
     <string name="venue_both">BOTH</string>
+
+    <!-- Temporary Guest List -->
+    <string name="temp_guest_artist_label">Artist / Group</string>
+    <string name="temp_guest_event_date_label">Event date</string>
+    <string name="temp_guest_contact_phone_label">Emergency contact phone</string>
+    <string name="temp_guest_chip_label">Temp</string>
+    <string name="temp_guest_timeline_button">Future / History</string>
+    <string name="temp_guest_timeline_title">Temporary Guest Timeline</string>
+    <string name="temp_guest_tab_temp">Temporary</string>
+    <string name="temp_guest_tab_volunteer">Volunteer</string>
+    <string name="temp_guest_range_label">Range</string>
+    <string name="temp_guest_range_three_days">+/- 3 days</string>
+    <string name="temp_guest_range_three_days_short">±3d</string>
+    <string name="temp_guest_range_one_week">1 week</string>
+    <string name="temp_guest_range_one_week_short">1w</string>
+    <string name="temp_guest_range_two_weeks">2 weeks</string>
+    <string name="temp_guest_range_two_weeks_short">2w</string>
+    <string name="temp_guest_range_one_month">1 month</string>
+    <string name="temp_guest_range_one_month_short">1m</string>
+    <string name="temp_guest_range_six_months">6 months</string>
+    <string name="temp_guest_range_six_months_short">6m</string>
+    <string name="temp_guest_range_one_year">1 year</string>
+    <string name="temp_guest_range_one_year_short">1y</string>
+    <string name="temp_guest_range_all_time">All time</string>
+    <string name="temp_guest_range_all_time_short">All</string>
+    <string name="temp_guest_section_upcoming">Upcoming guests</string>
+    <string name="temp_guest_section_past">Past guests</string>
+    <string name="temp_guest_none_upcoming">No upcoming temporary guests for this filter.</string>
+    <string name="temp_guest_none_past">No past temporary guests for this filter.</string>
     
     <!-- App Information -->
     <string name="app_info_title">App Information</string>
@@ -224,7 +254,7 @@
     <string name="step_5_title">Create Google Spreadsheet</string>
     <string name="step_5_description">Create a new Google Spreadsheet and copy its ID from the URL.</string>
     <string name="step_6_title">Create Required Sheets</string>
-    <string name="step_6_description">Create five sheets: \'Guest List\', \'Volunteers\', \'Shifts\', \'Shift Types\', and \'Volunteer Guest List\'</string>
+    <string name="step_6_description">Create the sheets: \'Guest List\', \'Volunteers\', \'Shifts\', \'Shift Types\', \'Volunteer Guest List\', \'Venues\' and \'Temp Guest List\' (dates in \'Temp Guest List\' must use the YYYY-MM-DD format).</string>
     <string name="step_7_title">Set Up Sheet Headers</string>
     <string name="step_7_description">Add headers to each sheet. The app will create them automatically, but you can set them up manually if needed.</string>
     <string name="step_8_title">Share with Service Account</string>
@@ -786,6 +816,11 @@
     <!-- Easter Egg Games -->
     <string name="easter_egg_drive_nocturne">Nocturnal Drive</string>
     <string name="easter_egg_flappy_nocturne">Nocturnal Flappy</string>
+    
+    <!-- Entry Validation -->
+    <string name="validate_entry">Validate Entry</string>
+    <string name="validate_entry_description">This volunteer has an unused free entry benefit from an after-midnight shift. Slide to confirm their entry.</string>
+    <string name="slide_to_confirm">Slide to confirm entry</string>
     
     <!-- Activity Status -->
     <string name="activity_status_never_worked">Never worked</string>

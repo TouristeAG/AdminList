@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.eventmanager.app.ui.components.VolunteerDetailPanel
 import com.eventmanager.app.ui.components.BirthdayDatePicker
@@ -413,12 +414,29 @@ fun AddVolunteerDialog(
 
     val isCompact = isCompactScreen()
     val scrollState = rememberScrollState()
+    val isTabletDevice = isTablet()
+    val tabletMaxWidth = getTabletConstrainedDialogMaxWidth()
+    val tabletMaxHeight = getTabletConstrainedDialogMaxHeight()
 
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = !isTabletDevice
+        )
+    ) {
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.9f)
+                .then(
+                    if (isTabletDevice) {
+                        Modifier
+                            .widthIn(max = tabletMaxWidth)
+                            .heightIn(max = tabletMaxHeight)
+                    } else {
+                        Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(0.9f)
+                    }
+                )
                 .padding(16.dp)
         ) {
             Card(
@@ -438,7 +456,7 @@ fun AddVolunteerDialog(
                     ) {
                         Text(
                             text = if (isCompact) context.getString(R.string.add_volunteer) else context.getString(R.string.add_new_volunteer),
-                            style = getResponsiveTypography(),
+                            style = if (isTabletDevice) getTabletConstrainedTitleTypography() else getResponsiveTypography(),
                             fontWeight = FontWeight.Bold
                         )
                         
@@ -610,12 +628,29 @@ fun EditVolunteerDialog(
 
     val isCompact = isCompactScreen()
     val scrollState = rememberScrollState()
+    val isTabletDevice = isTablet()
+    val tabletMaxWidth = getTabletConstrainedDialogMaxWidth()
+    val tabletMaxHeight = getTabletConstrainedDialogMaxHeight()
 
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = !isTabletDevice
+        )
+    ) {
         Card(
             modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.9f)
+                .then(
+                    if (isTabletDevice) {
+                        Modifier
+                            .widthIn(max = tabletMaxWidth)
+                            .heightIn(max = tabletMaxHeight)
+                    } else {
+                        Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(0.9f)
+                    }
+                )
                 .padding(16.dp),
             shape = RoundedCornerShape(16.dp)
         ) {
@@ -632,7 +667,7 @@ fun EditVolunteerDialog(
                 ) {
                     Text(
                         text = if (isCompact) context.getString(R.string.edit_volunteer) else context.getString(R.string.edit_volunteer_details),
-                        style = getResponsiveTypography(),
+                        style = if (isTabletDevice) getTabletConstrainedTitleTypography() else getResponsiveTypography(),
                         fontWeight = FontWeight.Bold
                     )
                     

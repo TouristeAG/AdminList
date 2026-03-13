@@ -258,6 +258,151 @@ fun getResponsiveMinTouchTarget(): Dp {
     }
 }
 
+// ============================================================================
+// TABLET-CONSTRAINED DIALOG UTILITIES
+// These functions provide smaller, more constrained sizes for tablets to prevent
+// dialogs and UI elements from becoming too large on bigger screens.
+// Phone UI remains unchanged - these only affect tablets.
+// ============================================================================
+
+/**
+ * Returns a constrained maximum width for dialogs on tablets.
+ * On phones, returns a large value (effectively no constraint).
+ * On tablets, returns a reasonable max width to prevent dialogs from being too wide.
+ */
+@Composable
+fun getTabletConstrainedDialogMaxWidth(): Dp {
+    return when (getScreenSize()) {
+        ScreenSize.COMPACT -> 600.dp  // Large enough to not constrain phones
+        ScreenSize.MEDIUM -> 420.dp   // Small tablets: constrained width
+        ScreenSize.EXPANDED -> 480.dp // Large tablets: slightly wider but still constrained
+    }
+}
+
+/**
+ * Returns a constrained maximum height for dialogs on tablets.
+ * On phones, returns a large value (effectively no constraint).
+ * On tablets, returns a reasonable max height to prevent dialogs from being too tall.
+ */
+@Composable
+fun getTabletConstrainedDialogMaxHeight(): Dp {
+    return when (getScreenSize()) {
+        ScreenSize.COMPACT -> 800.dp  // Large enough to not constrain phones
+        ScreenSize.MEDIUM -> 500.dp   // Small tablets: constrained height
+        ScreenSize.EXPANDED -> 560.dp // Large tablets: slightly taller but still constrained
+    }
+}
+
+/**
+ * Returns a constrained QR code size for different screen sizes.
+ * On phones, the QR code can be larger relative to screen.
+ * On tablets, the QR code is limited to a reasonable size.
+ */
+@Composable
+fun getTabletConstrainedQRCodeSize(): Dp {
+    return when (getScreenSize()) {
+        ScreenSize.COMPACT -> 280.dp  // Good size for phones
+        ScreenSize.MEDIUM -> 240.dp   // Smaller for small tablets
+        ScreenSize.EXPANDED -> 260.dp // Slightly larger for big tablets, but still constrained
+    }
+}
+
+/**
+ * Returns the fraction of screen width that dialogs should use.
+ * On phones, dialogs use most of the width.
+ * On tablets, dialogs use a smaller fraction to avoid being too wide.
+ */
+@Composable
+fun getDialogWidthFraction(): Float {
+    return when (getScreenSize()) {
+        ScreenSize.COMPACT -> 0.92f   // Phones: use most of the width
+        ScreenSize.MEDIUM -> 0.55f    // Small tablets: use about half
+        ScreenSize.EXPANDED -> 0.45f  // Large tablets: use less than half
+    }
+}
+
+/**
+ * Returns the fraction of screen height that dialogs should use.
+ * On phones, dialogs can use more of the height.
+ * On tablets, dialogs use a smaller fraction to avoid being too tall.
+ */
+@Composable
+fun getDialogHeightFraction(): Float {
+    return when (getScreenSize()) {
+        ScreenSize.COMPACT -> 0.90f   // Phones: use most of the height
+        ScreenSize.MEDIUM -> 0.65f    // Small tablets: use about 65%
+        ScreenSize.EXPANDED -> 0.55f  // Large tablets: use about 55%
+    }
+}
+
+/**
+ * Returns constrained typography for tablet dialogs.
+ * On phones, uses the standard phone typography.
+ * On tablets, uses smaller font sizes to prevent oversized text.
+ */
+@Composable
+fun getTabletConstrainedTitleTypography(): TextStyle {
+    return when (getScreenSize()) {
+        ScreenSize.COMPACT -> MaterialTheme.typography.titleLarge.copy(fontSize = 18.sp)
+        ScreenSize.MEDIUM -> MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp)  // Same as phone
+        ScreenSize.EXPANDED -> MaterialTheme.typography.titleMedium.copy(fontSize = 20.sp) // Slightly larger
+    }
+}
+
+/**
+ * Returns constrained body typography for tablet dialogs.
+ * On phones, uses the standard phone typography.
+ * On tablets, uses smaller font sizes to prevent oversized text.
+ */
+@Composable
+fun getTabletConstrainedBodyTypography(): TextStyle {
+    return when (getScreenSize()) {
+        ScreenSize.COMPACT -> MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp)
+        ScreenSize.MEDIUM -> MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp)  // Same as phone
+        ScreenSize.EXPANDED -> MaterialTheme.typography.bodyMedium.copy(fontSize = 15.sp) // Slightly larger
+    }
+}
+
+/**
+ * Returns constrained padding for tablet dialogs.
+ * On phones, uses standard padding.
+ * On tablets, uses similar padding to phones to keep dialogs compact.
+ */
+@Composable
+fun getTabletConstrainedDialogPadding(): Dp {
+    return when (getScreenSize()) {
+        ScreenSize.COMPACT -> 16.dp
+        ScreenSize.MEDIUM -> 16.dp   // Same as phone
+        ScreenSize.EXPANDED -> 20.dp // Slightly larger
+    }
+}
+
+/**
+ * Returns constrained spacing for tablet dialogs.
+ * On phones, uses standard spacing.
+ * On tablets, uses similar spacing to phones to keep dialogs compact.
+ */
+@Composable
+fun getTabletConstrainedDialogSpacing(): Dp {
+    return when (getScreenSize()) {
+        ScreenSize.COMPACT -> 12.dp
+        ScreenSize.MEDIUM -> 12.dp   // Same as phone
+        ScreenSize.EXPANDED -> 14.dp // Slightly larger
+    }
+}
+
+/**
+ * Returns constrained button height for tablet dialogs.
+ */
+@Composable
+fun getTabletConstrainedButtonHeight(): Dp {
+    return when (getScreenSize()) {
+        ScreenSize.COMPACT -> 48.dp
+        ScreenSize.MEDIUM -> 48.dp   // Same as phone
+        ScreenSize.EXPANDED -> 52.dp // Slightly larger
+    }
+}
+
 /**
  * Data class representing a venue option for dropdowns
  */

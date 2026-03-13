@@ -1049,6 +1049,7 @@ fun SettingsScreen(
     var volunteerGuestListSheet by remember { mutableStateOf(settingsManager.getVolunteerGuestListSheet()) }
     var jobTypesSheet by remember { mutableStateOf(settingsManager.getJobTypesSheet()) }
     var venuesSheet by remember { mutableStateOf(settingsManager.getVenuesSheet()) }
+    var tempGuestListSheet by remember { mutableStateOf(settingsManager.getTempGuestListSheet()) }
     var showInstructions by remember { mutableStateOf(false) }
     var jsonKeyInfo by remember { mutableStateOf<JsonKeyInfo?>(null) }
     var showActiveVolunteersDialog by remember { mutableStateOf(false) }
@@ -1265,6 +1266,23 @@ fun SettingsScreen(
                         )
                         
                         OutlinedTextField(
+                            value = tempGuestListSheet,
+                            onValueChange = { tempGuestListSheet = it },
+                            label = { Text(context.getString(R.string.temp_guest_list_sheet_label)) },
+                            modifier = Modifier.weight(1f),
+                            leadingIcon = {
+                                Icon(Icons.Default.People, contentDescription = null)
+                            }
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        OutlinedTextField(
                             value = jobTypesSheet,
                             onValueChange = { jobTypesSheet = it },
                             label = { Text(context.getString(R.string.shift_types_sheet_label)) },
@@ -1273,19 +1291,17 @@ fun SettingsScreen(
                                 Icon(Icons.Default.Settings, contentDescription = null)
                             }
                         )
+                        
+                        OutlinedTextField(
+                            value = venuesSheet,
+                            onValueChange = { venuesSheet = it },
+                            label = { Text(context.getString(R.string.venues_sheet_label)) },
+                            modifier = Modifier.weight(1f),
+                            leadingIcon = {
+                                Icon(Icons.Default.LocationOn, contentDescription = null)
+                            }
+                        )
                     }
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    OutlinedTextField(
-                        value = venuesSheet,
-                        onValueChange = { venuesSheet = it },
-                        label = { Text(context.getString(R.string.venues_sheet_label)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        leadingIcon = {
-                            Icon(Icons.Default.LocationOn, contentDescription = null)
-                        }
-                    )
                     
                     Spacer(modifier = Modifier.height(24.dp))
                     
@@ -1297,6 +1313,7 @@ fun SettingsScreen(
                             settingsManager.saveVolunteerSheet(volunteerSheet)
                             settingsManager.saveJobsSheet(jobsSheet)
                             settingsManager.saveVolunteerGuestListSheet(volunteerGuestListSheet)
+                            settingsManager.saveTempGuestListSheet(tempGuestListSheet)
                             settingsManager.saveJobTypesSheet(jobTypesSheet)
                             settingsManager.saveVenuesSheet(venuesSheet)
                         },
