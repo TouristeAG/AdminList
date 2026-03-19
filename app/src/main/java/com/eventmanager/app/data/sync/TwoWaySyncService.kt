@@ -794,6 +794,7 @@ class TwoWaySyncService(
             }
             
             googleSheetsService.initializeSheetsService()
+            googleSheetsService.validateAndRepairSheetsStructure()
             val guests = repository.getAllGuests().first()
             val venues = repository.getAllVenues().first()
             println("📊 Retrieved ${guests.size} guests from repository for backup")
@@ -820,6 +821,7 @@ class TwoWaySyncService(
             }
             
             googleSheetsService.initializeSheetsService()
+            googleSheetsService.validateAndRepairSheetsStructure()
             // Get ALL volunteers (both active and inactive) to ensure complete backup
             val volunteers = repository.getAllVolunteers().first()
             println("📊 Retrieved ${volunteers.size} volunteers from repository for backup")
@@ -971,7 +973,7 @@ class TwoWaySyncService(
                 diagnostics["guests"] = mapOf(
                     "status" to "OK",
                     "count" to guests.size,
-                    "headers" to listOf("Name", "Email", "Phone", "Invitations", "Venue", "Notes", "Volunteer Benefit", "Last Modified")
+                    "headers" to listOf("Name", "Email", "Phone", "Invitations", "Venue", "Notes", "Volunteer Benefit", "Last Modified", "NFC UID")
                 )
             } catch (e: Exception) {
                 diagnostics["guests"] = mapOf("status" to "ERROR", "message" to e.message)
@@ -982,7 +984,7 @@ class TwoWaySyncService(
                 diagnostics["volunteers"] = mapOf(
                     "status" to "OK",
                     "count" to volunteers.size,
-                    "headers" to listOf("ID", "Name", "Abbreviation", "Email", "Phone", "Date of Birth", "Rank", "Active", "Last Modified")
+                    "headers" to listOf("ID", "Name", "Abbreviation", "Email", "Phone", "Date of Birth", "Rank", "Active", "Last Modified", "NFC UID")
                 )
             } catch (e: Exception) {
                 diagnostics["volunteers"] = mapOf("status" to "ERROR", "message" to e.message)

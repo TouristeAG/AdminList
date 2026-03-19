@@ -2429,7 +2429,8 @@ class EventManagerViewModel(
                         venueName = "BOTH",
                         notes = "Volunteer benefit - ${getRankDisplayName(status.rank)}",
                         isVolunteerBenefit = true,
-                        volunteerId = volunteer.id
+                        volunteerId = volunteer.id,
+                        nfcCardUid = volunteer.nfcCardUid
                     )
                 )
             }
@@ -2477,7 +2478,8 @@ class EventManagerViewModel(
                     toInsert.add(newGuest)
                 } else if (existingGuest.name != newGuest.name ||
                            existingGuest.invitations != newGuest.invitations ||
-                           existingGuest.notes != newGuest.notes) {
+                           existingGuest.notes != newGuest.notes ||
+                           existingGuest.nfcCardUid != newGuest.nfcCardUid) {
                     // Modified - update with existing ID
                     toUpdate.add(newGuest.copy(id = existingGuest.id))
                 }
@@ -3097,7 +3099,7 @@ class EventManagerViewModel(
         
         // Now check for content duplicates (different ID but same info)
         // Content key = all identifying fields except ID and timestamps
-        fun contentKey(g: Guest) = "${g.name}_${g.email}_${g.phoneNumber}_${g.venueName}_${g.invitations}_${g.notes}_${g.isVolunteerBenefit}"
+        fun contentKey(g: Guest) = "${g.name}_${g.email}_${g.phoneNumber}_${g.venueName}_${g.invitations}_${g.notes}_${g.isVolunteerBenefit}_${g.nfcCardUid}"
         
         val byContent = uniqueById.groupBy { contentKey(it) }
         
@@ -3133,7 +3135,7 @@ class EventManagerViewModel(
         
         // Now check for content duplicates (different NanoID but same info)
         // Content key = all identifying fields except NanoID and timestamps
-        fun contentKey(v: Volunteer) = "${v.name}_${v.lastNameAbbreviation}_${v.email}_${v.phoneNumber}_${v.dateOfBirth}_${v.gender}_${v.currentRank}_${v.isActive}"
+        fun contentKey(v: Volunteer) = "${v.name}_${v.lastNameAbbreviation}_${v.email}_${v.phoneNumber}_${v.dateOfBirth}_${v.gender}_${v.currentRank}_${v.isActive}_${v.nfcCardUid}"
         
         val byContent = uniqueByNanoId.groupBy { contentKey(it) }
         

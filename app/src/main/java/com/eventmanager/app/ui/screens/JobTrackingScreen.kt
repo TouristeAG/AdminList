@@ -89,6 +89,7 @@ fun JobTrackingScreen(
             }
             val matchesSearch = searchText.isEmpty() || 
                 volunteer?.name?.lowercase()?.contains(lowerSearchText) == true ||
+                volunteer?.nfcCardUid?.lowercase()?.contains(lowerSearchText) == true ||
                 job.notes.lowercase().contains(lowerSearchText) ||
                 job.jobTypeName.lowercase().contains(lowerSearchText)
             val matchesFilter = selectedFilter?.let { filter ->
@@ -769,7 +770,7 @@ fun AddJobDialog(
                         }
                     },
                     searchText = { volunteer -> 
-                        "${volunteer.name} ${volunteer.lastNameAbbreviation}".trim()
+                        "${volunteer.name} ${volunteer.lastNameAbbreviation} ${volunteer.nfcCardUid}".trim()
                     },
                     label = context.getString(R.string.volunteer),
                     placeholder = context.getString(R.string.search_volunteers_shift_placeholder),
@@ -1062,7 +1063,7 @@ fun EditJobDialog(
                         }
                     },
                     searchText = { volunteer -> 
-                        "${volunteer.name} ${volunteer.lastNameAbbreviation}".trim()
+                        "${volunteer.name} ${volunteer.lastNameAbbreviation} ${volunteer.nfcCardUid}".trim()
                     },
                     label = context.getString(R.string.volunteer),
                     placeholder = context.getString(R.string.search_volunteers_shift_placeholder),

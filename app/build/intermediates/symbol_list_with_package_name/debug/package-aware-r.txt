@@ -1088,6 +1088,8 @@ string add_new_guest
 string add_new_shift
 string add_new_venue
 string add_new_volunteer
+string add_nfc_card
+string add_nfc_card_uid_title
 string add_shift
 string add_shift_type
 string add_venue
@@ -1139,6 +1141,7 @@ string app_name
 string app_version
 string available_guests
 string available_volunteers
+string back
 string bar_discount
 string bar_discount_n
 string benefit_details
@@ -1154,6 +1157,7 @@ string call_notification_ongoing_text
 string call_notification_screening_text
 string camera_error
 string camera_not_available
+string camera_permission_qr_nfc_body
 string camera_permission_required
 string camera_permission_title
 string cancel
@@ -1197,6 +1201,7 @@ string common_signin_button_text
 string common_signin_button_text_long
 string confirm
 string continue_button
+string copy_nfc_uid
 string count
 string current_benefits
 string current_rank
@@ -1258,8 +1263,9 @@ string download_progress
 string downloading_update
 string drink_tokens
 string dropdown_menu
-string easter_egg_drive_nocturne
-string easter_egg_flappy_nocturne
+string easter_egg_off_the_line
+string easter_egg_pizza_undelivery
+string easter_egg_scroll
 string edit
 string edit_guest
 string edit_guest_details
@@ -1334,6 +1340,8 @@ string email_tab_volunteer
 string enhanced_touch_targets
 string enter_guest_name_manually
 string enter_id_manually
+string enter_nfc_uid_title
+string enter_uid_manually
 string enter_volunteer_id_manually
 string error_processing_qr_code
 string expired
@@ -1422,6 +1430,7 @@ string install_update
 string invalid_guest_qr_code
 string invalid_input
 string invalid_qr_code_format
+string invalid_qr_or_nfc_data
 string invitations
 string invitations_count
 string invitations_text
@@ -1439,6 +1448,7 @@ string language_title
 string large_screen_experience
 string last_name_abbreviation
 string last_name_abbreviation_placeholder
+string last_nfc_uid_scanned
 string last_shift
 string last_sync
 string last_synced
@@ -1540,6 +1550,16 @@ string nav_volunteers_tablet
 string navigation_menu
 string never
 string never_synced
+string nfc_card_detected
+string nfc_disabled_enable
+string nfc_not_supported_device
+string nfc_reader_error
+string nfc_uid_copied
+string nfc_uid_label
+string nfc_uid_multiple_matches_message
+string nfc_uid_multiple_matches_title
+string nfc_uid_not_found
+string nfc_uid_read_failed
 string no
 string no_age_data
 string no_gender_data
@@ -1570,11 +1590,14 @@ string people_counter_reset
 string people_counter_title
 string people_counter_visibility_description
 string people_counter_visibility_title
+string permanent_guest_label
 string permanent_guests
 string personal_information
 string phone
 string phone_number
+string place_nfc_card_on_phone
 string please_enter_guest_name
+string please_enter_valid_volunteer_id
 string plus_one_invites
 string prefer_not_to_disclose
 string project_colon
@@ -1586,6 +1609,8 @@ string qr_code_subject
 string qr_code_subject_guest
 string range_end
 string range_start
+string read_uid_with_phone_nfc
+string read_uid_with_usb_reader
 string recent_activity
 string recent_guests
 string recent_shifts
@@ -1609,6 +1634,13 @@ string save
 string save_resolution_scale
 string save_settings
 string scan_guest_qr_code
+string scan_nfc_card_title
+string scan_qr_or_nfc_subtitle_enabled
+string scan_qr_or_nfc_subtitle_phone_and_usb
+string scan_qr_or_nfc_subtitle_usb_only
+string scan_qr_or_nfc_title
+string scan_qr_subtitle_nfc_disabled
+string scan_with_usb_reader
 string scroll_behavior_description
 string scroll_behavior_full_page_description
 string scroll_behavior_full_page_title
@@ -1808,6 +1840,7 @@ string total_invitations_count
 string total_people
 string total_shifts
 string total_shifts_description
+string uid_label
 string unknown
 string unknown_volunteer
 string unspecified
@@ -1833,6 +1866,10 @@ string upload_failed
 string upload_key_description
 string upload_key_file
 string upload_key_file_description
+string usb_reader_not_connected
+string usb_reader_waiting_card
+string usb_reader_waiting_card_short
+string use_this_uid
 string validate_entry
 string validate_entry_description
 string validating_file
@@ -1866,6 +1903,7 @@ string volunteer_benefits_overview_tablet
 string volunteer_guest_list_sheet_label
 string volunteer_guests_description
 string volunteer_id
+string volunteer_id_not_found
 string volunteer_information
 string volunteer_invites_description
 string volunteer_label

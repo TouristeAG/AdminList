@@ -1,8 +1,8 @@
 {
-  "latestVersionCode": 10,
-  "latestVersionName": "0.9.9",
+  "latestVersionCode": 11,
+  "latestVersionName": "0.9.9.1",
   "minSupportedVersionCode": "9",
-  "changelogShort": "New after midnight entry validation dialog, New temporary guest feature.",
-  "downloadUrl": "https://github.com/TouristeAG/AdminList/releases/download/0.9.9/app-release-0.9.9.apk",
+  "changelogShort": "New NFC card support for permanent guests and volunteers.",
+  "downloadUrl": "https://github.com/TouristeAG/AdminList/releases/download/0.9.9.1/app-release-0.9.9.1.apk",
   "storeUrl": "https://play.google.com/store/apps/details?id=com.eventmanager.app"
 }

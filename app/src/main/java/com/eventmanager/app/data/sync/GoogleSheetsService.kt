@@ -100,14 +100,15 @@ class GoogleSheetsService(private val context: Context) {
                         guest.venueName,
                         guest.notes,
                         if (guest.isVolunteerBenefit) "Yes" else "No",
-                        guest.lastModified.toString()
+                        guest.lastModified.toString(),
+                        guest.nfcCardUid
                     )
                     
                     val valueRange = ValueRange().setValues(listOf(values))
                     
                     val response = sheetsService?.spreadsheets()?.values()?.append(
                         settingsManager.getSpreadsheetId(),
-                        "${settingsManager.getGuestListSheet()}!A:H",
+                        "${settingsManager.getGuestListSheet()}!A:I",
                         valueRange
                     )?.setValueInputOption("RAW")?.execute()
                     
@@ -117,7 +118,7 @@ class GoogleSheetsService(private val context: Context) {
                     
                     // Update the guest with the sheets ID (row number)
                     val sheetsId = response.updates?.updatedRange?.let { range ->
-                        val match = Regex(".*!A(\\d+):H\\d+").find(range)
+                        val match = Regex(".*!A(\\d+):I\\d+").find(range)
                         match?.groupValues?.get(1)?.toIntOrNull()
                     }?.toString() ?: "1"
                     
@@ -210,7 +211,8 @@ class GoogleSheetsService(private val context: Context) {
                         guest.venueName,
                         guest.notes,
                         if (guest.isVolunteerBenefit) "Yes" else "No",
-                        guest.lastModified.toString()
+                        guest.lastModified.toString(),
+                        guest.nfcCardUid
                     )
                     
                     val valueRange = ValueRange().setValues(listOf(values))
@@ -218,7 +220,7 @@ class GoogleSheetsService(private val context: Context) {
                     
                     val response = sheetsService?.spreadsheets()?.values()?.update(
                         settingsManager.getSpreadsheetId(),
-                        "${settingsManager.getGuestListSheet()}!A$rowNumber:H$rowNumber",
+                        "${settingsManager.getGuestListSheet()}!A$rowNumber:I$rowNumber",
                         valueRange
                     )?.setValueInputOption("RAW")?.execute()
                     
@@ -259,12 +261,13 @@ class GoogleSheetsService(private val context: Context) {
                         guest.venueName,
                         guest.notes,
                         "No",
-                        guest.lastModified.toString()
+                        guest.lastModified.toString(),
+                        guest.nfcCardUid
                     )
                 }
                 
                 val valueRange = ValueRange()
-                    .setValues(listOf(listOf("Name", "Email", "Phone", "Invitations", "Venue", "Notes", "Volunteer Benefit", "Last Modified")) + values)
+                    .setValues(listOf(listOf("Name", "Email", "Phone", "Invitations", "Venue", "Notes", "Volunteer Benefit", "Last Modified", "NFC UID")) + values)
                 
                 val response = sheetsService?.spreadsheets()?.values()?.update(
                     settingsManager.getSpreadsheetId(),
@@ -313,11 +316,12 @@ class GoogleSheetsService(private val context: Context) {
                             guest.venueName,
                             guest.notes,
                             "Yes",
-                            guest.lastModified.toString()
+                            guest.lastModified.toString(),
+                            guest.nfcCardUid
                         )
                     }
                     val valueRange = ValueRange()
-                        .setValues(listOf(listOf("Name", "Last Name Abbreviation", "Invitations", "Venue", "Notes", "Volunteer Benefit", "Last Modified")) + values)
+                        .setValues(listOf(listOf("Name", "Last Name Abbreviation", "Invitations", "Venue", "Notes", "Volunteer Benefit", "Last Modified", "NFC UID")) + values)
                     val response = sheetsService?.spreadsheets()?.values()?.update(
                         settingsManager.getSpreadsheetId(),
                         "${settingsManager.getVolunteerGuestListSheet()}!A1",
@@ -351,7 +355,7 @@ class GoogleSheetsService(private val context: Context) {
                 operation = {
                 val spreadsheetId = settingsManager.getSpreadsheetId()
                 val sheetName = settingsManager.getGuestListSheet()
-                val range = "${sheetName}!A2:H"
+                val range = "${sheetName}!A2:I"
                 
                 println("Reading from spreadsheet: $spreadsheetId, range: $range")
                 
@@ -368,7 +372,7 @@ class GoogleSheetsService(private val context: Context) {
                 println("Retrieved ${values.size} guest rows from sheets")
                 
                 val guests = values.mapIndexedNotNull { index, row ->
-                    if (row.size >= 8) {
+                    if (row.size >= 9) {
                         try {
                             val rowNumber = index + 2 // +2 because we start from row 2 (after header)
                             val guest = Guest(
@@ -380,11 +384,33 @@ class GoogleSheetsService(private val context: Context) {
                                 venueName = row[4].toString(),
                                 notes = row[5].toString(),
                                 isVolunteerBenefit = row[6].toString().equals("Yes", ignoreCase = true),
-                                lastModified = row[7].toString().toLongOrNull() ?: System.currentTimeMillis()
+                                lastModified = row[7].toString().toLongOrNull() ?: System.currentTimeMillis(),
+                                nfcCardUid = row[8].toString()
                             )
                             guest
                         } catch (e: Exception) {
                             println("Failed to parse guest row ${index + 2}: ${e.message}")
+                            null
+                        }
+                    } else if (row.size >= 8) {
+                        // Backward compatibility: support format without NFC UID
+                        try {
+                            val rowNumber = index + 2
+                            val guest = Guest(
+                                sheetsId = rowNumber.toString(),
+                                name = row[0].toString(),
+                                email = row[1].toString(),
+                                phoneNumber = row[2].toString(),
+                                invitations = row[3].toString().toIntOrNull() ?: 1,
+                                venueName = row[4].toString(),
+                                notes = row[5].toString(),
+                                isVolunteerBenefit = row[6].toString().equals("Yes", ignoreCase = true),
+                                lastModified = row[7].toString().toLongOrNull() ?: System.currentTimeMillis(),
+                                nfcCardUid = ""
+                            )
+                            guest
+                        } catch (e: Exception) {
+                            println("Failed to parse guest row ${index + 2} (no NFC UID format): ${e.message}")
                             null
                         }
                     } else if (row.size >= 6) {
@@ -400,7 +426,8 @@ class GoogleSheetsService(private val context: Context) {
                                 venueName = row[2].toString(),
                                 notes = row[3].toString(),
                                 isVolunteerBenefit = row[4].toString().equals("Yes", ignoreCase = true),
-                                lastModified = row[5].toString().toLongOrNull() ?: System.currentTimeMillis()
+                                lastModified = row[5].toString().toLongOrNull() ?: System.currentTimeMillis(),
+                                nfcCardUid = ""
                             )
                             guest
                         } catch (e: Exception) {
@@ -455,14 +482,15 @@ class GoogleSheetsService(private val context: Context) {
                         } ?: "",
                         volunteer.currentRank?.name ?: "No Rank",
                         if (volunteer.isActive) "Yes" else "No",
-                        volunteer.lastModified.toString()
+                        volunteer.lastModified.toString(),
+                        volunteer.nfcCardUid
                     )
                     
                     val valueRange = ValueRange().setValues(listOf(values))
                     
                     val response = sheetsService?.spreadsheets()?.values()?.append(
                         settingsManager.getSpreadsheetId(),
-                        "${settingsManager.getVolunteerSheet()}!A:J",
+                        "${settingsManager.getVolunteerSheet()}!A:K",
                         valueRange
                     )?.setValueInputOption("RAW")?.execute()
                     
@@ -472,7 +500,7 @@ class GoogleSheetsService(private val context: Context) {
                     
                     // Update the volunteer with the sheets ID (row number)
                     val sheetsId = response.updates?.updatedRange?.let { range ->
-                        val match = Regex(".*!A(\\d+):J\\d+").find(range)
+                        val match = Regex(".*!A(\\d+):K\\d+").find(range)
                         match?.groupValues?.get(1)?.toIntOrNull()
                     }?.toString() ?: "1"
                     
@@ -517,7 +545,8 @@ class GoogleSheetsService(private val context: Context) {
                         } ?: "",
                         volunteer.currentRank?.name ?: "No Rank",
                         if (volunteer.isActive) "Yes" else "No",
-                        volunteer.lastModified.toString()
+                        volunteer.lastModified.toString(),
+                        volunteer.nfcCardUid
                     )
                     
                     val valueRange = ValueRange().setValues(listOf(values))
@@ -525,7 +554,7 @@ class GoogleSheetsService(private val context: Context) {
                     
                     val response = sheetsService?.spreadsheets()?.values()?.update(
                         settingsManager.getSpreadsheetId(),
-                        "${settingsManager.getVolunteerSheet()}!A$rowNumber:J$rowNumber",
+                        "${settingsManager.getVolunteerSheet()}!A$rowNumber:K$rowNumber",
                         valueRange
                     )?.setValueInputOption("RAW")?.execute()
                     
@@ -575,12 +604,13 @@ class GoogleSheetsService(private val context: Context) {
                         } ?: "",
                         volunteer.currentRank?.name ?: "No Rank",
                         if (volunteer.isActive) "Yes" else "No",
-                        volunteer.lastModified.toString()
+                        volunteer.lastModified.toString(),
+                        volunteer.nfcCardUid
                     )
                 }
                 
                 val valueRange = ValueRange()
-                    .setValues(listOf(listOf("ID", "Name", "Abbreviation", "Email", "Phone", "Date of Birth", "Gender", "Rank", "Active", "Last Modified")) + values)
+                    .setValues(listOf(listOf("ID", "Name", "Abbreviation", "Email", "Phone", "Date of Birth", "Gender", "Rank", "Active", "Last Modified", "NFC UID")) + values)
                 
                 val response = sheetsService?.spreadsheets()?.values()?.update(
                     settingsManager.getSpreadsheetId(),
@@ -616,7 +646,7 @@ class GoogleSheetsService(private val context: Context) {
                 operation = {
                 val response = sheetsService?.spreadsheets()?.values()?.get(
                     settingsManager.getSpreadsheetId(),
-                    "${settingsManager.getVolunteerSheet()}!A2:J"
+                    "${settingsManager.getVolunteerSheet()}!A2:K"
                 )?.execute()
                 
                 if (response == null) {
@@ -630,7 +660,7 @@ class GoogleSheetsService(private val context: Context) {
                 val volunteersToFixInSheets = mutableListOf<Pair<Int, String>>() // (rowNumber, newId)
                 
                 values.forEachIndexed { index, row ->
-                    if (row.size >= 10) {
+                    if (row.size >= 11) {
                         try {
                             val rowNumber = index + 2 // +2 because we start from row 2 (after header)
                             // Column A now contains NanoID (String)
@@ -693,15 +723,57 @@ class GoogleSheetsService(private val context: Context) {
                                 } catch (e: Exception) {
                                     println("Failed to parse volunteer last modified for volunteer '${row[1]}', setting to current time")
                                     System.currentTimeMillis()
-                                }
+                                },
+                                nfcCardUid = row[10].toString()
                             )
                             volunteers.add(volunteer)
                         } catch (e: Exception) {
                             println("Failed to parse volunteer row ${index + 2}: ${e.message}")
                             println("Row data: ${row.joinToString(", ")}")
                         }
+                    } else if (row.size >= 10) {
+                        try {
+                            val rowNumber = index + 2
+                            val rawId = row[0].toString()
+                            val volunteerName = row[1].toString()
+                            val needsFix = NanoIdGenerator.needsRegeneration(rawId)
+                            val validId = NanoIdGenerator.ensureValidNanoId(rawId, volunteerName)
+                            if (needsFix) {
+                                volunteersToFixInSheets.add(Pair(rowNumber, validId))
+                            }
+                            val volunteer = Volunteer(
+                                id = validId,
+                                sheetsId = rowNumber.toString(),
+                                name = row[1].toString(),
+                                lastNameAbbreviation = row[2].toString(),
+                                email = row[3].toString(),
+                                phoneNumber = row[4].toString(),
+                                dateOfBirth = row[5].toString(),
+                                gender = try {
+                                    val genderString = row[6].toString()
+                                    if (genderString.isBlank()) null else when (genderString) {
+                                        "Female" -> Gender.FEMALE
+                                        "Male" -> Gender.MALE
+                                        "Non-binary" -> Gender.NON_BINARY
+                                        "Other" -> Gender.OTHER
+                                        "Prefer not to disclose" -> Gender.PREFER_NOT_TO_DISCLOSE
+                                        else -> null
+                                    }
+                                } catch (_: Exception) { null },
+                                currentRank = try {
+                                    val rankString = row[7].toString()
+                                    if (rankString == "No Rank" || rankString.isBlank()) null else VolunteerRank.valueOf(rankString)
+                                } catch (_: Exception) { null },
+                                isActive = row[8].toString().equals("Yes", ignoreCase = true),
+                                lastModified = row[9].toString().toLongOrNull() ?: System.currentTimeMillis(),
+                                nfcCardUid = ""
+                            )
+                            volunteers.add(volunteer)
+                        } catch (e: Exception) {
+                            println("Failed to parse volunteer row ${index + 2} (no NFC UID format): ${e.message}")
+                        }
                     } else {
-                        println("Skipping volunteer row ${index + 2} - insufficient columns: ${row.size} (expected 10)")
+                        println("Skipping volunteer row ${index + 2} - insufficient columns: ${row.size} (expected 11)")
                         println("Row data: ${row.joinToString(", ")}")
                     }
                 }
@@ -1412,7 +1484,7 @@ class GoogleSheetsService(private val context: Context) {
                 // Test guest sheet access
                 try {
                     val guestResponse = sheetsService?.spreadsheets()?.values()?.get(
-                        spreadsheetId, "${guestSheetName}!A1:H1"
+                        spreadsheetId, "${guestSheetName}!A1:I1"
                     )?.execute()
                     println("✅ Guest sheet accessible, headers: ${guestResponse?.getValues()?.firstOrNull()}")
                 } catch (e: Exception) {
@@ -1422,7 +1494,7 @@ class GoogleSheetsService(private val context: Context) {
                 // Test volunteer sheet access
                 try {
                     val volunteerResponse = sheetsService?.spreadsheets()?.values()?.get(
-                        spreadsheetId, "${volunteerSheetName}!A1:J1"
+                        spreadsheetId, "${volunteerSheetName}!A1:K1"
                     )?.execute()
                     println("✅ Volunteer sheet accessible, headers: ${volunteerResponse?.getValues()?.firstOrNull()}")
                 } catch (e: Exception) {
@@ -1556,15 +1628,15 @@ class GoogleSheetsService(private val context: Context) {
     private fun getSheetDefinitions(): List<SheetDefinition> = listOf(
         SheetDefinition(
             settingsManager.getGuestListSheet(),
-            listOf("Name", "Email", "Phone", "Invitations", "Venue", "Notes", "Volunteer Benefit", "Last Modified")
+                listOf("Name", "Email", "Phone", "Invitations", "Venue", "Notes", "Volunteer Benefit", "Last Modified", "NFC UID")
         ),
         SheetDefinition(
             settingsManager.getVolunteerGuestListSheet(),
-            listOf("Name", "Last Name Abbreviation", "Invitations", "Venue", "Notes", "Volunteer Benefit", "Last Modified")
+                listOf("Name", "Last Name Abbreviation", "Invitations", "Venue", "Notes", "Volunteer Benefit", "Last Modified", "NFC UID")
         ),
         SheetDefinition(
             settingsManager.getVolunteerSheet(),
-            listOf("ID", "Name", "Abbreviation", "Email", "Phone", "Date of Birth", "Gender", "Rank", "Active", "Last Modified")
+                listOf("ID", "Name", "Abbreviation", "Email", "Phone", "Date of Birth", "Gender", "Rank", "Active", "Last Modified", "NFC UID")
         ),
         SheetDefinition(
             settingsManager.getJobsSheet(),

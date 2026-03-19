@@ -37,7 +37,8 @@ data class Guest(
     val isTemporaryGuest: Boolean = false,
     val temporaryArtistName: String = "",
     val temporaryEventDate: Long? = null,
-    val temporaryContactPhone: String = ""
+    val temporaryContactPhone: String = "",
+    val nfcCardUid: String = ""
 ) : Parcelable
 
 @Entity(
@@ -63,7 +64,8 @@ data class Volunteer(
     val currentRank: VolunteerRank? = null, // No default rank - must be earned
     val isActive: Boolean = true,
     val lastShiftDate: Long? = null, // Timestamp of last shift
-    val lastModified: Long = System.currentTimeMillis()
+    val lastModified: Long = System.currentTimeMillis(),
+    val nfcCardUid: String = ""
 ) : Parcelable
 
 @Entity(

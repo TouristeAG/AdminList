@@ -1,27 +1,10 @@
 {
     "logs": [
         {
-            "outputFile": "com.eventmanager.app-mergeDebugResources-68:/values-watch-v20/values-watch-v20.xml",
+            "outputFile": "com.eventmanager.app-mergeDebugResources-2:/values-watch-v20/values-watch-v20.xml",
             "map": [
                 {
-                    "source": "/Users/leonardomondada/.gradle/caches/8.10/transforms/2ff695e0ca1702a093d7b43b2f53fa6e/transformed/play-services-auth-20.7.0/res/values-watch-v20/values.xml",
-                    "from": {
-                        "startLines": "4,5,6,7,8,9,10,11",
-                        "startColumns": "0,0,0,0,0,0,0,0",
-                        "startOffsets": "173,248,324,399,474,561,638,725",
-                        "endColumns": "74,75,74,74,86,76,86,75",
-                        "endOffsets": "247,323,398,473,560,637,724,800"
-                    },
-                    "to": {
-                        "startLines": "2,3,4,5,6,7,8,9",
-                        "startColumns": "4,4,4,4,4,4,4,4",
-                        "startOffsets": "55,134,214,293,372,463,544,635",
-                        "endColumns": "78,79,78,78,90,80,90,79",
-                        "endOffsets": "129,209,288,367,458,539,630,710"
-                    }
-                },
-                {
-                    "source": "/Users/leonardomondada/.gradle/caches/8.10/transforms/765fbe5211548b3aaad6d9a3f65f54fe/transformed/appcompat-1.6.1/res/values-watch-v20/values-watch-v20.xml",
+                    "source": "/private/var/folders/_1/6v50lr7521x6nrp75vj936rh0000gq/T/cursor-sandbox-cache/aa74710522dc0fab17915f7158ae90eb/gradle/caches/8.10/transforms/765fbe5211548b3aaad6d9a3f65f54fe/transformed/appcompat-1.6.1/res/values-watch-v20/values-watch-v20.xml",
                     "from": {
                         "startLines": "2,5,8",
                         "startColumns": "4,4,4",
@@ -37,6 +20,23 @@
                         "endLines": "12,15,18",
                         "endColumns": "12,12,12",
                         "endOffsets": "869,1040,1213"
+                    }
+                },
+                {
+                    "source": "/private/var/folders/_1/6v50lr7521x6nrp75vj936rh0000gq/T/cursor-sandbox-cache/aa74710522dc0fab17915f7158ae90eb/gradle/caches/8.10/transforms/2ff695e0ca1702a093d7b43b2f53fa6e/transformed/play-services-auth-20.7.0/res/values-watch-v20/values.xml",
+                    "from": {
+                        "startLines": "4,5,6,7,8,9,10,11",
+                        "startColumns": "0,0,0,0,0,0,0,0",
+                        "startOffsets": "173,248,324,399,474,561,638,725",
+                        "endColumns": "74,75,74,74,86,76,86,75",
+                        "endOffsets": "247,323,398,473,560,637,724,800"
+                    },
+                    "to": {
+                        "startLines": "2,3,4,5,6,7,8,9",
+                        "startColumns": "4,4,4,4,4,4,4,4",
+                        "startOffsets": "55,134,214,293,372,463,544,635",
+                        "endColumns": "78,79,78,78,90,80,90,79",
+                        "endOffsets": "129,209,288,367,458,539,630,710"
                     }
                 }
             ]

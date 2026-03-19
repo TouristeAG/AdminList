@@ -1,11 +1,17 @@
 package com.eventmanager.app.ui.components
 
 import android.Manifest
+import android.app.Activity
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.pm.PackageManager
 import android.hardware.Camera
 import android.hardware.camera2.CameraManager
+import android.nfc.NfcAdapter
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.LinearEasing
@@ -22,6 +28,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Nfc
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material3.*
@@ -46,9 +53,11 @@ import com.journeyapps.barcodescanner.BarcodeCallback
 import com.journeyapps.barcodescanner.BarcodeResult
 import com.eventmanager.app.data.models.Volunteer
 import com.eventmanager.app.data.models.Guest
+import com.eventmanager.app.hardware.Acr122uUsbNfcReader
 import com.eventmanager.app.ui.utils.*
 import com.eventmanager.app.R
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 data class QRCodeData(
     val type: String,
@@ -57,6 +66,18 @@ data class QRCodeData(
     val sheetsId: String?,
     val name: String,
     val abbr: String?
+)
+
+sealed class ScannerMatch {
+    data class VolunteerMatch(val volunteer: Volunteer) : ScannerMatch()
+    data class GuestMatch(val guest: Guest) : ScannerMatch()
+}
+
+data class NfcUidMatchOption(
+    val match: ScannerMatch,
+    val title: String,
+    val subtitle: String,
+    val typeLabel: String
 )
 
 /**
@@ -151,14 +172,83 @@ fun tryAlternativeCameraInitialization(context: Context): Boolean {
 @Composable
 fun QRScannerDialog(
     onDismiss: () -> Unit,
-    onVolunteerFound: (Volunteer) -> Unit,
-    volunteers: List<Volunteer>
+    onMatchFound: (ScannerMatch) -> Unit,
+    volunteers: List<Volunteer>,
+    guests: List<Guest>
 ) {
     val context = LocalContext.current
+    val activity = remember(context) { context.findActivity() }
+    val nfcAdapter = remember(context) { NfcAdapter.getDefaultAdapter(context) }
+    val mainHandler = remember { Handler(Looper.getMainLooper()) }
+    val coroutineScope = rememberCoroutineScope()
     var hasPermission by remember { mutableStateOf(false) }
     var cameraAvailable by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var showManualInput by remember { mutableStateOf(false) }
+    var lastNfcUid by remember { mutableStateOf<String?>(null) }
+    var isUsbReaderBusy by remember { mutableStateOf(false) }
+    var duplicateUid by remember { mutableStateOf<String?>(null) }
+    var duplicateUidMatches by remember { mutableStateOf<List<NfcUidMatchOption>>(emptyList()) }
+    val hasExternalReaderConnected = Acr122uUsbNfcReader.isConnected(context)
+    val permanentGuests = remember(guests) { guests.filter { !it.isVolunteerBenefit && !it.isTemporaryGuest } }
+    val volunteersByNfcUid = remember(volunteers) {
+        volunteers
+            .filter { it.nfcCardUid.isNotBlank() }
+            .groupBy { it.nfcCardUid.normalizeUid() }
+    }
+    val guestsByNfcUid = remember(permanentGuests) {
+        permanentGuests
+            .filter { it.nfcCardUid.isNotBlank() }
+            .groupBy { it.nfcCardUid.normalizeUid() }
+    }
+
+    val resolveUidMatch: (String) -> Unit = { rawUid ->
+        val uid = rawUid.normalizeUid()
+        if (uid.isBlank()) {
+            errorMessage = context.getString(R.string.nfc_uid_read_failed)
+        } else {
+            lastNfcUid = uid
+            val volunteerMatches = volunteersByNfcUid[uid].orEmpty()
+            val guestMatches = guestsByNfcUid[uid].orEmpty()
+
+            val allMatches = buildList {
+                volunteerMatches.forEach { volunteer ->
+                    add(
+                        NfcUidMatchOption(
+                            match = ScannerMatch.VolunteerMatch(volunteer),
+                            title = volunteer.name,
+                            subtitle = "${volunteer.lastNameAbbreviation} • ${volunteer.id}",
+                            typeLabel = context.getString(R.string.volunteer)
+                        )
+                    )
+                }
+                guestMatches.forEach { guest ->
+                    add(
+                        NfcUidMatchOption(
+                            match = ScannerMatch.GuestMatch(guest),
+                            title = guest.name,
+                            subtitle = if (guest.email.isNotBlank()) guest.email else guest.phoneNumber,
+                            typeLabel = context.getString(R.string.permanent_guest_label)
+                        )
+                    )
+                }
+            }
+
+            when {
+                allMatches.isEmpty() -> {
+                    errorMessage = context.getString(R.string.nfc_uid_not_found, uid)
+                }
+                allMatches.size == 1 -> {
+                    onMatchFound(allMatches.first().match)
+                    onDismiss()
+                }
+                else -> {
+                    duplicateUid = uid
+                    duplicateUidMatches = allMatches
+                }
+            }
+        }
+    }
     
     // Check camera permission
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -200,12 +290,52 @@ fun QRScannerDialog(
             permissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
+
+    DisposableEffect(activity, nfcAdapter, volunteers, permanentGuests) {
+        if (activity == null || nfcAdapter == null) {
+            onDispose { }
+        } else {
+            if (!nfcAdapter.isEnabled) {
+                errorMessage = context.getString(R.string.nfc_disabled_enable)
+            }
+
+            val callback = NfcAdapter.ReaderCallback { tag ->
+                val uid = tag.id?.toHexUid().orEmpty()
+                mainHandler.post {
+                    resolveUidMatch(uid)
+                }
+            }
+
+            try {
+                nfcAdapter.enableReaderMode(
+                    activity,
+                    callback,
+                    NfcAdapter.FLAG_READER_NFC_A or
+                        NfcAdapter.FLAG_READER_NFC_B or
+                        NfcAdapter.FLAG_READER_NFC_F or
+                        NfcAdapter.FLAG_READER_NFC_V or
+                        NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK,
+                    null
+                )
+            } catch (e: Exception) {
+                errorMessage = context.getString(R.string.nfc_reader_error, e.message ?: "")
+            }
+
+            onDispose {
+                try {
+                    nfcAdapter.disableReaderMode(activity)
+                } catch (_: Exception) {
+                    // Ignore disable errors on teardown.
+                }
+            }
+        }
+    }
     
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Scan QR Code",
+                text = context.getString(R.string.scan_qr_or_nfc_title),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold
             )
@@ -219,47 +349,41 @@ fun QRScannerDialog(
                     QRScannerView(
                         onQRCodeScanned = { qrData ->
                             try {
-                                // Debug logging
-                                println("🔍 QR Code scanned - ID: '${qrData.id}', Name: '${qrData.name}'")
-                                println("🔍 Available volunteers (${volunteers.size} total):")
-                                volunteers.forEach { v ->
-                                    println("  - ID: ${v.id}, Name: ${v.name}, Active: ${v.isActive}")
-                                }
-                                
-                                // Find volunteer by NanoID - direct String comparison
-                                val volunteer = volunteers.find { volunteer ->
-                                    val qrIdStr = qrData.id
-                                    println("🔍 Comparing: volunteer ID '${volunteer.id}' with QR ID '$qrIdStr'")
-                                    
-                                    // Check for empty ID issue
-                                    if (volunteer.id.isBlank()) {
-                                        println("⚠️ Warning: Volunteer '${volunteer.name}' has empty ID - this might be a sync issue")
+                                when (qrData.type.lowercase()) {
+                                    "volunteer" -> {
+                                        val volunteer = volunteers.find { volunteer ->
+                                            volunteer.id == qrData.id
+                                        } ?: volunteers.find { it.name.equals(qrData.name, ignoreCase = true) }
+
+                                        if (volunteer != null) {
+                                            onMatchFound(ScannerMatch.VolunteerMatch(volunteer))
+                                            onDismiss()
+                                        } else {
+                                            errorMessage = context.getString(R.string.volunteer_not_found, qrData.name, qrData.id)
+                                        }
                                     }
-                                    
-                                    volunteer.id == qrIdStr
-                                }
-                                
-                                if (volunteer != null) {
-                                    println("✅ Found volunteer: ${volunteer.name}")
-                                    onVolunteerFound(volunteer)
-                                    onDismiss()
-                                } else {
-                                    println("❌ Volunteer not found for ID: '${qrData.id}'")
-                                    println("❌ Available volunteer IDs: ${volunteers.map { it.id }}")
-                                    
-                                    // Try fallback matching by name
-                                    val volunteerByName = volunteers.find { it.name.equals(qrData.name, ignoreCase = true) }
-                                    if (volunteerByName != null) {
-                                        println("✅ Found volunteer by name fallback: ${volunteerByName.name}")
-                                        onVolunteerFound(volunteerByName)
-                                        onDismiss()
-                                    } else {
-                                        println("❌ No volunteer found with name '${qrData.name}' either")
-                                        errorMessage = context.getString(R.string.volunteer_not_found, qrData.name, qrData.id)
+
+                                    "guest" -> {
+                                        val guest = permanentGuests.find {
+                                            it.name.equals(qrData.name, ignoreCase = true)
+                                        } ?: permanentGuests.find {
+                                            it.name.contains(qrData.name, ignoreCase = true) ||
+                                                qrData.name.contains(it.name, ignoreCase = true)
+                                        }
+
+                                        if (guest != null) {
+                                            onMatchFound(ScannerMatch.GuestMatch(guest))
+                                            onDismiss()
+                                        } else {
+                                            errorMessage = context.getString(R.string.guest_not_found, qrData.name)
+                                        }
+                                    }
+
+                                    else -> {
+                                        errorMessage = context.getString(R.string.invalid_qr_or_nfc_data)
                                     }
                                 }
                             } catch (e: Exception) {
-                                println("❌ Error processing QR code: ${e.message}")
                                 errorMessage = context.getString(R.string.error_processing_qr_code, e.message ?: "")
                             }
                         },
@@ -267,6 +391,117 @@ fun QRScannerDialog(
                             errorMessage = message
                         }
                     )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if ((nfcAdapter != null && nfcAdapter.isEnabled) || hasExternalReaderConnected) {
+                                MaterialTheme.colorScheme.primaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant
+                            }
+                        ),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Nfc,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = if ((nfcAdapter != null && nfcAdapter.isEnabled) || hasExternalReaderConnected) {
+                                    MaterialTheme.colorScheme.onPrimaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                }
+                            )
+
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(2.dp)
+                            ) {
+                                Text(
+                                    text = context.getString(R.string.scan_nfc_card_title),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if ((nfcAdapter != null && nfcAdapter.isEnabled) || hasExternalReaderConnected) {
+                                        MaterialTheme.colorScheme.onPrimaryContainer
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    }
+                                )
+                                Text(
+                                    text = if (nfcAdapter != null && nfcAdapter.isEnabled && hasExternalReaderConnected) {
+                                        context.getString(R.string.scan_qr_or_nfc_subtitle_phone_and_usb)
+                                    } else if (nfcAdapter != null && nfcAdapter.isEnabled) {
+                                        context.getString(R.string.scan_qr_or_nfc_subtitle_enabled)
+                                    } else if (hasExternalReaderConnected) {
+                                        context.getString(R.string.scan_qr_or_nfc_subtitle_usb_only)
+                                    } else if (nfcAdapter == null) {
+                                        context.getString(R.string.nfc_not_supported_device)
+                                    } else {
+                                        context.getString(R.string.scan_qr_subtitle_nfc_disabled)
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if ((nfcAdapter != null && nfcAdapter.isEnabled) || hasExternalReaderConnected) {
+                                        MaterialTheme.colorScheme.onPrimaryContainer
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    }
+                                )
+                                lastNfcUid?.let { uid ->
+                                    Text(
+                                        text = context.getString(R.string.last_nfc_uid_scanned, uid),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if ((nfcAdapter != null && nfcAdapter.isEnabled) || hasExternalReaderConnected) {
+                                            MaterialTheme.colorScheme.onPrimaryContainer
+                                        } else {
+                                            MaterialTheme.colorScheme.primary
+                                        }
+                                    )
+                                }
+                            }
+
+                            if (hasExternalReaderConnected) {
+                                OutlinedButton(
+                                    onClick = {
+                                        isUsbReaderBusy = true
+                                        coroutineScope.launch {
+                                            val result = Acr122uUsbNfcReader.readUid(context)
+                                            if (result.isSuccess) {
+                                                resolveUidMatch(result.uid.orEmpty())
+                                            } else {
+                                                errorMessage = result.error ?: context.getString(R.string.nfc_uid_read_failed)
+                                            }
+                                            isUsbReaderBusy = false
+                                        }
+                                    },
+                                    enabled = !isUsbReaderBusy
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Nfc,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = if (isUsbReaderBusy) {
+                                            context.getString(R.string.usb_reader_waiting_card_short)
+                                        } else {
+                                            context.getString(R.string.scan_with_usb_reader)
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
                 } else {
                 // Permission denied state (polished)
                 Card(
@@ -301,14 +536,26 @@ fun QRScannerDialog(
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "We need access to your camera to scan QR codes.",
+                                text = context.getString(R.string.camera_permission_qr_nfc_body),
                                 style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
+                            Text(
+                                text = if (nfcAdapter == null) {
+                                    context.getString(R.string.nfc_not_supported_device)
+                                } else if (!nfcAdapter.isEnabled) {
+                                    context.getString(R.string.nfc_disabled_enable)
+                                } else {
+                                    context.getString(R.string.scan_qr_or_nfc_subtitle_enabled)
+                                },
+                                style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Button(onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) }) {
-                                Text("Grant permission")
+                                Text(context.getString(R.string.grant_permission))
                             }
                             Spacer(modifier = Modifier.height(8.dp))
                             OutlinedButton(onClick = { showManualInput = true }) {
@@ -341,17 +588,107 @@ fun QRScannerDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(context.getString(R.string.cancel))
             }
         }
     )
+
+    if (duplicateUidMatches.isNotEmpty()) {
+        AlertDialog(
+            onDismissRequest = {
+                duplicateUidMatches = emptyList()
+                duplicateUid = null
+            },
+            title = {
+                Text(
+                    text = context.getString(R.string.nfc_uid_multiple_matches_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = context.getString(
+                            R.string.nfc_uid_multiple_matches_message,
+                            duplicateUid ?: "",
+                            duplicateUidMatches.size
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 320.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        items(duplicateUidMatches) { option ->
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = {
+                                    onMatchFound(option.match)
+                                    duplicateUidMatches = emptyList()
+                                    duplicateUid = null
+                                    onDismiss()
+                                },
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                                )
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 12.dp, vertical = 10.dp)
+                                ) {
+                                    Text(
+                                        text = option.title,
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = option.typeLabel,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    if (option.subtitle.isNotBlank()) {
+                                        Text(
+                                            text = option.subtitle,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        duplicateUidMatches = emptyList()
+                        duplicateUid = null
+                    }
+                ) {
+                    Text(context.getString(R.string.cancel))
+                }
+            }
+        )
+    }
     
     // Manual input dialog
     if (showManualInput) {
         ManualVolunteerInputDialog(
             onDismiss = { showManualInput = false },
             onVolunteerFound = { volunteer ->
-                onVolunteerFound(volunteer)
+                onMatchFound(ScannerMatch.VolunteerMatch(volunteer))
                 onDismiss()
             },
             volunteers = volunteers
@@ -368,6 +705,8 @@ fun QRScannerView(
     var barcodeView by remember { mutableStateOf<DecoratedBarcodeView?>(null) }
     var cameraError by remember { mutableStateOf<String?>(null) }
     var cameraInitialized by remember { mutableStateOf(false) }
+    var lastScanText by remember { mutableStateOf<String?>(null) }
+    var lastScanAtMs by remember { mutableStateOf(0L) }
     val scanBoxSize = 240.dp
     val containerHeight = 320.dp
     val overlayColor = Color.Black.copy(alpha = 0.5f)
@@ -382,8 +721,14 @@ fun QRScannerView(
     
     val callback = object : BarcodeCallback {
         override fun barcodeResult(result: BarcodeResult) {
+            val rawText = result.text ?: return
+            val now = SystemClock.elapsedRealtime()
+            // Ignore immediate duplicate decode events from continuous mode.
+            if (rawText == lastScanText && now - lastScanAtMs < 1200L) return
+            lastScanText = rawText
+            lastScanAtMs = now
             try {
-                val qrData = parseQRCodeData(result.text)
+                val qrData = parseQRCodeData(rawText)
                 onQRCodeScanned(qrData)
             } catch (e: Exception) {
                 onError(context.getString(R.string.invalid_qr_code_format, e.message ?: ""))
@@ -411,13 +756,14 @@ fun QRScannerView(
                         println("🛡️ Detected NVIDIA Shield tablet - using enhanced initialization")
                     }
                     
-                    val barcodeView = DecoratedBarcodeView(ctx)
+                    val createdBarcodeView = DecoratedBarcodeView(ctx)
+                    barcodeView = createdBarcodeView
                     println("✅ DecoratedBarcodeView created")
                     
                     // Set up the barcode view
                     val formats = listOf(com.google.zxing.BarcodeFormat.QR_CODE)
                     val decoderFactory = com.journeyapps.barcodescanner.DefaultDecoderFactory(formats)
-                    barcodeView.decoderFactory = decoderFactory
+                    createdBarcodeView.decoderFactory = decoderFactory
                     println("✅ Decoder factory set")
                     
                     // For NVIDIA Shield, try a more conservative approach with retries
@@ -431,11 +777,11 @@ fun QRScannerView(
                         
                         while (retryCount < maxRetries) {
                             try {
-                                barcodeView.resume()
+                                createdBarcodeView.resume()
                                 println("✅ NVIDIA Shield camera resumed successfully (attempt ${retryCount + 1})")
                                 
                                 // Start continuous decoding
-                                barcodeView.decodeContinuous(callback)
+                                createdBarcodeView.decodeContinuous(callback)
                                 println("✅ NVIDIA Shield continuous decoding started")
                                 break // Success, exit retry loop
                             } catch (e: Exception) {
@@ -447,7 +793,7 @@ fun QRScannerView(
                                     // Wait before retrying
                                     Thread.sleep(300)
                                     try {
-                                        barcodeView.pause()
+                                        createdBarcodeView.pause()
                                         Thread.sleep(200)
                                     } catch (e2: Exception) {
                                         println("⚠️ Error pausing before retry: ${e2.message}")
@@ -464,9 +810,9 @@ fun QRScannerView(
                     } else {
                         // Standard initialization for other devices with error handling
                         try {
-                            barcodeView.resume()
+                            createdBarcodeView.resume()
                             println("✅ Camera resumed successfully")
-                            barcodeView.decodeContinuous(callback)
+                            createdBarcodeView.decodeContinuous(callback)
                             println("✅ Continuous decoding started")
                         } catch (e: Exception) {
                             println("⚠️ Camera resume failed: ${e.message}")
@@ -474,7 +820,7 @@ fun QRScannerView(
                         }
                     }
                     
-                    barcodeView
+                    createdBarcodeView
                 } catch (e: Exception) {
                     println("❌ Error initializing camera: ${e.message}")
                     println("❌ Exception type: ${e.javaClass.simpleName}")
@@ -486,17 +832,7 @@ fun QRScannerView(
                 }
             },
             modifier = Modifier.matchParentSize(),
-            update = { view -> 
-                try {
-                    println("🔍 Updating camera view...")
-                    view?.resume()
-                    println("✅ Camera view updated successfully")
-                } catch (e: Exception) {
-                    println("❌ Error updating camera: ${e.message}")
-                    cameraError = "Camera error: ${e.message}"
-                    onError("Camera error: ${e.message}")
-                }
-            }
+            update = { _ -> }
         )
         } else {
             // Show loading indicator while camera initializes
@@ -699,7 +1035,14 @@ fun QRScannerView(
     // Handle lifecycle events using DisposableEffect
     DisposableEffect(Unit) {
         onDispose {
-            barcodeView?.pause()
+            // Ensure camera/autofocus thread is released when dialog closes.
+            try {
+                barcodeView?.pause()
+            } catch (_: Exception) {
+                // Ignore teardown errors from camera stack.
+            } finally {
+                barcodeView = null
+            }
         }
     }
 }
@@ -818,7 +1161,7 @@ fun ManualVolunteerInputDialog(
                     try {
                         val volunteerId = inputText.trim()
                         if (volunteerId.isBlank()) {
-                            errorMessage = "Please enter a valid volunteer ID"
+                            errorMessage = context.getString(R.string.please_enter_valid_volunteer_id)
                             return@Button
                         }
                         
@@ -830,10 +1173,10 @@ fun ManualVolunteerInputDialog(
                             onVolunteerFound(volunteer)
                             onDismiss()
                         } else {
-                            errorMessage = "Volunteer with ID '$volunteerId' not found"
+                            errorMessage = context.getString(R.string.volunteer_id_not_found, volunteerId)
                         }
                     } catch (e: Exception) {
-                        errorMessage = "Invalid input: ${e.message}"
+                        errorMessage = context.getString(R.string.invalid_input, e.message ?: "")
                     }
                 },
                 enabled = inputText.isNotBlank()
@@ -843,10 +1186,25 @@ fun ManualVolunteerInputDialog(
         },
         dismissButton = {
             OutlinedButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(context.getString(R.string.cancel))
             }
         }
     )
+}
+
+private fun ByteArray.toHexUid(): String = joinToString(separator = "") { byte ->
+    "%02X".format(byte)
+}
+
+private fun String.normalizeUid(): String = trim()
+    .replace(" ", "")
+    .replace(":", "")
+    .uppercase()
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

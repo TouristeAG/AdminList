@@ -80,6 +80,7 @@ fun VolunteerDetailPanel(
     volunteerJobs: List<Job>,
     venues: List<VenueEntity>,
     onEdit: (Volunteer) -> Unit,
+    onAssignNfcUid: (Volunteer, String) -> Unit,
     onDelete: (Volunteer) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
@@ -89,6 +90,7 @@ fun VolunteerDetailPanel(
     val isPhone = !isTablet()
     val responsivePadding = if (isPhone) getPhonePortraitPadding() else getResponsivePadding()
     var showQrDialog by remember { mutableStateOf(false) }
+    var showNfcDialog by remember { mutableStateOf(false) }
     
     // Calculate age from date of birth
     val age = calculateAge(volunteer.dateOfBirth)
@@ -245,6 +247,7 @@ fun VolunteerDetailPanel(
                         ActionButtonsSection(
                             volunteer = volunteer,
                             onEdit = onEdit,
+                            onAddNfcCard = { showNfcDialog = true },
                             onDelete = onDelete,
                             onShowQr = { showQrDialog = true },
                             isPhone = isPhone
@@ -934,6 +937,19 @@ fun VolunteerDetailPanel(
             }
         )
     }
+
+    if (showNfcDialog) {
+        AddNfcUidDialog(
+            onDismiss = { showNfcDialog = false },
+            onConfirmUid = { uid ->
+                onAssignNfcUid(
+                    volunteer,
+                    uid
+                )
+                showNfcDialog = false
+            }
+        )
+    }
 }
 
 @Composable
@@ -1038,6 +1054,11 @@ private fun PersonalInformationSection(
             NanoIdInfoRow(
                 label = "NanoID",
                 value = volunteer.id,
+                isPhone = isPhone
+            )
+
+            NfcUidInfoRow(
+                uid = volunteer.nfcCardUid,
                 isPhone = isPhone
             )
         }
@@ -1292,6 +1313,7 @@ private fun ShiftHistoryItem(
 private fun ActionButtonsSection(
     volunteer: Volunteer,
     onEdit: (Volunteer) -> Unit,
+    onAddNfcCard: () -> Unit,
     onDelete: (Volunteer) -> Unit,
     onShowQr: (Volunteer) -> Unit,
     isPhone: Boolean
@@ -1346,6 +1368,15 @@ private fun ActionButtonsSection(
                     }
                     
                     OutlinedButton(
+                        onClick = onAddNfcCard,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Nfc, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(getStringResource(R.string.add_nfc_card))
+                    }
+
+                    OutlinedButton(
                         onClick = { onEdit(volunteer) },
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -1381,6 +1412,15 @@ private fun ActionButtonsSection(
                         Text(getStringResource(R.string.qr_code))
                     }
                     
+                    OutlinedButton(
+                        onClick = onAddNfcCard,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.Nfc, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(getStringResource(R.string.add_nfc_card))
+                    }
+
                     OutlinedButton(
                         onClick = { onEdit(volunteer) },
                         modifier = Modifier.weight(1f)

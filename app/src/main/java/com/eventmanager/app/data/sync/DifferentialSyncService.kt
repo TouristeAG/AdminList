@@ -101,7 +101,8 @@ class DifferentialSyncService(
         old.invitations != new.invitations ||
         old.venueName != new.venueName ||
         old.notes != new.notes ||
-        old.isVolunteerBenefit != new.isVolunteerBenefit
+        old.isVolunteerBenefit != new.isVolunteerBenefit ||
+        old.nfcCardUid != new.nfcCardUid
     
     // ========== VOLUNTEER COMPARISON ==========
     
@@ -169,7 +170,8 @@ class DifferentialSyncService(
         old.gender != new.gender ||
         old.currentRank != new.currentRank ||
         old.isActive != new.isActive ||
-        old.lastShiftDate != new.lastShiftDate
+        old.lastShiftDate != new.lastShiftDate ||
+        old.nfcCardUid != new.nfcCardUid
     
     // ========== JOB COMPARISON ==========
     

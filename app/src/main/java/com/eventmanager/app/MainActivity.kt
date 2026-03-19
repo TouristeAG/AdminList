@@ -42,7 +42,9 @@ import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.LocalBar
 import androidx.compose.material3.*
 import com.eventmanager.app.ui.components.QRScannerDialog
+import com.eventmanager.app.ui.components.ScannerMatch
 import com.eventmanager.app.ui.components.VolunteerBenefitsPanel
+import com.eventmanager.app.ui.components.GuestDetailPanel
 import com.eventmanager.app.ui.components.PeopleCounter
 import com.eventmanager.app.ui.scaling.ResolutionScaler
 import com.eventmanager.app.data.models.Guest
@@ -371,6 +373,7 @@ fun EventManagerApp() {
     var showVenueManagement by rememberSaveable { mutableStateOf(false) }
     var showQRScanner by rememberSaveable { mutableStateOf(false) }
     var showVolunteerBenefits: Volunteer? by remember { mutableStateOf(null) }
+    var showScannedGuestDetail: Guest? by remember { mutableStateOf(null) }
     
     // Haptic feedback for page navigation - very subtle vibration
     val vibrator = remember { appContext.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator }
@@ -628,7 +631,9 @@ fun EventManagerApp() {
                         NavigationBar(
                             containerColor = MaterialTheme.colorScheme.surface,
                             contentColor = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            modifier = Modifier
+                                .padding(horizontal = 12.dp, vertical = 2.dp)
+                                .height(62.dp)
                         ) {
                             val context = LocalContext.current
                             val tabs = listOf(
@@ -663,7 +668,7 @@ fun EventManagerApp() {
                                         Icon(
                                             icon,
                                             contentDescription = title,
-                                            modifier = Modifier.size(24.dp).graphicsLayer(scaleX = scale, scaleY = scale)
+                                            modifier = Modifier.size(20.dp).graphicsLayer(scaleX = scale, scaleY = scale)
                                         )
                                     },
                                     label = {
@@ -955,11 +960,21 @@ if (pageAnimationsEnabled) {
         if (showQRScanner) {
             QRScannerDialog(
                 onDismiss = { showQRScanner = false },
-                onVolunteerFound = { volunteer ->
-                    showVolunteerBenefits = volunteer
+                onMatchFound = { match ->
+                    when (match) {
+                        is ScannerMatch.VolunteerMatch -> {
+                            showVolunteerBenefits = match.volunteer
+                            showScannedGuestDetail = null
+                        }
+                        is ScannerMatch.GuestMatch -> {
+                            showScannedGuestDetail = match.guest
+                            showVolunteerBenefits = null
+                        }
+                    }
                     showQRScanner = false
                 },
-                volunteers = volunteers
+                volunteers = volunteers,
+                guests = guests
             )
         }
         
@@ -990,7 +1005,45 @@ if (pageAnimationsEnabled) {
                     volunteerJobs = memoizedVolunteerJobs,
                     venues = venues,
                     onClose = { showVolunteerBenefits = null },
-                    onConfirmEntry = { job -> viewModel.markBenefitAsUsed(job) }
+                    onConfirmEntry = { job -> viewModel.markBenefitAsUsed(job) },
+                    onAssignNfcUid = { updatedVolunteer, uid ->
+                        viewModel.updateVolunteer(
+                            updatedVolunteer.copy(
+                                nfcCardUid = uid,
+                                lastModified = System.currentTimeMillis()
+                            )
+                        )
+                        showVolunteerBenefits = updatedVolunteer.copy(nfcCardUid = uid)
+                    }
+                )
+            }
+        }
+
+        showScannedGuestDetail?.let { guest ->
+            androidx.compose.ui.window.Dialog(
+                onDismissRequest = { showScannedGuestDetail = null },
+                properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+            ) {
+                GuestDetailPanel(
+                    guest = guest,
+                    venues = venues,
+                    onEdit = { updated ->
+                        viewModel.updateGuest(updated)
+                        showScannedGuestDetail = updated
+                    },
+                    onAssignNfcUid = { updatedGuest, uid ->
+                        val withUid = updatedGuest.copy(
+                            nfcCardUid = uid,
+                            lastModified = System.currentTimeMillis()
+                        )
+                        viewModel.updateGuest(withUid)
+                        showScannedGuestDetail = withUid
+                    },
+                    onDelete = { toDelete ->
+                        viewModel.deleteGuest(toDelete)
+                        showScannedGuestDetail = null
+                    },
+                    onClose = { showScannedGuestDetail = null }
                 )
             }
         }
@@ -1875,6 +1928,15 @@ fun GuestListScreenWithViewModel(viewModel: EventManagerViewModel) {
                     println("Guest update failed: ${e.message}")
                 }
             } 
+        },
+        onUpdateVolunteer = {
+            coroutineScope.launch {
+                try {
+                    viewModel.updateVolunteer(it)
+                } catch (e: Exception) {
+                    println("Volunteer update from guest list failed: ${e.message}")
+                }
+            }
         },
         onDeleteGuest = { 
             coroutineScope.launch { 

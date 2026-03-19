@@ -1,20 +1,20 @@
 -- Merging decision tree log ---
 provider#androidx.core.content.FileProvider
-INJECTED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:138:9-146:20
+INJECTED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:145:9-153:20
 	android:grantUriPermissions
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:142:13-47
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:149:13-47
 	android:authorities
 		INJECTED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:140:13-64
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:147:13-64
 	android:exported
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:141:13-37
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:148:13-37
 	android:name
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:139:13-62
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:146:13-62
 manifest
-ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:2:1-149:12
-INJECTED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:2:1-149:12
-INJECTED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:2:1-149:12
-INJECTED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:2:1-149:12
+ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:2:1-156:12
+INJECTED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:2:1-156:12
+INJECTED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:2:1-156:12
+INJECTED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:2:1-156:12
 MERGED from [com.patrykandpatrick.vico:compose-m3:2.0.0-alpha.20] /Users/leonardomondada/.gradle/caches/8.10/transforms/34d89a894058b847152e42b52eeedaf1/transformed/compose-m3-2.0.0-alpha.20/AndroidManifest.xml:2:1-7:12
 MERGED from [com.patrykandpatrick.vico:compose:2.0.0-alpha.20] /Users/leonardomondada/.gradle/caches/8.10/transforms/3f2138f3e1cbb3501b8bed353625ed6d/transformed/compose-2.0.0-alpha.20/AndroidManifest.xml:2:1-7:12
 MERGED from [io.coil-kt:coil-compose:2.5.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/e7cef7952d29cd87c7bdfa7f843b3478/transformed/coil-compose-2.5.0/AndroidManifest.xml:2:1-7:12
@@ -128,21 +128,37 @@ MERGED from [com.journeyapps:zxing-android-embedded:4.3.0] /Users/leonardomondad
 MERGED from [com.journeyapps:zxing-android-embedded:4.3.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/2bf7a732dd46a77021dd02460dcb623f/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:22:5-65
 	android:name
 		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:6:22-62
+uses-permission#android.permission.NFC
+ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:7:5-62
+	android:name
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:7:22-59
 uses-permission#android.permission.VIBRATE
-ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:7:5-66
+ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:8:5-66
 	android:name
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:7:22-63
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:8:22-63
 uses-permission#android.permission.REQUEST_INSTALL_PACKAGES
-ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:8:5-83
+ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:9:5-83
 	android:name
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:8:22-80
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:9:22-80
+uses-feature#android.hardware.nfc
+ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:10:5-12:36
+	android:required
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:12:9-33
+	android:name
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:11:9-44
+uses-feature#android.hardware.usb.host
+ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:13:5-15:36
+	android:required
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:15:9-33
+	android:name
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:14:9-49
 uses-permission#android.permission.GET_ACCOUNTS
-ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:10:5-71
+ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:17:5-71
 	android:name
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:10:22-68
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:17:22-68
 application
-ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:12:5-147:19
-INJECTED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:12:5-147:19
+ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:19:5-154:19
+INJECTED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:19:5-154:19
 MERGED from [com.google.android.gms:play-services-auth:20.7.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/2ff695e0ca1702a093d7b43b2f53fa6e/transformed/play-services-auth-20.7.0/AndroidManifest.xml:22:5-38:19
 MERGED from [com.google.android.gms:play-services-auth:20.7.0] /Users/leonardomondada/.gradle/caches/8.10/transforms/2ff695e0ca1702a093d7b43b2f53fa6e/transformed/play-services-auth-20.7.0/AndroidManifest.xml:22:5-38:19
 MERGED from [com.google.android.gms:play-services-fido:20.0.1] /Users/leonardomondada/.gradle/caches/8.10/transforms/146ce7ed2ef1879090b9e2b58717c6cb/transformed/play-services-fido-20.0.1/AndroidManifest.xml:7:5-8:19
@@ -180,157 +196,157 @@ MERGED from [com.journeyapps:zxing-android-embedded:4.3.0] /Users/leonardomondad
 	android:appComponentFactory
 		ADDED from [androidx.core:core:1.13.1] /Users/leonardomondada/.gradle/caches/8.10/transforms/8f01eeadb9c5d0e1803a5a1c0f14b4ab/transformed/core-1.13.1/AndroidManifest.xml:28:18-86
 	android:supportsRtl
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:17:9-35
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:24:9-35
 	android:label
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:15:9-41
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:22:9-41
 	android:allowBackup
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:14:9-35
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:21:9-35
 	android:theme
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:16:9-53
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:23:9-53
 	android:enableOnBackInvokedCallback
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:18:9-51
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:25:9-51
 	android:name
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:13:9-48
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:20:9-48
 activity#com.eventmanager.app.MainActivity
-ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:19:9-31:20
+ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:26:9-38:20
 	android:screenOrientation
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:24:13-52
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:31:13-52
 	android:label
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:22:13-45
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:29:13-45
 	android:exported
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:21:13-36
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:28:13-36
 	android:configChanges
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:23:13-74
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:30:13-74
 	android:name
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:20:13-41
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:27:13-41
 intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
-ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:27:13-30:29
+ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:34:13-37:29
 action#android.intent.action.MAIN
-ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:28:17-69
+ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:35:17-69
 	android:name
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:28:25-66
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:35:25-66
 category#android.intent.category.LAUNCHER
-ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:29:17-77
+ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:36:17-77
 	android:name
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:29:27-74
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:36:27-74
 activity-alias#com.eventmanager.app.MainActivity.Light
-ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:34:9-46:26
+ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:41:9-53:26
 	android:enabled
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:37:13-35
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:44:13-35
 	android:label
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:40:13-45
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:47:13-45
 	android:exported
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:41:13-36
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:48:13-36
 	android:targetActivity
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:36:13-51
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:43:13-51
 	android:roundIcon
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:39:13-58
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:46:13-58
 	android:icon
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:38:13-47
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:45:13-47
 	android:name
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:35:13-47
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:42:13-47
 activity-alias#com.eventmanager.app.MainActivity.Dark
-ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:49:9-61:26
+ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:56:9-68:26
 	android:enabled
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:52:13-36
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:59:13-36
 	android:label
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:55:13-45
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:62:13-45
 	android:exported
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:56:13-36
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:63:13-36
 	android:targetActivity
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:51:13-51
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:58:13-51
 	android:roundIcon
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:54:13-63
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:61:13-63
 	android:icon
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:53:13-52
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:60:13-52
 	android:name
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:50:13-46
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:57:13-46
 activity-alias#com.eventmanager.app.MainActivity.DeepBlue
-ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:64:9-76:26
+ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:71:9-83:26
 	android:enabled
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:67:13-36
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:74:13-36
 	android:label
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:70:13-45
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:77:13-45
 	android:exported
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:71:13-36
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:78:13-36
 	android:targetActivity
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:66:13-51
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:73:13-51
 	android:roundIcon
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:69:13-68
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:76:13-68
 	android:icon
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:68:13-57
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:75:13-57
 	android:name
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:65:13-50
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:72:13-50
 activity-alias#com.eventmanager.app.MainActivity.BlueOcean
-ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:79:9-91:26
+ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:86:9-98:26
 	android:enabled
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:82:13-36
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:89:13-36
 	android:label
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:85:13-45
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:92:13-45
 	android:exported
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:86:13-36
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:93:13-36
 	android:targetActivity
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:81:13-51
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:88:13-51
 	android:roundIcon
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:84:13-69
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:91:13-69
 	android:icon
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:83:13-58
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:90:13-58
 	android:name
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:80:13-51
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:87:13-51
 activity-alias#com.eventmanager.app.MainActivity.Braun
-ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:94:9-106:26
+ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:101:9-113:26
 	android:enabled
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:97:13-36
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:104:13-36
 	android:label
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:100:13-45
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:107:13-45
 	android:exported
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:101:13-36
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:108:13-36
 	android:targetActivity
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:96:13-51
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:103:13-51
 	android:roundIcon
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:99:13-64
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:106:13-64
 	android:icon
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:98:13-53
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:105:13-53
 	android:name
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:95:13-47
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:102:13-47
 activity-alias#com.eventmanager.app.MainActivity.Purple
-ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:109:9-121:26
+ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:116:9-128:26
 	android:enabled
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:112:13-36
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:119:13-36
 	android:label
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:115:13-45
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:122:13-45
 	android:exported
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:116:13-36
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:123:13-36
 	android:targetActivity
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:111:13-51
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:118:13-51
 	android:roundIcon
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:114:13-65
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:121:13-65
 	android:icon
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:113:13-54
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:120:13-54
 	android:name
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:110:13-48
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:117:13-48
 activity-alias#com.eventmanager.app.MainActivity.Violet
-ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:124:9-136:26
+ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:131:9-143:26
 	android:enabled
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:127:13-36
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:134:13-36
 	android:label
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:130:13-45
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:137:13-45
 	android:exported
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:131:13-36
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:138:13-36
 	android:targetActivity
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:126:13-51
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:133:13-51
 	android:roundIcon
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:129:13-65
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:136:13-65
 	android:icon
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:128:13-54
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:135:13-54
 	android:name
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:125:13-48
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:132:13-48
 meta-data#android.support.FILE_PROVIDER_PATHS
-ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:143:13-145:54
+ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:150:13-152:54
 	android:resource
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:145:17-51
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:152:17-51
 	android:name
-		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:144:17-67
+		ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:151:17-67
 uses-sdk
 INJECTED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml

@@ -474,12 +474,49 @@
     <string name="delete_volunteer_button">Supprimer le·la bénévole</string>
     <string name="camera_permission_required">L\'autorisation de la caméra est requise pour scanner les QR codes</string>
     <string name="camera_permission_title">Autorisation de caméra requise</string>
+    <string name="camera_permission_qr_nfc_body">L\'autorisation caméra est requise pour scanner les QR codes. Le scan NFC reste actif en parallèle quand il est disponible.</string>
     <string name="camera_error">Erreur de caméra</string>
     <string name="enter_id_manually">Entrer l\'ID manuellement</string>
+    <string name="add_nfc_card">Ajouter une carte NFC</string>
+    <string name="add_nfc_card_uid_title">Ajouter l\'UID de la carte NFC</string>
+    <string name="enter_uid_manually">Entrer l\'UID manuellement</string>
+    <string name="read_uid_with_phone_nfc">Lire l\'UID avec le téléphone (NFC)</string>
+    <string name="read_uid_with_usb_reader">Lire l\'UID avec le lecteur USB (ACR122U)</string>
+    <string name="usb_reader_not_connected">Aucun lecteur NFC USB externe détecté.</string>
+    <string name="usb_reader_waiting_card">En attente d\'une carte NFC sur le lecteur USB...</string>
+    <string name="enter_nfc_uid_title">Entrer l\'UID NFC</string>
+    <string name="uid_label">UID</string>
+    <string name="scan_nfc_card_title">Scanner une carte NFC</string>
+    <string name="place_nfc_card_on_phone">Placez la carte NFC au dos du téléphone.</string>
+    <string name="nfc_card_detected">Carte détectée.</string>
+    <string name="use_this_uid">Utiliser cet UID</string>
+    <string name="nfc_uid_label">UID NFC</string>
+    <string name="nfc_uid_copied">UID NFC copié</string>
+    <string name="copy_nfc_uid">Copier l\'UID NFC</string>
+    <string name="back">Retour</string>
+    <string name="scan_qr_or_nfc_title">Scanner un QR code ou une carte NFC</string>
+    <string name="scan_qr_or_nfc_subtitle_enabled">Le scanner QR caméra et le scanner de carte NFC sont actifs. Vous pouvez utiliser l\'un ou l\'autre.</string>
+    <string name="scan_qr_or_nfc_subtitle_phone_and_usb">Le scanner QR, le NFC du téléphone et le lecteur NFC USB sont disponibles.</string>
+    <string name="scan_qr_or_nfc_subtitle_usb_only">Le scanner QR et le lecteur NFC USB sont disponibles. Le NFC du téléphone n\'est pas actif.</string>
+    <string name="scan_qr_subtitle_nfc_disabled">Le scanner QR caméra est actif. NFC est désactivé sur cet appareil.</string>
+    <string name="scan_with_usb_reader">Scanner avec le lecteur USB</string>
+    <string name="usb_reader_waiting_card_short">Carte en attente...</string>
+    <string name="nfc_not_supported_device">Cet appareil ne prend pas en charge le scan NFC.</string>
+    <string name="nfc_disabled_enable">NFC est désactivé. Activez NFC dans les réglages du téléphone pour scanner les cartes.</string>
+    <string name="nfc_uid_read_failed">Impossible de lire l\'UID NFC. Réessayez.</string>
+    <string name="nfc_uid_not_found">Aucun·e bénévole ou invité·e permanent·e trouvé·e pour l\'UID NFC : %s</string>
+    <string name="nfc_reader_error">Erreur du lecteur NFC : %s</string>
+    <string name="last_nfc_uid_scanned">Dernier UID NFC scanné : %s</string>
+    <string name="invalid_qr_or_nfc_data">Données QR/NFC invalides.</string>
+    <string name="permanent_guest_label">Invité·e permanent·e</string>
+    <string name="nfc_uid_multiple_matches_title">Plusieurs profils trouvés</string>
+    <string name="nfc_uid_multiple_matches_message">L\'UID %1$s correspond à %2$d profils. Sélectionnez le bon profil.</string>
     <string name="manual_volunteer_input">Entrer l\'ID du·de la bénévole</string>
     <string name="enter_volunteer_id_manually">Entrez l\'ID du·de la bénévole manuellement :</string>
     <string name="volunteer_id">ID du·de la bénévole</string>
     <string name="find_volunteer">Trouver un·e bénévole</string>
+    <string name="please_enter_valid_volunteer_id">Veuillez entrer un ID bénévole valide</string>
+    <string name="volunteer_id_not_found">Bénévole avec l\'ID \"%s\" introuvable</string>
     <string name="available_volunteers">Bénévoles disponibles :</string>
     <string name="error_processing_qr_code">Erreur de traitement du QR code : %s</string>
     <string name="invalid_qr_code_format">Format de QR code invalide : %s</string>
@@ -812,8 +849,9 @@
     <string name="settings_category_maintenance">Maintenance</string>
     
     <!-- Easter Egg Games -->
-    <string name="easter_egg_drive_nocturne">Drive Nocturne</string>
-    <string name="easter_egg_flappy_nocturne">Flappy Nocturne</string>
+    <string name="easter_egg_off_the_line">Off The Line</string>
+    <string name="easter_egg_pizza_undelivery">Pizza Undelivery</string>
+    <string name="easter_egg_scroll">Scroll!</string>
     
     <!-- Entry Validation -->
     <string name="validate_entry">Valider l\'entrée</string>
