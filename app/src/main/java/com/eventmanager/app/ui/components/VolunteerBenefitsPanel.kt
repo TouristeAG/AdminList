@@ -60,12 +60,14 @@ fun VolunteerBenefitsPanel(
     venues: List<VenueEntity>,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
-    onConfirmEntry: ((Job) -> Unit)? = null
+    onConfirmEntry: ((Job) -> Unit)? = null,
+    onAssignNfcUid: ((Volunteer, String) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val isPhone = !isTablet()
     val responsivePadding = if (isPhone) getPhonePortraitPadding() else getResponsivePadding()
     var showQrDialog by remember { mutableStateOf(false) }
+    var showNfcDialog by remember { mutableStateOf(false) }
     
     val benefit = volunteerBenefitStatus.benefits
     
@@ -279,19 +281,60 @@ fun VolunteerBenefitsPanel(
                 ) {
                     // Actions (QR Code)
                     item {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            OutlinedButton(
-                                onClick = { showQrDialog = true },
-                                modifier = if (isPhone) Modifier.fillMaxWidth() else Modifier.weight(1f)
+                        if (isPhone) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Icon(Icons.Default.QrCode, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(context.getString(R.string.qr_code))
+                                OutlinedButton(
+                                    onClick = { showNfcDialog = true },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(Icons.Default.Nfc, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(context.getString(R.string.add_nfc_card))
+                                }
+
+                                OutlinedButton(
+                                    onClick = { showQrDialog = true },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(Icons.Default.QrCode, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(context.getString(R.string.qr_code))
+                                }
+                            }
+                        } else {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                OutlinedButton(
+                                    onClick = { showNfcDialog = true },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(Icons.Default.Nfc, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(context.getString(R.string.add_nfc_card))
+                                }
+
+                                OutlinedButton(
+                                    onClick = { showQrDialog = true },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(Icons.Default.QrCode, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(context.getString(R.string.qr_code))
+                                }
                             }
                         }
+                    }
+
+                    item {
+                        NfcUidInfoRow(
+                            uid = volunteer.nfcCardUid,
+                            isPhone = isPhone
+                        )
                     }
                     
                     // Benefit details
@@ -681,6 +724,16 @@ fun VolunteerBenefitsPanel(
                 }
             }
         }
+    }
+
+    if (showNfcDialog) {
+        AddNfcUidDialog(
+            onDismiss = { showNfcDialog = false },
+            onConfirmUid = { uid ->
+                onAssignNfcUid?.invoke(volunteer, uid)
+                showNfcDialog = false
+            }
+        )
     }
     
     // Email Confirmation Dialog

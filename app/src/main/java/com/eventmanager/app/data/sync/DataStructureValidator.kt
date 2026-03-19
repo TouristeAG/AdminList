@@ -22,8 +22,8 @@ class DataStructureValidator(
      * Expected headers for each sheet type
      */
     private val expectedHeaders = mapOf(
-        "guests" to listOf("Name", "Email", "Phone", "Invitations", "Venue", "Notes", "Volunteer Benefit", "Last Modified"),
-        "volunteers" to listOf("ID", "Name", "Abbreviation", "Email", "Phone", "Date of Birth", "Rank", "Active", "Last Modified"),
+        "guests" to listOf("Name", "Email", "Phone", "Invitations", "Venue", "Notes", "Volunteer Benefit", "Last Modified", "NFC UID"),
+        "volunteers" to listOf("ID", "Name", "Abbreviation", "Email", "Phone", "Date of Birth", "Rank", "Active", "Last Modified", "NFC UID"),
         "jobs" to listOf("Volunteer ID", "Shift Type", "Venue", "Date", "Shift Time", "Notes", "Last Modified"),
         "job_types" to listOf("Name", "Status", "Shift Type", "Orion Type", "Requires Time", "Description", "Last Modified"),
         "venues" to listOf("Name", "Description", "Active", "Last Modified")
@@ -153,6 +153,7 @@ class DataStructureValidator(
             8 -> "H"
             9 -> "I"
             10 -> "J"
+            11 -> "K"
             else -> "Z" // Fallback for more columns
         }
     }

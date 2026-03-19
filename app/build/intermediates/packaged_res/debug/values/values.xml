@@ -37,6 +37,8 @@
     <string name="add_new_shift">Add New Shift</string>
     <string name="add_new_venue">Add New Venue</string>
     <string name="add_new_volunteer">Add New Volunteer</string>
+    <string name="add_nfc_card">Add NFC card</string>
+    <string name="add_nfc_card_uid_title">Add NFC card UID</string>
     <string name="add_shift">Add Shift</string>
     <string name="add_shift_type">Add Shift Type</string>
     <string name="add_venue">Add Venue</string>
@@ -87,6 +89,7 @@
     <string name="app_version">AdminList 0.9</string>
     <string name="available_guests">Available guests:</string>
     <string name="available_volunteers">Available volunteers:</string>
+    <string name="back">Back</string>
     <string name="bar_discount">💰 %d%% Bar Discount</string>
     <string name="bar_discount_n">%1$d%% bar discount</string>
     <string name="benefit_details">Benefit Details</string>
@@ -95,6 +98,7 @@
     <string name="birthday">Birthday</string>
     <string name="camera_error">Camera Error</string>
     <string name="camera_not_available">Camera hardware is not available or not working on this device</string>
+    <string name="camera_permission_qr_nfc_body">Camera permission is required for QR scanning. NFC scanning stays active at the same time when available.</string>
     <string name="camera_permission_required">Camera permission is required to scan QR codes</string>
     <string name="camera_permission_title">Camera permission required</string>
     <string name="cancel">Cancel</string>
@@ -118,6 +122,7 @@
     <string name="color_theme_warm_gray">Warm Gray</string>
     <string name="confirm">Confirm</string>
     <string name="continue_button">Continue</string>
+    <string name="copy_nfc_uid">Copy NFC UID</string>
     <string name="count">Count</string>
     <string name="current_benefits">✨ Current Benefits</string>
     <string name="current_rank">Current Rank</string>
@@ -251,6 +256,8 @@
     <string name="enhanced_touch_targets">Enhanced touch targets for better interaction</string>
     <string name="enter_guest_name_manually">Enter guest name manually:</string>
     <string name="enter_id_manually">Enter ID Manually</string>
+    <string name="enter_nfc_uid_title">Enter NFC UID</string>
+    <string name="enter_uid_manually">Enter UID manually</string>
     <string name="enter_volunteer_id_manually">Enter the volunteer ID manually:</string>
     <string name="error_processing_qr_code">Error processing QR code: %s</string>
     <string name="expired">Expired</string>
@@ -337,6 +344,7 @@
     <string name="invalid_guest_qr_code">Invalid QR code. This is not a guest QR code.</string>
     <string name="invalid_input">Invalid input: %s</string>
     <string name="invalid_qr_code_format">Invalid QR code format: %s</string>
+    <string name="invalid_qr_or_nfc_data">Invalid QR/NFC data.</string>
     <string name="invitations">Invitations</string>
     <string name="invitations_count">Invitations</string>
     <string name="invitations_text">%d invitations</string>
@@ -354,6 +362,7 @@
     <string name="large_screen_experience">Enhanced experience for large screens</string>
     <string name="last_name_abbreviation">Last Name Abbreviation</string>
     <string name="last_name_abbreviation_placeholder">e.g., SMIT</string>
+    <string name="last_nfc_uid_scanned">Last NFC UID scanned: %s</string>
     <string name="last_shift">Last Shift</string>
     <string name="last_sync">Last sync: %s</string>
     <string name="last_synced">Last synced:</string>
@@ -389,6 +398,16 @@
     <string name="nav_volunteers_tablet">Volunteer Management</string>
     <string name="never">Never</string>
     <string name="never_synced">Never synced</string>
+    <string name="nfc_card_detected">Card detected.</string>
+    <string name="nfc_disabled_enable">NFC is disabled. Enable NFC in your phone settings to scan cards.</string>
+    <string name="nfc_not_supported_device">This device does not support NFC scanning.</string>
+    <string name="nfc_reader_error">NFC reader error: %s</string>
+    <string name="nfc_uid_copied">NFC UID copied</string>
+    <string name="nfc_uid_label">NFC UID</string>
+    <string name="nfc_uid_multiple_matches_message">UID %1$s matches %2$d profiles. Select the correct one.</string>
+    <string name="nfc_uid_multiple_matches_title">Multiple profiles found</string>
+    <string name="nfc_uid_not_found">No volunteer or permanent guest found for NFC UID: %s</string>
+    <string name="nfc_uid_read_failed">Unable to read NFC card UID. Try again.</string>
     <string name="no">No</string>
     <string name="no_age_data">No age data available for active volunteers</string>
     <string name="no_gender_data">No gender data available</string>
@@ -416,11 +435,14 @@
     <string name="people_counter_title">People Counter</string>
     <string name="people_counter_visibility_description">Show or hide the people counter on the home page</string>
     <string name="people_counter_visibility_title">Show People Counter</string>
+    <string name="permanent_guest_label">Permanent guest</string>
     <string name="permanent_guests">Permanent Guests</string>
     <string name="personal_information">Personal Information</string>
     <string name="phone">Phone</string>
     <string name="phone_number">Phone Number</string>
+    <string name="place_nfc_card_on_phone">Place the NFC card on the back of your phone.</string>
     <string name="please_enter_guest_name">Please enter a valid guest name</string>
+    <string name="please_enter_valid_volunteer_id">Please enter a valid volunteer ID</string>
     <string name="plus_one_invites">+1 Invites</string>
     <string name="prefer_not_to_disclose">Prefer not to disclose</string>
     <string name="project_colon">Project: %s</string>
@@ -430,6 +452,8 @@
     <string name="qr_code_for_volunteer">QR Code for volunteer: %s</string>
     <string name="qr_code_subject">Volunteer QR Code - %s</string>
     <string name="qr_code_subject_guest">Guest QR Code - %s</string>
+    <string name="read_uid_with_phone_nfc">Read UID with phone (NFC)</string>
+    <string name="read_uid_with_usb_reader">Read UID with USB reader (ACR122U)</string>
     <string name="recent_activity">Recent Activity</string>
     <string name="recent_guests">Recent Guests</string>
     <string name="recent_shifts">Recent Shifts</string>
@@ -453,6 +477,13 @@
     <string name="save_resolution_scale">Save Resolution Scale</string>
     <string name="save_settings">Save Settings</string>
     <string name="scan_guest_qr_code">Scan Guest QR Code</string>
+    <string name="scan_nfc_card_title">Scan NFC card</string>
+    <string name="scan_qr_or_nfc_subtitle_enabled">Camera QR scanner and NFC card scanner are active. You can use either one.</string>
+    <string name="scan_qr_or_nfc_subtitle_phone_and_usb">QR scanner, phone NFC, and USB NFC reader are available.</string>
+    <string name="scan_qr_or_nfc_subtitle_usb_only">QR scanner and USB NFC reader are available. Phone NFC is not active.</string>
+    <string name="scan_qr_or_nfc_title">Scan QR Code or NFC Card</string>
+    <string name="scan_qr_subtitle_nfc_disabled">Camera QR scanner is active. NFC is disabled on this device.</string>
+    <string name="scan_with_usb_reader">Scan with USB reader</string>
     <string name="scroll_behavior_description">Control how the header (add, filters, search) behaves when you scroll the Volunteers, Guest List and Shifts pages.</string>
     <string name="scroll_behavior_full_page_description">The header and the list scroll together. The top actions move away as you scroll down.</string>
     <string name="scroll_behavior_full_page_title">Scroll Whole Page</string>
@@ -644,6 +675,7 @@
     <string name="total_people">Total List</string>
     <string name="total_shifts">Total Shifts</string>
     <string name="total_shifts_description">Total number of shifts completed across all venues over time</string>
+    <string name="uid_label">UID</string>
     <string name="unknown">Unknown</string>
     <string name="unknown_volunteer">Unknown Volunteer</string>
     <string name="unspecified">Unspecified</string>
@@ -669,6 +701,10 @@
     <string name="upload_key_description">Upload your Google Service Account JSON key file</string>
     <string name="upload_key_file">Upload Key File</string>
     <string name="upload_key_file_description">Upload your Google Service Account JSON key file</string>
+    <string name="usb_reader_not_connected">No external USB NFC reader detected.</string>
+    <string name="usb_reader_waiting_card">Waiting for an NFC card on the USB reader...</string>
+    <string name="usb_reader_waiting_card_short">Waiting card...</string>
+    <string name="use_this_uid">Use this UID</string>
     <string name="validate_entry">Validate Entry</string>
     <string name="validate_entry_description">This volunteer has an unused free entry benefit from an after-midnight shift. Slide to confirm their entry.</string>
     <string name="validating_file">Validating file...</string>
@@ -702,6 +738,7 @@
     <string name="volunteer_guest_list_sheet_label">Volunteer Guest List Sheet</string>
     <string name="volunteer_guests_description">Number of volunteers who had guest list access at each point in time</string>
     <string name="volunteer_id">Volunteer ID</string>
+    <string name="volunteer_id_not_found">Volunteer with ID \'%s\' not found</string>
     <string name="volunteer_information">Volunteer Information</string>
     <string name="volunteer_invites_description">Total number of invitations that volunteers with guest list access could give at each point in time</string>
     <string name="volunteer_label">Volunteer</string>

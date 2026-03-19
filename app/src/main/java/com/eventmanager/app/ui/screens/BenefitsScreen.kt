@@ -70,7 +70,8 @@ fun BenefitsScreen(
             val matchesSearch = searchText.isEmpty() || 
                 volunteer.name.lowercase().contains(lowerSearchText) ||
                 volunteer.email.lowercase().contains(lowerSearchText) ||
-                volunteer.lastNameAbbreviation.lowercase().contains(lowerSearchText)
+                volunteer.lastNameAbbreviation.lowercase().contains(lowerSearchText) ||
+                volunteer.nfcCardUid.lowercase().contains(lowerSearchText)
             val matchesFilter = selectedFilter?.let { filter ->
                 status.rank?.name == filter
             } ?: true

@@ -1,1 +1,1 @@
-ÁJÜKýTîFöRÅHÆJ
+ÓJÌK÷TËGæTæE

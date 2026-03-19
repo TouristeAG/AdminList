@@ -50,6 +50,7 @@ fun GuestListScreen(
     venues: List<VenueEntity>,
     onAddGuest: (Guest) -> Unit,
     onUpdateGuest: (Guest) -> Unit,
+    onUpdateVolunteer: (Volunteer) -> Unit,
     onDeleteGuest: (Guest) -> Unit,
     onRefreshTemporaryGuests: () -> Unit = {},
     onConfirmEntry: ((Job) -> Unit)? = null,
@@ -118,7 +119,8 @@ fun GuestListScreen(
                     guest.name.contains(searchQuery, ignoreCase = true) ||
                     guest.email.contains(searchQuery, ignoreCase = true) ||
                     guest.phoneNumber.contains(searchQuery, ignoreCase = true) ||
-                    guest.notes.contains(searchQuery, ignoreCase = true)
+                    guest.notes.contains(searchQuery, ignoreCase = true) ||
+                    guest.nfcCardUid.contains(searchQuery, ignoreCase = true)
                 if (!matchesSearch) continue
             }
 
@@ -691,7 +693,16 @@ fun GuestListScreen(
                 volunteerJobs = memoizedVolunteerJobs,
                 venues = venues,
                 onClose = { showVolunteerBenefits = null },
-                onConfirmEntry = onConfirmEntry
+                onConfirmEntry = onConfirmEntry,
+                onAssignNfcUid = { updatedVolunteer, uid ->
+                    onUpdateVolunteer(
+                        updatedVolunteer.copy(
+                            nfcCardUid = uid,
+                            lastModified = System.currentTimeMillis()
+                        )
+                    )
+                    showVolunteerBenefits = updatedVolunteer.copy(nfcCardUid = uid)
+                }
             )
         }
     }
@@ -705,6 +716,15 @@ fun GuestListScreen(
                 onEdit = { guest ->
                     showGuestDetailPanel = null
                     showEditGuestDialog = guest
+                },
+                onAssignNfcUid = { guest, uid ->
+                    onUpdateGuest(
+                        guest.copy(
+                            nfcCardUid = uid,
+                            lastModified = System.currentTimeMillis()
+                        )
+                    )
+                    showGuestDetailPanel = guest.copy(nfcCardUid = uid)
                 },
                 onDelete = { guest ->
                     showGuestDetailPanel = null
@@ -1059,6 +1079,7 @@ private enum class TempGuestRangeShortLabel(@androidx.annotation.StringRes val l
 private data class VolunteerAccessEntry(
     val volunteerName: String,
     val volunteerNameLower: String,
+    val volunteerNfcUidLower: String,
     val accessStartDate: LocalDate,
     val accessEndDate: LocalDate
 )
@@ -1120,7 +1141,8 @@ private fun TemporaryGuestsTimelineDialog(
                 guest.name.contains(searchQuery, ignoreCase = true) ||
                 guest.temporaryArtistName.contains(searchQuery, ignoreCase = true) ||
                 guest.temporaryContactPhone.contains(searchQuery, ignoreCase = true) ||
-                guest.notes.contains(searchQuery, ignoreCase = true)
+                guest.notes.contains(searchQuery, ignoreCase = true) ||
+                guest.nfcCardUid.contains(searchQuery, ignoreCase = true)
             inRange && matchesSearch
         }
     }
@@ -1207,6 +1229,7 @@ private fun TemporaryGuestsTimelineDialog(
                         VolunteerAccessEntry(
                             volunteerName = volunteer.name,
                             volunteerNameLower = volunteer.name.lowercase(),
+                            volunteerNfcUidLower = volunteer.nfcCardUid.lowercase(),
                             accessStartDate = currentStart,
                             accessEndDate = currentEnd
                         )
@@ -1220,6 +1243,7 @@ private fun TemporaryGuestsTimelineDialog(
                 VolunteerAccessEntry(
                     volunteerName = volunteer.name,
                     volunteerNameLower = volunteer.name.lowercase(),
+                    volunteerNfcUidLower = volunteer.nfcCardUid.lowercase(),
                     accessStartDate = currentStart,
                     accessEndDate = currentEnd
                 )
@@ -1241,7 +1265,9 @@ private fun TemporaryGuestsTimelineDialog(
                 val toDate = effectiveToday.plusDays(rangeDays)
                 !entry.accessEndDate.isBefore(fromDate) && !entry.accessStartDate.isAfter(toDate)
             }
-            val matchesSearch = !hasSearch || entry.volunteerNameLower.contains(searchQuery)
+            val matchesSearch = !hasSearch ||
+                entry.volunteerNameLower.contains(searchQuery) ||
+                entry.volunteerNfcUidLower.contains(searchQuery)
             inRange && matchesSearch
         }
     }

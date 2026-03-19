@@ -23,7 +23,7 @@ import com.eventmanager.app.data.models.CounterData
 
 @Database(
     entities = [Guest::class, Volunteer::class, Job::class, JobTypeConfig::class, VenueEntity::class, CounterData::class],
-    version = 22,
+    version = 23,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -901,6 +901,24 @@ abstract class EventManagerDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * MIGRATION 22→23: Add NFC UID columns to guests and volunteers.
+         */
+        private val MIGRATION_22_23 = object : Migration(22, 23) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                try {
+                    println("Starting migration 22→23: Adding NFC UID columns")
+                    db.execSQL("ALTER TABLE guests ADD COLUMN nfcCardUid TEXT NOT NULL DEFAULT ''")
+                    db.execSQL("ALTER TABLE volunteers ADD COLUMN nfcCardUid TEXT NOT NULL DEFAULT ''")
+                    println("Migration 22→23 completed successfully")
+                } catch (e: Exception) {
+                    println("Migration 22→23 failed: ${e.message}")
+                    e.printStackTrace()
+                    throw e
+                }
+            }
+        }
+
         fun getDatabase(context: Context): EventManagerDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -929,7 +947,8 @@ abstract class EventManagerDatabase : RoomDatabase() {
                     MIGRATION_18_19,
                     MIGRATION_19_20,
                     MIGRATION_20_21,
-                    MIGRATION_21_22
+                    MIGRATION_21_22,
+                    MIGRATION_22_23
                 )
                 .fallbackToDestructiveMigration()
                 .build()

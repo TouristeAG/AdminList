@@ -80,7 +80,8 @@ fun VolunteerScreen(
             val matchesSearch = searchText.isEmpty() || 
                 volunteer.name.lowercase().contains(lowerSearchText) ||
                 volunteer.email.lowercase().contains(lowerSearchText) ||
-                volunteer.lastNameAbbreviation.lowercase().contains(lowerSearchText)
+                volunteer.lastNameAbbreviation.lowercase().contains(lowerSearchText) ||
+                volunteer.nfcCardUid.lowercase().contains(lowerSearchText)
             
             val matchesFilter = selectedFilter?.let { filter ->
                 when (filter) {
@@ -285,6 +286,15 @@ fun VolunteerScreen(
                 onEdit = { volunteer ->
                     showDetailPanel = null
                     showEditDialog = volunteer
+                },
+                onAssignNfcUid = { volunteer, uid ->
+                    onUpdateVolunteer(
+                        volunteer.copy(
+                            nfcCardUid = uid,
+                            lastModified = System.currentTimeMillis()
+                        )
+                    )
+                    showDetailPanel = volunteer.copy(nfcCardUid = uid)
                 },
                 onDelete = { volunteer ->
                     showDetailPanel = null

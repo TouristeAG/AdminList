@@ -57,6 +57,7 @@ fun GuestDetailPanel(
     guest: Guest,
     venues: List<VenueEntity>,
     onEdit: (Guest) -> Unit,
+    onAssignNfcUid: (Guest, String) -> Unit,
     onDelete: (Guest) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier
@@ -65,6 +66,7 @@ fun GuestDetailPanel(
     val isPhone = !isTablet()
     val responsivePadding = if (isPhone) getPhonePortraitPadding() else getResponsivePadding()
     var showQrDialog by remember { mutableStateOf(false) }
+    var showNfcDialog by remember { mutableStateOf(false) }
     
     Box(
         modifier = modifier.fillMaxSize()
@@ -109,6 +111,7 @@ fun GuestDetailPanel(
                         ActionButtonsSection(
                             guest = guest,
                             onEdit = onEdit,
+                            onAddNfcCard = { showNfcDialog = true },
                             onDelete = onDelete,
                             onShowQr = { showQrDialog = true },
                             isPhone = isPhone
@@ -823,6 +826,16 @@ fun GuestDetailPanel(
             }
         )
     }
+
+    if (showNfcDialog) {
+        AddNfcUidDialog(
+            onDismiss = { showNfcDialog = false },
+            onConfirmUid = { uid ->
+                onAssignNfcUid(guest, uid)
+                showNfcDialog = false
+            }
+        )
+    }
 }
 
 @Composable
@@ -973,6 +986,11 @@ private fun GuestInformationSection(
                         }
                     }
                 }
+
+                NfcUidInfoRow(
+                    uid = guest.nfcCardUid,
+                    isPhone = isPhone
+                )
             }
         }
     }
@@ -1168,6 +1186,7 @@ private fun DetailTile(
 private fun ActionButtonsSection(
     guest: Guest,
     onEdit: (Guest) -> Unit,
+    onAddNfcCard: () -> Unit,
     onDelete: (Guest) -> Unit,
     onShowQr: () -> Unit,
     isPhone: Boolean
@@ -1215,6 +1234,15 @@ private fun ActionButtonsSection(
                 ) {
                     if (!guest.isTemporaryGuest) {
                         OutlinedButton(
+                            onClick = onAddNfcCard,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.Nfc, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(context.getString(R.string.add_nfc_card))
+                        }
+
+                        OutlinedButton(
                             onClick = onShowQr,
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -1246,41 +1274,60 @@ private fun ActionButtonsSection(
                     }
                 }
             } else {
-                // Row layout on tablets
-                Row(
+                // Two-row layout on larger screens to avoid cramped actions.
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     if (!guest.isTemporaryGuest) {
-                        OutlinedButton(
-                            onClick = onShowQr,
-                            modifier = Modifier.weight(1f)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Icon(Icons.Default.QrCode, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(context.getString(R.string.qr_code))
+                            OutlinedButton(
+                                onClick = onAddNfcCard,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Default.Nfc, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(context.getString(R.string.add_nfc_card))
+                            }
+
+                            OutlinedButton(
+                                onClick = onShowQr,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Default.QrCode, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(context.getString(R.string.qr_code))
+                            }
                         }
                     }
-                    
-                    OutlinedButton(
-                        onClick = { onEdit(guest) },
-                        modifier = Modifier.weight(1f)
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(context.getString(R.string.edit_guest))
-                    }
-                    
-                    OutlinedButton(
-                        onClick = { onDelete(guest) },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
-                        )
-                    ) {
-                        Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(context.getString(R.string.delete_guest))
+                        OutlinedButton(
+                            onClick = { onEdit(guest) },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(context.getString(R.string.edit_guest))
+                        }
+
+                        OutlinedButton(
+                            onClick = { onDelete(guest) },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error
+                            )
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(context.getString(R.string.delete_guest))
+                        }
                     }
                 }
             }

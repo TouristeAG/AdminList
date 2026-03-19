@@ -23,6 +23,8 @@
     <string name="add_new_shift">Ajouter un nouveau Shift</string>
     <string name="add_new_venue">Ajouter un nouveau lieu</string>
     <string name="add_new_volunteer">Ajouter un·e nouveau·elle bénévole</string>
+    <string name="add_nfc_card">Ajouter une carte NFC</string>
+    <string name="add_nfc_card_uid_title">Ajouter l\'UID de la carte NFC</string>
     <string name="add_shift">Ajouter un Shift</string>
     <string name="add_shift_type">Ajouter un type de Shift</string>
     <string name="add_venue">Ajouter un lieu</string>
@@ -73,6 +75,7 @@
     <string name="app_version">AdminList 0.9</string>
     <string name="available_guests">Invité·es disponibles :</string>
     <string name="available_volunteers">Bénévoles disponibles :</string>
+    <string name="back">Retour</string>
     <string name="bar_discount">💰 %d%% de réduction au bar</string>
     <string name="bar_discount_n">%1$d%% de réduction au bar</string>
     <string name="benefit_details">Détails des avantages</string>
@@ -81,6 +84,7 @@
     <string name="birthday">Anniversaire</string>
     <string name="camera_error">Erreur de caméra</string>
     <string name="camera_not_available">Le matériel de la caméra n\'est pas disponible ou ne fonctionne pas sur cet appareil</string>
+    <string name="camera_permission_qr_nfc_body">L\'autorisation caméra est requise pour scanner les QR codes. Le scan NFC reste actif en parallèle quand il est disponible.</string>
     <string name="camera_permission_required">L\'autorisation de la caméra est requise pour scanner les QR codes</string>
     <string name="camera_permission_title">Autorisation de caméra requise</string>
     <string name="cancel">Annuler</string>
@@ -104,6 +108,7 @@
     <string name="color_theme_warm_gray">Gris chaud</string>
     <string name="confirm">Confirmer</string>
     <string name="continue_button">Continuer</string>
+    <string name="copy_nfc_uid">Copier l\'UID NFC</string>
     <string name="count">Compte</string>
     <string name="current_benefits">✨ Avantages actuels</string>
     <string name="current_rank">Rang actuel</string>
@@ -236,6 +241,8 @@
     <string name="enhanced_touch_targets">Cibles tactiles améliorées pour une meilleure interaction</string>
     <string name="enter_guest_name_manually">Entrez le nom de l\'invité·e manuellement :</string>
     <string name="enter_id_manually">Entrer l\'ID manuellement</string>
+    <string name="enter_nfc_uid_title">Entrer l\'UID NFC</string>
+    <string name="enter_uid_manually">Entrer l\'UID manuellement</string>
     <string name="enter_volunteer_id_manually">Entrez l\'ID du·de la bénévole manuellement :</string>
     <string name="error_processing_qr_code">Erreur de traitement du QR code : %s</string>
     <string name="expired">Expiré</string>
@@ -322,6 +329,7 @@
     <string name="invalid_guest_qr_code">QR code invalide. Ce n\'est pas un QR code d\'invité·e.</string>
     <string name="invalid_input">Entrée invalide : %s</string>
     <string name="invalid_qr_code_format">Format de QR code invalide : %s</string>
+    <string name="invalid_qr_or_nfc_data">Données QR/NFC invalides.</string>
     <string name="invitations">Invitations</string>
     <string name="invitations_count">Invitations</string>
     <string name="invitations_text">%d invitations</string>
@@ -339,6 +347,7 @@
     <string name="large_screen_experience">Expérience améliorée pour les grands écrans</string>
     <string name="last_name_abbreviation">Abréviation du nom</string>
     <string name="last_name_abbreviation_placeholder">par ex., SMIT</string>
+    <string name="last_nfc_uid_scanned">Dernier UID NFC scanné : %s</string>
     <string name="last_shift">Dernier Shift</string>
     <string name="last_sync">Dernière synchronisation : %s</string>
     <string name="last_synced">Dernière synchronisation :</string>
@@ -374,6 +383,16 @@
     <string name="nav_volunteers_tablet">Gestion des bénévoles</string>
     <string name="never">Jamais</string>
     <string name="never_synced">Jamais synchronisé</string>
+    <string name="nfc_card_detected">Carte détectée.</string>
+    <string name="nfc_disabled_enable">NFC est désactivé. Activez NFC dans les réglages du téléphone pour scanner les cartes.</string>
+    <string name="nfc_not_supported_device">Cet appareil ne prend pas en charge le scan NFC.</string>
+    <string name="nfc_reader_error">Erreur du lecteur NFC : %s</string>
+    <string name="nfc_uid_copied">UID NFC copié</string>
+    <string name="nfc_uid_label">UID NFC</string>
+    <string name="nfc_uid_multiple_matches_message">L\'UID %1$s correspond à %2$d profils. Sélectionnez le bon profil.</string>
+    <string name="nfc_uid_multiple_matches_title">Plusieurs profils trouvés</string>
+    <string name="nfc_uid_not_found">Aucun·e bénévole ou invité·e permanent·e trouvé·e pour l\'UID NFC : %s</string>
+    <string name="nfc_uid_read_failed">Impossible de lire l\'UID NFC. Réessayez.</string>
     <string name="no">Non</string>
     <string name="no_age_data">Aucune donnée d\'âge disponible pour les bénévoles actif·ve·s</string>
     <string name="no_gender_data">Aucune donnée de genre disponible</string>
@@ -401,11 +420,14 @@
     <string name="people_counter_title">Compteur de personnes</string>
     <string name="people_counter_visibility_description">Afficher ou masquer le compteur de personnes sur la page d\'accueil</string>
     <string name="people_counter_visibility_title">Afficher le compteur de personnes</string>
+    <string name="permanent_guest_label">Invité·e permanent·e</string>
     <string name="permanent_guests">Invité·e·s permanent·e·s</string>
     <string name="personal_information">Informations personnelles</string>
     <string name="phone">Téléphone</string>
     <string name="phone_number">Numéro de téléphone</string>
+    <string name="place_nfc_card_on_phone">Placez la carte NFC au dos du téléphone.</string>
     <string name="please_enter_guest_name">Veuillez entrer un nom d\'invité·e valide</string>
+    <string name="please_enter_valid_volunteer_id">Veuillez entrer un ID bénévole valide</string>
     <string name="plus_one_invites">Invitations +1</string>
     <string name="prefer_not_to_disclose">Préfère ne pas divulguer</string>
     <string name="project_colon">Projet : %s</string>
@@ -415,6 +437,8 @@
     <string name="qr_code_for_volunteer">QR Code pour le·la bénévole : %s</string>
     <string name="qr_code_subject">QR Code bénévole - %s</string>
     <string name="qr_code_subject_guest">QR Code invité·e - %s</string>
+    <string name="read_uid_with_phone_nfc">Lire l\'UID avec le téléphone (NFC)</string>
+    <string name="read_uid_with_usb_reader">Lire l\'UID avec le lecteur USB (ACR122U)</string>
     <string name="recent_activity">Activité récente</string>
     <string name="recent_guests">Invité·e·s récent·e·s</string>
     <string name="recent_shifts">Shifts récents</string>
@@ -438,6 +462,13 @@
     <string name="save_resolution_scale">Enregistrer l\'échelle de résolution</string>
     <string name="save_settings">Enregistrer les paramètres</string>
     <string name="scan_guest_qr_code">Scanner le QR Code Invité·e</string>
+    <string name="scan_nfc_card_title">Scanner une carte NFC</string>
+    <string name="scan_qr_or_nfc_subtitle_enabled">Le scanner QR caméra et le scanner de carte NFC sont actifs. Vous pouvez utiliser l\'un ou l\'autre.</string>
+    <string name="scan_qr_or_nfc_subtitle_phone_and_usb">Le scanner QR, le NFC du téléphone et le lecteur NFC USB sont disponibles.</string>
+    <string name="scan_qr_or_nfc_subtitle_usb_only">Le scanner QR et le lecteur NFC USB sont disponibles. Le NFC du téléphone n\'est pas actif.</string>
+    <string name="scan_qr_or_nfc_title">Scanner un QR code ou une carte NFC</string>
+    <string name="scan_qr_subtitle_nfc_disabled">Le scanner QR caméra est actif. NFC est désactivé sur cet appareil.</string>
+    <string name="scan_with_usb_reader">Scanner avec le lecteur USB</string>
     <string name="scroll_behavior_description">Contrôlez comment l\'en-tête (ajouter, filtres, recherche) se comporte lorsque vous faites défiler les pages Bénévoles, Liste des invité·e·s et Shifts.</string>
     <string name="scroll_behavior_full_page_description">L\'en-tête et la liste défilent ensemble. Les actions du haut disparaissent lorsque vous faites défiler vers le bas.</string>
     <string name="scroll_behavior_full_page_title">Faire défiler toute la page</string>
@@ -627,6 +658,7 @@
     <string name="total_people">Liste totale</string>
     <string name="total_shifts">Total de Shifts</string>
     <string name="total_shifts_description">Nombre total de shifts effectués dans tous les lieux au fil du temps</string>
+    <string name="uid_label">UID</string>
     <string name="unknown">Inconnu</string>
     <string name="unknown_volunteer">Bénévole inconnu·e</string>
     <string name="unspecified">Non spécifié</string>
@@ -652,6 +684,10 @@
     <string name="upload_key_description">Téléchargez votre fichier de clé JSON du compte de service Google</string>
     <string name="upload_key_file">Télécharger le fichier de clé</string>
     <string name="upload_key_file_description">Téléchargez votre fichier de clé JSON du compte de service Google</string>
+    <string name="usb_reader_not_connected">Aucun lecteur NFC USB externe détecté.</string>
+    <string name="usb_reader_waiting_card">En attente d\'une carte NFC sur le lecteur USB...</string>
+    <string name="usb_reader_waiting_card_short">Carte en attente...</string>
+    <string name="use_this_uid">Utiliser cet UID</string>
     <string name="validate_entry">Valider l\'entrée</string>
     <string name="validate_entry_description">Ce bénévole a une entrée gratuite non utilisée grâce à un shift après minuit. Glissez pour confirmer son entrée.</string>
     <string name="validating_file">Validation du fichier...</string>
@@ -685,6 +721,7 @@
     <string name="volunteer_guest_list_sheet_label">Feuille liste invité·e·s bénévoles</string>
     <string name="volunteer_guests_description">Nombre de bénévoles qui avaient accès à la liste des invité·e·s à chaque moment</string>
     <string name="volunteer_id">ID du·de la bénévole</string>
+    <string name="volunteer_id_not_found">Bénévole avec l\'ID \"%s\" introuvable</string>
     <string name="volunteer_information">Informations sur le·la bénévole</string>
     <string name="volunteer_invites_description">Nombre total d\'invitations que les bénévoles avec accès à la liste des invité·e·s pouvaient donner à chaque moment</string>
     <string name="volunteer_label">Bénévole</string>
