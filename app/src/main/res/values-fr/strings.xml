@@ -849,8 +849,9 @@
     <string name="settings_category_maintenance">Maintenance</string>
     
     <!-- Easter Egg Games -->
-    <string name="easter_egg_drive_nocturne">Drive Nocturne</string>
-    <string name="easter_egg_flappy_nocturne">Flappy Nocturne</string>
+    <string name="easter_egg_off_the_line">Off The Line</string>
+    <string name="easter_egg_pizza_undelivery">Pizza Undelivery</string>
+    <string name="easter_egg_scroll">Scroll!</string>
     
     <!-- Entry Validation -->
     <string name="validate_entry">Valider l\'entrée</string>

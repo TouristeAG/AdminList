@@ -80,8 +80,9 @@ import com.eventmanager.app.ui.theme.ThemeMode
 import com.eventmanager.app.ui.components.ResolutionScaleSlider
 import com.eventmanager.app.ui.components.AppRestartDialog
 import com.eventmanager.app.ui.components.RetroSynthwaveGameDialog
-import com.eventmanager.app.ui.components.FlappyNocturneGameDialog
-import com.eventmanager.app.ui.components.DriveNocturneGameDialog
+import com.eventmanager.app.ui.components.OffTheLineGameDialog
+import com.eventmanager.app.ui.components.PizzaUndeliveryGameDialog
+import com.eventmanager.app.ui.components.ScrollGameDialog
 import com.eventmanager.app.utils.ImageUtils
 import androidx.core.content.ContextCompat
 import androidx.compose.ui.graphics.asImageBitmap
@@ -1076,8 +1077,9 @@ fun SettingsScreen(
     var easterEggTapCount by remember { mutableStateOf(0) }
     var lastEasterEggTapTime by remember { mutableStateOf(0L) }
     var showEasterEggDialog by remember { mutableStateOf(false) }
-    var showFlappyGame by remember { mutableStateOf(false) }
-    var showDriveGame by remember { mutableStateOf(false) }
+    var showOffTheLineGame by remember { mutableStateOf(false) }
+    var showPizzaUndeliveryGame by remember { mutableStateOf(false) }
+    var showScrollGame by remember { mutableStateOf(false) }
     
     // Sync status dialog state
     val syncStatusMessage by viewModel.syncStatusMessage.collectAsState()
@@ -3576,28 +3578,39 @@ fun SettingsScreen(
     if (showEasterEggDialog) {
         RetroSynthwaveGameDialog(
             onDismiss = { showEasterEggDialog = false },
-            onDriveSelected = {
+            onOffTheLineSelected = {
                 showEasterEggDialog = false
-                showDriveGame = true
+                showOffTheLineGame = true
             },
-            onFlappySelected = {
+            onPizzaUndeliverySelected = {
                 showEasterEggDialog = false
-                showFlappyGame = true
+                showPizzaUndeliveryGame = true
+            },
+            onScrollSelected = {
+                showEasterEggDialog = false
+                showScrollGame = true
             }
         )
     }
     
-    // Flappy Nocturne Game Dialog
-    if (showFlappyGame) {
-        FlappyNocturneGameDialog(
-            onDismiss = { showFlappyGame = false }
+    // Off The Line Game Dialog
+    if (showOffTheLineGame) {
+        OffTheLineGameDialog(
+            onDismiss = { showOffTheLineGame = false }
         )
     }
     
-    // Drive Nocturne Game Dialog
-    if (showDriveGame) {
-        DriveNocturneGameDialog(
-            onDismiss = { showDriveGame = false }
+    // Pizza Undelivery Game Dialog
+    if (showPizzaUndeliveryGame) {
+        PizzaUndeliveryGameDialog(
+            onDismiss = { showPizzaUndeliveryGame = false }
+        )
+    }
+
+    // Scroll Game Dialog
+    if (showScrollGame) {
+        ScrollGameDialog(
+            onDismiss = { showScrollGame = false }
         )
     }
     

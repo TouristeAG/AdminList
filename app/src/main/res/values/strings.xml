@@ -851,8 +851,9 @@
     <string name="enhanced_touch_targets">Enhanced touch targets for better interaction</string>
     
     <!-- Easter Egg Games -->
-    <string name="easter_egg_drive_nocturne">Nocturnal Drive</string>
-    <string name="easter_egg_flappy_nocturne">Nocturnal Flappy</string>
+    <string name="easter_egg_off_the_line">Off The Line</string>
+    <string name="easter_egg_pizza_undelivery">Pizza Undelivery</string>
+    <string name="easter_egg_scroll">Scroll!</string>
     
     <!-- Entry Validation -->
     <string name="validate_entry">Validate Entry</string>

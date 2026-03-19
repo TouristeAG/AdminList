@@ -208,8 +208,9 @@ string download_error_title
 string download_progress
 string downloading_update
 string drink_tokens
-string easter_egg_drive_nocturne
-string easter_egg_flappy_nocturne
+string easter_egg_off_the_line
+string easter_egg_pizza_undelivery
+string easter_egg_scroll
 string edit
 string edit_guest
 string edit_guest_details

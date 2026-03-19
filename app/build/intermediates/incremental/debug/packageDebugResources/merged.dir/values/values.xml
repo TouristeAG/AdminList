@@ -180,8 +180,9 @@
     <string name="download_progress">Downloading: %d%%</string>
     <string name="downloading_update">Downloading update…</string>
     <string name="drink_tokens">🍺 %d Drink Tokens</string>
-    <string name="easter_egg_drive_nocturne">Nocturnal Drive</string>
-    <string name="easter_egg_flappy_nocturne">Nocturnal Flappy</string>
+    <string name="easter_egg_off_the_line">Off The Line</string>
+    <string name="easter_egg_pizza_undelivery">Pizza Undelivery</string>
+    <string name="easter_egg_scroll">Scroll!</string>
     <string name="edit">Edit</string>
     <string name="edit_guest">Edit Guest</string>
     <string name="edit_guest_details">Edit Guest Details</string>

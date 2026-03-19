@@ -166,8 +166,9 @@
     <string name="download_progress">Téléchargement : %d%%</string>
     <string name="downloading_update">Téléchargement de la mise à jour…</string>
     <string name="drink_tokens">🍺 %d jetons de boisson</string>
-    <string name="easter_egg_drive_nocturne">Drive Nocturne</string>
-    <string name="easter_egg_flappy_nocturne">Flappy Nocturne</string>
+    <string name="easter_egg_off_the_line">Off The Line</string>
+    <string name="easter_egg_pizza_undelivery">Pizza Undelivery</string>
+    <string name="easter_egg_scroll">Scroll!</string>
     <string name="edit">Modifier</string>
     <string name="edit_guest">Modifier l\'invité·e</string>
     <string name="edit_guest_details">Modifier les détails de l\'invité·e</string>
