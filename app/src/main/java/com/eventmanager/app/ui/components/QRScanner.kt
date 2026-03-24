@@ -51,6 +51,7 @@ import com.journeyapps.barcodescanner.DecoratedBarcodeView
 import com.journeyapps.barcodescanner.DefaultDecoderFactory
 import com.journeyapps.barcodescanner.BarcodeCallback
 import com.journeyapps.barcodescanner.BarcodeResult
+import com.google.zxing.DecodeHintType
 import com.eventmanager.app.data.models.Volunteer
 import com.eventmanager.app.data.models.Guest
 import com.eventmanager.app.hardware.Acr122uUsbNfcReader
@@ -760,9 +761,13 @@ fun QRScannerView(
                     barcodeView = createdBarcodeView
                     println("✅ DecoratedBarcodeView created")
                     
-                    // Set up the barcode view
+                    // Set up the barcode view: MixedDecoder (scan type 2) alternates normal and inverted
+                    // luminance so QR codes work on dark backgrounds (e.g. white modules on black).
                     val formats = listOf(com.google.zxing.BarcodeFormat.QR_CODE)
-                    val decoderFactory = com.journeyapps.barcodescanner.DefaultDecoderFactory(formats)
+                    val decodeHints = mapOf<DecodeHintType, Any>(
+                        DecodeHintType.TRY_HARDER to true
+                    )
+                    val decoderFactory = DefaultDecoderFactory(formats, decodeHints, null, 2)
                     createdBarcodeView.decoderFactory = decoderFactory
                     println("✅ Decoder factory set")
                     
