@@ -279,8 +279,45 @@ class EventManagerViewModel(
     private fun loadData() {
         viewModelScope.launch {
             try {
-                repository.getAllGuests().collect { 
-                    _guests.value = removeDuplicateGuests(it)
+                repository.getAllGuests().collect { guestList ->
+                    // Validate and fix any guests with invalid NanoIDs
+                    val validatedGuests = mutableListOf<Guest>()
+                    val guestsToFix = mutableListOf<Guest>()
+
+                    for (guest in guestList) {
+                        if (NanoIdGenerator.needsRegeneration(guest.nanoId)) {
+                            val newId = NanoIdGenerator.ensureValidNanoId(guest.nanoId, guest.name)
+                            println("⚠️ ViewModel: Fixed invalid NanoID for guest '${guest.name}': '${guest.nanoId}' → '$newId'")
+                            val fixedGuest = guest.copy(nanoId = newId)
+                            validatedGuests.add(fixedGuest)
+                            guestsToFix.add(fixedGuest)
+                        } else {
+                            validatedGuests.add(guest)
+                        }
+                    }
+
+                    if (guestsToFix.isNotEmpty()) {
+                        launch {
+                            try {
+                                guestsToFix.forEach { fixedGuest ->
+                                    repository.updateGuest(fixedGuest)
+                                }
+                                println("✅ Updated ${guestsToFix.size} guest(s) with fixed NanoIDs in local database")
+                                if (isGoogleSheetsConfigured()) {
+                                    try {
+                                        twoWaySyncService?.backupGuestsToSheets()
+                                        println("✅ Synced all guests (including ${guestsToFix.size} with fixed NanoIDs) to Google Sheets")
+                                    } catch (e: Exception) {
+                                        println("⚠️ Failed to sync fixed guest NanoIDs to Google Sheets: ${e.message}")
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                println("Failed to update guests with fixed NanoIDs: ${e.message}")
+                            }
+                        }
+                    }
+
+                    _guests.value = removeDuplicateGuests(validatedGuests)
                 }
             } catch (e: Exception) {
                 println("Failed to load guests: ${e.message}")
@@ -1744,6 +1781,7 @@ class EventManagerViewModel(
             val guests = tempGuestsRaw.map { temp ->
                 Guest(
                     sheetsId = temp.rowNumber.toString(),
+                    nanoId = NanoIdGenerator.ensureValidNanoId(temp.nanoId, temp.guestName),
                     name = temp.guestName,
                     email = "",
                     phoneNumber = "",

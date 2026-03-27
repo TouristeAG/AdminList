@@ -1,1 +1,1 @@
-”JÃK…U…GÂTÈE
+–JÕKÛT“G…TÔE

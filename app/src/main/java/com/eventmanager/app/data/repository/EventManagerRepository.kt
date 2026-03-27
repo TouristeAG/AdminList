@@ -29,21 +29,37 @@ class EventManagerRepository(
     // Guest operations
     fun getAllGuests(): Flow<List<Guest>> = guestDao.getAllGuests()
     suspend fun insertGuest(guest: Guest): Long {
-        // Check for duplicate names
-        val existingGuest = guestDao.getGuestByName(guest.name)
-        if (existingGuest != null) {
-            throw IllegalArgumentException("A guest with the name '${guest.name}' already exists")
+        // Ensure guest has a valid NanoID before insertion
+        val validatedGuest = if (NanoIdGenerator.needsRegeneration(guest.nanoId)) {
+            val newId = NanoIdGenerator.ensureValidNanoId(guest.nanoId, guest.name)
+            println("⚠️ Repository: Generated NanoID for guest '${guest.name}': '$newId'")
+            guest.copy(nanoId = newId)
+        } else {
+            guest
         }
-        return guestDao.insertGuest(guest)
+        // Check for duplicate names
+        val existingGuest = guestDao.getGuestByName(validatedGuest.name)
+        if (existingGuest != null) {
+            throw IllegalArgumentException("A guest with the name '${validatedGuest.name}' already exists")
+        }
+        return guestDao.insertGuest(validatedGuest)
     }
     
     suspend fun updateGuest(guest: Guest) {
-        // Check for duplicate names (excluding current guest)
-        val existingGuest = guestDao.getGuestByName(guest.name)
-        if (existingGuest != null && existingGuest.id != guest.id) {
-            throw IllegalArgumentException("A guest with the name '${guest.name}' already exists")
+        // Ensure guest has a valid NanoID before update
+        val validatedGuest = if (NanoIdGenerator.needsRegeneration(guest.nanoId)) {
+            val newId = NanoIdGenerator.ensureValidNanoId(guest.nanoId, guest.name)
+            println("⚠️ Repository: Generated NanoID for guest '${guest.name}': '$newId'")
+            guest.copy(nanoId = newId)
+        } else {
+            guest
         }
-        guestDao.updateGuest(guest)
+        // Check for duplicate names (excluding current guest)
+        val existingGuest = guestDao.getGuestByName(validatedGuest.name)
+        if (existingGuest != null && existingGuest.id != validatedGuest.id) {
+            throw IllegalArgumentException("A guest with the name '${validatedGuest.name}' already exists")
+        }
+        guestDao.updateGuest(validatedGuest)
     }
     
     suspend fun deleteGuest(guest: Guest) = guestDao.deleteGuest(guest)

@@ -973,7 +973,7 @@ class TwoWaySyncService(
                 diagnostics["guests"] = mapOf(
                     "status" to "OK",
                     "count" to guests.size,
-                    "headers" to listOf("Name", "Email", "Phone", "Invitations", "Venue", "Notes", "Volunteer Benefit", "Last Modified", "NFC UID")
+                    "headers" to listOf("Name", "Email", "Phone", "Invitations", "Venue", "Notes", "Volunteer Benefit", "Last Modified", "NFC UID", "ID")
                 )
             } catch (e: Exception) {
                 diagnostics["guests"] = mapOf("status" to "ERROR", "message" to e.message)

@@ -24,6 +24,7 @@ data class Guest(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val sheetsId: String? = null, // Google Sheets row ID for syncing
+    val nanoId: String = NanoIdGenerator.generateGuestId(), // Globally-unique NanoID for cross-device sync
     val name: String,
     val lastNameAbbreviation: String = "", // Last name abbreviation for volunteer guests
     val email: String = "", // Guest email address

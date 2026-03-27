@@ -22,7 +22,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -34,7 +36,6 @@ import com.eventmanager.app.data.models.*
 import com.eventmanager.app.ui.utils.*
 import com.eventmanager.app.utils.QRCodeUtils
 import com.eventmanager.app.R
-import com.google.gson.Gson
 import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.data.sync.GmailAuthService
 import com.eventmanager.app.data.sync.GmailSendService
@@ -169,16 +170,8 @@ fun GuestDetailPanel(
                     )
                     
                     val payload = remember(guest) {
-                        val data = mapOf(
-                            "type" to "guest",
-                            "version" to 1,
-                            "name" to guest.name,
-                            "abbr" to guest.lastNameAbbreviation
-                        )
-                        val json = Gson().toJson(data)
-                        println("🔍 Generating QR code for guest: ${guest.name}")
-                        println("🔍 QR code JSON: '$json'")
-                        json
+                        println("🔍 Generating QR code for guest: ${guest.name} (NanoID: ${guest.nanoId})")
+                        guest.nanoId
                     }
                     val qrImage = remember(payload) { QRCodeUtils.generateQrImageBitmap(payload, 1024) }
                     val qrContext = LocalContext.current
@@ -418,15 +411,8 @@ fun GuestDetailPanel(
                 val includeLogo = settingsManager.isEmailIncludeLogoEnabled()
                 val logoUriString = settingsManager.getEmailLogoUri()
                 
-                // Generate QR code for guest (with name only)
-                val payload = mapOf(
-                    "type" to "guest",
-                    "version" to 1,
-                    "name" to guest.name,
-                    "abbr" to guest.lastNameAbbreviation
-                )
-                val json = Gson().toJson(payload)
-                val qrBitmap = QRCodeUtils.generateQrImageBitmap(json, 512)
+                // Generate QR code for guest (NanoID plain text for Lightspeed compatibility)
+                val qrBitmap = QRCodeUtils.generateQrImageBitmap(guest.nanoId, 512)
                 
                 // Save QR code file
                 var qrFile: File? = null
@@ -612,15 +598,8 @@ fun GuestDetailPanel(
                     emailContext.getString(R.string.email_signature_default) 
                 }
                 
-                // Generate QR code for guest (with name only)
-                val payload = mapOf(
-                    "type" to "guest",
-                    "version" to 1,
-                    "name" to guest.name,
-                    "abbr" to guest.lastNameAbbreviation
-                )
-                val json = Gson().toJson(payload)
-                val qrBitmap = QRCodeUtils.generateQrImageBitmap(json, 512)
+                // Generate QR code for guest (NanoID plain text for Lightspeed compatibility)
+                val qrBitmap = QRCodeUtils.generateQrImageBitmap(guest.nanoId, 512)
                 
                 // Build simple HTML email
                 val htmlEmail = buildGuestEmailHtml(
@@ -991,6 +970,14 @@ private fun GuestInformationSection(
                     uid = guest.nfcCardUid,
                     isPhone = isPhone
                 )
+
+                Spacer(modifier = Modifier.height(if (isPhone) 6.dp else 8.dp))
+
+                NanoIdInfoRow(
+                    label = "NanoID",
+                    value = guest.nanoId,
+                    isPhone = isPhone
+                )
             }
         }
     }
@@ -1133,6 +1120,14 @@ private fun TemporaryGuestInformationSection(
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(if (isPhone) 6.dp else 8.dp))
+
+            NanoIdInfoRow(
+                label = "NanoID",
+                value = guest.nanoId,
+                isPhone = isPhone
+            )
         }
     }
 }
@@ -1360,6 +1355,65 @@ private fun InfoRow(
             modifier = Modifier.weight(1f),
             textAlign = TextAlign.End
         )
+    }
+}
+
+@Composable
+private fun NanoIdInfoRow(
+    label: String,
+    value: String,
+    isPhone: Boolean
+) {
+    val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    var showCopiedToast by remember { mutableStateOf(false) }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "$label:",
+            style = if (isPhone) getPhonePortraitBodyTypography() else getResponsiveBodyTypography(),
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        Row(
+            modifier = Modifier.weight(1f),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = value,
+                style = if (isPhone) getPhonePortraitBodyTypography() else getResponsiveBodyTypography(),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.End,
+                modifier = Modifier.padding(end = 8.dp)
+            )
+
+            IconButton(
+                onClick = {
+                    clipboardManager.setText(AnnotatedString(value))
+                    showCopiedToast = true
+                    Toast.makeText(context, "NanoID copied to clipboard", Toast.LENGTH_SHORT).show()
+                    coroutineScope.launch {
+                        kotlinx.coroutines.delay(2000)
+                        showCopiedToast = false
+                    }
+                },
+                modifier = Modifier.size(if (isPhone) 32.dp else 40.dp)
+            ) {
+                Icon(
+                    imageVector = if (showCopiedToast) Icons.Default.Check else Icons.Default.ContentCopy,
+                    contentDescription = if (showCopiedToast) "Copied" else "Copy NanoID",
+                    tint = if (showCopiedToast) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(if (isPhone) 16.dp else 20.dp)
+                )
+            }
+        }
     }
 }
 

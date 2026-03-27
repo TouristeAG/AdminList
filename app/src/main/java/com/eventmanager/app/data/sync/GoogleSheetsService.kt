@@ -101,14 +101,15 @@ class GoogleSheetsService(private val context: Context) {
                         guest.notes,
                         if (guest.isVolunteerBenefit) "Yes" else "No",
                         guest.lastModified.toString(),
-                        guest.nfcCardUid
+                        guest.nfcCardUid,
+                        guest.nanoId
                     )
                     
                     val valueRange = ValueRange().setValues(listOf(values))
                     
                     val response = sheetsService?.spreadsheets()?.values()?.append(
                         settingsManager.getSpreadsheetId(),
-                        "${settingsManager.getGuestListSheet()}!A:I",
+                        "${settingsManager.getGuestListSheet()}!A:J",
                         valueRange
                     )?.setValueInputOption("RAW")?.execute()
                     
@@ -118,7 +119,7 @@ class GoogleSheetsService(private val context: Context) {
                     
                     // Update the guest with the sheets ID (row number)
                     val sheetsId = response.updates?.updatedRange?.let { range ->
-                        val match = Regex(".*!A(\\d+):I\\d+").find(range)
+                        val match = Regex(".*!A(\\d+):J\\d+").find(range)
                         match?.groupValues?.get(1)?.toIntOrNull()
                     }?.toString() ?: "1"
                     
@@ -212,7 +213,8 @@ class GoogleSheetsService(private val context: Context) {
                         guest.notes,
                         if (guest.isVolunteerBenefit) "Yes" else "No",
                         guest.lastModified.toString(),
-                        guest.nfcCardUid
+                        guest.nfcCardUid,
+                        guest.nanoId
                     )
                     
                     val valueRange = ValueRange().setValues(listOf(values))
@@ -220,7 +222,7 @@ class GoogleSheetsService(private val context: Context) {
                     
                     val response = sheetsService?.spreadsheets()?.values()?.update(
                         settingsManager.getSpreadsheetId(),
-                        "${settingsManager.getGuestListSheet()}!A$rowNumber:I$rowNumber",
+                        "${settingsManager.getGuestListSheet()}!A$rowNumber:J$rowNumber",
                         valueRange
                     )?.setValueInputOption("RAW")?.execute()
                     
@@ -262,12 +264,13 @@ class GoogleSheetsService(private val context: Context) {
                         guest.notes,
                         "No",
                         guest.lastModified.toString(),
-                        guest.nfcCardUid
+                        guest.nfcCardUid,
+                        guest.nanoId
                     )
                 }
                 
                 val valueRange = ValueRange()
-                    .setValues(listOf(listOf("Name", "Email", "Phone", "Invitations", "Venue", "Notes", "Volunteer Benefit", "Last Modified", "NFC UID")) + values)
+                    .setValues(listOf(listOf("Name", "Email", "Phone", "Invitations", "Venue", "Notes", "Volunteer Benefit", "Last Modified", "NFC UID", "ID")) + values)
                 
                 val response = sheetsService?.spreadsheets()?.values()?.update(
                     settingsManager.getSpreadsheetId(),
@@ -355,7 +358,7 @@ class GoogleSheetsService(private val context: Context) {
                 operation = {
                 val spreadsheetId = settingsManager.getSpreadsheetId()
                 val sheetName = settingsManager.getGuestListSheet()
-                val range = "${sheetName}!A2:I"
+                val range = "${sheetName}!A2:J"
                 
                 println("Reading from spreadsheet: $spreadsheetId, range: $range")
                 
@@ -371,13 +374,24 @@ class GoogleSheetsService(private val context: Context) {
                 val values = response.getValues() ?: emptyList()
                 println("Retrieved ${values.size} guest rows from sheets")
                 
-                val guests = values.mapIndexedNotNull { index, row ->
-                    if (row.size >= 9) {
+                val guests = mutableListOf<Guest>()
+                val guestsToFixInSheets = mutableListOf<Pair<Int, String>>() // (rowNumber, newNanoId)
+
+                values.forEachIndexed { index, row ->
+                    val rowNumber = index + 2 // +2 because we start from row 2 (after header)
+                    if (row.size >= 10) {
                         try {
-                            val rowNumber = index + 2 // +2 because we start from row 2 (after header)
-                            val guest = Guest(
+                            val rawNanoId = row[9].toString()
+                            val guestName = row[0].toString()
+                            val needsFix = NanoIdGenerator.needsRegeneration(rawNanoId)
+                            val validNanoId = NanoIdGenerator.ensureValidNanoId(rawNanoId, guestName)
+                            if (needsFix) {
+                                guestsToFixInSheets.add(Pair(rowNumber, validNanoId))
+                            }
+                            guests.add(Guest(
                                 sheetsId = rowNumber.toString(),
-                                name = row[0].toString(),
+                                nanoId = validNanoId,
+                                name = guestName,
                                 email = row[1].toString(),
                                 phoneNumber = row[2].toString(),
                                 invitations = row[3].toString().toIntOrNull() ?: 1,
@@ -386,19 +400,42 @@ class GoogleSheetsService(private val context: Context) {
                                 isVolunteerBenefit = row[6].toString().equals("Yes", ignoreCase = true),
                                 lastModified = row[7].toString().toLongOrNull() ?: System.currentTimeMillis(),
                                 nfcCardUid = row[8].toString()
-                            )
-                            guest
+                            ))
                         } catch (e: Exception) {
-                            println("Failed to parse guest row ${index + 2}: ${e.message}")
-                            null
+                            println("Failed to parse guest row $rowNumber: ${e.message}")
+                        }
+                    } else if (row.size >= 9) {
+                        // Backward compatibility: no ID column yet — assign a new NanoID and queue for fix
+                        try {
+                            val guestName = row[0].toString()
+                            val newNanoId = NanoIdGenerator.generateGuestId()
+                            guestsToFixInSheets.add(Pair(rowNumber, newNanoId))
+                            guests.add(Guest(
+                                sheetsId = rowNumber.toString(),
+                                nanoId = newNanoId,
+                                name = guestName,
+                                email = row[1].toString(),
+                                phoneNumber = row[2].toString(),
+                                invitations = row[3].toString().toIntOrNull() ?: 1,
+                                venueName = row[4].toString(),
+                                notes = row[5].toString(),
+                                isVolunteerBenefit = row[6].toString().equals("Yes", ignoreCase = true),
+                                lastModified = row[7].toString().toLongOrNull() ?: System.currentTimeMillis(),
+                                nfcCardUid = row[8].toString()
+                            ))
+                        } catch (e: Exception) {
+                            println("Failed to parse guest row $rowNumber (no ID format): ${e.message}")
                         }
                     } else if (row.size >= 8) {
-                        // Backward compatibility: support format without NFC UID
+                        // Backward compatibility: no NFC UID column
                         try {
-                            val rowNumber = index + 2
-                            val guest = Guest(
+                            val guestName = row[0].toString()
+                            val newNanoId = NanoIdGenerator.generateGuestId()
+                            guestsToFixInSheets.add(Pair(rowNumber, newNanoId))
+                            guests.add(Guest(
                                 sheetsId = rowNumber.toString(),
-                                name = row[0].toString(),
+                                nanoId = newNanoId,
+                                name = guestName,
                                 email = row[1].toString(),
                                 phoneNumber = row[2].toString(),
                                 invitations = row[3].toString().toIntOrNull() ?: 1,
@@ -407,19 +444,20 @@ class GoogleSheetsService(private val context: Context) {
                                 isVolunteerBenefit = row[6].toString().equals("Yes", ignoreCase = true),
                                 lastModified = row[7].toString().toLongOrNull() ?: System.currentTimeMillis(),
                                 nfcCardUid = ""
-                            )
-                            guest
+                            ))
                         } catch (e: Exception) {
-                            println("Failed to parse guest row ${index + 2} (no NFC UID format): ${e.message}")
-                            null
+                            println("Failed to parse guest row $rowNumber (no NFC UID format): ${e.message}")
                         }
                     } else if (row.size >= 6) {
-                        // Backward compatibility: support old format without email and phone
+                        // Backward compatibility: old format without email and phone
                         try {
-                            val rowNumber = index + 2
-                            val guest = Guest(
+                            val guestName = row[0].toString()
+                            val newNanoId = NanoIdGenerator.generateGuestId()
+                            guestsToFixInSheets.add(Pair(rowNumber, newNanoId))
+                            guests.add(Guest(
                                 sheetsId = rowNumber.toString(),
-                                name = row[0].toString(),
+                                nanoId = newNanoId,
+                                name = guestName,
                                 email = "",
                                 phoneNumber = "",
                                 invitations = row[1].toString().toIntOrNull() ?: 1,
@@ -428,15 +466,30 @@ class GoogleSheetsService(private val context: Context) {
                                 isVolunteerBenefit = row[4].toString().equals("Yes", ignoreCase = true),
                                 lastModified = row[5].toString().toLongOrNull() ?: System.currentTimeMillis(),
                                 nfcCardUid = ""
-                            )
-                            guest
+                            ))
                         } catch (e: Exception) {
-                            println("Failed to parse guest row ${index + 2} (old format): ${e.message}")
-                            null
+                            println("Failed to parse guest row $rowNumber (old format): ${e.message}")
                         }
                     } else {
-                        println("Skipping guest row ${index + 2} - insufficient columns: ${row.size}")
-                        null
+                        println("Skipping guest row $rowNumber - insufficient columns: ${row.size}")
+                    }
+                }
+
+                // Write back any missing or invalid NanoIDs to Google Sheets (column J)
+                if (guestsToFixInSheets.isNotEmpty()) {
+                    println("📝 Writing ${guestsToFixInSheets.size} guest NanoID(s) to Google Sheets...")
+                    guestsToFixInSheets.forEach { (row, nanoId) ->
+                        try {
+                            val fixRange = ValueRange().setValues(listOf(listOf(nanoId)))
+                            sheetsService?.spreadsheets()?.values()?.update(
+                                spreadsheetId,
+                                "${sheetName}!J$row:J$row",
+                                fixRange
+                            )?.setValueInputOption("RAW")?.execute()
+                            println("✅ Set NanoID for guest row $row: $nanoId")
+                        } catch (e: Exception) {
+                            println("⚠️ Failed to write NanoID for guest row $row: ${e.message}")
+                        }
                     }
                 }
                 
@@ -1628,7 +1681,7 @@ class GoogleSheetsService(private val context: Context) {
     private fun getSheetDefinitions(): List<SheetDefinition> = listOf(
         SheetDefinition(
             settingsManager.getGuestListSheet(),
-                listOf("Name", "Email", "Phone", "Invitations", "Venue", "Notes", "Volunteer Benefit", "Last Modified", "NFC UID")
+                listOf("Name", "Email", "Phone", "Invitations", "Venue", "Notes", "Volunteer Benefit", "Last Modified", "NFC UID", "ID")
         ),
         SheetDefinition(
             settingsManager.getVolunteerGuestListSheet(),
@@ -1658,7 +1711,8 @@ class GoogleSheetsService(private val context: Context) {
                 "Artist/Group",
                 "Artist Contact Phone",
                 "Guest Name",
-                "Comment"
+                "Comment",
+                "ID"
             )
         )
     )
@@ -1670,7 +1724,8 @@ class GoogleSheetsService(private val context: Context) {
         val artistName: String,
         val artistContactPhone: String,
         val guestName: String,
-        val comment: String
+        val comment: String,
+        val nanoId: String = ""
     )
 
     suspend fun syncTempGuestsFromSheets(): List<TempGuestRow> = withContext(Dispatchers.IO) {
@@ -1683,7 +1738,7 @@ class GoogleSheetsService(private val context: Context) {
                 operation = {
                     val spreadsheetId = settingsManager.getSpreadsheetId()
                     val sheetName = settingsManager.getTempGuestListSheet()
-                    val range = "${sheetName}!A2:F"
+                    val range = "${sheetName}!A2:G"
 
                     val response = sheetsService?.spreadsheets()?.values()?.get(
                         spreadsheetId,
@@ -1698,20 +1753,33 @@ class GoogleSheetsService(private val context: Context) {
                     println("Retrieved ${values.size} temporary guest rows from sheets")
 
                     val formatter = java.time.format.DateTimeFormatter.ISO_LOCAL_DATE
+                    val tempGuestsToFixInSheets = mutableListOf<Pair<Int, String>>()
 
-                    values.mapIndexedNotNull { index, row ->
+                    val result = values.mapIndexedNotNull { index, row ->
                         if (row.size >= 5) {
                             try {
+                                val rowNumber = index + 2
                                 val modificationDate = java.time.LocalDate.parse(row[0].toString().trim(), formatter)
                                 val eventDate = java.time.LocalDate.parse(row[1].toString().trim(), formatter)
+                                val guestName = row[4].toString()
+
+                                // Parse NanoID from column G (index 6)
+                                val rawNanoId = if (row.size > 6) row[6].toString() else ""
+                                val needsFix = NanoIdGenerator.needsRegeneration(rawNanoId)
+                                val validNanoId = NanoIdGenerator.ensureValidNanoId(rawNanoId, guestName)
+                                if (needsFix) {
+                                    tempGuestsToFixInSheets.add(Pair(rowNumber, validNanoId))
+                                }
+
                                 TempGuestRow(
-                                    rowNumber = index + 2,
+                                    rowNumber = rowNumber,
                                     modificationDate = modificationDate,
                                     eventDate = eventDate,
                                     artistName = row[2].toString(),
                                     artistContactPhone = row[3].toString(),
-                                    guestName = row[4].toString(),
-                                    comment = if (row.size > 5) row[5].toString() else ""
+                                    guestName = guestName,
+                                    comment = if (row.size > 5) row[5].toString() else "",
+                                    nanoId = validNanoId
                                 )
                             } catch (e: Exception) {
                                 println("Failed to parse temp guest row ${index + 2}: ${e.message}")
@@ -1722,6 +1790,26 @@ class GoogleSheetsService(private val context: Context) {
                             null
                         }
                     }
+
+                    // Write back missing or invalid NanoIDs to column G
+                    if (tempGuestsToFixInSheets.isNotEmpty()) {
+                        println("📝 Writing ${tempGuestsToFixInSheets.size} temp guest NanoID(s) to Google Sheets...")
+                        tempGuestsToFixInSheets.forEach { (row, nanoId) ->
+                            try {
+                                val fixRange = ValueRange().setValues(listOf(listOf(nanoId)))
+                                sheetsService?.spreadsheets()?.values()?.update(
+                                    spreadsheetId,
+                                    "${sheetName}!G$row:G$row",
+                                    fixRange
+                                )?.setValueInputOption("RAW")?.execute()
+                                println("✅ Set NanoID for temp guest row $row: $nanoId")
+                            } catch (e: Exception) {
+                                println("⚠️ Failed to write NanoID for temp guest row $row: ${e.message}")
+                            }
+                        }
+                    }
+
+                    result
                 },
                 operationName = "sync temp guests from sheets"
             )
@@ -1768,13 +1856,14 @@ class GoogleSheetsService(private val context: Context) {
                         guest.temporaryArtistName,
                         guest.temporaryContactPhone,
                         guest.name,
-                        guest.notes
+                        guest.notes,
+                        guest.nanoId
                     )
 
                     val valueRange = ValueRange().setValues(listOf(values))
                     sheetsService?.spreadsheets()?.values()?.update(
                         spreadsheetId,
-                        "${sheetName}!A$rowNumber:F$rowNumber",
+                        "${sheetName}!A$rowNumber:G$rowNumber",
                         valueRange
                     )?.setValueInputOption("RAW")?.execute()
 

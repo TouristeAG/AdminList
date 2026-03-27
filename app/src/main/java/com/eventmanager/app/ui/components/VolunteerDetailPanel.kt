@@ -44,7 +44,6 @@ import com.eventmanager.app.data.utils.VolunteerActivityManager
 import com.eventmanager.app.ui.utils.*
 import com.eventmanager.app.utils.QRCodeUtils
 import com.eventmanager.app.R
-import com.google.gson.Gson
 import java.text.SimpleDateFormat
 import java.util.*
 import com.eventmanager.app.utils.ValidationUtils
@@ -304,18 +303,8 @@ fun VolunteerDetailPanel(
                     )
                     
                     val payload = remember(volunteer) {
-                        val data = mapOf(
-                            "type" to "volunteer",
-                            "version" to 1,
-                            "id" to volunteer.id,
-                            "sheetsId" to (volunteer.sheetsId ?: ""),
-                            "name" to volunteer.name,
-                            "abbr" to volunteer.lastNameAbbreviation
-                        )
-                        val json = Gson().toJson(data)
                         println("🔍 Generating QR code for volunteer: ${volunteer.name} (ID: ${volunteer.id})")
-                        println("🔍 QR code JSON: '$json'")
-                        json
+                        volunteer.id
                     }
                     val qrImage = remember(payload) { QRCodeUtils.generateQrImageBitmap(payload, 1024) }
                     val qrContext = LocalContext.current
@@ -493,16 +482,7 @@ fun VolunteerDetailPanel(
                 val logoUriString = settingsManager.getEmailLogoUri()
                 
                 // Generate QR code
-                val payload = mapOf(
-                    "type" to "volunteer",
-                    "version" to 1,
-                    "id" to volunteer.id,
-                    "sheetsId" to (volunteer.sheetsId ?: ""),
-                    "name" to volunteer.name,
-                    "abbr" to volunteer.lastNameAbbreviation
-                )
-                val json = Gson().toJson(payload)
-                val qrBitmap = QRCodeUtils.generateQrImageBitmap(json, 512)
+                val qrBitmap = QRCodeUtils.generateQrImageBitmap(volunteer.id, 512)
                 
                 // Save QR code file
                 var qrFile: File? = null
@@ -690,16 +670,7 @@ fun VolunteerDetailPanel(
                 }
                 
                 // Generate QR code
-                val payload = mapOf(
-                    "type" to "volunteer",
-                    "version" to 1,
-                    "id" to volunteer.id,
-                    "sheetsId" to (volunteer.sheetsId ?: ""),
-                    "name" to volunteer.name,
-                    "abbr" to volunteer.lastNameAbbreviation
-                )
-                val json = Gson().toJson(payload)
-                val qrBitmap = QRCodeUtils.generateQrImageBitmap(json, 512)
+                val qrBitmap = QRCodeUtils.generateQrImageBitmap(volunteer.id, 512)
                 
                 // Build simple HTML email (without Content-ID, just plain HTML)
                 val htmlEmail = buildProfessionalEmailHtml(

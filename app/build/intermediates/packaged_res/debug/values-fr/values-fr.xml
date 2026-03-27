@@ -439,7 +439,7 @@
     <string name="qr_code_subject">QR Code bénévole - %s</string>
     <string name="qr_code_subject_guest">QR Code invité·e - %s</string>
     <string name="read_uid_with_phone_nfc">Lire l\'UID avec le téléphone (NFC)</string>
-    <string name="read_uid_with_usb_reader">Lire l\'UID avec le lecteur USB (ACR122U)</string>
+    <string name="read_uid_with_usb_reader">Lire l\'UID avec le lecteur USB CCID</string>
     <string name="recent_activity">Activité récente</string>
     <string name="recent_guests">Invité·e·s récent·e·s</string>
     <string name="recent_shifts">Shifts récents</string>
