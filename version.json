@@ -1,8 +1,8 @@
 {
-  "latestVersionCode": 11,
-  "latestVersionName": "0.9.9.1",
-  "minSupportedVersionCode": "9",
-  "changelogShort": "New NFC card support for permanent guests and volunteers.",
-  "downloadUrl": "https://github.com/TouristeAG/AdminList/releases/download/0.9.9.1/app-release-0.9.9.1.apk",
+  "latestVersionCode": 12,
+  "latestVersionName": "0.9.9.2",
+  "minSupportedVersionCode": "12",
+  "changelogShort": "New QR code generation with support for future Lightspeed integration",
+  "downloadUrl": "https://github.com/TouristeAG/AdminList/releases/download/0.9.9.2/app-release-0.9.9.2.apk",
   "storeUrl": "https://play.google.com/store/apps/details?id=com.eventmanager.app"
 }
