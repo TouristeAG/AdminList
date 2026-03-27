@@ -53,7 +53,7 @@ public final class GuestDao_Impl implements GuestDao {
       @Override
       @NonNull
       protected String createQuery() {
-        return "INSERT OR REPLACE INTO `guests` (`id`,`sheetsId`,`name`,`lastNameAbbreviation`,`email`,`phoneNumber`,`invitations`,`venueName`,`notes`,`isVolunteerBenefit`,`volunteerId`,`lastModified`,`isTemporaryGuest`,`temporaryArtistName`,`temporaryEventDate`,`temporaryContactPhone`,`nfcCardUid`) VALUES (nullif(?, 0),?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+        return "INSERT OR REPLACE INTO `guests` (`id`,`sheetsId`,`nanoId`,`name`,`lastNameAbbreviation`,`email`,`phoneNumber`,`invitations`,`venueName`,`notes`,`isVolunteerBenefit`,`volunteerId`,`lastModified`,`isTemporaryGuest`,`temporaryArtistName`,`temporaryEventDate`,`temporaryContactPhone`,`nfcCardUid`) VALUES (nullif(?, 0),?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
       }
 
       @Override
@@ -65,31 +65,32 @@ public final class GuestDao_Impl implements GuestDao {
         } else {
           statement.bindString(2, entity.getSheetsId());
         }
-        statement.bindString(3, entity.getName());
-        statement.bindString(4, entity.getLastNameAbbreviation());
-        statement.bindString(5, entity.getEmail());
-        statement.bindString(6, entity.getPhoneNumber());
-        statement.bindLong(7, entity.getInvitations());
-        statement.bindString(8, entity.getVenueName());
-        statement.bindString(9, entity.getNotes());
+        statement.bindString(3, entity.getNanoId());
+        statement.bindString(4, entity.getName());
+        statement.bindString(5, entity.getLastNameAbbreviation());
+        statement.bindString(6, entity.getEmail());
+        statement.bindString(7, entity.getPhoneNumber());
+        statement.bindLong(8, entity.getInvitations());
+        statement.bindString(9, entity.getVenueName());
+        statement.bindString(10, entity.getNotes());
         final int _tmp = entity.isVolunteerBenefit() ? 1 : 0;
-        statement.bindLong(10, _tmp);
+        statement.bindLong(11, _tmp);
         if (entity.getVolunteerId() == null) {
-          statement.bindNull(11);
+          statement.bindNull(12);
         } else {
-          statement.bindString(11, entity.getVolunteerId());
+          statement.bindString(12, entity.getVolunteerId());
         }
-        statement.bindLong(12, entity.getLastModified());
+        statement.bindLong(13, entity.getLastModified());
         final int _tmp_1 = entity.isTemporaryGuest() ? 1 : 0;
-        statement.bindLong(13, _tmp_1);
-        statement.bindString(14, entity.getTemporaryArtistName());
+        statement.bindLong(14, _tmp_1);
+        statement.bindString(15, entity.getTemporaryArtistName());
         if (entity.getTemporaryEventDate() == null) {
-          statement.bindNull(15);
+          statement.bindNull(16);
         } else {
-          statement.bindLong(15, entity.getTemporaryEventDate());
+          statement.bindLong(16, entity.getTemporaryEventDate());
         }
-        statement.bindString(16, entity.getTemporaryContactPhone());
-        statement.bindString(17, entity.getNfcCardUid());
+        statement.bindString(17, entity.getTemporaryContactPhone());
+        statement.bindString(18, entity.getNfcCardUid());
       }
     };
     this.__deletionAdapterOfGuest = new EntityDeletionOrUpdateAdapter<Guest>(__db) {
@@ -109,7 +110,7 @@ public final class GuestDao_Impl implements GuestDao {
       @Override
       @NonNull
       protected String createQuery() {
-        return "UPDATE OR ABORT `guests` SET `id` = ?,`sheetsId` = ?,`name` = ?,`lastNameAbbreviation` = ?,`email` = ?,`phoneNumber` = ?,`invitations` = ?,`venueName` = ?,`notes` = ?,`isVolunteerBenefit` = ?,`volunteerId` = ?,`lastModified` = ?,`isTemporaryGuest` = ?,`temporaryArtistName` = ?,`temporaryEventDate` = ?,`temporaryContactPhone` = ?,`nfcCardUid` = ? WHERE `id` = ?";
+        return "UPDATE OR ABORT `guests` SET `id` = ?,`sheetsId` = ?,`nanoId` = ?,`name` = ?,`lastNameAbbreviation` = ?,`email` = ?,`phoneNumber` = ?,`invitations` = ?,`venueName` = ?,`notes` = ?,`isVolunteerBenefit` = ?,`volunteerId` = ?,`lastModified` = ?,`isTemporaryGuest` = ?,`temporaryArtistName` = ?,`temporaryEventDate` = ?,`temporaryContactPhone` = ?,`nfcCardUid` = ? WHERE `id` = ?";
       }
 
       @Override
@@ -121,32 +122,33 @@ public final class GuestDao_Impl implements GuestDao {
         } else {
           statement.bindString(2, entity.getSheetsId());
         }
-        statement.bindString(3, entity.getName());
-        statement.bindString(4, entity.getLastNameAbbreviation());
-        statement.bindString(5, entity.getEmail());
-        statement.bindString(6, entity.getPhoneNumber());
-        statement.bindLong(7, entity.getInvitations());
-        statement.bindString(8, entity.getVenueName());
-        statement.bindString(9, entity.getNotes());
+        statement.bindString(3, entity.getNanoId());
+        statement.bindString(4, entity.getName());
+        statement.bindString(5, entity.getLastNameAbbreviation());
+        statement.bindString(6, entity.getEmail());
+        statement.bindString(7, entity.getPhoneNumber());
+        statement.bindLong(8, entity.getInvitations());
+        statement.bindString(9, entity.getVenueName());
+        statement.bindString(10, entity.getNotes());
         final int _tmp = entity.isVolunteerBenefit() ? 1 : 0;
-        statement.bindLong(10, _tmp);
+        statement.bindLong(11, _tmp);
         if (entity.getVolunteerId() == null) {
-          statement.bindNull(11);
+          statement.bindNull(12);
         } else {
-          statement.bindString(11, entity.getVolunteerId());
+          statement.bindString(12, entity.getVolunteerId());
         }
-        statement.bindLong(12, entity.getLastModified());
+        statement.bindLong(13, entity.getLastModified());
         final int _tmp_1 = entity.isTemporaryGuest() ? 1 : 0;
-        statement.bindLong(13, _tmp_1);
-        statement.bindString(14, entity.getTemporaryArtistName());
+        statement.bindLong(14, _tmp_1);
+        statement.bindString(15, entity.getTemporaryArtistName());
         if (entity.getTemporaryEventDate() == null) {
-          statement.bindNull(15);
+          statement.bindNull(16);
         } else {
-          statement.bindLong(15, entity.getTemporaryEventDate());
+          statement.bindLong(16, entity.getTemporaryEventDate());
         }
-        statement.bindString(16, entity.getTemporaryContactPhone());
-        statement.bindString(17, entity.getNfcCardUid());
-        statement.bindLong(18, entity.getId());
+        statement.bindString(17, entity.getTemporaryContactPhone());
+        statement.bindString(18, entity.getNfcCardUid());
+        statement.bindLong(19, entity.getId());
       }
     };
     this.__preparedStmtOfDeleteGuestById = new SharedSQLiteStatement(__db) {
@@ -371,6 +373,7 @@ public final class GuestDao_Impl implements GuestDao {
         try {
           final int _cursorIndexOfId = CursorUtil.getColumnIndexOrThrow(_cursor, "id");
           final int _cursorIndexOfSheetsId = CursorUtil.getColumnIndexOrThrow(_cursor, "sheetsId");
+          final int _cursorIndexOfNanoId = CursorUtil.getColumnIndexOrThrow(_cursor, "nanoId");
           final int _cursorIndexOfName = CursorUtil.getColumnIndexOrThrow(_cursor, "name");
           final int _cursorIndexOfLastNameAbbreviation = CursorUtil.getColumnIndexOrThrow(_cursor, "lastNameAbbreviation");
           final int _cursorIndexOfEmail = CursorUtil.getColumnIndexOrThrow(_cursor, "email");
@@ -397,6 +400,8 @@ public final class GuestDao_Impl implements GuestDao {
             } else {
               _tmpSheetsId = _cursor.getString(_cursorIndexOfSheetsId);
             }
+            final String _tmpNanoId;
+            _tmpNanoId = _cursor.getString(_cursorIndexOfNanoId);
             final String _tmpName;
             _tmpName = _cursor.getString(_cursorIndexOfName);
             final String _tmpLastNameAbbreviation;
@@ -439,7 +444,7 @@ public final class GuestDao_Impl implements GuestDao {
             _tmpTemporaryContactPhone = _cursor.getString(_cursorIndexOfTemporaryContactPhone);
             final String _tmpNfcCardUid;
             _tmpNfcCardUid = _cursor.getString(_cursorIndexOfNfcCardUid);
-            _item = new Guest(_tmpId,_tmpSheetsId,_tmpName,_tmpLastNameAbbreviation,_tmpEmail,_tmpPhoneNumber,_tmpInvitations,_tmpVenueName,_tmpNotes,_tmpIsVolunteerBenefit,_tmpVolunteerId,_tmpLastModified,_tmpIsTemporaryGuest,_tmpTemporaryArtistName,_tmpTemporaryEventDate,_tmpTemporaryContactPhone,_tmpNfcCardUid);
+            _item = new Guest(_tmpId,_tmpSheetsId,_tmpNanoId,_tmpName,_tmpLastNameAbbreviation,_tmpEmail,_tmpPhoneNumber,_tmpInvitations,_tmpVenueName,_tmpNotes,_tmpIsVolunteerBenefit,_tmpVolunteerId,_tmpLastModified,_tmpIsTemporaryGuest,_tmpTemporaryArtistName,_tmpTemporaryEventDate,_tmpTemporaryContactPhone,_tmpNfcCardUid);
             _result.add(_item);
           }
           return _result;
@@ -467,6 +472,7 @@ public final class GuestDao_Impl implements GuestDao {
         try {
           final int _cursorIndexOfId = CursorUtil.getColumnIndexOrThrow(_cursor, "id");
           final int _cursorIndexOfSheetsId = CursorUtil.getColumnIndexOrThrow(_cursor, "sheetsId");
+          final int _cursorIndexOfNanoId = CursorUtil.getColumnIndexOrThrow(_cursor, "nanoId");
           final int _cursorIndexOfName = CursorUtil.getColumnIndexOrThrow(_cursor, "name");
           final int _cursorIndexOfLastNameAbbreviation = CursorUtil.getColumnIndexOrThrow(_cursor, "lastNameAbbreviation");
           final int _cursorIndexOfEmail = CursorUtil.getColumnIndexOrThrow(_cursor, "email");
@@ -493,6 +499,8 @@ public final class GuestDao_Impl implements GuestDao {
             } else {
               _tmpSheetsId = _cursor.getString(_cursorIndexOfSheetsId);
             }
+            final String _tmpNanoId;
+            _tmpNanoId = _cursor.getString(_cursorIndexOfNanoId);
             final String _tmpName;
             _tmpName = _cursor.getString(_cursorIndexOfName);
             final String _tmpLastNameAbbreviation;
@@ -535,7 +543,7 @@ public final class GuestDao_Impl implements GuestDao {
             _tmpTemporaryContactPhone = _cursor.getString(_cursorIndexOfTemporaryContactPhone);
             final String _tmpNfcCardUid;
             _tmpNfcCardUid = _cursor.getString(_cursorIndexOfNfcCardUid);
-            _item = new Guest(_tmpId,_tmpSheetsId,_tmpName,_tmpLastNameAbbreviation,_tmpEmail,_tmpPhoneNumber,_tmpInvitations,_tmpVenueName,_tmpNotes,_tmpIsVolunteerBenefit,_tmpVolunteerId,_tmpLastModified,_tmpIsTemporaryGuest,_tmpTemporaryArtistName,_tmpTemporaryEventDate,_tmpTemporaryContactPhone,_tmpNfcCardUid);
+            _item = new Guest(_tmpId,_tmpSheetsId,_tmpNanoId,_tmpName,_tmpLastNameAbbreviation,_tmpEmail,_tmpPhoneNumber,_tmpInvitations,_tmpVenueName,_tmpNotes,_tmpIsVolunteerBenefit,_tmpVolunteerId,_tmpLastModified,_tmpIsTemporaryGuest,_tmpTemporaryArtistName,_tmpTemporaryEventDate,_tmpTemporaryContactPhone,_tmpNfcCardUid);
             _result.add(_item);
           }
           return _result;
@@ -566,6 +574,7 @@ public final class GuestDao_Impl implements GuestDao {
         try {
           final int _cursorIndexOfId = CursorUtil.getColumnIndexOrThrow(_cursor, "id");
           final int _cursorIndexOfSheetsId = CursorUtil.getColumnIndexOrThrow(_cursor, "sheetsId");
+          final int _cursorIndexOfNanoId = CursorUtil.getColumnIndexOrThrow(_cursor, "nanoId");
           final int _cursorIndexOfName = CursorUtil.getColumnIndexOrThrow(_cursor, "name");
           final int _cursorIndexOfLastNameAbbreviation = CursorUtil.getColumnIndexOrThrow(_cursor, "lastNameAbbreviation");
           final int _cursorIndexOfEmail = CursorUtil.getColumnIndexOrThrow(_cursor, "email");
@@ -591,6 +600,8 @@ public final class GuestDao_Impl implements GuestDao {
             } else {
               _tmpSheetsId = _cursor.getString(_cursorIndexOfSheetsId);
             }
+            final String _tmpNanoId;
+            _tmpNanoId = _cursor.getString(_cursorIndexOfNanoId);
             final String _tmpName;
             _tmpName = _cursor.getString(_cursorIndexOfName);
             final String _tmpLastNameAbbreviation;
@@ -633,7 +644,7 @@ public final class GuestDao_Impl implements GuestDao {
             _tmpTemporaryContactPhone = _cursor.getString(_cursorIndexOfTemporaryContactPhone);
             final String _tmpNfcCardUid;
             _tmpNfcCardUid = _cursor.getString(_cursorIndexOfNfcCardUid);
-            _result = new Guest(_tmpId,_tmpSheetsId,_tmpName,_tmpLastNameAbbreviation,_tmpEmail,_tmpPhoneNumber,_tmpInvitations,_tmpVenueName,_tmpNotes,_tmpIsVolunteerBenefit,_tmpVolunteerId,_tmpLastModified,_tmpIsTemporaryGuest,_tmpTemporaryArtistName,_tmpTemporaryEventDate,_tmpTemporaryContactPhone,_tmpNfcCardUid);
+            _result = new Guest(_tmpId,_tmpSheetsId,_tmpNanoId,_tmpName,_tmpLastNameAbbreviation,_tmpEmail,_tmpPhoneNumber,_tmpInvitations,_tmpVenueName,_tmpNotes,_tmpIsVolunteerBenefit,_tmpVolunteerId,_tmpLastModified,_tmpIsTemporaryGuest,_tmpTemporaryArtistName,_tmpTemporaryEventDate,_tmpTemporaryContactPhone,_tmpNfcCardUid);
           } else {
             _result = null;
           }
@@ -662,6 +673,7 @@ public final class GuestDao_Impl implements GuestDao {
         try {
           final int _cursorIndexOfId = CursorUtil.getColumnIndexOrThrow(_cursor, "id");
           final int _cursorIndexOfSheetsId = CursorUtil.getColumnIndexOrThrow(_cursor, "sheetsId");
+          final int _cursorIndexOfNanoId = CursorUtil.getColumnIndexOrThrow(_cursor, "nanoId");
           final int _cursorIndexOfName = CursorUtil.getColumnIndexOrThrow(_cursor, "name");
           final int _cursorIndexOfLastNameAbbreviation = CursorUtil.getColumnIndexOrThrow(_cursor, "lastNameAbbreviation");
           final int _cursorIndexOfEmail = CursorUtil.getColumnIndexOrThrow(_cursor, "email");
@@ -688,6 +700,8 @@ public final class GuestDao_Impl implements GuestDao {
             } else {
               _tmpSheetsId = _cursor.getString(_cursorIndexOfSheetsId);
             }
+            final String _tmpNanoId;
+            _tmpNanoId = _cursor.getString(_cursorIndexOfNanoId);
             final String _tmpName;
             _tmpName = _cursor.getString(_cursorIndexOfName);
             final String _tmpLastNameAbbreviation;
@@ -730,7 +744,7 @@ public final class GuestDao_Impl implements GuestDao {
             _tmpTemporaryContactPhone = _cursor.getString(_cursorIndexOfTemporaryContactPhone);
             final String _tmpNfcCardUid;
             _tmpNfcCardUid = _cursor.getString(_cursorIndexOfNfcCardUid);
-            _item = new Guest(_tmpId,_tmpSheetsId,_tmpName,_tmpLastNameAbbreviation,_tmpEmail,_tmpPhoneNumber,_tmpInvitations,_tmpVenueName,_tmpNotes,_tmpIsVolunteerBenefit,_tmpVolunteerId,_tmpLastModified,_tmpIsTemporaryGuest,_tmpTemporaryArtistName,_tmpTemporaryEventDate,_tmpTemporaryContactPhone,_tmpNfcCardUid);
+            _item = new Guest(_tmpId,_tmpSheetsId,_tmpNanoId,_tmpName,_tmpLastNameAbbreviation,_tmpEmail,_tmpPhoneNumber,_tmpInvitations,_tmpVenueName,_tmpNotes,_tmpIsVolunteerBenefit,_tmpVolunteerId,_tmpLastModified,_tmpIsTemporaryGuest,_tmpTemporaryArtistName,_tmpTemporaryEventDate,_tmpTemporaryContactPhone,_tmpNfcCardUid);
             _result.add(_item);
           }
           return _result;
@@ -755,6 +769,7 @@ public final class GuestDao_Impl implements GuestDao {
         try {
           final int _cursorIndexOfId = CursorUtil.getColumnIndexOrThrow(_cursor, "id");
           final int _cursorIndexOfSheetsId = CursorUtil.getColumnIndexOrThrow(_cursor, "sheetsId");
+          final int _cursorIndexOfNanoId = CursorUtil.getColumnIndexOrThrow(_cursor, "nanoId");
           final int _cursorIndexOfName = CursorUtil.getColumnIndexOrThrow(_cursor, "name");
           final int _cursorIndexOfLastNameAbbreviation = CursorUtil.getColumnIndexOrThrow(_cursor, "lastNameAbbreviation");
           final int _cursorIndexOfEmail = CursorUtil.getColumnIndexOrThrow(_cursor, "email");
@@ -781,6 +796,8 @@ public final class GuestDao_Impl implements GuestDao {
             } else {
               _tmpSheetsId = _cursor.getString(_cursorIndexOfSheetsId);
             }
+            final String _tmpNanoId;
+            _tmpNanoId = _cursor.getString(_cursorIndexOfNanoId);
             final String _tmpName;
             _tmpName = _cursor.getString(_cursorIndexOfName);
             final String _tmpLastNameAbbreviation;
@@ -823,7 +840,7 @@ public final class GuestDao_Impl implements GuestDao {
             _tmpTemporaryContactPhone = _cursor.getString(_cursorIndexOfTemporaryContactPhone);
             final String _tmpNfcCardUid;
             _tmpNfcCardUid = _cursor.getString(_cursorIndexOfNfcCardUid);
-            _item = new Guest(_tmpId,_tmpSheetsId,_tmpName,_tmpLastNameAbbreviation,_tmpEmail,_tmpPhoneNumber,_tmpInvitations,_tmpVenueName,_tmpNotes,_tmpIsVolunteerBenefit,_tmpVolunteerId,_tmpLastModified,_tmpIsTemporaryGuest,_tmpTemporaryArtistName,_tmpTemporaryEventDate,_tmpTemporaryContactPhone,_tmpNfcCardUid);
+            _item = new Guest(_tmpId,_tmpSheetsId,_tmpNanoId,_tmpName,_tmpLastNameAbbreviation,_tmpEmail,_tmpPhoneNumber,_tmpInvitations,_tmpVenueName,_tmpNotes,_tmpIsVolunteerBenefit,_tmpVolunteerId,_tmpLastModified,_tmpIsTemporaryGuest,_tmpTemporaryArtistName,_tmpTemporaryEventDate,_tmpTemporaryContactPhone,_tmpNfcCardUid);
             _result.add(_item);
           }
           return _result;
@@ -851,6 +868,7 @@ public final class GuestDao_Impl implements GuestDao {
         try {
           final int _cursorIndexOfId = CursorUtil.getColumnIndexOrThrow(_cursor, "id");
           final int _cursorIndexOfSheetsId = CursorUtil.getColumnIndexOrThrow(_cursor, "sheetsId");
+          final int _cursorIndexOfNanoId = CursorUtil.getColumnIndexOrThrow(_cursor, "nanoId");
           final int _cursorIndexOfName = CursorUtil.getColumnIndexOrThrow(_cursor, "name");
           final int _cursorIndexOfLastNameAbbreviation = CursorUtil.getColumnIndexOrThrow(_cursor, "lastNameAbbreviation");
           final int _cursorIndexOfEmail = CursorUtil.getColumnIndexOrThrow(_cursor, "email");
@@ -876,6 +894,8 @@ public final class GuestDao_Impl implements GuestDao {
             } else {
               _tmpSheetsId = _cursor.getString(_cursorIndexOfSheetsId);
             }
+            final String _tmpNanoId;
+            _tmpNanoId = _cursor.getString(_cursorIndexOfNanoId);
             final String _tmpName;
             _tmpName = _cursor.getString(_cursorIndexOfName);
             final String _tmpLastNameAbbreviation;
@@ -918,7 +938,7 @@ public final class GuestDao_Impl implements GuestDao {
             _tmpTemporaryContactPhone = _cursor.getString(_cursorIndexOfTemporaryContactPhone);
             final String _tmpNfcCardUid;
             _tmpNfcCardUid = _cursor.getString(_cursorIndexOfNfcCardUid);
-            _result = new Guest(_tmpId,_tmpSheetsId,_tmpName,_tmpLastNameAbbreviation,_tmpEmail,_tmpPhoneNumber,_tmpInvitations,_tmpVenueName,_tmpNotes,_tmpIsVolunteerBenefit,_tmpVolunteerId,_tmpLastModified,_tmpIsTemporaryGuest,_tmpTemporaryArtistName,_tmpTemporaryEventDate,_tmpTemporaryContactPhone,_tmpNfcCardUid);
+            _result = new Guest(_tmpId,_tmpSheetsId,_tmpNanoId,_tmpName,_tmpLastNameAbbreviation,_tmpEmail,_tmpPhoneNumber,_tmpInvitations,_tmpVenueName,_tmpNotes,_tmpIsVolunteerBenefit,_tmpVolunteerId,_tmpLastModified,_tmpIsTemporaryGuest,_tmpTemporaryArtistName,_tmpTemporaryEventDate,_tmpTemporaryContactPhone,_tmpNfcCardUid);
           } else {
             _result = null;
           }
@@ -947,6 +967,7 @@ public final class GuestDao_Impl implements GuestDao {
         try {
           final int _cursorIndexOfId = CursorUtil.getColumnIndexOrThrow(_cursor, "id");
           final int _cursorIndexOfSheetsId = CursorUtil.getColumnIndexOrThrow(_cursor, "sheetsId");
+          final int _cursorIndexOfNanoId = CursorUtil.getColumnIndexOrThrow(_cursor, "nanoId");
           final int _cursorIndexOfName = CursorUtil.getColumnIndexOrThrow(_cursor, "name");
           final int _cursorIndexOfLastNameAbbreviation = CursorUtil.getColumnIndexOrThrow(_cursor, "lastNameAbbreviation");
           final int _cursorIndexOfEmail = CursorUtil.getColumnIndexOrThrow(_cursor, "email");
@@ -972,6 +993,8 @@ public final class GuestDao_Impl implements GuestDao {
             } else {
               _tmpSheetsId = _cursor.getString(_cursorIndexOfSheetsId);
             }
+            final String _tmpNanoId;
+            _tmpNanoId = _cursor.getString(_cursorIndexOfNanoId);
             final String _tmpName;
             _tmpName = _cursor.getString(_cursorIndexOfName);
             final String _tmpLastNameAbbreviation;
@@ -1014,7 +1037,7 @@ public final class GuestDao_Impl implements GuestDao {
             _tmpTemporaryContactPhone = _cursor.getString(_cursorIndexOfTemporaryContactPhone);
             final String _tmpNfcCardUid;
             _tmpNfcCardUid = _cursor.getString(_cursorIndexOfNfcCardUid);
-            _result = new Guest(_tmpId,_tmpSheetsId,_tmpName,_tmpLastNameAbbreviation,_tmpEmail,_tmpPhoneNumber,_tmpInvitations,_tmpVenueName,_tmpNotes,_tmpIsVolunteerBenefit,_tmpVolunteerId,_tmpLastModified,_tmpIsTemporaryGuest,_tmpTemporaryArtistName,_tmpTemporaryEventDate,_tmpTemporaryContactPhone,_tmpNfcCardUid);
+            _result = new Guest(_tmpId,_tmpSheetsId,_tmpNanoId,_tmpName,_tmpLastNameAbbreviation,_tmpEmail,_tmpPhoneNumber,_tmpInvitations,_tmpVenueName,_tmpNotes,_tmpIsVolunteerBenefit,_tmpVolunteerId,_tmpLastModified,_tmpIsTemporaryGuest,_tmpTemporaryArtistName,_tmpTemporaryEventDate,_tmpTemporaryContactPhone,_tmpNfcCardUid);
           } else {
             _result = null;
           }
@@ -1042,6 +1065,7 @@ public final class GuestDao_Impl implements GuestDao {
         try {
           final int _cursorIndexOfId = CursorUtil.getColumnIndexOrThrow(_cursor, "id");
           final int _cursorIndexOfSheetsId = CursorUtil.getColumnIndexOrThrow(_cursor, "sheetsId");
+          final int _cursorIndexOfNanoId = CursorUtil.getColumnIndexOrThrow(_cursor, "nanoId");
           final int _cursorIndexOfName = CursorUtil.getColumnIndexOrThrow(_cursor, "name");
           final int _cursorIndexOfLastNameAbbreviation = CursorUtil.getColumnIndexOrThrow(_cursor, "lastNameAbbreviation");
           final int _cursorIndexOfEmail = CursorUtil.getColumnIndexOrThrow(_cursor, "email");
@@ -1067,6 +1091,8 @@ public final class GuestDao_Impl implements GuestDao {
             } else {
               _tmpSheetsId = _cursor.getString(_cursorIndexOfSheetsId);
             }
+            final String _tmpNanoId;
+            _tmpNanoId = _cursor.getString(_cursorIndexOfNanoId);
             final String _tmpName;
             _tmpName = _cursor.getString(_cursorIndexOfName);
             final String _tmpLastNameAbbreviation;
@@ -1109,7 +1135,7 @@ public final class GuestDao_Impl implements GuestDao {
             _tmpTemporaryContactPhone = _cursor.getString(_cursorIndexOfTemporaryContactPhone);
             final String _tmpNfcCardUid;
             _tmpNfcCardUid = _cursor.getString(_cursorIndexOfNfcCardUid);
-            _result = new Guest(_tmpId,_tmpSheetsId,_tmpName,_tmpLastNameAbbreviation,_tmpEmail,_tmpPhoneNumber,_tmpInvitations,_tmpVenueName,_tmpNotes,_tmpIsVolunteerBenefit,_tmpVolunteerId,_tmpLastModified,_tmpIsTemporaryGuest,_tmpTemporaryArtistName,_tmpTemporaryEventDate,_tmpTemporaryContactPhone,_tmpNfcCardUid);
+            _result = new Guest(_tmpId,_tmpSheetsId,_tmpNanoId,_tmpName,_tmpLastNameAbbreviation,_tmpEmail,_tmpPhoneNumber,_tmpInvitations,_tmpVenueName,_tmpNotes,_tmpIsVolunteerBenefit,_tmpVolunteerId,_tmpLastModified,_tmpIsTemporaryGuest,_tmpTemporaryArtistName,_tmpTemporaryEventDate,_tmpTemporaryContactPhone,_tmpNfcCardUid);
           } else {
             _result = null;
           }

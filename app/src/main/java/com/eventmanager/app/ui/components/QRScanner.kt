@@ -45,12 +45,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import com.google.gson.Gson
-import com.google.gson.JsonSyntaxException
 import com.journeyapps.barcodescanner.CaptureManager
 import com.journeyapps.barcodescanner.DecoratedBarcodeView
 import com.journeyapps.barcodescanner.DefaultDecoderFactory
 import com.journeyapps.barcodescanner.BarcodeCallback
 import com.journeyapps.barcodescanner.BarcodeResult
+import com.google.zxing.DecodeHintType
 import com.eventmanager.app.data.models.Volunteer
 import com.eventmanager.app.data.models.Guest
 import com.eventmanager.app.hardware.Acr122uUsbNfcReader
@@ -350,6 +350,24 @@ fun QRScannerDialog(
                         onQRCodeScanned = { qrData ->
                             try {
                                 when (qrData.type.lowercase()) {
+                                    "nanoid" -> {
+                                        // New plain-text NanoID format — look up in both lists
+                                        val rawId = qrData.id
+                                        val volunteer = volunteers.find { it.id == rawId }
+                                        if (volunteer != null) {
+                                            onMatchFound(ScannerMatch.VolunteerMatch(volunteer))
+                                            onDismiss()
+                                        } else {
+                                            val guest = permanentGuests.find { it.nanoId == rawId }
+                                            if (guest != null) {
+                                                onMatchFound(ScannerMatch.GuestMatch(guest))
+                                                onDismiss()
+                                            } else {
+                                                errorMessage = context.getString(R.string.invalid_qr_or_nfc_data)
+                                            }
+                                        }
+                                    }
+
                                     "volunteer" -> {
                                         val volunteer = volunteers.find { volunteer ->
                                             volunteer.id == qrData.id
@@ -364,12 +382,13 @@ fun QRScannerDialog(
                                     }
 
                                     "guest" -> {
-                                        val guest = permanentGuests.find {
-                                            it.name.equals(qrData.name, ignoreCase = true)
-                                        } ?: permanentGuests.find {
-                                            it.name.contains(qrData.name, ignoreCase = true) ||
-                                                qrData.name.contains(it.name, ignoreCase = true)
-                                        }
+                                        val guest = permanentGuests.find { it.nanoId == qrData.id && qrData.id.isNotBlank() }
+                                            ?: permanentGuests.find {
+                                                it.name.equals(qrData.name, ignoreCase = true)
+                                            } ?: permanentGuests.find {
+                                                it.name.contains(qrData.name, ignoreCase = true) ||
+                                                    qrData.name.contains(it.name, ignoreCase = true)
+                                            }
 
                                         if (guest != null) {
                                             onMatchFound(ScannerMatch.GuestMatch(guest))
@@ -760,9 +779,13 @@ fun QRScannerView(
                     barcodeView = createdBarcodeView
                     println("✅ DecoratedBarcodeView created")
                     
-                    // Set up the barcode view
+                    // Set up the barcode view: MixedDecoder (scan type 2) alternates normal and inverted
+                    // luminance so QR codes work on dark backgrounds (e.g. white modules on black).
                     val formats = listOf(com.google.zxing.BarcodeFormat.QR_CODE)
-                    val decoderFactory = com.journeyapps.barcodescanner.DefaultDecoderFactory(formats)
+                    val decodeHints = mapOf<DecodeHintType, Any>(
+                        DecodeHintType.TRY_HARDER to true
+                    )
+                    val decoderFactory = DefaultDecoderFactory(formats, decodeHints, null, 2)
                     createdBarcodeView.decoderFactory = decoderFactory
                     println("✅ Decoder factory set")
                     
@@ -1048,12 +1071,12 @@ fun QRScannerView(
 }
 
 fun parseQRCodeData(qrText: String): QRCodeData {
+    val trimmed = qrText.trim()
+    println("🔍 Parsing QR code text: '$trimmed'")
     return try {
-        println("🔍 Parsing QR code text: '$qrText'")
         val gson = Gson()
-        val jsonMap = gson.fromJson(qrText, Map::class.java) as Map<String, Any>
+        val jsonMap = gson.fromJson(trimmed, Map::class.java) as Map<String, Any>
         println("🔍 Parsed JSON map: $jsonMap")
-        
         val qrData = QRCodeData(
             type = jsonMap["type"] as? String ?: "",
             version = (jsonMap["version"] as? Double)?.toInt() ?: 1,
@@ -1066,14 +1089,19 @@ fun parseQRCodeData(qrText: String): QRCodeData {
             name = jsonMap["name"] as? String ?: "",
             abbr = jsonMap["abbr"] as? String
         )
-        println("🔍 Parsed QR data: $qrData")
+        println("🔍 Parsed legacy JSON QR data: $qrData")
         qrData
-    } catch (e: JsonSyntaxException) {
-        println("❌ JSON syntax error: ${e.message}")
-        throw IllegalArgumentException("Invalid JSON format in QR code")
     } catch (e: Exception) {
-        println("❌ Parsing error: ${e.message}")
-        throw IllegalArgumentException("Failed to parse QR code data: ${e.message}")
+        // Not JSON — treat as plain NanoID (new Lightspeed-compatible format)
+        println("🔍 Not JSON, treating as plain NanoID: '$trimmed'")
+        QRCodeData(
+            type = "nanoid",
+            version = 1,
+            id = trimmed,
+            sheetsId = null,
+            name = "",
+            abbr = null
+        )
     }
 }
 
@@ -1279,46 +1307,37 @@ fun GuestQRScannerDialog(
                     QRScannerView(
                         onQRCodeScanned = { qrData ->
                             try {
-                                // Debug logging
-                                println("🔍 Guest QR Code scanned - Type: '${qrData.type}', Name: '${qrData.name}'")
-                                println("🔍 Available guests (${guests.size} total):")
-                                guests.take(10).forEach { g ->
-                                    println("  - Name: ${g.name}, IsVolunteerBenefit: ${g.isVolunteerBenefit}")
+                                println("🔍 Guest QR Code scanned - Type: '${qrData.type}', ID: '${qrData.id}', Name: '${qrData.name}'")
+                                val permanentOnly = guests.filter { !it.isVolunteerBenefit && !it.isTemporaryGuest }
+
+                                val guest: Guest? = when (qrData.type.lowercase()) {
+                                    "nanoid" -> {
+                                        // New plain-text NanoID format
+                                        permanentOnly.find { it.nanoId == qrData.id }
+                                    }
+                                    "guest" -> {
+                                        // Legacy JSON format — try NanoID first, then name
+                                        permanentOnly.find { it.nanoId == qrData.id && qrData.id.isNotBlank() }
+                                            ?: permanentOnly.find { it.name.equals(qrData.name, ignoreCase = true) }
+                                            ?: permanentOnly.find { g ->
+                                                g.name.contains(qrData.name, ignoreCase = true) ||
+                                                    qrData.name.contains(g.name, ignoreCase = true)
+                                            }
+                                    }
+                                    else -> {
+                                        errorMessage = context.getString(R.string.invalid_guest_qr_code)
+                                        null
+                                    }
                                 }
-                                
-                                // Only process guest type QR codes
-                                if (qrData.type != "guest") {
-                                    errorMessage = context.getString(R.string.invalid_guest_qr_code)
-                                    return@QRScannerView
-                                }
-                                
-                                // Find guest by name (case-insensitive) - only permanent guests
-                                val guest = guests.find { guest ->
-                                    !guest.isVolunteerBenefit && 
-                                    guest.name.equals(qrData.name, ignoreCase = true)
-                                }
-                                
+
                                 if (guest != null) {
                                     println("✅ Found guest: ${guest.name}")
                                     onGuestFound(guest)
                                     onDismiss()
-                                } else {
-                                    println("❌ Guest not found for name: '${qrData.name}'")
-                                    
-                                    // Try partial matching by name
-                                    val guestByPartialName = guests.find { g ->
-                                        !g.isVolunteerBenefit &&
-                                        (g.name.contains(qrData.name, ignoreCase = true) ||
-                                         qrData.name.contains(g.name, ignoreCase = true))
-                                    }
-                                    if (guestByPartialName != null) {
-                                        println("✅ Found guest by partial name match: ${guestByPartialName.name}")
-                                        onGuestFound(guestByPartialName)
-                                        onDismiss()
-                                    } else {
-                                        println("❌ No guest found with name '${qrData.name}'")
-                                        errorMessage = context.getString(R.string.guest_not_found, qrData.name)
-                                    }
+                                } else if (errorMessage == null) {
+                                    val label = qrData.id.ifBlank { qrData.name }
+                                    println("❌ No guest found for: '$label'")
+                                    errorMessage = context.getString(R.string.guest_not_found, label)
                                 }
                             } catch (e: Exception) {
                                 println("❌ Error processing QR code: ${e.message}")

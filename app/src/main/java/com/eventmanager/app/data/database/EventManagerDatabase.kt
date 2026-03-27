@@ -23,7 +23,7 @@ import com.eventmanager.app.data.models.CounterData
 
 @Database(
     entities = [Guest::class, Volunteer::class, Job::class, JobTypeConfig::class, VenueEntity::class, CounterData::class],
-    version = 23,
+    version = 24,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -919,6 +919,27 @@ abstract class EventManagerDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * MIGRATION 23→24: Add NanoID column to guests table.
+         * Each guest (permanent and temporary) gets a globally-unique NanoID for
+         * conflict-free synchronisation across devices and Google Sheets.
+         * Existing rows receive an empty string as a placeholder; the application
+         * will generate proper NanoIDs on next load and push them to Google Sheets.
+         */
+        private val MIGRATION_23_24 = object : Migration(23, 24) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                try {
+                    println("Starting migration 23→24: Adding nanoId column to guests table")
+                    db.execSQL("ALTER TABLE guests ADD COLUMN nanoId TEXT NOT NULL DEFAULT ''")
+                    println("Migration 23→24 completed successfully")
+                } catch (e: Exception) {
+                    println("Migration 23→24 failed: ${e.message}")
+                    e.printStackTrace()
+                    throw e
+                }
+            }
+        }
+
         fun getDatabase(context: Context): EventManagerDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -948,7 +969,8 @@ abstract class EventManagerDatabase : RoomDatabase() {
                     MIGRATION_19_20,
                     MIGRATION_20_21,
                     MIGRATION_21_22,
-                    MIGRATION_22_23
+                    MIGRATION_22_23,
+                    MIGRATION_23_24
                 )
                 .fallbackToDestructiveMigration()
                 .build()

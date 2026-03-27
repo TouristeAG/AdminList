@@ -481,7 +481,7 @@
     <string name="add_nfc_card_uid_title">Ajouter l\'UID de la carte NFC</string>
     <string name="enter_uid_manually">Entrer l\'UID manuellement</string>
     <string name="read_uid_with_phone_nfc">Lire l\'UID avec le téléphone (NFC)</string>
-    <string name="read_uid_with_usb_reader">Lire l\'UID avec le lecteur USB (ACR122U)</string>
+    <string name="read_uid_with_usb_reader">Lire l\'UID avec le lecteur USB CCID</string>
     <string name="usb_reader_not_connected">Aucun lecteur NFC USB externe détecté.</string>
     <string name="usb_reader_waiting_card">En attente d\'une carte NFC sur le lecteur USB...</string>
     <string name="enter_nfc_uid_title">Entrer l\'UID NFC</string>
