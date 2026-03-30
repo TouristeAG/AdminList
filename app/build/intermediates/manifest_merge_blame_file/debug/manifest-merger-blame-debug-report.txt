@@ -1,8 +1,8 @@
 1<?xml version="1.0" encoding="utf-8"?>
 2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
 3    package="com.eventmanager.app"
-4    android:versionCode="11"
-5    android:versionName="0.9.9.1" >
+4    android:versionCode="12"
+5    android:versionName="0.9.9.2" >
 6
 7    <uses-sdk
 8        android:minSdkVersion="21"
@@ -139,8 +139,8 @@
 74        </activity> <!-- Violet Icon Alias -->
 75        <activity-alias
 75-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:127:9-139:26
-76            android:name="com.eventmanager.app.MainActivity.Violet"
-76-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:128:13-48
+76            android:name="com.eventmanager.app.LauncherIconViolet"
+76-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:128:13-47
 77            android:enabled="false"
 77-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:130:13-36
 78            android:exported="true"
@@ -166,8 +166,8 @@
 88        </activity-alias> <!-- Purple Icon Alias -->
 89        <activity-alias
 89-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:112:9-124:26
-90            android:name="com.eventmanager.app.MainActivity.Purple"
-90-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:113:13-48
+90            android:name="com.eventmanager.app.LauncherIconPurple"
+90-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:113:13-47
 91            android:enabled="false"
 91-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:115:13-36
 92            android:exported="true"
@@ -193,8 +193,8 @@
 102        </activity-alias> <!-- Braun Icon Alias -->
 103        <activity-alias
 103-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:97:9-109:26
-104            android:name="com.eventmanager.app.MainActivity.Braun"
-104-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:98:13-47
+104            android:name="com.eventmanager.app.LauncherIconBraun"
+104-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:98:13-46
 105            android:enabled="false"
 105-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:100:13-36
 106            android:exported="true"
@@ -220,8 +220,8 @@
 116        </activity-alias> <!-- Blue Ocean Icon Alias -->
 117        <activity-alias
 117-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:82:9-94:26
-118            android:name="com.eventmanager.app.MainActivity.BlueOcean"
-118-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:83:13-51
+118            android:name="com.eventmanager.app.LauncherIconBlueOcean"
+118-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:83:13-50
 119            android:enabled="false"
 119-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:85:13-36
 120            android:exported="true"
@@ -247,8 +247,8 @@
 130        </activity-alias> <!-- Deep Blue Icon Alias -->
 131        <activity-alias
 131-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:67:9-79:26
-132            android:name="com.eventmanager.app.MainActivity.DeepBlue"
-132-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:68:13-50
+132            android:name="com.eventmanager.app.LauncherIconDeepBlue"
+132-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:68:13-49
 133            android:enabled="false"
 133-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:70:13-36
 134            android:exported="true"
@@ -274,8 +274,8 @@
 144        </activity-alias> <!-- Dark Icon Alias -->
 145        <activity-alias
 145-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:52:9-64:26
-146            android:name="com.eventmanager.app.MainActivity.Dark"
-146-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:53:13-46
+146            android:name="com.eventmanager.app.LauncherIconDark"
+146-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:53:13-45
 147            android:enabled="false"
 147-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:55:13-36
 148            android:exported="true"
@@ -298,11 +298,11 @@
 156-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:47:17-77
 156-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:47:27-74
 157            </intent-filter>
-158        </activity-alias> <!-- Light Icon Alias (Default) -->
+158        </activity-alias> <!-- Light Icon Alias (Default). Must not use MainActivity.* — tools resolve that as a non-existent inner class. -->
 159        <activity-alias
 159-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:37:9-49:26
-160            android:name="com.eventmanager.app.MainActivity.Light"
-160-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:38:13-47
+160            android:name="com.eventmanager.app.LauncherIconLight"
+160-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:38:13-46
 161            android:enabled="true"
 161-->/Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:40:13-35
 162            android:exported="true"

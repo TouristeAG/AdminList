@@ -2,6 +2,7 @@ package com.eventmanager.app.ui.components
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
@@ -11,12 +12,16 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -66,15 +71,57 @@ fun GuestDetailPanel(
     val context = LocalContext.current
     val isPhone = !isTablet()
     val responsivePadding = if (isPhone) getPhonePortraitPadding() else getResponsivePadding()
+    val seasonalFunEnabled = remember { SettingsManager(context).isSeasonalFunEnabled() }
+    val leonardoEasterEggEnabled = remember(guest, seasonalFunEnabled) {
+        seasonalFunEnabled && isLeonardoMondadaProfile(
+            firstName = guest.name,
+            lastNameOrAbbreviation = guest.lastNameAbbreviation
+        )
+    }
+    val glowTransition = rememberInfiniteTransition(label = "guest-glow")
+    val glow by glowTransition.animateFloat(
+        initialValue = 0.88f,
+        targetValue = 1f,
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+            animation = androidx.compose.animation.core.tween(1150),
+            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+        ),
+        label = "guest-glow-alpha"
+    )
     var showQrDialog by remember { mutableStateOf(false) }
     var showNfcDialog by remember { mutableStateOf(false) }
     
     Box(
         modifier = modifier.fillMaxSize()
     ) {
+        ProfileEasterEggBackground(enabled = leonardoEasterEggEnabled)
+
         // Background
         Card(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    if (leonardoEasterEggEnabled) {
+                        shadowElevation = 18.dp.toPx() * glow
+                    }
+                }
+                .then(
+                    if (leonardoEasterEggEnabled) {
+                        Modifier.border(
+                            width = 2.dp,
+                            brush = Brush.linearGradient(
+                                listOf(
+                                    Color(0xFFFFC857).copy(alpha = 0.75f),
+                                    Color(0xFF7F5AF0).copy(alpha = 0.75f),
+                                    Color(0xFF2CB67D).copy(alpha = 0.75f)
+                                )
+                            ),
+                            shape = RoundedCornerShape(if (isPhone) 12.dp else 16.dp)
+                        )
+                    } else {
+                        Modifier
+                    }
+                ),
             shape = RoundedCornerShape(if (isPhone) 12.dp else 16.dp),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surface
@@ -103,7 +150,8 @@ fun GuestDetailPanel(
                             guest = guest,
                             venues = venues,
                             isPhone = isPhone,
-                            onClose = onClose
+                            onClose = onClose,
+                            easterEggEnabled = leonardoEasterEggEnabled
                         )
                     }
                     
@@ -121,6 +169,7 @@ fun GuestDetailPanel(
                 }
             }
         }
+        ProfileEasterEggConfetti(enabled = leonardoEasterEggEnabled)
     }
     
     // Email confirmation dialog state
@@ -822,7 +871,8 @@ private fun GuestInformationSection(
     guest: Guest,
     venues: List<VenueEntity>,
     isPhone: Boolean,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    easterEggEnabled: Boolean
 ) {
     val context = LocalContext.current
     val responsivePadding = if (isPhone) getPhonePortraitCardPadding() else getResponsiveCardPadding()
@@ -870,13 +920,29 @@ private fun GuestInformationSection(
                                 text = guest.name,
                                 style = if (isPhone) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.headlineMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                                color = if (easterEggEnabled) Color(0xFFFFF3B0) else MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = if (easterEggEnabled) {
+                                    Modifier.graphicsLayer {
+                                        shadowElevation = 14.dp.toPx()
+                                        scaleX = 1.02f
+                                        scaleY = 1.02f
+                                    }
+                                } else {
+                                    Modifier
+                                }
                             )
                             if (guest.lastNameAbbreviation.isNotEmpty()) {
                                 Text(
                                     text = guest.lastNameAbbreviation,
                                     style = if (isPhone) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    color = if (easterEggEnabled) Color(0xFFE3FFFB) else MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = if (easterEggEnabled) {
+                                        Modifier.graphicsLayer {
+                                            shadowElevation = 10.dp.toPx()
+                                        }
+                                    } else {
+                                        Modifier
+                                    }
                                 )
                             }
                         }

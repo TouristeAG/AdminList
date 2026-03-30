@@ -1,1 +1,1 @@
-–JÕKÛT“G…TÔE
+ÕK‰LŒTÍF√SÏG

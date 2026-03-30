@@ -177,7 +177,32 @@
     <string name="bar_discount_n">%1$d%% bar discount</string>
     <string name="invites_n">%1$d invites</string>
     <string name="no_rewards_configured">No rewards configured</string>
-    
+    <!-- Shift Type Dialog -->
+    <string name="add_shift_type_title_compact">Add Shift Type</string>
+    <string name="add_shift_type_title_full">Add New Shift Type</string>
+    <string name="edit_shift_type_title_compact">Edit Shift Type</string>
+    <string name="edit_shift_type_title_full">Edit Shift Type Configuration</string>
+    <string name="shift_type_name_label">Shift Type Name</string>
+    <string name="shift_type_name_placeholder">e.g., Bar Staff</string>
+    <string name="description_label">Description</string>
+    <string name="description_placeholder">Optional description</string>
+    <string name="benefit_system_label">Benefit System</string>
+    <string name="stellar_config_label">Shift Type Configuration</string>
+    <string name="manual_rewards_config_label">Manual Rewards Configuration</string>
+    <string name="shift_job_label">Shift Job (Nova / Étoile / Galaxie)</string>
+    <string name="orion_job_label">Orion Job (Committee / Coordination)</string>
+    <string name="requires_shift_time_label">Requires Shift Time</string>
+    <string name="duration_days_label">Duration (days)</string>
+    <string name="free_drinks_label">Free Drinks</string>
+    <string name="bar_discount_percent_label">Bar Discount (%)</string>
+    <string name="free_entry_label">Free Entry</string>
+    <string name="number_of_invites_label">Number of Invites</string>
+    <string name="other_notes_label">Other Notes</string>
+    <string name="other_notes_placeholder">Additional notes…</string>
+    <string name="update_shift_type">Update Shift Type</string>
+    <string name="stellar_benefits_info_title">Stellar Benefits System</string>
+    <string name="stellar_benefits_info_body">The Stellar system automatically awards ranks based on shift history:\n\n• NOVA — before-midnight shift → free entry + 1 guest + 2 drink tokens (same night)\n• ÉTOILE — after-midnight shift → free entry + 1 guest for the next event (valid 31 days)\n• GALAXIE — 3 + shifts in the same month → free entry + 50 %% bar discount for the whole month\n• ORION — committee / coordination role → free entry + 1 guest + 50 %% bar discount (1 year)\n• VETERAN — 1 year after Orion → same perks for a second year\n\nShift Job enables Nova / Étoile / Galaxie tracking.\nOrion Job enables Orion / Veteran tracking.\nThese two options are mutually exclusive.\nRequires Shift Time is only relevant for Shift Jobs (determines before / after midnight).</string>
+
     <!-- Venue Management -->
     <string name="venue_management_title">Venue Management</string>
     <string name="venue_management_description">Configure venues and their settings</string>
@@ -499,6 +524,8 @@
     <string name="scan_with_usb_reader">Scan with USB reader</string>
     <string name="usb_reader_waiting_card_short">Waiting card...</string>
     <string name="nfc_not_supported_device">This device does not support NFC scanning.</string>
+    <string name="nfc_unavailable_no_usb_hint">This device has no NFC, and no USB reader is connected.</string>
+    <string name="nfc_phone_unavailable_use_usb_reader">This device has no built-in NFC. Use the USB reader option below to scan.</string>
     <string name="nfc_disabled_enable">NFC is disabled. Enable NFC in your phone settings to scan cards.</string>
     <string name="nfc_uid_read_failed">Unable to read NFC card UID. Try again.</string>
     <string name="nfc_uid_not_found">No volunteer or permanent guest found for NFC UID: %s</string>
@@ -866,4 +893,5 @@
     <string name="activity_status_active_days_ago">Active (%d days ago)</string>
     <string name="activity_status_active_months_ago">Active (%d months ago)</string>
     <string name="activity_status_inactive_years_ago">Inactive (%d years ago)</string>
+    <string name="legend_badge_label">Legend</string>
 </resources>

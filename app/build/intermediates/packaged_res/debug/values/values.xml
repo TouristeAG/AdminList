@@ -41,6 +41,8 @@
     <string name="add_nfc_card_uid_title">Add NFC card UID</string>
     <string name="add_shift">Add Shift</string>
     <string name="add_shift_type">Add Shift Type</string>
+    <string name="add_shift_type_title_compact">Add Shift Type</string>
+    <string name="add_shift_type_title_full">Add New Shift Type</string>
     <string name="add_venue">Add Venue</string>
     <string name="add_volunteer">Add Volunteer</string>
     <string name="advanced_settings_title">Advanced Settings</string>
@@ -92,7 +94,9 @@
     <string name="back">Back</string>
     <string name="bar_discount">💰 %d%% Bar Discount</string>
     <string name="bar_discount_n">%1$d%% bar discount</string>
+    <string name="bar_discount_percent_label">Bar Discount (%)</string>
     <string name="benefit_details">Benefit Details</string>
+    <string name="benefit_system_label">Benefit System</string>
     <string name="benefits_description">Staff reference for checking volunteer benefits</string>
     <string name="benefits_title">Benefits</string>
     <string name="birthday">Birthday</string>
@@ -174,12 +178,15 @@
     <string name="delete_volunteer_title">Delete Volunteer</string>
     <string name="delete_volunteer_warning">⚠️ Warning: This action cannot be undone!</string>
     <string formatted="false" name="delete_volunteers">Delete %d Volunteer%s</string>
+    <string name="description_label">Description</string>
+    <string name="description_placeholder">Optional description</string>
     <string name="download_complete">Download complete</string>
     <string name="download_error_message">Could not download update: %s</string>
     <string name="download_error_title">Download failed</string>
     <string name="download_progress">Downloading: %d%%</string>
     <string name="downloading_update">Downloading update…</string>
     <string name="drink_tokens">🍺 %d Drink Tokens</string>
+    <string name="duration_days_label">Duration (days)</string>
     <string name="easter_egg_off_the_line">Off The Line</string>
     <string name="easter_egg_pizza_undelivery">Pizza Undelivery</string>
     <string name="easter_egg_scroll">Scroll!</string>
@@ -188,6 +195,8 @@
     <string name="edit_guest_details">Edit Guest Details</string>
     <string name="edit_shift">Edit Shift</string>
     <string name="edit_shift_details">Edit Shift Details</string>
+    <string name="edit_shift_type_title_compact">Edit Shift Type</string>
+    <string name="edit_shift_type_title_full">Edit Shift Type Configuration</string>
     <string name="edit_venue_configuration">Edit Venue Configuration</string>
     <string name="edit_volunteer">Edit Volunteer</string>
     <string name="edit_volunteer_button">Edit Volunteer</string>
@@ -287,11 +296,13 @@
     <string name="find_guest">Find Guest</string>
     <string name="find_volunteer">Find Volunteer</string>
     <string name="free_drinks">Free Drinks</string>
+    <string name="free_drinks_label">Free Drinks</string>
     <string name="free_drinks_n">%1$d free drinks</string>
     <string name="free_drinks_statistics">Free Drinks Statistics</string>
     <string name="free_drinks_statistics_description">Number of free drinks available over time</string>
     <string name="free_drinks_today">Free Drinks Today</string>
     <string name="free_entry">✅ Free Entry</string>
+    <string name="free_entry_label">Free Entry</string>
     <string name="friend_invitation">👥 Friend Invitation</string>
     <string name="full_name">Full Name</string>
     <string name="gender">Gender</string>
@@ -374,11 +385,13 @@
     <string name="latest_job_tablet">Latest Job: %s</string>
     <string name="latest_volunteer_phone">Volunteer: %s</string>
     <string name="latest_volunteer_tablet">Latest Volunteer: %s</string>
+    <string name="legend_badge_label">Legend</string>
     <string name="male">Male</string>
     <string name="manage_shift_types">Manage Shift Types</string>
     <string name="manage_venues">Manage Venues</string>
     <string name="manual_guest_input">Enter Guest Name</string>
     <string name="manual_rewards">Manual Rewards</string>
+    <string name="manual_rewards_config_label">Manual Rewards Configuration</string>
     <string name="manual_rewards_details">Manual Rewards Details</string>
     <string name="manual_sync_now">Manual Sync Now</string>
     <string name="manual_volunteer_input">Enter Volunteer ID</string>
@@ -402,6 +415,7 @@
     <string name="nfc_card_detected">Card detected.</string>
     <string name="nfc_disabled_enable">NFC is disabled. Enable NFC in your phone settings to scan cards.</string>
     <string name="nfc_not_supported_device">This device does not support NFC scanning.</string>
+    <string name="nfc_phone_unavailable_use_usb_reader">This device has no built-in NFC. Use the USB reader option below to scan.</string>
     <string name="nfc_reader_error">NFC reader error: %s</string>
     <string name="nfc_uid_copied">NFC UID copied</string>
     <string name="nfc_uid_label">NFC UID</string>
@@ -409,6 +423,7 @@
     <string name="nfc_uid_multiple_matches_title">Multiple profiles found</string>
     <string name="nfc_uid_not_found">No volunteer or permanent guest found for NFC UID: %s</string>
     <string name="nfc_uid_read_failed">Unable to read NFC card UID. Try again.</string>
+    <string name="nfc_unavailable_no_usb_hint">This device has no NFC, and no USB reader is connected.</string>
     <string name="no">No</string>
     <string name="no_age_data">No age data available for active volunteers</string>
     <string name="no_gender_data">No gender data available</string>
@@ -422,11 +437,15 @@
     <string name="notes">Notes</string>
     <string name="notes_optional">Notes (Optional)</string>
     <string name="number_of_invitations">Number of Invitations</string>
+    <string name="number_of_invites_label">Number of Invites</string>
     <string name="ok">OK</string>
     <string name="open_google_cloud_console">Open Google Cloud Console</string>
     <string name="open_with">Open with</string>
     <string name="orion_job">Orion Job</string>
+    <string name="orion_job_label">Orion Job (Committee / Coordination)</string>
     <string name="other">Other</string>
+    <string name="other_notes_label">Other Notes</string>
+    <string name="other_notes_placeholder">Additional notes…</string>
     <string name="page_animations_description">Enable slide animations when switching pages and tabs</string>
     <string name="page_animations_title">Page Animations</string>
     <string name="people_counter_hint">Track guest attendance</string>
@@ -462,6 +481,7 @@
     <string name="refresh">Refresh</string>
     <string name="remove">Remove</string>
     <string name="replace_key_file">Replace Key File</string>
+    <string name="requires_shift_time_label">Requires Shift Time</string>
     <string name="requires_time">Requires Time</string>
     <string name="resolution_large">Small</string>
     <string name="resolution_medium_large">Medium Large</string>
@@ -525,6 +545,7 @@
     <string name="shift_date_time">Shift Date &amp; Time</string>
     <string name="shift_history">Shift History (%d shifts)</string>
     <string name="shift_job">Shift Job</string>
+    <string name="shift_job_label">Shift Job (Nova / Étoile / Galaxie)</string>
     <string name="shift_statistics">Shift Statistics</string>
     <string name="shift_statistics_description">Number of shifts completed by volunteers over time, organized by venue</string>
     <string name="shift_time">Shift Time</string>
@@ -533,6 +554,8 @@
     <string name="shift_type">Shift Type</string>
     <string name="shift_type_management_description">Configure shift types and their rank eligibility</string>
     <string name="shift_type_management_title">Shift Type Management</string>
+    <string name="shift_type_name_label">Shift Type Name</string>
+    <string name="shift_type_name_placeholder">e.g., Bar Staff</string>
     <string name="shift_types_count">%1$d of %2$d shift types</string>
     <string name="shift_types_sheet_label">Shift Types Sheet</string>
     <string name="shift_types_title">Shift Types</string>
@@ -549,6 +572,9 @@
     <string name="stats_and_graphs">Statistics &amp; Trends</string>
     <string name="status">Status:</string>
     <string name="stellar_benefits">Stellar Benefits</string>
+    <string name="stellar_benefits_info_body">The Stellar system automatically awards ranks based on shift history:\n\n• NOVA — before-midnight shift → free entry + 1 guest + 2 drink tokens (same night)\n• ÉTOILE — after-midnight shift → free entry + 1 guest for the next event (valid 31 days)\n• GALAXIE — 3 + shifts in the same month → free entry + 50 %% bar discount for the whole month\n• ORION — committee / coordination role → free entry + 1 guest + 50 %% bar discount (1 year)\n• VETERAN — 1 year after Orion → same perks for a second year\n\nShift Job enables Nova / Étoile / Galaxie tracking.\nOrion Job enables Orion / Veteran tracking.\nThese two options are mutually exclusive.\nRequires Shift Time is only relevant for Shift Jobs (determines before / after midnight).</string>
+    <string name="stellar_benefits_info_title">Stellar Benefits System</string>
+    <string name="stellar_config_label">Shift Type Configuration</string>
     <string name="step_1_description">Go to Google Cloud Console and create a new project or select an existing one.</string>
     <string name="step_1_title">Create Google Cloud Project</string>
     <string name="step_2_description">In your project, enable the Google Sheets API from the APIs &amp; Services section.</string>
@@ -690,6 +716,7 @@
     <string name="update_job">Update Job</string>
     <string name="update_now">Update now</string>
     <string name="update_required_message">A newer version of this app is required to continue. Please update to the latest version.</string>
+    <string name="update_shift_type">Update Shift Type</string>
     <string name="update_sources_custom_url">Custom URL</string>
     <string name="update_sources_github_label">GitHub Manifest URL</string>
     <string name="update_sources_reset">Reset to default</string>

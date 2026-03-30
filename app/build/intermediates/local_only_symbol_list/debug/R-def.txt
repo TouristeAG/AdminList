@@ -69,6 +69,8 @@ string add_nfc_card
 string add_nfc_card_uid_title
 string add_shift
 string add_shift_type
+string add_shift_type_title_compact
+string add_shift_type_title_full
 string add_venue
 string add_volunteer
 string advanced_settings_title
@@ -120,7 +122,9 @@ string available_volunteers
 string back
 string bar_discount
 string bar_discount_n
+string bar_discount_percent_label
 string benefit_details
+string benefit_system_label
 string benefits_description
 string benefits_title
 string birthday
@@ -202,12 +206,15 @@ string delete_volunteer_shift_count_other
 string delete_volunteer_title
 string delete_volunteer_warning
 string delete_volunteers
+string description_label
+string description_placeholder
 string download_complete
 string download_error_message
 string download_error_title
 string download_progress
 string downloading_update
 string drink_tokens
+string duration_days_label
 string easter_egg_off_the_line
 string easter_egg_pizza_undelivery
 string easter_egg_scroll
@@ -216,6 +223,8 @@ string edit_guest
 string edit_guest_details
 string edit_shift
 string edit_shift_details
+string edit_shift_type_title_compact
+string edit_shift_type_title_full
 string edit_venue_configuration
 string edit_volunteer
 string edit_volunteer_button
@@ -315,11 +324,13 @@ string filter_volunteer_benefits
 string find_guest
 string find_volunteer
 string free_drinks
+string free_drinks_label
 string free_drinks_n
 string free_drinks_statistics
 string free_drinks_statistics_description
 string free_drinks_today
 string free_entry
+string free_entry_label
 string friend_invitation
 string full_name
 string gender
@@ -402,11 +413,13 @@ string latest_job_phone
 string latest_job_tablet
 string latest_volunteer_phone
 string latest_volunteer_tablet
+string legend_badge_label
 string male
 string manage_shift_types
 string manage_venues
 string manual_guest_input
 string manual_rewards
+string manual_rewards_config_label
 string manual_rewards_details
 string manual_sync_now
 string manual_volunteer_input
@@ -430,6 +443,7 @@ string never_synced
 string nfc_card_detected
 string nfc_disabled_enable
 string nfc_not_supported_device
+string nfc_phone_unavailable_use_usb_reader
 string nfc_reader_error
 string nfc_uid_copied
 string nfc_uid_label
@@ -437,6 +451,7 @@ string nfc_uid_multiple_matches_message
 string nfc_uid_multiple_matches_title
 string nfc_uid_not_found
 string nfc_uid_read_failed
+string nfc_unavailable_no_usb_hint
 string no
 string no_age_data
 string no_gender_data
@@ -450,11 +465,15 @@ string not_specified
 string notes
 string notes_optional
 string number_of_invitations
+string number_of_invites_label
 string ok
 string open_google_cloud_console
 string open_with
 string orion_job
+string orion_job_label
 string other
+string other_notes_label
+string other_notes_placeholder
 string page_animations_description
 string page_animations_title
 string people_counter_hint
@@ -490,6 +509,7 @@ string recent_volunteers
 string refresh
 string remove
 string replace_key_file
+string requires_shift_time_label
 string requires_time
 string resolution_large
 string resolution_medium_large
@@ -553,6 +573,7 @@ string shield_optimized
 string shift_date_time
 string shift_history
 string shift_job
+string shift_job_label
 string shift_statistics
 string shift_statistics_description
 string shift_time
@@ -561,6 +582,8 @@ string shift_tracking_tablet
 string shift_type
 string shift_type_management_description
 string shift_type_management_title
+string shift_type_name_label
+string shift_type_name_placeholder
 string shift_types_count
 string shift_types_sheet_label
 string shift_types_title
@@ -577,6 +600,9 @@ string statistics_visibility_title
 string stats_and_graphs
 string status
 string stellar_benefits
+string stellar_benefits_info_body
+string stellar_benefits_info_title
+string stellar_config_label
 string step_1_description
 string step_1_title
 string step_2_description
@@ -718,6 +744,7 @@ string update_guest
 string update_job
 string update_now
 string update_required_message
+string update_shift_type
 string update_sources_custom_url
 string update_sources_github_label
 string update_sources_reset

@@ -2,6 +2,7 @@ package com.eventmanager.app.ui.components
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,13 +13,17 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -65,6 +70,23 @@ fun VolunteerBenefitsPanel(
     val context = LocalContext.current
     val isPhone = !isTablet()
     val responsivePadding = if (isPhone) getPhonePortraitPadding() else getResponsivePadding()
+    val seasonalFunEnabled = remember { SettingsManager(context).isSeasonalFunEnabled() }
+    val leonardoEasterEggEnabled = remember(volunteer, seasonalFunEnabled) {
+        seasonalFunEnabled && isLeonardoMondadaProfile(
+            firstName = volunteer.name,
+            lastNameOrAbbreviation = volunteer.lastNameAbbreviation
+        )
+    }
+    val glowTransition = rememberInfiniteTransition(label = "benefits-glow")
+    val glow by glowTransition.animateFloat(
+        initialValue = 0.86f,
+        targetValue = 1f,
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+            animation = androidx.compose.animation.core.tween(1000),
+            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+        ),
+        label = "benefits-glow-alpha"
+    )
     var showQrDialog by remember { mutableStateOf(false) }
     var showNfcDialog by remember { mutableStateOf(false) }
     
@@ -73,9 +95,31 @@ fun VolunteerBenefitsPanel(
     Box(
         modifier = modifier.fillMaxSize()
     ) {
+        ProfileEasterEggBackground(enabled = leonardoEasterEggEnabled)
         // Background
         Card(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    if (leonardoEasterEggEnabled) {
+                        shadowElevation = 18.dp.toPx() * glow
+                    }
+                }
+                .then(
+                    if (leonardoEasterEggEnabled) {
+                        Modifier.border(
+                            width = 2.dp,
+                            brush = Brush.linearGradient(
+                                listOf(
+                                    Color(0xFFFFC857).copy(alpha = 0.75f),
+                                    Color(0xFF7F5AF0).copy(alpha = 0.75f),
+                                    Color(0xFF2CB67D).copy(alpha = 0.75f)
+                                )
+                            ),
+                            shape = RoundedCornerShape(if (isPhone) 12.dp else 16.dp)
+                        )
+                    } else Modifier
+                ),
             shape = RoundedCornerShape(if (isPhone) 12.dp else 16.dp),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surface
@@ -155,13 +199,20 @@ fun VolunteerBenefitsPanel(
                                         text = volunteer.name,
                                         style = if (isPhone) getPhonePortraitTypography() else getResponsiveTypography(),
                                         fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                        color = if (leonardoEasterEggEnabled) Color(0xFFFFF3B0) else MaterialTheme.colorScheme.onPrimaryContainer,
+                                        modifier = if (leonardoEasterEggEnabled) {
+                                            Modifier.graphicsLayer {
+                                                shadowElevation = 14.dp.toPx()
+                                                scaleX = 1.02f
+                                                scaleY = 1.02f
+                                            }
+                                        } else Modifier
                                     )
                                     
                                     Text(
                                         text = "${volunteer.lastNameAbbreviation} • ${volunteer.email}",
                                         style = if (isPhone) getPhonePortraitBodyTypography() else getResponsiveBodyTypography(),
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                        color = if (leonardoEasterEggEnabled) Color(0xFFE3FFFB) else MaterialTheme.colorScheme.onPrimaryContainer
                                     )
                                 }
                             }
@@ -189,51 +240,124 @@ fun VolunteerBenefitsPanel(
                         
                         Spacer(modifier = Modifier.height(if (isPhone) 8.dp else 12.dp))
                         
-                        // Rank badge with status
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            AssistChip(
-                                onClick = { },
-                                label = { Text(getRankDisplayName(volunteerBenefitStatus.rank)) },
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.Default.Star,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                },
-                                colors = AssistChipDefaults.assistChipColors(
-                                    containerColor = when (volunteerBenefitStatus.rank) {
-                                        VolunteerRank.NOVA -> MaterialTheme.colorScheme.primaryContainer
-                                        VolunteerRank.ETOILE -> MaterialTheme.colorScheme.secondaryContainer
-                                        VolunteerRank.GALAXIE -> Color(0xFFEDE9FE) // Light purple container - always readable
-                                        VolunteerRank.ORION -> MaterialTheme.colorScheme.errorContainer
-                                        VolunteerRank.VETERAN -> MaterialTheme.colorScheme.surfaceVariant
-                                        VolunteerRank.SPECIAL -> MaterialTheme.colorScheme.primaryContainer
-                                        null -> MaterialTheme.colorScheme.surfaceVariant
+                        // Rank badge with status.
+                        // For the easter egg we stack official rank above the Legend chip
+                        // to keep phone layout stable and readable.
+                        val statusText = if (!benefit.isActive) {
+                            context.getString(R.string.expired)
+                        } else if (benefit.validUntil != null) {
+                            val timeLeft = benefit.validUntil - System.currentTimeMillis()
+                            val daysLeft = timeLeft / (1000 * 60 * 60 * 24)
+                            if (daysLeft > 0) context.getString(R.string.days_left, daysLeft.toInt()) else context.getString(R.string.expires_soon)
+                        } else {
+                            null
+                        }
+                        val statusColor = if (!benefit.isActive) {
+                            MaterialTheme.colorScheme.error
+                        } else if (benefit.validUntil != null) {
+                            val timeLeft = benefit.validUntil - System.currentTimeMillis()
+                            val daysLeft = timeLeft / (1000 * 60 * 60 * 24)
+                            if (daysLeft > 7) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        }
+
+                        if (leonardoEasterEggEnabled) {
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                AssistChip(
+                                    onClick = { },
+                                    label = { Text(getRankDisplayName(volunteerBenefitStatus.rank)) },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.Star,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp)
+                                        )
                                     },
-                                    labelColor = if (volunteerBenefitStatus.rank == VolunteerRank.GALAXIE) Color(0xFF5B21B6) else Color.Unspecified,
-                                    leadingIconContentColor = if (volunteerBenefitStatus.rank == VolunteerRank.GALAXIE) Color(0xFF5B21B6) else Color.Unspecified
+                                    colors = AssistChipDefaults.assistChipColors(
+                                        containerColor = when (volunteerBenefitStatus.rank) {
+                                            VolunteerRank.NOVA -> MaterialTheme.colorScheme.primaryContainer
+                                            VolunteerRank.ETOILE -> MaterialTheme.colorScheme.secondaryContainer
+                                            VolunteerRank.GALAXIE -> Color(0xFFEDE9FE)
+                                            VolunteerRank.ORION -> MaterialTheme.colorScheme.errorContainer
+                                            VolunteerRank.VETERAN -> MaterialTheme.colorScheme.surfaceVariant
+                                            VolunteerRank.SPECIAL -> MaterialTheme.colorScheme.primaryContainer
+                                            null -> MaterialTheme.colorScheme.surfaceVariant
+                                        },
+                                        labelColor = if (volunteerBenefitStatus.rank == VolunteerRank.GALAXIE) Color(0xFF5B21B6) else Color.Unspecified,
+                                        leadingIconContentColor = if (volunteerBenefitStatus.rank == VolunteerRank.GALAXIE) Color(0xFF5B21B6) else Color.Unspecified
+                                    )
                                 )
-                            )
-                            
-                            // Status indicator
-                            if (!benefit.isActive) {
-                                Text(
-                                    text = context.getString(R.string.expired),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.error
+
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    AssistChip(
+                                        onClick = { },
+                                        label = { Text(context.getString(R.string.legend_badge_label)) },
+                                        leadingIcon = {
+                                            Icon(
+                                                Icons.Default.AutoAwesome,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        },
+                                        colors = AssistChipDefaults.assistChipColors(
+                                            containerColor = Color(0xFFFFC857),
+                                            labelColor = Color(0xFF1F2937),
+                                            leadingIconContentColor = Color(0xFF1F2937)
+                                        )
+                                    )
+
+                                    statusText?.let {
+                                        Text(
+                                            text = it,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = statusColor
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                AssistChip(
+                                    onClick = { },
+                                    label = { Text(getRankDisplayName(volunteerBenefitStatus.rank)) },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.Star,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    },
+                                    colors = AssistChipDefaults.assistChipColors(
+                                        containerColor = when (volunteerBenefitStatus.rank) {
+                                            VolunteerRank.NOVA -> MaterialTheme.colorScheme.primaryContainer
+                                            VolunteerRank.ETOILE -> MaterialTheme.colorScheme.secondaryContainer
+                                            VolunteerRank.GALAXIE -> Color(0xFFEDE9FE)
+                                            VolunteerRank.ORION -> MaterialTheme.colorScheme.errorContainer
+                                            VolunteerRank.VETERAN -> MaterialTheme.colorScheme.surfaceVariant
+                                            VolunteerRank.SPECIAL -> MaterialTheme.colorScheme.primaryContainer
+                                            null -> MaterialTheme.colorScheme.surfaceVariant
+                                        },
+                                        labelColor = if (volunteerBenefitStatus.rank == VolunteerRank.GALAXIE) Color(0xFF5B21B6) else Color.Unspecified,
+                                        leadingIconContentColor = if (volunteerBenefitStatus.rank == VolunteerRank.GALAXIE) Color(0xFF5B21B6) else Color.Unspecified
+                                    )
                                 )
-                            } else if (benefit.validUntil != null) {
-                                val timeLeft = benefit.validUntil - System.currentTimeMillis()
-                                val daysLeft = timeLeft / (1000 * 60 * 60 * 24)
-                                Text(
-                                    text = if (daysLeft > 0) context.getString(R.string.days_left, daysLeft.toInt()) else context.getString(R.string.expires_soon),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = if (daysLeft > 7) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.error
-                                )
+
+                                statusText?.let {
+                                    Text(
+                                        text = it,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = statusColor
+                                    )
+                                }
                             }
                         }
                     }
@@ -399,7 +523,10 @@ fun VolunteerBenefitsPanel(
                                             ) {
                                                 listOfNotNull(
                                                     if (activeBenefit.freeEntry) context.getString(R.string.free_entry) else null,
-                                                    if (activeBenefit.friendInvitation) context.getString(R.string.friend_invitation) else null,
+                                                    if (activeBenefit.friendInvitation) {
+                                                        if (activeBenefit.inviteCount > 1) context.getString(R.string.invites_n, activeBenefit.inviteCount)
+                                                        else context.getString(R.string.friend_invitation)
+                                                    } else null,
                                                     if (activeBenefit.drinkTokens > 0) context.getString(R.string.drink_tokens, activeBenefit.drinkTokens) else null,
                                                     if (activeBenefit.barDiscount > 0) context.getString(R.string.bar_discount, activeBenefit.barDiscount) else null,
                                                     if (activeBenefit.extraordinaryBenefits) context.getString(R.string.extraordinary_benefits) else null
@@ -436,7 +563,10 @@ fun VolunteerBenefitsPanel(
                                     ) {
                                         listOfNotNull(
                                             if (benefit.freeEntry) context.getString(R.string.free_entry) else null,
-                                            if (benefit.friendInvitation) context.getString(R.string.friend_invitation) else null,
+                                            if (benefit.friendInvitation) {
+                                                if (benefit.inviteCount > 1) context.getString(R.string.invites_n, benefit.inviteCount)
+                                                else context.getString(R.string.friend_invitation)
+                                            } else null,
                                             if (benefit.drinkTokens > 0) context.getString(R.string.drink_tokens, benefit.drinkTokens) else null,
                                             if (benefit.barDiscount > 0) context.getString(R.string.bar_discount, benefit.barDiscount) else null,
                                             if (benefit.extraordinaryBenefits) context.getString(R.string.extraordinary_benefits) else null
@@ -546,6 +676,7 @@ fun VolunteerBenefitsPanel(
                 }
             }
         }
+        ProfileEasterEggConfetti(enabled = leonardoEasterEggEnabled)
     }
 
     // Email confirmation dialog state

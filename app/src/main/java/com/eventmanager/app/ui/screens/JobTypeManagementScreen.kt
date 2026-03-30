@@ -18,6 +18,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.eventmanager.app.data.models.JobTypeConfig
 import com.eventmanager.app.data.models.BenefitSystemType
@@ -434,52 +435,27 @@ fun AddJobTypeConfigDialog(
     val tabletMaxWidth = getTabletConstrainedDialogMaxWidth()
     val tabletMaxHeight = getTabletConstrainedDialogMaxHeight()
 
-    // Custom Dialog with proper scrolling
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = !isTabletDevice
-        )
+        properties = DialogProperties(usePlatformDefaultWidth = !isTabletDevice)
     ) {
         Card(
             modifier = Modifier
                 .then(
-                    if (isTabletDevice) {
-                        Modifier
-                            .widthIn(max = tabletMaxWidth)
-                            .heightIn(max = tabletMaxHeight)
-                    } else {
-                        Modifier
-                            .fillMaxWidth()
-                            .fillMaxHeight(0.9f)
-                    }
+                    if (isTabletDevice) Modifier.widthIn(max = tabletMaxWidth).heightIn(max = tabletMaxHeight)
+                    else Modifier.fillMaxWidth().fillMaxHeight(0.9f)
                 )
                 .padding(16.dp),
             shape = RoundedCornerShape(16.dp)
         ) {
-            Column(
-                modifier = Modifier.fillMaxSize()
-            ) {
-                // Header
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = if (isCompact) "Add Shift Type" else "Add New Shift Type",
-                        style = if (isTabletDevice) getTabletConstrainedTitleTypography() else getResponsiveTypography(),
-                        fontWeight = FontWeight.Bold
-                    )
-                    
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Close")
-                    }
-                }
-                
-                // Scrollable Content
+            Column(modifier = Modifier.fillMaxSize()) {
+                JobTypeDialogHeader(
+                    title = if (isCompact) stringResource(R.string.add_shift_type_title_compact)
+                            else stringResource(R.string.add_shift_type_title_full),
+                    isTabletDevice = isTabletDevice,
+                    onDismiss = onDismiss
+                )
+
                 Column(
                     modifier = Modifier
                         .weight(1f)
@@ -487,323 +463,51 @@ fun AddJobTypeConfigDialog(
                         .padding(horizontal = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(if (isCompact) 8.dp else 12.dp)
                 ) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Shift Type Name") },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("e.g., Bar Staff") }
-                )
-
-                OutlinedTextField(
-                    value = description,
-                    onValueChange = { description = it },
-                    label = { Text("Description") },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Optional description") }
-                )
-
-                // Benefit System Selection
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    JobTypeDialogFields(
+                        name = name,
+                        onNameChange = { name = it },
+                        description = description,
+                        onDescriptionChange = { description = it },
+                        benefitSystemType = benefitSystemType,
+                        onBenefitSystemTypeChange = { benefitSystemType = it },
+                        isShiftJob = isShiftJob,
+                        onShiftJobChange = { checked ->
+                            isShiftJob = checked
+                            if (checked) isOrionJob = false
+                        },
+                        isOrionJob = isOrionJob,
+                        onOrionJobChange = { checked ->
+                            isOrionJob = checked
+                            if (checked) { isShiftJob = false; requiresShiftTime = false }
+                        },
+                        requiresShiftTime = requiresShiftTime,
+                        onRequiresShiftTimeChange = { requiresShiftTime = it },
+                        manualRewards = manualRewards,
+                        onManualRewardsChange = { manualRewards = it },
+                        isCompact = isCompact
                     )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Text(
-                            text = "Benefit System",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        
-                        Spacer(modifier = Modifier.height(12.dp))
-                        
-                        // Segmented Button
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(
-                                    MaterialTheme.colorScheme.surfaceVariant,
-                                    RoundedCornerShape(8.dp)
-                                )
-                                .padding(4.dp)
-                        ) {
-                            // Stellar Benefits Option
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .background(
-                                        if (benefitSystemType == BenefitSystemType.STELLAR) {
-                                            MaterialTheme.colorScheme.primary
-                                        } else {
-                                            MaterialTheme.colorScheme.surface
-                                        },
-                                        RoundedCornerShape(6.dp)
-                                    )
-                                    .clickable { benefitSystemType = BenefitSystemType.STELLAR }
-                                    .padding(vertical = 12.dp, horizontal = 16.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "Stellar Benefits",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = if (benefitSystemType == BenefitSystemType.STELLAR) {
-                                        MaterialTheme.colorScheme.onPrimary
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurface
-                                    },
-                                    fontWeight = if (benefitSystemType == BenefitSystemType.STELLAR) {
-                                        FontWeight.SemiBold
-                                    } else {
-                                        FontWeight.Normal
-                                    }
-                                )
-                            }
-                            
-                            // Manual Rewards Option
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .background(
-                                        if (benefitSystemType == BenefitSystemType.MANUAL) {
-                                            MaterialTheme.colorScheme.primary
-                                        } else {
-                                            MaterialTheme.colorScheme.surface
-                                        },
-                                        RoundedCornerShape(6.dp)
-                                    )
-                                    .clickable { benefitSystemType = BenefitSystemType.MANUAL }
-                                    .padding(vertical = 12.dp, horizontal = 16.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "Manual Rewards",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = if (benefitSystemType == BenefitSystemType.MANUAL) {
-                                        MaterialTheme.colorScheme.onPrimary
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurface
-                                    },
-                                    fontWeight = if (benefitSystemType == BenefitSystemType.MANUAL) {
-                                        FontWeight.SemiBold
-                                    } else {
-                                        FontWeight.Normal
-                                    }
-                                )
-                            }
-                        }
-                    }
                 }
 
-                // Configuration based on selected benefit system
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Text(
-                            text = if (benefitSystemType == BenefitSystemType.STELLAR) "Shift Type Configuration" else "Manual Rewards Configuration",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        
-                        Spacer(modifier = Modifier.height(12.dp))
-                        
-                        if (benefitSystemType == BenefitSystemType.STELLAR) {
-                            // Stellar Benefits Configuration
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    "Shift Job (Nova/Etoile/Galaxie)",
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .padding(end = 8.dp)
-                                )
-                                Switch(
-                                    checked = isShiftJob,
-                                    onCheckedChange = { isShiftJob = it }
-                                )
-                            }
-                            
-                            Spacer(modifier = Modifier.height(8.dp))
-                            
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    "Orion Job (Committee/Coordination)",
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .padding(end = 8.dp)
-                                )
-                                Switch(
-                                    checked = isOrionJob,
-                                    onCheckedChange = { isOrionJob = it }
-                                )
-                            }
-                            
-                            Spacer(modifier = Modifier.height(8.dp))
-                            
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    "Requires Shift Time",
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .padding(end = 8.dp)
-                                )
-                                Switch(
-                                    checked = requiresShiftTime,
-                                    onCheckedChange = { requiresShiftTime = it }
-                                )
-                            }
-                        } else {
-                            // Manual Rewards Configuration
-                            // Duration in days
-                            OutlinedTextField(
-                                value = manualRewards.durationDays.toString(),
-                                onValueChange = { 
-                                    manualRewards = manualRewards.copy(
-                                        durationDays = it.toIntOrNull() ?: 1
-                                    )
-                                },
-                                label = { Text("Duration (days)") },
-                                modifier = Modifier.fillMaxWidth(),
-                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
-                                )
-                            )
-                            
-                            Spacer(modifier = Modifier.height(8.dp))
-                            
-                            // Free drinks
-                            OutlinedTextField(
-                                value = manualRewards.freeDrinks.toString(),
-                                onValueChange = { 
-                                    manualRewards = manualRewards.copy(
-                                        freeDrinks = it.toIntOrNull() ?: 0
-                                    )
-                                },
-                                label = { Text("Free Drinks") },
-                                modifier = Modifier.fillMaxWidth(),
-                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
-                                )
-                            )
-                            
-                            Spacer(modifier = Modifier.height(8.dp))
-                            
-                            // Bar discount percentage
-                            OutlinedTextField(
-                                value = manualRewards.barDiscountPercentage.toString(),
-                                onValueChange = { 
-                                    manualRewards = manualRewards.copy(
-                                        barDiscountPercentage = it.toIntOrNull() ?: 0
-                                    )
-                                },
-                                label = { Text("Bar Discount (%)") },
-                                modifier = Modifier.fillMaxWidth(),
-                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
-                                )
-                            )
-                            
-                            Spacer(modifier = Modifier.height(8.dp))
-                            
-                            // Free entry checkbox
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    "Free Entry",
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .padding(end = 8.dp)
-                                )
-                                Switch(
-                                    checked = manualRewards.freeEntry,
-                                    onCheckedChange = { 
-                                        manualRewards = manualRewards.copy(freeEntry = it)
-                                    }
-                                )
-                            }
-                            
-                            Spacer(modifier = Modifier.height(8.dp))
-                            
-                            // Invites
-                            OutlinedTextField(
-                                value = manualRewards.invites.toString(),
-                                onValueChange = { 
-                                    manualRewards = manualRewards.copy(
-                                        invites = it.toIntOrNull() ?: 0
-                                    )
-                                },
-                                label = { Text("Number of Invites") },
-                                modifier = Modifier.fillMaxWidth(),
-                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
-                                )
-                            )
-                            
-                            Spacer(modifier = Modifier.height(8.dp))
-                            
-                            // Other notes
-                            OutlinedTextField(
-                                value = manualRewards.otherNotes,
-                                onValueChange = { 
-                                    manualRewards = manualRewards.copy(otherNotes = it)
-                                },
-                                label = { Text("Other Notes") },
-                                modifier = Modifier.fillMaxWidth(),
-                                placeholder = { Text("Additional notes...") },
-                                maxLines = 3
-                            )
-                        }
-                    }
-                }
-                }
-                
-                // Action Buttons
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    OutlinedButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Cancel")
+                    OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.cancel))
                     }
-                    
                     Button(
                         onClick = {
-                            val config = JobTypeConfig(
-                                name = name,
-                                description = description,
-                                isShiftJob = isShiftJob,
-                                isOrionJob = isOrionJob,
-                                requiresShiftTime = requiresShiftTime,
-                                benefitSystemType = benefitSystemType,
-                                manualRewards = if (benefitSystemType == BenefitSystemType.MANUAL) manualRewards else null
+                            onConfirm(
+                                JobTypeConfig(
+                                    name = name,
+                                    description = description,
+                                    isShiftJob = isShiftJob,
+                                    isOrionJob = isOrionJob,
+                                    requiresShiftTime = requiresShiftTime,
+                                    benefitSystemType = benefitSystemType,
+                                    manualRewards = if (benefitSystemType == BenefitSystemType.MANUAL) manualRewards else null
+                                )
                             )
-                            onConfirm(config)
                         },
                         enabled = name.isNotBlank(),
                         modifier = Modifier.weight(1f)
@@ -837,52 +541,27 @@ fun EditJobTypeConfigDialog(
     val tabletMaxWidth = getTabletConstrainedDialogMaxWidth()
     val tabletMaxHeight = getTabletConstrainedDialogMaxHeight()
 
-    // Custom Dialog with proper scrolling
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = !isTabletDevice
-        )
+        properties = DialogProperties(usePlatformDefaultWidth = !isTabletDevice)
     ) {
         Card(
             modifier = Modifier
                 .then(
-                    if (isTabletDevice) {
-                        Modifier
-                            .widthIn(max = tabletMaxWidth)
-                            .heightIn(max = tabletMaxHeight)
-                    } else {
-                        Modifier
-                            .fillMaxWidth()
-                            .fillMaxHeight(0.9f)
-                    }
+                    if (isTabletDevice) Modifier.widthIn(max = tabletMaxWidth).heightIn(max = tabletMaxHeight)
+                    else Modifier.fillMaxWidth().fillMaxHeight(0.9f)
                 )
                 .padding(16.dp),
             shape = RoundedCornerShape(16.dp)
         ) {
-            Column(
-                modifier = Modifier.fillMaxSize()
-            ) {
-                // Header
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = if (isCompact) "Edit Shift Type" else "Edit Shift Type Configuration",
-                        style = if (isTabletDevice) getTabletConstrainedTitleTypography() else getResponsiveTypography(),
-                        fontWeight = FontWeight.Bold
-                    )
-                    
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Close")
-                    }
-                }
-                
-                // Scrollable Content
+            Column(modifier = Modifier.fillMaxSize()) {
+                JobTypeDialogHeader(
+                    title = if (isCompact) stringResource(R.string.edit_shift_type_title_compact)
+                            else stringResource(R.string.edit_shift_type_title_full),
+                    isTabletDevice = isTabletDevice,
+                    onDismiss = onDismiss
+                )
+
                 Column(
                     modifier = Modifier
                         .weight(1f)
@@ -890,311 +569,353 @@ fun EditJobTypeConfigDialog(
                         .padding(horizontal = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(if (isCompact) 8.dp else 12.dp)
                 ) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Shift Type Name") },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("e.g., Bar Staff") }
-                )
-
-                OutlinedTextField(
-                    value = description,
-                    onValueChange = { description = it },
-                    label = { Text("Description") },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Optional description") }
-                )
-
-                // Benefit System Selection
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    JobTypeDialogFields(
+                        name = name,
+                        onNameChange = { name = it },
+                        description = description,
+                        onDescriptionChange = { description = it },
+                        benefitSystemType = benefitSystemType,
+                        onBenefitSystemTypeChange = { benefitSystemType = it },
+                        isShiftJob = isShiftJob,
+                        onShiftJobChange = { checked ->
+                            isShiftJob = checked
+                            if (checked) isOrionJob = false
+                        },
+                        isOrionJob = isOrionJob,
+                        onOrionJobChange = { checked ->
+                            isOrionJob = checked
+                            if (checked) { isShiftJob = false; requiresShiftTime = false }
+                        },
+                        requiresShiftTime = requiresShiftTime,
+                        onRequiresShiftTimeChange = { requiresShiftTime = it },
+                        manualRewards = manualRewards,
+                        onManualRewardsChange = { manualRewards = it },
+                        isCompact = isCompact
                     )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Text(
-                            text = "Benefit System",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        
-                        Spacer(modifier = Modifier.height(12.dp))
-                        
-                        // Segmented Button
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(
-                                    MaterialTheme.colorScheme.surfaceVariant,
-                                    RoundedCornerShape(8.dp)
-                                )
-                                .padding(4.dp)
-                        ) {
-                            // Stellar Benefits Option
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .background(
-                                        if (benefitSystemType == BenefitSystemType.STELLAR) {
-                                            MaterialTheme.colorScheme.primary
-                                        } else {
-                                            MaterialTheme.colorScheme.surface
-                                        },
-                                        RoundedCornerShape(6.dp)
-                                    )
-                                    .clickable { benefitSystemType = BenefitSystemType.STELLAR }
-                                    .padding(vertical = 12.dp, horizontal = 16.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "Stellar Benefits",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = if (benefitSystemType == BenefitSystemType.STELLAR) {
-                                        MaterialTheme.colorScheme.onPrimary
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurface
-                                    },
-                                    fontWeight = if (benefitSystemType == BenefitSystemType.STELLAR) {
-                                        FontWeight.SemiBold
-                                    } else {
-                                        FontWeight.Normal
-                                    }
-                                )
-                            }
-                            
-                            // Manual Rewards Option
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .background(
-                                        if (benefitSystemType == BenefitSystemType.MANUAL) {
-                                            MaterialTheme.colorScheme.primary
-                                        } else {
-                                            MaterialTheme.colorScheme.surface
-                                        },
-                                        RoundedCornerShape(6.dp)
-                                    )
-                                    .clickable { benefitSystemType = BenefitSystemType.MANUAL }
-                                    .padding(vertical = 12.dp, horizontal = 16.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "Manual Rewards",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = if (benefitSystemType == BenefitSystemType.MANUAL) {
-                                        MaterialTheme.colorScheme.onPrimary
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurface
-                                    },
-                                    fontWeight = if (benefitSystemType == BenefitSystemType.MANUAL) {
-                                        FontWeight.SemiBold
-                                    } else {
-                                        FontWeight.Normal
-                                    }
-                                )
-                            }
-                        }
-                    }
                 }
 
-                // Configuration based on selected benefit system
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Text(
-                            text = if (benefitSystemType == BenefitSystemType.STELLAR) "Shift Type Configuration" else "Manual Rewards Configuration",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        
-                        Spacer(modifier = Modifier.height(12.dp))
-                        
-                        if (benefitSystemType == BenefitSystemType.STELLAR) {
-                            // Stellar Benefits Configuration
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text("Shift Job (Nova/Etoile/Galaxie)")
-                                Switch(
-                                    checked = isShiftJob,
-                                    onCheckedChange = { isShiftJob = it }
-                                )
-                            }
-                            
-                            Spacer(modifier = Modifier.height(8.dp))
-                            
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text("Orion Job (Committee/Coordination)")
-                                Switch(
-                                    checked = isOrionJob,
-                                    onCheckedChange = { isOrionJob = it }
-                                )
-                            }
-                            
-                            Spacer(modifier = Modifier.height(8.dp))
-                            
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text("Requires Shift Time")
-                                Switch(
-                                    checked = requiresShiftTime,
-                                    onCheckedChange = { requiresShiftTime = it }
-                                )
-                            }
-                        } else {
-                            // Manual Rewards Configuration
-                            // Duration in days
-                            OutlinedTextField(
-                                value = manualRewards.durationDays.toString(),
-                                onValueChange = { 
-                                    manualRewards = manualRewards.copy(
-                                        durationDays = it.toIntOrNull() ?: 1
-                                    )
-                                },
-                                label = { Text("Duration (days)") },
-                                modifier = Modifier.fillMaxWidth(),
-                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
-                                )
-                            )
-                            
-                            Spacer(modifier = Modifier.height(8.dp))
-                            
-                            // Free drinks
-                            OutlinedTextField(
-                                value = manualRewards.freeDrinks.toString(),
-                                onValueChange = { 
-                                    manualRewards = manualRewards.copy(
-                                        freeDrinks = it.toIntOrNull() ?: 0
-                                    )
-                                },
-                                label = { Text("Free Drinks") },
-                                modifier = Modifier.fillMaxWidth(),
-                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
-                                )
-                            )
-                            
-                            Spacer(modifier = Modifier.height(8.dp))
-                            
-                            // Bar discount percentage
-                            OutlinedTextField(
-                                value = manualRewards.barDiscountPercentage.toString(),
-                                onValueChange = { 
-                                    manualRewards = manualRewards.copy(
-                                        barDiscountPercentage = it.toIntOrNull() ?: 0
-                                    )
-                                },
-                                label = { Text("Bar Discount (%)") },
-                                modifier = Modifier.fillMaxWidth(),
-                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
-                                )
-                            )
-                            
-                            Spacer(modifier = Modifier.height(8.dp))
-                            
-                            // Free entry checkbox
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text("Free Entry")
-                                Switch(
-                                    checked = manualRewards.freeEntry,
-                                    onCheckedChange = { 
-                                        manualRewards = manualRewards.copy(freeEntry = it)
-                                    }
-                                )
-                            }
-                            
-                            Spacer(modifier = Modifier.height(8.dp))
-                            
-                            // Invites
-                            OutlinedTextField(
-                                value = manualRewards.invites.toString(),
-                                onValueChange = { 
-                                    manualRewards = manualRewards.copy(
-                                        invites = it.toIntOrNull() ?: 0
-                                    )
-                                },
-                                label = { Text("Number of Invites") },
-                                modifier = Modifier.fillMaxWidth(),
-                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
-                                )
-                            )
-                            
-                            Spacer(modifier = Modifier.height(8.dp))
-                            
-                            // Other notes
-                            OutlinedTextField(
-                                value = manualRewards.otherNotes,
-                                onValueChange = { 
-                                    manualRewards = manualRewards.copy(otherNotes = it)
-                                },
-                                label = { Text("Other Notes") },
-                                modifier = Modifier.fillMaxWidth(),
-                                placeholder = { Text("Additional notes...") },
-                                maxLines = 3
-                            )
-                        }
-                    }
-                }
-                }
-                
-                // Action Buttons
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    OutlinedButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Cancel")
+                    OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.cancel))
                     }
-                    
                     Button(
                         onClick = {
-                            val updatedConfig = config.copy(
-                                name = name,
-                                description = description,
-                                isShiftJob = isShiftJob,
-                                isOrionJob = isOrionJob,
-                                requiresShiftTime = requiresShiftTime,
-                                benefitSystemType = benefitSystemType,
-                                manualRewards = if (benefitSystemType == BenefitSystemType.MANUAL) manualRewards else null
+                            onConfirm(
+                                config.copy(
+                                    name = name,
+                                    description = description,
+                                    isShiftJob = isShiftJob,
+                                    isOrionJob = isOrionJob,
+                                    requiresShiftTime = requiresShiftTime,
+                                    benefitSystemType = benefitSystemType,
+                                    manualRewards = if (benefitSystemType == BenefitSystemType.MANUAL) manualRewards else null
+                                )
                             )
-                            onConfirm(updatedConfig)
                         },
                         enabled = name.isNotBlank(),
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Update Shift Type")
+                        Text(stringResource(R.string.update_shift_type))
                     }
                 }
             }
         }
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Shared private helpers used by both Add and Edit dialogs
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun JobTypeDialogHeader(
+    title: String,
+    isTabletDevice: Boolean,
+    onDismiss: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = title,
+            style = if (isTabletDevice) getTabletConstrainedTitleTypography() else getResponsiveTypography(),
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.weight(1f)
+        )
+        IconButton(onClick = onDismiss) {
+            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
+        }
+    }
+}
+
+@Composable
+private fun JobTypeDialogFields(
+    name: String,
+    onNameChange: (String) -> Unit,
+    description: String,
+    onDescriptionChange: (String) -> Unit,
+    benefitSystemType: BenefitSystemType,
+    onBenefitSystemTypeChange: (BenefitSystemType) -> Unit,
+    isShiftJob: Boolean,
+    onShiftJobChange: (Boolean) -> Unit,
+    isOrionJob: Boolean,
+    onOrionJobChange: (Boolean) -> Unit,
+    requiresShiftTime: Boolean,
+    onRequiresShiftTimeChange: (Boolean) -> Unit,
+    manualRewards: ManualRewards,
+    onManualRewardsChange: (ManualRewards) -> Unit,
+    isCompact: Boolean
+) {
+    var showStellarInfoDialog by remember { mutableStateOf(false) }
+
+    OutlinedTextField(
+        value = name,
+        onValueChange = onNameChange,
+        label = { Text(stringResource(R.string.shift_type_name_label)) },
+        placeholder = { Text(stringResource(R.string.shift_type_name_placeholder)) },
+        modifier = Modifier.fillMaxWidth()
+    )
+
+    OutlinedTextField(
+        value = description,
+        onValueChange = onDescriptionChange,
+        label = { Text(stringResource(R.string.description_label)) },
+        placeholder = { Text(stringResource(R.string.description_placeholder)) },
+        modifier = Modifier.fillMaxWidth()
+    )
+
+    // Benefit System Selection card
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        )
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.benefit_system_label),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(
+                    onClick = { showStellarInfoDialog = true },
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        Icons.Default.HelpOutline,
+                        contentDescription = stringResource(R.string.stellar_benefits_info_title),
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(IntrinsicSize.Min)
+                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
+                    .padding(4.dp)
+            ) {
+                BenefitSystemTab(
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    label = stringResource(R.string.stellar_benefits),
+                    selected = benefitSystemType == BenefitSystemType.STELLAR,
+                    onClick = { onBenefitSystemTypeChange(BenefitSystemType.STELLAR) }
+                )
+                BenefitSystemTab(
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    label = stringResource(R.string.manual_rewards),
+                    selected = benefitSystemType == BenefitSystemType.MANUAL,
+                    onClick = { onBenefitSystemTypeChange(BenefitSystemType.MANUAL) }
+                )
+            }
+        }
+    }
+
+    // Configuration card
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        )
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = if (benefitSystemType == BenefitSystemType.STELLAR)
+                    stringResource(R.string.stellar_config_label)
+                else
+                    stringResource(R.string.manual_rewards_config_label),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (benefitSystemType == BenefitSystemType.STELLAR) {
+                SwitchRow(
+                    label = stringResource(R.string.shift_job_label),
+                    checked = isShiftJob,
+                    onCheckedChange = onShiftJobChange
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                SwitchRow(
+                    label = stringResource(R.string.orion_job_label),
+                    checked = isOrionJob,
+                    onCheckedChange = onOrionJobChange
+                )
+
+                // requiresShiftTime is only relevant when isShiftJob is true
+                if (isShiftJob) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    SwitchRow(
+                        label = stringResource(R.string.requires_shift_time_label),
+                        checked = requiresShiftTime,
+                        onCheckedChange = onRequiresShiftTimeChange
+                    )
+                }
+            } else {
+                NumberField(
+                    value = manualRewards.durationDays,
+                    label = stringResource(R.string.duration_days_label),
+                    onValueChange = { onManualRewardsChange(manualRewards.copy(durationDays = it ?: 1)) }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                NumberField(
+                    value = manualRewards.freeDrinks,
+                    label = stringResource(R.string.free_drinks_label),
+                    onValueChange = { onManualRewardsChange(manualRewards.copy(freeDrinks = it ?: 0)) }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                NumberField(
+                    value = manualRewards.barDiscountPercentage,
+                    label = stringResource(R.string.bar_discount_percent_label),
+                    onValueChange = { onManualRewardsChange(manualRewards.copy(barDiscountPercentage = it ?: 0)) }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                SwitchRow(
+                    label = stringResource(R.string.free_entry_label),
+                    checked = manualRewards.freeEntry,
+                    onCheckedChange = { onManualRewardsChange(manualRewards.copy(freeEntry = it)) }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                NumberField(
+                    value = manualRewards.invites,
+                    label = stringResource(R.string.number_of_invites_label),
+                    onValueChange = { onManualRewardsChange(manualRewards.copy(invites = it ?: 0)) }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = manualRewards.otherNotes,
+                    onValueChange = { onManualRewardsChange(manualRewards.copy(otherNotes = it)) },
+                    label = { Text(stringResource(R.string.other_notes_label)) },
+                    placeholder = { Text(stringResource(R.string.other_notes_placeholder)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    maxLines = 3
+                )
+            }
+        }
+    }
+
+    if (showStellarInfoDialog) {
+        AlertDialog(
+            onDismissRequest = { showStellarInfoDialog = false },
+            icon = {
+                Icon(
+                    Icons.Default.Stars,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            },
+            title = {
+                Text(
+                    text = stringResource(R.string.stellar_benefits_info_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 320.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    Text(
+                        text = stringResource(R.string.stellar_benefits_info_body),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showStellarInfoDialog = false }) {
+                    Text(stringResource(R.string.close))
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun BenefitSystemTab(
+    modifier: Modifier = Modifier,
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .background(
+                if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                RoundedCornerShape(6.dp)
+            )
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp, horizontal = 16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
+private fun SwitchRow(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, modifier = Modifier.weight(1f).padding(end = 8.dp))
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+@Composable
+private fun NumberField(value: Int, label: String, onValueChange: (Int?) -> Unit) {
+    OutlinedTextField(
+        value = value.toString(),
+        onValueChange = { onValueChange(it.toIntOrNull()) },
+        label = { Text(label) },
+        modifier = Modifier.fillMaxWidth(),
+        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+            keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+        )
+    )
 }

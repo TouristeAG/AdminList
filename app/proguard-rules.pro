@@ -32,6 +32,10 @@
 -keep class androidx.compose.runtime.** { *; }
 -keep class androidx.compose.ui.** { *; }
 
+# Core library desugaring (j$.*) — must survive R8 for API < 26 / Compose
+-keep class j$.** { *; }
+-dontwarn j$.**
+
 # Keep ViewModel classes
 -keep class * extends androidx.lifecycle.ViewModel { *; }
 

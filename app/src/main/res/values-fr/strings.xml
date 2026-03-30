@@ -409,7 +409,32 @@
     <string name="bar_discount_n">%1$d%% de réduction au bar</string>
     <string name="invites_n">%1$d invitations</string>
     <string name="no_rewards_configured">Aucune récompense configurée</string>
-    
+    <!-- Shift Type Dialog -->
+    <string name="add_shift_type_title_compact">Ajouter un type de shift</string>
+    <string name="add_shift_type_title_full">Ajouter un nouveau type de shift</string>
+    <string name="edit_shift_type_title_compact">Modifier le type de shift</string>
+    <string name="edit_shift_type_title_full">Modifier la configuration du type de shift</string>
+    <string name="shift_type_name_label">Nom du type de shift</string>
+    <string name="shift_type_name_placeholder">ex. : Personnel du bar</string>
+    <string name="description_label">Description</string>
+    <string name="description_placeholder">Description facultative</string>
+    <string name="benefit_system_label">Système d\'avantages</string>
+    <string name="stellar_config_label">Configuration du type de shift</string>
+    <string name="manual_rewards_config_label">Configuration des récompenses manuelles</string>
+    <string name="shift_job_label">Shift Job (Nova / Étoile / Galaxie)</string>
+    <string name="orion_job_label">Orion Job (Comité / Coordination)</string>
+    <string name="requires_shift_time_label">Horaire requis</string>
+    <string name="duration_days_label">Durée (jours)</string>
+    <string name="free_drinks_label">Boissons gratuites</string>
+    <string name="bar_discount_percent_label">Réduction bar (%)</string>
+    <string name="free_entry_label">Entrée gratuite</string>
+    <string name="number_of_invites_label">Nombre d\'invitations</string>
+    <string name="other_notes_label">Autres remarques</string>
+    <string name="other_notes_placeholder">Remarques supplémentaires…</string>
+    <string name="update_shift_type">Mettre à jour le type de shift</string>
+    <string name="stellar_benefits_info_title">Système d\'avantages Stellaire</string>
+    <string name="stellar_benefits_info_body">Le système Stellaire attribue automatiquement des rangs selon l\'historique des shifts :\n\n• NOVA — shift avant minuit → entrée gratuite + 1 invité + 2 jetons boisson (même soir)\n• ÉTOILE — shift après minuit → entrée gratuite + 1 invité pour le prochain événement (valable 31 jours)\n• GALAXIE — 3 shifts ou plus dans le même mois → entrée gratuite + 50 %% de réduction au bar pour tout le mois\n• ORION — rôle comité / coordination → entrée gratuite + 1 invité + 50 %% de réduction (1 an)\n• VETERAN — 1 an après Orion → mêmes avantages pour une deuxième année\n\nShift Job active le suivi Nova / Étoile / Galaxie.\nOrion Job active le suivi Orion / Veteran.\nCes deux options sont mutuellement exclusives.\nHoraire requis n\'est pertinent que pour les Shift Jobs (détermine avant / après minuit).</string>
+
     <!-- Venue Management -->
     <string name="venue_management_title">Gestion des lieux</string>
     <string name="venue_management_description">Configurer les lieux et leurs paramètres</string>
@@ -502,6 +527,8 @@
     <string name="scan_with_usb_reader">Scanner avec le lecteur USB</string>
     <string name="usb_reader_waiting_card_short">Carte en attente...</string>
     <string name="nfc_not_supported_device">Cet appareil ne prend pas en charge le scan NFC.</string>
+    <string name="nfc_unavailable_no_usb_hint">Cet appareil n\'a pas de NFC et aucun lecteur USB n\'est connecté.</string>
+    <string name="nfc_phone_unavailable_use_usb_reader">Cet appareil n\'a pas de NFC intégré. Utilisez l\'option lecteur USB ci-dessous pour scanner.</string>
     <string name="nfc_disabled_enable">NFC est désactivé. Activez NFC dans les réglages du téléphone pour scanner les cartes.</string>
     <string name="nfc_uid_read_failed">Impossible de lire l\'UID NFC. Réessayez.</string>
     <string name="nfc_uid_not_found">Aucun·e bénévole ou invité·e permanent·e trouvé·e pour l\'UID NFC : %s</string>
@@ -864,4 +891,5 @@
     <string name="activity_status_active_days_ago">Actif (il y a %d jours)</string>
     <string name="activity_status_active_months_ago">Actif (il y a %d mois)</string>
     <string name="activity_status_inactive_years_ago">Inactif (il y a %d ans)</string>
+    <string name="legend_badge_label">Légende</string>
 </resources>

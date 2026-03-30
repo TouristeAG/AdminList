@@ -35,13 +35,13 @@ class AppIconManager(private val context: Context) {
         
         // Activity aliases that need to be enabled/disabled
         // These correspond to the alias activities in AndroidManifest.xml
-        private const val LIGHT_ICON_SUFFIX = "MainActivity.Light"
-        private const val DARK_ICON_SUFFIX = "MainActivity.Dark"
-        private const val DEEP_BLUE_ICON_SUFFIX = "MainActivity.DeepBlue"
-        private const val BLUE_OCEAN_ICON_SUFFIX = "MainActivity.BlueOcean"
-        private const val BRAUN_ICON_SUFFIX = "MainActivity.Braun"
-        private const val PURPLE_ICON_SUFFIX = "MainActivity.Purple"
-        private const val VIOLET_ICON_SUFFIX = "MainActivity.Violet"
+        private const val LIGHT_ICON_SUFFIX = "LauncherIconLight"
+        private const val DARK_ICON_SUFFIX = "LauncherIconDark"
+        private const val DEEP_BLUE_ICON_SUFFIX = "LauncherIconDeepBlue"
+        private const val BLUE_OCEAN_ICON_SUFFIX = "LauncherIconBlueOcean"
+        private const val BRAUN_ICON_SUFFIX = "LauncherIconBraun"
+        private const val PURPLE_ICON_SUFFIX = "LauncherIconPurple"
+        private const val VIOLET_ICON_SUFFIX = "LauncherIconViolet"
         
         // Map icon types to their component suffixes
         private val ICON_SUFFIX_MAP = mapOf(
