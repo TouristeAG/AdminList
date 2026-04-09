@@ -47,6 +47,7 @@ import com.eventmanager.app.data.models.*
 import com.eventmanager.app.data.utils.DateTimeUtils
 import com.eventmanager.app.data.utils.VolunteerActivityManager
 import com.eventmanager.app.ui.utils.*
+import com.eventmanager.app.ui.util.shiftTimeLabel
 import com.eventmanager.app.utils.QRCodeUtils
 import com.eventmanager.app.R
 import java.text.SimpleDateFormat
@@ -56,6 +57,7 @@ import com.eventmanager.app.data.sync.DateFormatUtils
 import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.data.sync.GmailAuthService
 import com.eventmanager.app.data.sync.GmailSendService
+import com.eventmanager.app.utils.DigitalWalletPassGenerator
 import android.widget.Toast
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CoroutineScope
@@ -88,7 +90,8 @@ fun VolunteerDetailPanel(
     onDelete: (Volunteer) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
-    jobTypeConfigs: List<JobTypeConfig> = emptyList()
+    jobTypeConfigs: List<JobTypeConfig> = emptyList(),
+    onConfirmFutureEntry: ((Job, Int) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val isPhone = !isTablet()
@@ -292,6 +295,14 @@ fun VolunteerDetailPanel(
                             totalShifts = totalShifts,
                             isPhone = isPhone,
                             currentRank = currentRank
+                        )
+                    }
+
+                    item {
+                        VolunteerFutureEntriesSection(
+                            volunteerJobs = volunteerJobs,
+                            jobTypeConfigs = jobTypeConfigs,
+                            onConfirmEntry = onConfirmFutureEntry
                         )
                     }
                     
@@ -542,8 +553,10 @@ fun VolunteerDetailPanel(
                 val signature = settingsManager.getEmailSignature().ifEmpty { 
                     emailContext.getString(R.string.email_signature_default) 
                 }
+                val includeDigitalWalletPass = settingsManager.isEmailIncludeDigitalWalletPassEnabled()
                 val includeLogo = settingsManager.isEmailIncludeLogoEnabled()
                 val logoUriString = settingsManager.getEmailLogoUri()
+                val associationName = settingsManager.getEmailAssociationName()
                 
                 // Generate QR code
                 val qrBitmap = QRCodeUtils.generateQrImageBitmap(volunteer.id, 512)
@@ -555,6 +568,26 @@ fun VolunteerDetailPanel(
                     val outputStream = FileOutputStream(qrFile)
                     qrBitmap.asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, outputStream)
                     outputStream.close()
+                }
+
+                val digitalWalletPassFile = if (includeDigitalWalletPass) {
+                    DigitalWalletPassGenerator.createPassFile(
+                        context = emailContext,
+                        serialNumber = "${volunteer.id}-${System.currentTimeMillis()}",
+                        holderName = volunteer.name,
+                        qrPayload = volunteer.id,
+                        logoUriString = logoUriString,
+                        associationName = associationName
+                    ) ?: DigitalWalletPassGenerator.createPassFile(
+                        context = emailContext,
+                        serialNumber = "${volunteer.id}-${System.currentTimeMillis()}",
+                        holderName = volunteer.name,
+                        qrPayload = volunteer.id,
+                        logoUriString = null,
+                        associationName = associationName
+                    )
+                } else {
+                    null
                 }
                 
                 // Save logo file
@@ -587,6 +620,10 @@ fun VolunteerDetailPanel(
                     footerText = emailContext.getString(R.string.email_html_footer),
                     qrAttachmentText = emailContext.getString(R.string.email_qr_attachment_text),
                     qrAttachmentNote = emailContext.getString(R.string.email_qr_attachment_note),
+                    includeDigitalWalletPass = includeDigitalWalletPass,
+                    digitalWalletPassTitle = emailContext.getString(R.string.email_wallet_section_title),
+                    digitalWalletPassDescription = emailContext.getString(R.string.email_wallet_section_description),
+                    digitalWalletPassCompatibility = emailContext.getString(R.string.email_wallet_section_compatibility),
                     includeLogo = includeLogo,
                     useContentId = true
                 )
@@ -597,6 +634,9 @@ fun VolunteerDetailPanel(
                     append("\n\n")
                     if (includeQr) {
                         append("[ QR Code - See attachment ]\n\n")
+                    }
+                    if (includeDigitalWalletPass) {
+                        append("[ Digital Wallet Pass (.pkpass) - See attachment ]\n\n")
                     }
                     append(contentAfter)
                     append("\n\n")
@@ -611,7 +651,8 @@ fun VolunteerDetailPanel(
                     htmlContent = htmlEmail,
                     plainText = plainTextEmail,
                     qrFile = qrFile,
-                    logoFile = logoFile
+                    logoFile = logoFile,
+                    digitalWalletPassFile = digitalWalletPassFile
                 )
                 
                 result.fold(
@@ -732,6 +773,9 @@ fun VolunteerDetailPanel(
                 val signature = settingsManager.getEmailSignature().ifEmpty { 
                     emailContext.getString(R.string.email_signature_default) 
                 }
+                val includeDigitalWalletPass = settingsManager.isEmailIncludeDigitalWalletPassEnabled()
+                val logoUriString = settingsManager.getEmailLogoUri()
+                val associationName = settingsManager.getEmailAssociationName()
                 
                 // Generate QR code
                 val qrBitmap = QRCodeUtils.generateQrImageBitmap(volunteer.id, 512)
@@ -747,6 +791,10 @@ fun VolunteerDetailPanel(
                     footerText = emailContext.getString(R.string.email_html_footer),
                     qrAttachmentText = emailContext.getString(R.string.email_qr_attachment_text),
                     qrAttachmentNote = emailContext.getString(R.string.email_qr_attachment_note),
+                    includeDigitalWalletPass = false,
+                    digitalWalletPassTitle = "",
+                    digitalWalletPassDescription = "",
+                    digitalWalletPassCompatibility = "",
                     includeLogo = false, // Don't include logo in HTML for manual send
                     useContentId = false
                 )
@@ -758,12 +806,15 @@ fun VolunteerDetailPanel(
                     if (includeQr) {
                         append("[ QR Code - See attachment ]\n\n")
                     }
+                    if (includeDigitalWalletPass) {
+                        append("[ Digital Wallet Pass (.pkpass) - See attachment ]\n\n")
+                    }
                     append(contentAfter)
                     append("\n\n")
                     append(signature)
                 }
                 
-                // Save QR code file for attachment
+                // Save QR code / digital wallet pass files for attachments
                 var qrUri: Uri? = null
                 if (includeQr && qrBitmap != null) {
                     val qrFile = File(emailContext.cacheDir, "qr_code_${volunteer.id}.png")
@@ -777,17 +828,49 @@ fun VolunteerDetailPanel(
                         qrFile
                     )
                 }
+
+                var walletPassUri: Uri? = null
+                if (includeDigitalWalletPass) {
+                    val walletPassFile = DigitalWalletPassGenerator.createPassFile(
+                        context = emailContext,
+                        serialNumber = "${volunteer.id}-${System.currentTimeMillis()}",
+                        holderName = volunteer.name,
+                        qrPayload = volunteer.id,
+                        logoUriString = logoUriString,
+                        associationName = associationName
+                    ) ?: DigitalWalletPassGenerator.createPassFile(
+                        context = emailContext,
+                        serialNumber = "${volunteer.id}-${System.currentTimeMillis()}",
+                        holderName = volunteer.name,
+                        qrPayload = volunteer.id,
+                        logoUriString = null,
+                        associationName = associationName
+                    )
+                    if (walletPassFile != null && walletPassFile.exists()) {
+                        walletPassUri = FileProvider.getUriForFile(
+                            emailContext,
+                            "${emailContext.packageName}.fileprovider",
+                            walletPassFile
+                        )
+                    }
+                }
                 
                 // Create email intent with HTML and QR attachment
                 val emailIntent = Intent(Intent.ACTION_SEND).apply {
-                    type = "text/html"
+                    type = if (qrUri != null || walletPassUri != null) "*/*" else "text/html"
                     putExtra(Intent.EXTRA_EMAIL, arrayOf(volunteer.email))
                     putExtra(Intent.EXTRA_SUBJECT, subject)
                     putExtra(Intent.EXTRA_TEXT, plainTextEmail)
                     putExtra("android.intent.extra.HTML_TEXT", htmlEmail)
-                    
-                    if (qrUri != null) {
-                        putExtra(Intent.EXTRA_STREAM, qrUri)
+
+                    val attachments = ArrayList<Uri>()
+                    qrUri?.let { attachments.add(it) }
+                    walletPassUri?.let { attachments.add(it) }
+                    if (attachments.size == 1) {
+                        putExtra(Intent.EXTRA_STREAM, attachments.first())
+                    } else if (attachments.size > 1) {
+                        putParcelableArrayListExtra(Intent.EXTRA_STREAM, attachments)
+                        action = Intent.ACTION_SEND_MULTIPLE
                     }
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
@@ -1325,7 +1408,7 @@ private fun ShiftHistoryItem(
                 )
                 
                 Text(
-                    text = job.shiftTime.name.replace("_", " "),
+                    text = context.shiftTimeLabel(job.shiftTime),
                     style = if (isPhone) getPhonePortraitBodyTypography() else getResponsiveBodyTypography(),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1618,6 +1701,10 @@ private fun buildProfessionalEmailHtml(
     footerText: String,
     qrAttachmentText: String,
     qrAttachmentNote: String,
+    includeDigitalWalletPass: Boolean,
+    digitalWalletPassTitle: String,
+    digitalWalletPassDescription: String,
+    digitalWalletPassCompatibility: String,
     logoBase64: String? = null,
     includeLogo: Boolean,
     useContentId: Boolean = false
@@ -1695,6 +1782,24 @@ private fun buildProfessionalEmailHtml(
         """
     } else ""
     
+    val walletPassSection = if (includeDigitalWalletPass && useContentId) {
+        """
+        <tr>
+            <td style="padding: 10px 40px 26px 40px;">
+                <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;">
+                    <tr>
+                        <td style="padding: 12px 14px;">
+                            <div style="font-size: 14px; font-weight: 700; color: #1f2937; margin-bottom: 4px;">$digitalWalletPassTitle</div>
+                            <div style="font-size: 12px; color: #475569; line-height: 1.45;">$digitalWalletPassDescription</div>
+                            <div style="margin-top: 4px; font-size: 11px; color: #64748b;">$digitalWalletPassCompatibility</div>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        """
+    } else ""
+
     return """
     <!DOCTYPE html>
     <html lang="en">
@@ -1737,7 +1842,7 @@ private fun buildProfessionalEmailHtml(
                                 ${contentAfter.toHtmlParagraphs()}
                             </td>
                         </tr>
-                        
+
                         <!-- Signature -->
                         <tr>
                             <td style="padding: 32px 40px; border-top: 2px solid #f1f5f9; background-color: #fafbfc;">
@@ -1767,6 +1872,8 @@ private fun buildProfessionalEmailHtml(
                                 </table>
                             </td>
                         </tr>
+
+                        $walletPassSection
                         
                     </table>
                     

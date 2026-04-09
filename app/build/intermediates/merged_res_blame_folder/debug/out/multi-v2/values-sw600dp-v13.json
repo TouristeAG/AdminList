@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.eventmanager.app-mergeDebugResources-2:/values-sw600dp-v13/values-sw600dp-v13.xml",
+            "outputFile": "com.eventmanager.app-mergeDebugResources-68:/values-sw600dp-v13/values-sw600dp-v13.xml",
             "map": [
                 {
                     "source": "/Users/leonardomondada/EventManagerApp/app/src/main/res/values-sw600dp/styles.xml",
@@ -23,6 +23,16 @@
                     }
                 },
                 {
+                    "source": "/Users/leonardomondada/.gradle/caches/8.10/transforms/765fbe5211548b3aaad6d9a3f65f54fe/transformed/appcompat-1.6.1/res/values-sw600dp-v13/values-sw600dp-v13.xml",
+                    "from": {
+                        "startLines": "2,3,4,5,6,7,8,9",
+                        "startColumns": "4,4,4,4,4,4,4,4",
+                        "startOffsets": "55,124,193,263,337,413,472,543",
+                        "endColumns": "68,68,69,73,75,58,70,67",
+                        "endOffsets": "119,188,258,332,408,467,538,606"
+                    }
+                },
+                {
                     "source": "/Users/leonardomondada/EventManagerApp/app/src/main/res/values-sw600dp/strings.xml",
                     "from": {
                         "startLines": "2,15,7,3,5,4,12,8,9,13,11,10,17,6,16,14",
@@ -37,16 +47,6 @@
                         "startOffsets": "611,720,824,914,992,1064,1146,1212,1280,1343,1420,1481,1552,1645,1719,1830",
                         "endColumns": "108,103,89,77,71,81,65,67,62,76,60,70,92,73,110,94",
                         "endOffsets": "715,819,909,987,1059,1141,1207,1275,1338,1415,1476,1547,1640,1714,1825,1920"
-                    }
-                },
-                {
-                    "source": "/private/var/folders/_1/6v50lr7521x6nrp75vj936rh0000gq/T/cursor-sandbox-cache/7a7ababef4974ca5693e47e9a67a3bef/gradle/caches/8.10/transforms/765fbe5211548b3aaad6d9a3f65f54fe/transformed/appcompat-1.6.1/res/values-sw600dp-v13/values-sw600dp-v13.xml",
-                    "from": {
-                        "startLines": "2,3,4,5,6,7,8,9",
-                        "startColumns": "4,4,4,4,4,4,4,4",
-                        "startOffsets": "55,124,193,263,337,413,472,543",
-                        "endColumns": "68,68,69,73,75,58,70,67",
-                        "endOffsets": "119,188,258,332,408,467,538,606"
                     }
                 }
             ]

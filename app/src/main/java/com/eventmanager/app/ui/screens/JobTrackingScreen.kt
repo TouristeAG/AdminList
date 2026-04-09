@@ -20,6 +20,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.eventmanager.app.data.models.*
+import com.eventmanager.app.data.models.NovaJobType
 import com.eventmanager.app.data.utils.DateTimeUtils
 import com.eventmanager.app.data.sync.DateFormatUtils
 import com.eventmanager.app.data.sync.SettingsManager
@@ -27,6 +28,7 @@ import com.eventmanager.app.ui.components.SearchBarWithFilter
 import com.eventmanager.app.ui.components.SearchableDropdown
 import com.eventmanager.app.ui.components.DateTimePicker
 import com.eventmanager.app.ui.utils.*
+import com.eventmanager.app.ui.util.shiftTimeLabel
 import com.eventmanager.app.R
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.datetime.Clock
@@ -591,7 +593,7 @@ fun JobCard(
                         onClick = { },
                         label = { 
                             Text(
-                                job.shiftTime.name.replace("_", " "),
+                                context.shiftTimeLabel(job.shiftTime),
                                 style = MaterialTheme.typography.labelSmall
                             )
                         },
@@ -701,9 +703,9 @@ fun AddJobDialog(
 
     val isCompact = isCompactScreen()
     val scrollState = rememberScrollState()
+    val jobTypeMenuScrollState = rememberScrollState()
+    val venueMenuScrollState = rememberScrollState()
     val isTabletDevice = isTablet()
-    val tabletMaxWidth = getTabletConstrainedDialogMaxWidth()
-    val tabletMaxHeight = getTabletConstrainedDialogMaxHeight()
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -711,33 +713,36 @@ fun AddJobDialog(
             usePlatformDefaultWidth = !isTabletDevice
         )
     ) {
-        Card(
+        Box(
             modifier = Modifier
                 .then(
                     if (isTabletDevice) {
                         Modifier
-                            .widthIn(max = tabletMaxWidth)
-                            .heightIn(max = tabletMaxHeight)
+                            .fillMaxSize()
+                            .padding(getTabletDialogScreenEdgeInset())
                     } else {
                         Modifier
                             .fillMaxWidth()
                             .fillMaxHeight(0.9f)
+                            .padding(16.dp)
                     }
                 )
-                .padding(16.dp),
-            shape = RoundedCornerShape(16.dp)
         ) {
-            Column(
-                modifier = Modifier.fillMaxSize()
+            Card(
+                modifier = Modifier.fillMaxSize(),
+                shape = RoundedCornerShape(16.dp)
             ) {
-                // Header
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier.fillMaxSize()
                 ) {
+                    // Header
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
             Text(
                 text = if (isCompact) context.getString(R.string.add_shift) else context.getString(R.string.add_new_shift),
                         style = if (isTabletDevice) getTabletConstrainedTitleTypography() else getResponsiveTypography(),
@@ -780,7 +785,7 @@ fun AddJobDialog(
                 // Job type selection
                 ExposedDropdownMenuBox(
                     expanded = showJobTypeDropdown,
-                    onExpandedChange = { showJobTypeDropdown = !showJobTypeDropdown }
+                    onExpandedChange = { showJobTypeDropdown = it }
                 ) {
                     OutlinedTextField(
                         value = selectedJobTypeConfig?.name ?: "",
@@ -798,27 +803,42 @@ fun AddJobDialog(
                     
                     ExposedDropdownMenu(
                         expanded = showJobTypeDropdown,
-                        onDismissRequest = { showJobTypeDropdown = false }
+                        onDismissRequest = { showJobTypeDropdown = false },
+                        modifier = Modifier.heightIn(max = 280.dp)
                     ) {
-                        activeJobTypeConfigs.forEach { config ->
+                        if (activeJobTypeConfigs.isEmpty()) {
                             DropdownMenuItem(
-                                text = { 
-                                    Column {
-                                        Text(config.name)
-                                        if (config.description.isNotEmpty()) {
-                                            Text(
-                                                text = config.description,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-                                    }
-                                },
-                                onClick = {
-                                    selectedJobTypeConfig = config
-                                    showJobTypeDropdown = false
-                                }
+                                text = { Text(context.getString(R.string.no_shift_types_available)) },
+                                onClick = { showJobTypeDropdown = false }
                             )
+                        } else {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 280.dp)
+                                    .verticalScroll(jobTypeMenuScrollState)
+                            ) {
+                                activeJobTypeConfigs.forEach { config ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Column {
+                                                Text(config.name)
+                                                if (config.description.isNotEmpty()) {
+                                                    Text(
+                                                        text = config.description,
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+                                            }
+                                        },
+                                        onClick = {
+                                            selectedJobTypeConfig = config
+                                            showJobTypeDropdown = false
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -826,7 +846,7 @@ fun AddJobDialog(
                 // Venue selection
                 ExposedDropdownMenuBox(
                     expanded = showVenueDropdown,
-                    onExpandedChange = { showVenueDropdown = !showVenueDropdown }
+                    onExpandedChange = { showVenueDropdown = it }
                 ) {
                     OutlinedTextField(
                         value = selectedVenueName ?: context.getString(R.string.venue),
@@ -843,43 +863,54 @@ fun AddJobDialog(
                     
                     ExposedDropdownMenu(
                         expanded = showVenueDropdown,
-                        onDismissRequest = { showVenueDropdown = false }
+                        onDismissRequest = { showVenueDropdown = false },
+                        modifier = Modifier.heightIn(max = 280.dp)
                     ) {
-                        // Add BOTH/ALL option
-                        val allOptionText = if (venues.filter { it.isActive }.size <= 2) {
-                            context.getString(R.string.venue_both)
-                        } else {
-                            context.getString(R.string.venue_all)
-                        }
-                        DropdownMenuItem(
-                            text = { Text(allOptionText) },
-                            onClick = {
-                                selectedVenueName = "BOTH"
-                                showVenueDropdown = false
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 280.dp)
+                                .verticalScroll(venueMenuScrollState)
+                        ) {
+                            // Add BOTH/ALL option
+                            val allOptionText = if (venues.filter { it.isActive }.size <= 2) {
+                                context.getString(R.string.venue_both)
+                            } else {
+                                context.getString(R.string.venue_all)
                             }
-                        )
-                        
-                        // Add individual venues (only active ones)
-                        venues.filter { it.isActive }.forEach { venue ->
                             DropdownMenuItem(
-                                text = { Text(venue.name) },
+                                text = { Text(allOptionText) },
                                 onClick = {
-                                    selectedVenueName = venue.name
+                                    selectedVenueName = "BOTH"
                                     showVenueDropdown = false
                                 }
                             )
+
+                            // Add individual venues (only active ones)
+                            venues.filter { it.isActive }.forEach { venue ->
+                                DropdownMenuItem(
+                                    text = { Text(venue.name) },
+                                    onClick = {
+                                        selectedVenueName = venue.name
+                                        showVenueDropdown = false
+                                    }
+                                )
+                            }
                         }
                     }
                 }
 
-                // Shift time selection (only show if job type requires it)
-                if (selectedJobTypeConfig?.requiresShiftTime == true) {
+                // Shift time selection (only show for DEFAULT_SHIFT that requires it)
+                val showShiftTimeForAdd = selectedJobTypeConfig?.let {
+                    it.requiresShiftTime && it.novaJobType == NovaJobType.DEFAULT_SHIFT
+                } ?: false
+                if (showShiftTimeForAdd) {
                     ExposedDropdownMenuBox(
                         expanded = showShiftTimeDropdown,
-                        onExpandedChange = { showShiftTimeDropdown = !showShiftTimeDropdown }
+                        onExpandedChange = { showShiftTimeDropdown = it }
                     ) {
                         OutlinedTextField(
-                            value = selectedShiftTime.name.replace("_", " "),
+                            value = context.shiftTimeLabel(selectedShiftTime),
                             onValueChange = { },
                             readOnly = true,
                             label = { Text(context.getString(R.string.shift_time)) },
@@ -897,7 +928,7 @@ fun AddJobDialog(
                         ) {
                             ShiftTime.values().forEach { shiftTime ->
                                 DropdownMenuItem(
-                                    text = { Text(shiftTime.name.replace("_", " ")) },
+                                    text = { Text(context.shiftTimeLabel(shiftTime)) },
                                     onClick = {
                                         selectedShiftTime = shiftTime
                                         showShiftTimeDropdown = false
@@ -943,13 +974,15 @@ fun AddJobDialog(
                 onClick = {
                     selectedVolunteer?.let { volunteer ->
                         selectedJobTypeConfig?.let { config ->
+                            val effectiveShiftTime = if (config.novaJobType == NovaJobType.DEFAULT_SHIFT && config.requiresShiftTime)
+                                selectedShiftTime else ShiftTime.BEFORE_MIDNIGHT
                             val job = Job(
                                 volunteerId = volunteer.id,
-                                jobType = JobType.OTHER, // Use OTHER as fallback for custom types
+                                jobType = JobType.OTHER,
                                 jobTypeName = config.name,
                                 venueName = selectedVenueName ?: venues.firstOrNull { it.isActive }?.name ?: "GROOVE",
                                 date = selectedDateTime,
-                                shiftTime = if (config.requiresShiftTime) selectedShiftTime else ShiftTime.BEFORE_MIDNIGHT,
+                                shiftTime = effectiveShiftTime,
                                 notes = notes
                             )
                             onConfirm(job)
@@ -961,6 +994,7 @@ fun AddJobDialog(
             ) {
                 Text(context.getString(R.string.add_job))
             }
+                }
                 }
             }
         }
@@ -991,12 +1025,21 @@ fun EditJobDialog(
     
     // Filter active job type configs
     val activeJobTypeConfigs = jobTypeConfigs.filter { it.isActive }
+    // Keep current selection visible even if that type was deactivated
+    val jobTypesForEditDropdown = remember(activeJobTypeConfigs, selectedJobTypeConfig) {
+        val cur = selectedJobTypeConfig
+        if (cur != null && activeJobTypeConfigs.none { it.name == cur.name }) {
+            listOf(cur) + activeJobTypeConfigs
+        } else {
+            activeJobTypeConfigs
+        }
+    }
 
     val isCompact = isCompactScreen()
     val scrollState = rememberScrollState()
+    val jobTypeMenuScrollState = rememberScrollState()
+    val venueMenuScrollState = rememberScrollState()
     val isTabletDevice = isTablet()
-    val tabletMaxWidth = getTabletConstrainedDialogMaxWidth()
-    val tabletMaxHeight = getTabletConstrainedDialogMaxHeight()
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -1004,33 +1047,36 @@ fun EditJobDialog(
             usePlatformDefaultWidth = !isTabletDevice
         )
     ) {
-        Card(
+        Box(
             modifier = Modifier
                 .then(
                     if (isTabletDevice) {
                         Modifier
-                            .widthIn(max = tabletMaxWidth)
-                            .heightIn(max = tabletMaxHeight)
+                            .fillMaxSize()
+                            .padding(getTabletDialogScreenEdgeInset())
                     } else {
                         Modifier
                             .fillMaxWidth()
                             .fillMaxHeight(0.9f)
+                            .padding(16.dp)
                     }
                 )
-                .padding(16.dp),
-            shape = RoundedCornerShape(16.dp)
         ) {
-            Column(
-                modifier = Modifier.fillMaxSize()
+            Card(
+                modifier = Modifier.fillMaxSize(),
+                shape = RoundedCornerShape(16.dp)
             ) {
-                // Header
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier.fillMaxSize()
                 ) {
+                    // Header
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                     Text(
                         text = if (isCompact) context.getString(R.string.edit_shift) else context.getString(R.string.edit_shift_details),
                         style = if (isTabletDevice) getTabletConstrainedTitleTypography() else getResponsiveTypography(),
@@ -1073,7 +1119,7 @@ fun EditJobDialog(
                 // Job type selection
                 ExposedDropdownMenuBox(
                     expanded = showJobTypeDropdown,
-                    onExpandedChange = { showJobTypeDropdown = !showJobTypeDropdown }
+                    onExpandedChange = { showJobTypeDropdown = it }
                 ) {
                     OutlinedTextField(
                         value = selectedJobTypeConfig?.name ?: "",
@@ -1091,27 +1137,42 @@ fun EditJobDialog(
                     
                     ExposedDropdownMenu(
                         expanded = showJobTypeDropdown,
-                        onDismissRequest = { showJobTypeDropdown = false }
+                        onDismissRequest = { showJobTypeDropdown = false },
+                        modifier = Modifier.heightIn(max = 280.dp)
                     ) {
-                        activeJobTypeConfigs.forEach { config ->
+                        if (jobTypesForEditDropdown.isEmpty()) {
                             DropdownMenuItem(
-                                text = { 
-                                    Column {
-                                        Text(config.name)
-                                        if (config.description.isNotEmpty()) {
-                                            Text(
-                                                text = config.description,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-                                    }
-                                },
-                                onClick = {
-                                    selectedJobTypeConfig = config
-                                    showJobTypeDropdown = false
-                                }
+                                text = { Text(context.getString(R.string.no_shift_types_available)) },
+                                onClick = { showJobTypeDropdown = false }
                             )
+                        } else {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 280.dp)
+                                    .verticalScroll(jobTypeMenuScrollState)
+                            ) {
+                                jobTypesForEditDropdown.forEach { config ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Column {
+                                                Text(config.name)
+                                                if (config.description.isNotEmpty()) {
+                                                    Text(
+                                                        text = config.description,
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+                                            }
+                                        },
+                                        onClick = {
+                                            selectedJobTypeConfig = config
+                                            showJobTypeDropdown = false
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -1119,7 +1180,7 @@ fun EditJobDialog(
                 // Venue selection
                 ExposedDropdownMenuBox(
                     expanded = showVenueDropdown,
-                    onExpandedChange = { showVenueDropdown = !showVenueDropdown }
+                    onExpandedChange = { showVenueDropdown = it }
                 ) {
                     OutlinedTextField(
                         value = selectedVenueName,
@@ -1136,43 +1197,54 @@ fun EditJobDialog(
                     
                     ExposedDropdownMenu(
                         expanded = showVenueDropdown,
-                        onDismissRequest = { showVenueDropdown = false }
+                        onDismissRequest = { showVenueDropdown = false },
+                        modifier = Modifier.heightIn(max = 280.dp)
                     ) {
-                        // Add BOTH/ALL option
-                        val allOptionText = if (venues.filter { it.isActive }.size <= 2) {
-                            context.getString(R.string.venue_both)
-                        } else {
-                            context.getString(R.string.venue_all)
-                        }
-                        DropdownMenuItem(
-                            text = { Text(allOptionText) },
-                            onClick = {
-                                selectedVenueName = "BOTH"
-                                showVenueDropdown = false
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 280.dp)
+                                .verticalScroll(venueMenuScrollState)
+                        ) {
+                            // Add BOTH/ALL option
+                            val allOptionText = if (venues.filter { it.isActive }.size <= 2) {
+                                context.getString(R.string.venue_both)
+                            } else {
+                                context.getString(R.string.venue_all)
                             }
-                        )
-                        
-                        // Add individual venues (only active ones)
-                        venues.filter { it.isActive }.forEach { venue ->
                             DropdownMenuItem(
-                                text = { Text(venue.name) },
+                                text = { Text(allOptionText) },
                                 onClick = {
-                                    selectedVenueName = venue.name
+                                    selectedVenueName = "BOTH"
                                     showVenueDropdown = false
                                 }
                             )
+
+                            // Add individual venues (only active ones)
+                            venues.filter { it.isActive }.forEach { venue ->
+                                DropdownMenuItem(
+                                    text = { Text(venue.name) },
+                                    onClick = {
+                                        selectedVenueName = venue.name
+                                        showVenueDropdown = false
+                                    }
+                                )
+                            }
                         }
                     }
                 }
 
-                // Shift time selection (only show if job type requires it)
-                if (selectedJobTypeConfig?.requiresShiftTime == true) {
+                // Shift time selection (only show for DEFAULT_SHIFT that requires it)
+                val showShiftTimeForEdit = selectedJobTypeConfig?.let {
+                    it.requiresShiftTime && it.novaJobType == NovaJobType.DEFAULT_SHIFT
+                } ?: false
+                if (showShiftTimeForEdit) {
                     ExposedDropdownMenuBox(
                         expanded = showShiftTimeDropdown,
-                        onExpandedChange = { showShiftTimeDropdown = !showShiftTimeDropdown }
+                        onExpandedChange = { showShiftTimeDropdown = it }
                     ) {
                         OutlinedTextField(
-                            value = selectedShiftTime.name.replace("_", " "),
+                            value = context.shiftTimeLabel(selectedShiftTime),
                             onValueChange = { },
                             readOnly = true,
                             label = { Text(context.getString(R.string.shift_time)) },
@@ -1190,7 +1262,7 @@ fun EditJobDialog(
                         ) {
                             ShiftTime.values().forEach { shiftTime ->
                                 DropdownMenuItem(
-                                    text = { Text(shiftTime.name.replace("_", " ")) },
+                                    text = { Text(context.shiftTimeLabel(shiftTime)) },
                                     onClick = {
                                         selectedShiftTime = shiftTime
                                         showShiftTimeDropdown = false
@@ -1236,12 +1308,14 @@ fun EditJobDialog(
                         onClick = {
                             selectedVolunteer?.let { volunteer ->
                                 selectedJobTypeConfig?.let { config ->
+                                    val effectiveShiftTime = if (config.novaJobType == NovaJobType.DEFAULT_SHIFT && config.requiresShiftTime)
+                                        selectedShiftTime else ShiftTime.BEFORE_MIDNIGHT
                                     val updatedJob = job.copy(
                                         volunteerId = volunteer.id,
                                         jobTypeName = config.name,
                                         venueName = selectedVenueName ?: job.venueName,
                                         date = selectedDateTime,
-                                        shiftTime = if (config.requiresShiftTime) selectedShiftTime else ShiftTime.BEFORE_MIDNIGHT,
+                                        shiftTime = effectiveShiftTime,
                                         notes = notes
                                     )
                                     onConfirm(updatedJob)
@@ -1253,6 +1327,7 @@ fun EditJobDialog(
                     ) {
                         Text(context.getString(R.string.update_job))
                     }
+                }
                 }
             }
         }

@@ -11,6 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.PopupProperties
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,7 +41,7 @@ fun <T> SearchableDropdown(
     
     ExposedDropdownMenuBox(
         expanded = expanded,
-        onExpandedChange = { expanded = !expanded },
+        onExpandedChange = { expanded = it },
         modifier = modifier
     ) {
         OutlinedTextField(
@@ -77,13 +78,21 @@ fun <T> SearchableDropdown(
             enabled = enabled
         )
         
-        ExposedDropdownMenu(
+        // focusable=false keeps IME on the TextField (backspace works). dismissOnClickOutside=false
+        // avoids IME/key events being treated as an outside tap, which was closing the menu on each key.
+        DropdownMenu(
             expanded = expanded,
-            onDismissRequest = { 
+            onDismissRequest = {
                 expanded = false
                 searchQuery = ""
             },
-            modifier = Modifier.heightIn(max = 200.dp)
+            modifier = Modifier
+                .exposedDropdownSize(true)
+                .heightIn(max = 200.dp),
+            properties = PopupProperties(
+                focusable = false,
+                dismissOnClickOutside = false
+            )
         ) {
             if (filteredItems.isEmpty()) {
                 DropdownMenuItem(

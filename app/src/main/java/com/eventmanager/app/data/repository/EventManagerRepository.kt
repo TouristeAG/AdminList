@@ -233,6 +233,7 @@ class EventManagerRepository(
 
     // Job operations
     fun getAllJobs(): Flow<List<Job>> = jobDao.getAllJobs()
+    suspend fun getJobById(id: Long): Job? = jobDao.getJobById(id)
     suspend fun insertJob(job: Job): Long = jobDao.insertJob(job)
     suspend fun updateJob(job: Job) = jobDao.updateJob(job)
     suspend fun deleteJob(job: Job) = jobDao.deleteJob(job)
@@ -276,22 +277,24 @@ class EventManagerRepository(
     suspend fun deleteVenuesAll(venues: List<VenueEntity>) = venueDao.deleteVenuesAll(venues)
 
     // Get volunteer benefit status with time-based calculations
-    suspend fun getVolunteerBenefitStatus(volunteerId: String): VolunteerBenefitStatus? {
+    suspend fun getVolunteerBenefitStatus(volunteerId: String, offsetHours: Int = 0): VolunteerBenefitStatus? {
         val volunteer = getVolunteerById(volunteerId) ?: return null
         val jobs = getAllJobs().first()
         val jobTypeConfigs = getAllActiveJobTypeConfigs().first()
-        return BenefitCalculator.calculateVolunteerBenefitStatus(volunteer, jobs, jobTypeConfigs)
+        return BenefitCalculator.calculateVolunteerBenefitStatus(
+            volunteer, jobs, jobTypeConfigs, offsetHours = offsetHours
+        )
     }
     
     // Get all volunteers with their current benefit status
-    suspend fun getAllVolunteerBenefitStatuses(): List<VolunteerBenefitStatus> {
+    suspend fun getAllVolunteerBenefitStatuses(offsetHours: Int = 0): List<VolunteerBenefitStatus> {
         val volunteers = getAllVolunteers().first() // Include both active and inactive volunteers
         val jobs = getAllJobs().first()
         val jobTypeConfigs = getAllActiveJobTypeConfigs().first()
         
         // OPTIMIZED: Use pre-computed calculation context to avoid repeated filtering
         // This creates lookups and date ranges once, then reuses them for all volunteers
-        val ctx = BenefitCalculator.CalculationContext(jobTypeConfigs)
+        val ctx = BenefitCalculator.CalculationContext(jobTypeConfigs, offsetHours = offsetHours)
         
         // OPTIMIZED: group jobs once to avoid O(volunteers * jobs) filtering
         // Uses String (NanoID) as the key type

@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -17,12 +18,15 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.eventmanager.app.data.models.JobTypeConfig
 import com.eventmanager.app.data.models.BenefitSystemType
 import com.eventmanager.app.data.models.ManualRewards
+import com.eventmanager.app.data.models.NovaJobType
+import com.eventmanager.app.ui.components.BenefitsSystemHelpDialog
 import com.eventmanager.app.ui.components.SearchBarWithFilter
 import androidx.compose.ui.res.stringResource
 import com.eventmanager.app.R
@@ -306,6 +310,20 @@ fun JobTypeConfigCard(
                     )
                 }
                 
+                if (config.isShiftJob && config.novaJobType != NovaJobType.DEFAULT_SHIFT) {
+                    AssistChip(
+                        onClick = { },
+                        label = { Text(novaJobTypeLabel(config.novaJobType), style = MaterialTheme.typography.labelSmall) },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Tune,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    )
+                }
+
                 if (config.requiresShiftTime) {
                     AssistChip(
                         onClick = { },
@@ -362,12 +380,30 @@ fun JobTypeConfigCard(
                         
                         Spacer(modifier = Modifier.height(8.dp))
                         
+                        ManualAutomaticBenefitsConflictWarning(
+                            isOrionJob = config.isOrionJob,
+                            isShiftJob = config.isShiftJob,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        if (config.isOrionJob || config.isShiftJob) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+                        
                         val rewardsDetails = mutableListOf<String>()
                         if (rewards.durationDays > 0) rewardsDetails.add(stringResource(R.string.days_n, rewards.durationDays))
                         if (rewards.freeDrinks > 0) rewardsDetails.add(stringResource(R.string.free_drinks_n, rewards.freeDrinks))
                         if (rewards.barDiscountPercentage > 0) rewardsDetails.add(stringResource(R.string.bar_discount_n, rewards.barDiscountPercentage))
                         if (rewards.freeEntry) rewardsDetails.add(stringResource(R.string.free_entry))
                         if (rewards.invites > 0) rewardsDetails.add(stringResource(R.string.invites_n, rewards.invites))
+                        if (rewards.futureSingleUseEntries > 0) {
+                            rewardsDetails.add(
+                                stringResource(
+                                    R.string.future_single_use_entries_with_invites_summary,
+                                    rewards.futureSingleUseEntries,
+                                    rewards.futureSingleUseEntryInvites
+                                )
+                            )
+                        }
                         if (rewards.otherNotes.isNotEmpty()) rewardsDetails.add(rewards.otherNotes)
                         
                         if (rewardsDetails.isNotEmpty()) {
@@ -426,31 +462,40 @@ fun AddJobTypeConfigDialog(
     var isShiftJob by remember { mutableStateOf(true) }
     var isOrionJob by remember { mutableStateOf(false) }
     var requiresShiftTime by remember { mutableStateOf(true) }
+    var novaJobType by remember { mutableStateOf(NovaJobType.DEFAULT_SHIFT) }
     var benefitSystemType by remember { mutableStateOf(BenefitSystemType.STELLAR) }
     var manualRewards by remember { mutableStateOf(ManualRewards()) }
 
     val isCompact = isCompactScreen()
     val scrollState = rememberScrollState()
     val isTabletDevice = isTablet()
-    val tabletMaxWidth = getTabletConstrainedDialogMaxWidth()
-    val tabletMaxHeight = getTabletConstrainedDialogMaxHeight()
 
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = !isTabletDevice)
     ) {
-        Card(
+        Box(
             modifier = Modifier
                 .then(
-                    if (isTabletDevice) Modifier.widthIn(max = tabletMaxWidth).heightIn(max = tabletMaxHeight)
-                    else Modifier.fillMaxWidth().fillMaxHeight(0.9f)
+                    if (isTabletDevice) {
+                        Modifier
+                            .fillMaxSize()
+                            .padding(getTabletDialogScreenEdgeInset())
+                    } else {
+                        Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(0.9f)
+                            .padding(16.dp)
+                    }
                 )
-                .padding(16.dp),
-            shape = RoundedCornerShape(16.dp)
         ) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                JobTypeDialogHeader(
-                    title = if (isCompact) stringResource(R.string.add_shift_type_title_compact)
+            Card(
+                modifier = Modifier.fillMaxSize(),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    JobTypeDialogHeader(
+                        title = if (isCompact) stringResource(R.string.add_shift_type_title_compact)
                             else stringResource(R.string.add_shift_type_title_full),
                     isTabletDevice = isTabletDevice,
                     onDismiss = onDismiss
@@ -482,6 +527,11 @@ fun AddJobTypeConfigDialog(
                         },
                         requiresShiftTime = requiresShiftTime,
                         onRequiresShiftTimeChange = { requiresShiftTime = it },
+                        novaJobType = novaJobType,
+                        onNovaJobTypeChange = { newType ->
+                            novaJobType = newType
+                            requiresShiftTime = newType == NovaJobType.DEFAULT_SHIFT
+                        },
                         manualRewards = manualRewards,
                         onManualRewardsChange = { manualRewards = it },
                         isCompact = isCompact
@@ -503,7 +553,8 @@ fun AddJobTypeConfigDialog(
                                     description = description,
                                     isShiftJob = isShiftJob,
                                     isOrionJob = isOrionJob,
-                                    requiresShiftTime = requiresShiftTime,
+                                    requiresShiftTime = if (novaJobType == NovaJobType.DEFAULT_SHIFT) requiresShiftTime else false,
+                                    novaJobType = if (isShiftJob) novaJobType else NovaJobType.DEFAULT_SHIFT,
                                     benefitSystemType = benefitSystemType,
                                     manualRewards = if (benefitSystemType == BenefitSystemType.MANUAL) manualRewards else null
                                 )
@@ -514,6 +565,7 @@ fun AddJobTypeConfigDialog(
                     ) {
                         Text(stringResource(R.string.add_shift_type))
                     }
+                }
                 }
             }
         }
@@ -532,31 +584,40 @@ fun EditJobTypeConfigDialog(
     var isShiftJob by remember { mutableStateOf(config.isShiftJob) }
     var isOrionJob by remember { mutableStateOf(config.isOrionJob) }
     var requiresShiftTime by remember { mutableStateOf(config.requiresShiftTime) }
+    var novaJobType by remember { mutableStateOf(config.novaJobType) }
     var benefitSystemType by remember { mutableStateOf(config.benefitSystemType) }
     var manualRewards by remember { mutableStateOf(config.manualRewards ?: ManualRewards()) }
 
     val isCompact = isCompactScreen()
     val scrollState = rememberScrollState()
     val isTabletDevice = isTablet()
-    val tabletMaxWidth = getTabletConstrainedDialogMaxWidth()
-    val tabletMaxHeight = getTabletConstrainedDialogMaxHeight()
 
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = !isTabletDevice)
     ) {
-        Card(
+        Box(
             modifier = Modifier
                 .then(
-                    if (isTabletDevice) Modifier.widthIn(max = tabletMaxWidth).heightIn(max = tabletMaxHeight)
-                    else Modifier.fillMaxWidth().fillMaxHeight(0.9f)
+                    if (isTabletDevice) {
+                        Modifier
+                            .fillMaxSize()
+                            .padding(getTabletDialogScreenEdgeInset())
+                    } else {
+                        Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(0.9f)
+                            .padding(16.dp)
+                    }
                 )
-                .padding(16.dp),
-            shape = RoundedCornerShape(16.dp)
         ) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                JobTypeDialogHeader(
-                    title = if (isCompact) stringResource(R.string.edit_shift_type_title_compact)
+            Card(
+                modifier = Modifier.fillMaxSize(),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    JobTypeDialogHeader(
+                        title = if (isCompact) stringResource(R.string.edit_shift_type_title_compact)
                             else stringResource(R.string.edit_shift_type_title_full),
                     isTabletDevice = isTabletDevice,
                     onDismiss = onDismiss
@@ -588,6 +649,11 @@ fun EditJobTypeConfigDialog(
                         },
                         requiresShiftTime = requiresShiftTime,
                         onRequiresShiftTimeChange = { requiresShiftTime = it },
+                        novaJobType = novaJobType,
+                        onNovaJobTypeChange = { newType ->
+                            novaJobType = newType
+                            requiresShiftTime = newType == NovaJobType.DEFAULT_SHIFT
+                        },
                         manualRewards = manualRewards,
                         onManualRewardsChange = { manualRewards = it },
                         isCompact = isCompact
@@ -609,7 +675,8 @@ fun EditJobTypeConfigDialog(
                                     description = description,
                                     isShiftJob = isShiftJob,
                                     isOrionJob = isOrionJob,
-                                    requiresShiftTime = requiresShiftTime,
+                                    requiresShiftTime = if (novaJobType == NovaJobType.DEFAULT_SHIFT) requiresShiftTime else false,
+                                    novaJobType = if (isShiftJob) novaJobType else NovaJobType.DEFAULT_SHIFT,
                                     benefitSystemType = benefitSystemType,
                                     manualRewards = if (benefitSystemType == BenefitSystemType.MANUAL) manualRewards else null
                                 )
@@ -621,7 +688,38 @@ fun EditJobTypeConfigDialog(
                         Text(stringResource(R.string.update_shift_type))
                     }
                 }
+                }
             }
+        }
+    }
+}
+
+@Composable
+private fun ManualAutomaticBenefitsConflictWarning(
+    isOrionJob: Boolean,
+    isShiftJob: Boolean,
+    modifier: Modifier = Modifier
+) {
+    if (!isOrionJob && !isShiftJob) return
+    Column(modifier = modifier) {
+        if (isOrionJob) {
+            Text(
+                text = stringResource(R.string.manual_rewards_warning_orion_automatic_enabled),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+        if (isShiftJob) {
+            if (isOrionJob) {
+                Spacer(modifier = Modifier.height(6.dp))
+            }
+            Text(
+                text = stringResource(R.string.manual_rewards_warning_nova_stellar_automatic_enabled),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                fontWeight = FontWeight.SemiBold
+            )
         }
     }
 }
@@ -667,6 +765,8 @@ private fun JobTypeDialogFields(
     onOrionJobChange: (Boolean) -> Unit,
     requiresShiftTime: Boolean,
     onRequiresShiftTimeChange: (Boolean) -> Unit,
+    novaJobType: NovaJobType = NovaJobType.DEFAULT_SHIFT,
+    onNovaJobTypeChange: (NovaJobType) -> Unit = {},
     manualRewards: ManualRewards,
     onManualRewardsChange: (ManualRewards) -> Unit,
     isCompact: Boolean
@@ -712,7 +812,7 @@ private fun JobTypeDialogFields(
                 ) {
                     Icon(
                         Icons.Default.HelpOutline,
-                        contentDescription = stringResource(R.string.stellar_benefits_info_title),
+                        contentDescription = stringResource(R.string.benefits_help_dialog_title),
                         modifier = Modifier.size(18.dp),
                         tint = MaterialTheme.colorScheme.primary
                     )
@@ -777,16 +877,55 @@ private fun JobTypeDialogFields(
                     onCheckedChange = onOrionJobChange
                 )
 
-                // requiresShiftTime is only relevant when isShiftJob is true
                 if (isShiftJob) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    SwitchRow(
-                        label = stringResource(R.string.requires_shift_time_label),
-                        checked = requiresShiftTime,
-                        onCheckedChange = onRequiresShiftTimeChange
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        text = stringResource(R.string.nova_job_type_label),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold
                     )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    NovaJobType.values().forEach { njt ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onNovaJobTypeChange(njt) }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = novaJobType == njt,
+                                onClick = { onNovaJobTypeChange(njt) }
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = novaJobTypeLabel(njt),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+
+                    if (novaJobType == NovaJobType.DEFAULT_SHIFT) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        SwitchRow(
+                            label = stringResource(R.string.requires_shift_time_label),
+                            checked = requiresShiftTime,
+                            onCheckedChange = onRequiresShiftTimeChange
+                        )
+                    }
                 }
             } else {
+                ManualAutomaticBenefitsConflictWarning(
+                    isOrionJob = isOrionJob,
+                    isShiftJob = isShiftJob,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (isOrionJob || isShiftJob) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
                 NumberField(
                     value = manualRewards.durationDays,
                     label = stringResource(R.string.duration_days_label),
@@ -813,8 +952,25 @@ private fun JobTypeDialogFields(
                 Spacer(modifier = Modifier.height(8.dp))
                 NumberField(
                     value = manualRewards.invites,
-                    label = stringResource(R.string.number_of_invites_label),
+                    label = stringResource(R.string.duration_invites_label),
                     onValueChange = { onManualRewardsChange(manualRewards.copy(invites = it ?: 0)) }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                NumberField(
+                    value = manualRewards.futureSingleUseEntries,
+                    label = stringResource(R.string.future_single_use_entries_label),
+                    onValueChange = { onManualRewardsChange(manualRewards.copy(futureSingleUseEntries = (it ?: 0).coerceAtLeast(0))) }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                NumberField(
+                    value = manualRewards.futureSingleUseEntryInvites,
+                    label = stringResource(R.string.future_entry_invites_label),
+                    onValueChange = { onManualRewardsChange(manualRewards.copy(futureSingleUseEntryInvites = (it ?: 0).coerceAtLeast(0))) }
+                )
+                Text(
+                    text = stringResource(R.string.future_entry_invites_helper),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
@@ -830,42 +986,17 @@ private fun JobTypeDialogFields(
     }
 
     if (showStellarInfoDialog) {
-        AlertDialog(
-            onDismissRequest = { showStellarInfoDialog = false },
-            icon = {
-                Icon(
-                    Icons.Default.Stars,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            },
-            title = {
-                Text(
-                    text = stringResource(R.string.stellar_benefits_info_title),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 320.dp)
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    Text(
-                        text = stringResource(R.string.stellar_benefits_info_body),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showStellarInfoDialog = false }) {
-                    Text(stringResource(R.string.close))
-                }
-            }
-        )
+        BenefitsSystemHelpDialog(onDismiss = { showStellarInfoDialog = false })
     }
+}
+
+@Composable
+private fun novaJobTypeLabel(njt: NovaJobType): String = when (njt) {
+    NovaJobType.DEFAULT_SHIFT -> stringResource(R.string.nova_type_default_shift)
+    NovaJobType.MEETING -> stringResource(R.string.nova_type_meeting)
+    NovaJobType.GRAPHIC_DESIGNER_EVENT -> stringResource(R.string.nova_type_graphic_designer_event)
+    NovaJobType.PHOTOGRAPHER_VIDEOGRAPHER -> stringResource(R.string.nova_type_photographer_videographer)
+    NovaJobType.GRAPHIC_DESIGNER_ASSOCIATION -> stringResource(R.string.nova_type_graphic_designer_association)
 }
 
 @Composable
@@ -914,8 +1045,6 @@ private fun NumberField(value: Int, label: String, onValueChange: (Int?) -> Unit
         onValueChange = { onValueChange(it.toIntOrNull()) },
         label = { Text(label) },
         modifier = Modifier.fillMaxWidth(),
-        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-            keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
-        )
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
     )
 }

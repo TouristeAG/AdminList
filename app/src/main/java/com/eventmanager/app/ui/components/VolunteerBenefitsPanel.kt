@@ -3,6 +3,7 @@ package com.eventmanager.app.ui.components
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -41,19 +42,102 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
 import com.eventmanager.app.data.models.*
+import com.eventmanager.app.data.utils.effectiveBenefitFutureEntriesRemaining
+import com.eventmanager.app.data.utils.jobTypeSupportsTrackedFutureEntries
 import com.eventmanager.app.data.utils.DateTimeUtils
 import com.eventmanager.app.data.sync.DateFormatUtils
 import com.eventmanager.app.ui.utils.*
+import com.eventmanager.app.ui.util.shiftTimeLabel
 import com.eventmanager.app.R
 import com.eventmanager.app.utils.QRCodeUtils
 import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.data.sync.GmailAuthService
 import com.eventmanager.app.data.sync.GmailSendService
+import com.eventmanager.app.utils.DigitalWalletPassGenerator
 import android.widget.Toast
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+
+private data class ShiftEntryInfo(val job: Job, val rankLabel: String, val remaining: Int, val invites: Int)
+
+@Composable
+private fun FutureEntrySelectionBlock(
+    isPhone: Boolean,
+    context: android.content.Context,
+    futureEntryGroupsByInvites: List<com.eventmanager.app.data.utils.FutureEntryGroup>,
+    futureEntriesByShiftAndRank: List<ShiftEntryInfo>,
+    selectedFutureEntryGroupInvites: Int?,
+    onSelectGroup: (Int) -> Unit
+) {
+    futureEntryGroupsByInvites.forEach { group ->
+        val isSelected = group.invites == selectedFutureEntryGroupInvites
+        val label = if (group.invites > 0) {
+            if (group.totalRemaining == 1) context.getString(R.string.future_entry_remaining_with_invites, group.totalRemaining, group.invites)
+            else context.getString(R.string.future_entries_remaining_with_invites, group.totalRemaining, group.invites)
+        } else {
+            if (group.totalRemaining == 1) context.getString(R.string.future_entry_solo, group.totalRemaining)
+            else context.getString(R.string.future_entries_solo, group.totalRemaining)
+        }
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 6.dp)
+                .clickable { onSelectGroup(group.invites) },
+            shape = RoundedCornerShape(if (isPhone) 10.dp else 12.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = if (isSelected) {
+                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.65f)
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f)
+                }
+            ),
+            border = if (isSelected) {
+                androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.75f))
+            } else {
+                androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.22f))
+            }
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = if (isPhone) 8.dp else 10.dp)
+            ) {
+                Icon(
+                    imageVector = if (group.invites > 0) Icons.Default.People else Icons.Default.Person,
+                    contentDescription = null,
+                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(if (isPhone) 16.dp else 18.dp)
+                )
+                Text(
+                    text = label,
+                    style = if (isPhone) getPhonePortraitBodyTypography() else getResponsiveBodyTypography(),
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+
+    if (futureEntriesByShiftAndRank.isNotEmpty()) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(3.dp),
+            modifier = Modifier
+                .padding(start = 8.dp, top = 2.dp)
+                .fillMaxWidth()
+        ) {
+            futureEntriesByShiftAndRank.forEach { entry ->
+                val invLabel = if (entry.invites > 0) "(+${entry.invites} inv.)" else "(solo)"
+                Text(
+                    text = "${entry.job.jobTypeName} • ${context.shiftTimeLabel(entry.job.shiftTime)} • ${entry.rankLabel}: ${entry.remaining} $invLabel",
+                    style = if (isPhone) MaterialTheme.typography.labelSmall else MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,9 +146,10 @@ fun VolunteerBenefitsPanel(
     volunteerBenefitStatus: VolunteerBenefitStatus,
     volunteerJobs: List<Job>,
     venues: List<VenueEntity>,
+    jobTypeConfigs: List<JobTypeConfig> = emptyList(),
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
-    onConfirmEntry: ((Job) -> Unit)? = null,
+    onConfirmEntry: ((Job, Int) -> Unit)? = null,
     onAssignNfcUid: ((Volunteer, String) -> Unit)? = null
 ) {
     val context = LocalContext.current
@@ -91,6 +176,62 @@ fun VolunteerBenefitsPanel(
     var showNfcDialog by remember { mutableStateOf(false) }
     
     val benefit = volunteerBenefitStatus.benefits
+    val configsByName = remember(jobTypeConfigs) { jobTypeConfigs.associateBy { it.name } }
+    val offsetHours = remember { SettingsManager(context).getDateChangeOffsetHours() }
+    // Scalar key that changes whenever any job's entry counter or timestamp is modified.
+    // Prevents stale remember caches inside Dialog compositions where list-equality
+    // checks on the volunteerJobs key may not propagate reliably.
+    val jobsVersion = remember(volunteerJobs) {
+        volunteerJobs.fold(0L) { acc, j -> acc + j.lastModified + (j.benefitFutureEntriesRemaining ?: 0) }
+    }
+    val futureEntriesByShiftAndRank = remember(volunteerJobs, configsByName, offsetHours, jobsVersion) {
+        val evaluationTime = System.currentTimeMillis()
+        volunteerJobs
+            .asSequence()
+            .mapNotNull { job ->
+                val config = configsByName[job.jobTypeName]
+                if (!jobTypeSupportsTrackedFutureEntries(job, config)) return@mapNotNull null
+                val remaining = effectiveBenefitFutureEntriesRemaining(
+                    job, config, evaluationTime, offsetHours
+                ).coerceAtLeast(0)
+                if (remaining <= 0) return@mapNotNull null
+                val invites = com.eventmanager.app.data.utils.effectiveBenefitFutureEntryInvites(job, config)
+                val rankLabel = when (config?.benefitSystemType) {
+                    BenefitSystemType.MANUAL -> VolunteerRank.SPECIAL.name
+                    BenefitSystemType.STELLAR, null -> VolunteerRank.NOVA.name
+                }
+                ShiftEntryInfo(job, rankLabel, remaining, invites)
+            }
+            .sortedByDescending { it.job.date }
+            .toList()
+    }
+    val futureEntryGroupsByInvites = remember(volunteerJobs, configsByName, offsetHours, jobsVersion) {
+        com.eventmanager.app.data.utils.groupFutureEntriesByInvites(
+            volunteerJobs, configsByName, System.currentTimeMillis(), offsetHours
+        )
+    }
+    val totalFutureEntriesRemaining = remember(futureEntriesByShiftAndRank) {
+        futureEntriesByShiftAndRank.sumOf { it.remaining }
+    }
+    var selectedFutureEntryGroupInvites by remember { mutableStateOf<Int?>(null) }
+    LaunchedEffect(futureEntryGroupsByInvites) {
+        if (
+            selectedFutureEntryGroupInvites == null ||
+            futureEntryGroupsByInvites.none { it.invites == selectedFutureEntryGroupInvites }
+        ) {
+            selectedFutureEntryGroupInvites = futureEntryGroupsByInvites.firstOrNull()?.invites
+        }
+    }
+    val activeBenefitsWithPerks = remember(volunteerBenefitStatus.activeBenefits) {
+        volunteerBenefitStatus.activeBenefits.filter { activeBenefit ->
+            activeBenefit.freeEntry ||
+                activeBenefit.friendInvitation ||
+                activeBenefit.inviteCount > 0 ||
+                activeBenefit.drinkTokens > 0 ||
+                activeBenefit.barDiscount > 0 ||
+                activeBenefit.extraordinaryBenefits
+        }
+    }
     
     Box(
         modifier = modifier.fillMaxSize()
@@ -363,33 +504,6 @@ fun VolunteerBenefitsPanel(
                     }
                 }
                 
-                // Pre-compute unused benefit job for slide-to-confirm.
-                // Only show the slider for shifts whose event night has already passed.
-                // todayStart is stable for the lifetime of this composable (midnight today).
-                val todayStart = remember {
-                    java.util.Calendar.getInstance().apply {
-                        set(java.util.Calendar.HOUR_OF_DAY, 0)
-                        set(java.util.Calendar.MINUTE, 0)
-                        set(java.util.Calendar.SECOND, 0)
-                        set(java.util.Calendar.MILLISECOND, 0)
-                    }.timeInMillis
-                }
-                // We "latch" the value: once a valid job is found the reference is
-                // kept even after the data refreshes (benefitUsed flips to true), so
-                // the check animation has time to play before the card disappears.
-                val currentUnusedJob = remember(volunteerJobs, todayStart) {
-                    volunteerJobs.filter {
-                        it.shiftTime == ShiftTime.AFTER_MIDNIGHT &&
-                            it.benefitUsed == false &&
-                            it.date < todayStart
-                    }.maxByOrNull { it.date }
-                }
-                var latchedBenefitJob by remember { mutableStateOf(currentUnusedJob) }
-                LaunchedEffect(currentUnusedJob) {
-                    if (currentUnusedJob != null) latchedBenefitJob = currentUnusedJob
-                }
-                val unusedBenefitJob = latchedBenefitJob
-                
                 // Scrollable content (SCROLLS BELOW HEADER)
                 LazyColumn(
                     modifier = Modifier
@@ -459,7 +573,7 @@ fun VolunteerBenefitsPanel(
                             isPhone = isPhone
                         )
                     }
-                    
+
                     // Benefit details
                     item {
                         Card(
@@ -495,7 +609,7 @@ fun VolunteerBenefitsPanel(
                                 Spacer(modifier = Modifier.height(if (isPhone) 8.dp else 12.dp))
                                 
                                 // Show all individual active benefits if there are multiple
-                                if (volunteerBenefitStatus.activeBenefits.size > 1) {
+                                if (activeBenefitsWithPerks.size > 1) {
                                     Text(
                                         text = context.getString(R.string.active_benefits_multiple_ranks),
                                         style = if (isPhone) getPhonePortraitBodyTypography() else getResponsiveBodyTypography(),
@@ -504,7 +618,7 @@ fun VolunteerBenefitsPanel(
                                         modifier = Modifier.padding(bottom = 8.dp)
                                     )
                                     
-                                    volunteerBenefitStatus.activeBenefits.forEachIndexed { index, activeBenefit ->
+                                    activeBenefitsWithPerks.forEachIndexed { index, activeBenefit ->
                                         Column(
                                             modifier = Modifier
                                                 .fillMaxWidth()
@@ -552,9 +666,21 @@ fun VolunteerBenefitsPanel(
                                             }
                                         }
                                         
-                                        if (index < volunteerBenefitStatus.activeBenefits.size - 1) {
+                                        if (index < activeBenefitsWithPerks.size - 1) {
                                             Divider(modifier = Modifier.padding(vertical = 8.dp))
                                         }
+                                    }
+
+                                    if (totalFutureEntriesRemaining > 0) {
+                                        Divider(modifier = Modifier.padding(vertical = 8.dp))
+                                        FutureEntrySelectionBlock(
+                                            isPhone = isPhone,
+                                            context = context,
+                                            futureEntryGroupsByInvites = futureEntryGroupsByInvites,
+                                            futureEntriesByShiftAndRank = futureEntriesByShiftAndRank,
+                                            selectedFutureEntryGroupInvites = selectedFutureEntryGroupInvites,
+                                            onSelectGroup = { selectedFutureEntryGroupInvites = it }
+                                        )
                                     }
                                 } else {
                                     // Single benefit - show as before
@@ -590,73 +716,32 @@ fun VolunteerBenefitsPanel(
                                             }
                                         }
                                     }
+
+                                        if (totalFutureEntriesRemaining > 0) {
+                                            Divider(modifier = Modifier.padding(vertical = 8.dp))
+                                            FutureEntrySelectionBlock(
+                                                isPhone = isPhone,
+                                                context = context,
+                                                futureEntryGroupsByInvites = futureEntryGroupsByInvites,
+                                                futureEntriesByShiftAndRank = futureEntriesByShiftAndRank,
+                                                selectedFutureEntryGroupInvites = selectedFutureEntryGroupInvites,
+                                                onSelectGroup = { selectedFutureEntryGroupInvites = it }
+                                            )
+                                        }
                                 }
                             }
                         }
                     }
-                    
-                    // Slide-to-confirm entry validation
-                    // Only show if there is an unused after-midnight benefit
-                    if (unusedBenefitJob != null && onConfirmEntry != null) {
-                        item {
-                            var isConfirmed by remember { mutableStateOf(false) }
-                            val confirmScope = rememberCoroutineScope()
-                            
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(if (isPhone) 12.dp else 16.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.secondaryContainer
-                                ),
-                                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(if (isPhone) 12.dp else 16.dp),
-                                    verticalArrangement = Arrangement.spacedBy(if (isPhone) 8.dp else 12.dp)
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        Icon(
-                                            Icons.Default.ConfirmationNumber,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(if (isPhone) 20.dp else 24.dp),
-                                            tint = MaterialTheme.colorScheme.onSecondaryContainer
-                                        )
-                                        Text(
-                                            text = context.getString(R.string.validate_entry),
-                                            style = if (isPhone) getPhonePortraitTypography() else getResponsiveTitleTypography(),
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSecondaryContainer
-                                        )
-                                    }
-                                    
-                                    Text(
-                                        text = context.getString(R.string.validate_entry_description),
-                                        style = if (isPhone) getPhonePortraitBodyTypography() else getResponsiveBodyTypography(),
-                                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
-                                    )
-                                    
-                                    SlideToConfirmButton(
-                                        text = context.getString(R.string.slide_to_confirm),
-                                        onConfirm = {
-                                            isConfirmed = true
-                                            // Delay the data update so the check animation
-                                            // has time to play before the card disappears.
-                                            confirmScope.launch {
-                                                kotlinx.coroutines.delay(1200L)
-                                                onConfirmEntry(unusedBenefitJob)
-                                                // Clear the latch so the card disappears
-                                                latchedBenefitJob = null
-                                            }
-                                        },
-                                        isConfirmed = isConfirmed,
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                }
-                            }
-                        }
+
+                    item {
+                        VolunteerFutureEntriesSection(
+                            volunteerJobs = volunteerJobs,
+                            jobTypeConfigs = jobTypeConfigs,
+                            onConfirmEntry = onConfirmEntry,
+                            externalSelectedGroupInvites = selectedFutureEntryGroupInvites,
+                            onExternalGroupInvitesChanged = { selectedFutureEntryGroupInvites = it },
+                            showGroupSelector = false
+                        )
                     }
                     
                     // Shift History Section
@@ -909,8 +994,10 @@ fun VolunteerBenefitsPanel(
                 val signature = settingsManager.getEmailSignature().ifEmpty { 
                     emailContext.getString(R.string.email_signature_default) 
                 }
+                val includeDigitalWalletPass = settingsManager.isEmailIncludeDigitalWalletPassEnabled()
                 val includeLogo = settingsManager.isEmailIncludeLogoEnabled()
                 val logoUriString = settingsManager.getEmailLogoUri()
+                val associationName = settingsManager.getEmailAssociationName()
                 
                 // Generate QR code
                 val qrBitmap = QRCodeUtils.generateQrImageBitmap(volunteer.id, 512)
@@ -922,6 +1009,26 @@ fun VolunteerBenefitsPanel(
                     val outputStream = FileOutputStream(qrFile)
                     qrBitmap.asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, outputStream)
                     outputStream.close()
+                }
+
+                val digitalWalletPassFile = if (includeDigitalWalletPass) {
+                    DigitalWalletPassGenerator.createPassFile(
+                        context = emailContext,
+                        serialNumber = "${volunteer.id}-${System.currentTimeMillis()}",
+                        holderName = volunteer.name,
+                        qrPayload = volunteer.id,
+                        logoUriString = logoUriString,
+                        associationName = associationName
+                    ) ?: DigitalWalletPassGenerator.createPassFile(
+                        context = emailContext,
+                        serialNumber = "${volunteer.id}-${System.currentTimeMillis()}",
+                        holderName = volunteer.name,
+                        qrPayload = volunteer.id,
+                        logoUriString = null,
+                        associationName = associationName
+                    )
+                } else {
+                    null
                 }
                 
                 // Save logo file
@@ -954,6 +1061,10 @@ fun VolunteerBenefitsPanel(
                     footerText = emailContext.getString(R.string.email_html_footer),
                     qrAttachmentText = emailContext.getString(R.string.email_qr_attachment_text),
                     qrAttachmentNote = emailContext.getString(R.string.email_qr_attachment_note),
+                    includeDigitalWalletPass = includeDigitalWalletPass,
+                    digitalWalletPassTitle = emailContext.getString(R.string.email_wallet_section_title),
+                    digitalWalletPassDescription = emailContext.getString(R.string.email_wallet_section_description),
+                    digitalWalletPassCompatibility = emailContext.getString(R.string.email_wallet_section_compatibility),
                     includeLogo = includeLogo,
                     useContentId = true
                 )
@@ -964,6 +1075,9 @@ fun VolunteerBenefitsPanel(
                     append("\n\n")
                     if (includeQr) {
                         append("[ QR Code - See attachment ]\n\n")
+                    }
+                    if (includeDigitalWalletPass) {
+                        append("[ Digital Wallet Pass (.pkpass) - See attachment ]\n\n")
                     }
                     append(contentAfter)
                     append("\n\n")
@@ -978,7 +1092,8 @@ fun VolunteerBenefitsPanel(
                     htmlContent = htmlEmail,
                     plainText = plainTextEmail,
                     qrFile = qrFile,
-                    logoFile = logoFile
+                    logoFile = logoFile,
+                    digitalWalletPassFile = digitalWalletPassFile
                 )
                 
                 result.fold(
@@ -1099,6 +1214,9 @@ fun VolunteerBenefitsPanel(
                 val signature = settingsManager.getEmailSignature().ifEmpty { 
                     emailContext.getString(R.string.email_signature_default) 
                 }
+                val includeDigitalWalletPass = settingsManager.isEmailIncludeDigitalWalletPassEnabled()
+                val logoUriString = settingsManager.getEmailLogoUri()
+                val associationName = settingsManager.getEmailAssociationName()
                 
                 // Generate QR code
                 val qrBitmap = QRCodeUtils.generateQrImageBitmap(volunteer.id, 512)
@@ -1114,6 +1232,10 @@ fun VolunteerBenefitsPanel(
                     footerText = emailContext.getString(R.string.email_html_footer),
                     qrAttachmentText = emailContext.getString(R.string.email_qr_attachment_text),
                     qrAttachmentNote = emailContext.getString(R.string.email_qr_attachment_note),
+                    includeDigitalWalletPass = false,
+                    digitalWalletPassTitle = "",
+                    digitalWalletPassDescription = "",
+                    digitalWalletPassCompatibility = "",
                     includeLogo = false, // Don't include logo in HTML for manual send
                     useContentId = false
                 )
@@ -1125,12 +1247,15 @@ fun VolunteerBenefitsPanel(
                     if (includeQr) {
                         append("[ QR Code - See attachment ]\n\n")
                     }
+                    if (includeDigitalWalletPass) {
+                        append("[ Digital Wallet Pass (.pkpass) - See attachment ]\n\n")
+                    }
                     append(contentAfter)
                     append("\n\n")
                     append(signature)
                 }
                 
-                // Save QR code file for attachment
+                // Save QR code / digital wallet pass files for attachments
                 var qrUri: Uri? = null
                 if (includeQr && qrBitmap != null) {
                     val qrFile = File(emailContext.cacheDir, "qr_code_${volunteer.id}.png")
@@ -1144,17 +1269,49 @@ fun VolunteerBenefitsPanel(
                         qrFile
                     )
                 }
+
+                var walletPassUri: Uri? = null
+                if (includeDigitalWalletPass) {
+                    val walletPassFile = DigitalWalletPassGenerator.createPassFile(
+                        context = emailContext,
+                        serialNumber = "${volunteer.id}-${System.currentTimeMillis()}",
+                        holderName = volunteer.name,
+                        qrPayload = volunteer.id,
+                        logoUriString = logoUriString,
+                        associationName = associationName
+                    ) ?: DigitalWalletPassGenerator.createPassFile(
+                        context = emailContext,
+                        serialNumber = "${volunteer.id}-${System.currentTimeMillis()}",
+                        holderName = volunteer.name,
+                        qrPayload = volunteer.id,
+                        logoUriString = null,
+                        associationName = associationName
+                    )
+                    if (walletPassFile != null && walletPassFile.exists()) {
+                        walletPassUri = FileProvider.getUriForFile(
+                            emailContext,
+                            "${emailContext.packageName}.fileprovider",
+                            walletPassFile
+                        )
+                    }
+                }
                 
                 // Create email intent with HTML and QR attachment
                 val emailIntent = Intent(Intent.ACTION_SEND).apply {
-                    type = "text/html"
+                    type = if (qrUri != null || walletPassUri != null) "*/*" else "text/html"
                     putExtra(Intent.EXTRA_EMAIL, arrayOf(volunteer.email))
                     putExtra(Intent.EXTRA_SUBJECT, subject)
                     putExtra(Intent.EXTRA_TEXT, plainTextEmail)
                     putExtra("android.intent.extra.HTML_TEXT", htmlEmail)
-                    
-                    if (qrUri != null) {
-                        putExtra(Intent.EXTRA_STREAM, qrUri)
+
+                    val attachments = ArrayList<Uri>()
+                    qrUri?.let { attachments.add(it) }
+                    walletPassUri?.let { attachments.add(it) }
+                    if (attachments.size == 1) {
+                        putExtra(Intent.EXTRA_STREAM, attachments.first())
+                    } else if (attachments.size > 1) {
+                        putParcelableArrayListExtra(Intent.EXTRA_STREAM, attachments)
+                        action = Intent.ACTION_SEND_MULTIPLE
                     }
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
@@ -1468,7 +1625,7 @@ private fun ShiftHistoryItem(
                 )
                 
                 Text(
-                    text = job.shiftTime.name.replace("_", " "),
+                    text = LocalContext.current.shiftTimeLabel(job.shiftTime),
                     style = if (isPhone) getPhonePortraitBodyTypography() else getResponsiveBodyTypography(),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1509,6 +1666,10 @@ private fun buildProfessionalEmailHtml(
     footerText: String,
     qrAttachmentText: String,
     qrAttachmentNote: String,
+    includeDigitalWalletPass: Boolean,
+    digitalWalletPassTitle: String,
+    digitalWalletPassDescription: String,
+    digitalWalletPassCompatibility: String,
     logoBase64: String? = null,
     includeLogo: Boolean,
     useContentId: Boolean = false
@@ -1586,6 +1747,24 @@ private fun buildProfessionalEmailHtml(
         """
     } else ""
     
+    val walletPassSection = if (includeDigitalWalletPass && useContentId) {
+        """
+        <tr>
+            <td style="padding: 10px 40px 26px 40px;">
+                <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;">
+                    <tr>
+                        <td style="padding: 12px 14px;">
+                            <div style="font-size: 14px; font-weight: 700; color: #1f2937; margin-bottom: 4px;">$digitalWalletPassTitle</div>
+                            <div style="font-size: 12px; color: #475569; line-height: 1.45;">$digitalWalletPassDescription</div>
+                            <div style="margin-top: 4px; font-size: 11px; color: #64748b;">$digitalWalletPassCompatibility</div>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        """
+    } else ""
+
     return """
     <!DOCTYPE html>
     <html lang="en">
@@ -1658,6 +1837,8 @@ private fun buildProfessionalEmailHtml(
                                 </table>
                             </td>
                         </tr>
+
+                        $walletPassSection
                         
                     </table>
                     

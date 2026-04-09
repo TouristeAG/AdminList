@@ -6,7 +6,9 @@
     <!-- Settings Screen -->
     <string name="settings_title">Settings &amp; Configuration</string>
     <string name="settings_subtitle">Configure Google Sheets synchronization and app settings</string>
-    
+    <string name="settings_logout">Log out</string>
+    <string name="settings_logout_description">Return to the welcome screen. You will need to sign in again as admin to access management features.</string>
+
     <!-- Google Sheets Configuration -->
     <string name="google_sheets_config_title">Google Sheets Configuration</string>
     <string name="view_setup_instructions">View Setup Instructions</string>
@@ -19,6 +21,9 @@
     <string name="temp_guest_list_sheet_label">Temp Guest List Sheet</string>
     <string name="shift_types_sheet_label">Shift Types Sheet</string>
     <string name="venues_sheet_label">Venues Sheet</string>
+    <string name="admin_label">Admin</string>
+    <string name="admin_yes">Yes</string>
+    <string name="admin_no">No</string>
     <string name="save_settings">Save Settings</string>
     <string name="test_connection">Test Connection</string>
     
@@ -189,19 +194,91 @@
     <string name="benefit_system_label">Benefit System</string>
     <string name="stellar_config_label">Shift Type Configuration</string>
     <string name="manual_rewards_config_label">Manual Rewards Configuration</string>
-    <string name="shift_job_label">Shift Job (Nova / Étoile / Galaxie)</string>
+    <string name="manual_rewards_warning_orion_automatic_enabled">Automatic Orion benefits are enabled for this shift type! They stack with manual rewards—switch to Stellar and turn off Orion Job if that was not intended.</string>
+    <string name="manual_rewards_warning_nova_stellar_automatic_enabled">Automatic Nova / Galaxie (shift job) benefits are enabled! They stack with manual rewards—switch to Stellar and turn off Shift Job if that was not intended.</string>
+    <string name="shift_job_label">Shift Job (Nova / Galaxie)</string>
     <string name="orion_job_label">Orion Job (Committee / Coordination)</string>
-    <string name="requires_shift_time_label">Requires Shift Time</string>
+    <string name="requires_shift_time_label">Required can/can\'t enjoy evening setting</string>
     <string name="duration_days_label">Duration (days)</string>
     <string name="free_drinks_label">Free Drinks</string>
     <string name="bar_discount_percent_label">Bar Discount (%)</string>
     <string name="free_entry_label">Free Entry</string>
     <string name="number_of_invites_label">Number of Invites</string>
+    <string name="duration_invites_label">Invites during reward duration</string>
+    <string name="future_single_use_entries_label">Future event entries (single use)</string>
+    <string name="future_entry_invites_label">Invites per future entry (friends)</string>
+    <string name="future_entry_invites_helper">Used for the &quot;+n inv.&quot; shown on future single-use entries.</string>
+    <string name="future_single_use_entries_with_invites_summary">Future single-use entries: %1$d (+%2$d inv.)</string>
+    <string name="future_event_entries_remaining_n">🎟️ %d Future event entries (single use)</string>
+    <string name="future_entry_remaining_with_invites">🎟️ %1$d entry left (+%2$d inv.)</string>
+    <string name="future_entries_remaining_with_invites">🎟️ %1$d entries left (+%2$d inv.)</string>
+    <string name="future_entry_solo">🎟️ %d entry left (solo)</string>
+    <string name="future_entries_solo">🎟️ %d entries left (solo)</string>
     <string name="other_notes_label">Other Notes</string>
     <string name="other_notes_placeholder">Additional notes…</string>
     <string name="update_shift_type">Update Shift Type</string>
-    <string name="stellar_benefits_info_title">Stellar Benefits System</string>
-    <string name="stellar_benefits_info_body">The Stellar system automatically awards ranks based on shift history:\n\n• NOVA — before-midnight shift → free entry + 1 guest + 2 drink tokens (same night)\n• ÉTOILE — after-midnight shift → free entry + 1 guest for the next event (valid 31 days)\n• GALAXIE — 3 + shifts in the same month → free entry + 50 %% bar discount for the whole month\n• ORION — committee / coordination role → free entry + 1 guest + 50 %% bar discount (1 year)\n• VETERAN — 1 year after Orion → same perks for a second year\n\nShift Job enables Nova / Étoile / Galaxie tracking.\nOrion Job enables Orion / Veteran tracking.\nThese two options are mutually exclusive.\nRequires Shift Time is only relevant for Shift Jobs (determines before / after midnight).</string>
+    <string name="stellar_benefits_info_title">Perks cheat sheet</string>
+
+    <string name="benefits_help_dialog_title">Perks cheat sheet</string>
+    <string name="benefits_help_dialog_subtitle">Collectif Nocturne · 2026–27</string>
+    <string name="benefits_help_intro">Match the shift to what actually happened. Stellar = auto; Manual = you type it.</string>
+
+    <string name="benefits_help_tab_modes">Modes</string>
+    <string name="benefits_help_tab_nova">Shift types</string>
+    <string name="benefits_help_tab_extras">Bonuses &amp; timing</string>
+
+    <string name="benefits_help_app_stellar">Shift job on → pick a Nova type\nOrion job on → mandate year (Veteran the year after)\nDrinks, guest list, future entries → calculated for you</string>
+    <string name="benefits_help_app_manual">You enter days, drinks, bar %%, guests, extras\nFor one-offs outside the usual grid\nDon\'t double-count the same real shift if it\'s already Stellar</string>
+
+    <string name="benefits_help_section_profité_title">Profité / non-profité</string>
+    <string name="benefits_help_section_profité_body">Default shift only, when “enjoy evening” is on\nStayed for the party vs. left after work — not about midnight math\nOther Nova types: this toggle is hidden</string>
+
+    <string name="benefits_help_section_nova_title">Nova perks (shift job)</string>
+    <string name="benefits_help_nova_profité_title">Default shift — profité</string>
+    <string name="benefits_help_nova_profité_rationale">That event night only.</string>
+    <string name="benefits_help_nova_profité_perks">Free entry + 1 guest — event night\n50%% bar — event night\n2 free drinks (~10 CHF) — event night</string>
+
+    <string name="benefits_help_nova_non_profité_title">Default shift — non-profité</string>
+    <string name="benefits_help_nova_non_profité_rationale">Night package + seasonal comp (+1 guest).</string>
+    <string name="benefits_help_nova_non_profité_perks">Same event-night package as profité\nPlus 1 seasonal free entry + 1 guest (in app)</string>
+
+    <string name="benefits_help_nova_photo_title">Photographer / videographer</string>
+    <string name="benefits_help_nova_photo_rationale">Same ballpark as non-profité default.</string>
+    <string name="benefits_help_nova_photo_perks">Free entry + 1 guest — covered night\n50%% bar — covered night\n2 free drinks (~10 CHF) — covered night\n1 seasonal free entry + 1 guest</string>
+
+    <string name="benefits_help_nova_meeting_title">Meeting</string>
+    <string name="benefits_help_nova_meeting_rationale">3 meetings in a month still pump Galaxie — except Orion (meetings don\'t count).</string>
+    <string name="benefits_help_nova_meeting_perks">1 seasonal free entry + 1 guest\n1 free drink (~5 CHF)</string>
+
+    <string name="benefits_help_nova_gd_event_title">Graphic designer — one event</string>
+    <string name="benefits_help_nova_gd_event_rationale">Same vibe as photo/video that night.</string>
+    <string name="benefits_help_nova_gd_event_perks">Free entry + 1 guest — event night\n50%% bar — event night\n2 free drinks (~10 CHF) — event night\n1 seasonal free entry + 1 guest</string>
+
+    <string name="benefits_help_nova_gd_asso_title">Graphic designer — association-wide</string>
+    <string name="benefits_help_nova_gd_asso_rationale">Not tied to one party → more drinks, no bar %%.</string>
+    <string name="benefits_help_nova_gd_asso_perks">2 seasonal free entries + 1 guest each\n4 free drinks (~20 CHF)</string>
+
+    <string name="benefits_help_section_galaxie_title">Galaxie</string>
+    <string name="benefits_help_section_galaxie_body">3 contributions in the same calendar month (shifts + meetings)\nOrion: meetings don\'t count toward the 3\nThat month: free entry everywhere + 50%% bar + 1 extra drink\nStacks with normal shift perks</string>
+
+    <string name="benefits_help_section_orion_title">Orion</string>
+    <string name="benefits_help_section_orion_body">Tag the job type as Orion\n1 year from mandate start: free entry + 50%% bar + 1 guest\n270 CHF wallet (shirt pot + drink budget)</string>
+
+    <string name="benefits_help_section_veteran_title">Veteran</string>
+    <string name="benefits_help_section_veteran_body">Year after Orion\nStill: free entry + 50%% bar\nWallet stops when the mandate ends</string>
+
+    <string name="benefits_help_section_timing_title">When the app turns perks on</string>
+    <string name="benefits_help_section_timing_body">Night-of perks = that venue\'s event day (Settings → day-change time)\nFuture entries unlock from the same moment\nOrion / Galaxie / Veteran use longer windows</string>
+
+    <string name="benefits_help_footer_title">Heads-up</string>
+    <string name="benefits_help_footer_bullets">Profité = you partied, not punch-clock\n50%% tracks Lightspeed prices\nGalaxie stacks with shift perks\nCN changes wallet or shirt? Tell volunteers\nAssoc. designer drinks: flexible if ticketing says OK</string>
+
+    <string name="nova_job_type_label">Nova Benefits Type</string>
+    <string name="nova_type_default_shift">Default shift</string>
+    <string name="nova_type_meeting">Meeting</string>
+    <string name="nova_type_graphic_designer_event">Graphic designer (for event)</string>
+    <string name="nova_type_photographer_videographer">Photographer / Videographer</string>
+    <string name="nova_type_graphic_designer_association">Graphic designer (for association)</string>
 
     <!-- Venue Management -->
     <string name="venue_management_title">Venue Management</string>
@@ -383,6 +460,41 @@
     
     <!-- Welcome Screen -->
     <string name="start_admin">Start Admin</string>
+    <string name="admin_mode">Admin</string>
+    <string name="ticket_check_mode">Ticket Check</string>
+
+    <!-- Admin Auth Screen -->
+    <string name="admin_auth_title">Admin Authentication</string>
+    <string name="admin_auth_description">Scan your badge or QR code to verify your admin access</string>
+    <string name="admin_auth_syncing">Loading data from Google Sheets…</string>
+    <string name="admin_auth_ready">Hold your NFC badge near the device or scan your QR code</string>
+    <string name="admin_auth_scan_qr">Scan QR Code</string>
+    <string name="admin_auth_granted">Welcome, %s! Admin access granted</string>
+    <string name="admin_auth_denied">%s does not have admin access</string>
+    <string name="admin_auth_not_found">No matching profile found</string>
+    <string name="admin_auth_try_again">Try Again</string>
+
+    <!-- Ticket Check Screen -->
+    <string name="ticket_check_title">Ticket Check</string>
+    <string name="ticket_check_coming_soon">This feature is coming soon</string>
+    <string name="ticket_check_description">The ticket check system is currently being built. Stay tuned!</string>
+
+    <!-- Setup Wizard -->
+    <string name="setup_continue">Continue</string>
+    <string name="setup_back">Back</string>
+    <string name="setup_skip">Skip Setup</string>
+    <string name="setup_finish">Finish Setup</string>
+    <string name="setup_language_title">Choose Your Language</string>
+    <string name="setup_language_description">Select the language you\'d like to use in the app</string>
+    <string name="setup_theme_title">Pick a Theme</string>
+    <string name="setup_theme_description">Choose how the app looks — you can always change this later in Settings</string>
+    <string name="setup_spreadsheet_title">Google Sheets ID</string>
+    <string name="setup_spreadsheet_description">Enter the ID of the Google Spreadsheet to sync with your event data</string>
+    <string name="setup_spreadsheet_hint">Find the ID in your Google Sheets URL:\nhttps://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit</string>
+    <string name="setup_json_key_title">Service Account Key</string>
+    <string name="setup_json_key_description">Upload the JSON key file for your Google service account to enable synchronization</string>
+    <string name="setup_sheets_title">Sheet Names</string>
+    <string name="setup_sheets_description">Configure the names of each sheet in your Google Spreadsheet — defaults are pre-filled</string>
     
     <!-- Volunteer Screen -->
     <string name="volunteers_title">Volunteers</string>
@@ -481,7 +593,10 @@
     <string name="search_volunteers_shift_placeholder">Search volunteers...</string>
     <string name="shift_type">Shift Type</string>
     <string name="select_shift_type">Select a shift type...</string>
+    <string name="no_shift_types_available">No active shift types. Add or activate types in Shift Type Management.</string>
     <string name="shift_time">Shift Time</string>
+    <string name="shift_time_evening_profited">Profited</string>
+    <string name="shift_time_evening_non_profited">Not profited</string>
     <string name="shift_date_time">Shift Date &amp; Time</string>
     <string name="notes_optional">Notes (Optional)</string>
     <string name="add_job">Add Job</string>
@@ -598,7 +713,12 @@
     <string name="email_content_after_default">If you have any questions, feel free to reach out to us. :)</string>
     <string name="email_signature_label">Signature</string>
     <string name="email_signature_hint">Your sign-off (e.g., Best regards, The Team)</string>
-    <string name="email_signature_default">Best regards,\nThe Event Team</string>
+    <string name="email_signature_default">Collectif Nocturne</string>
+    <string name="email_association_name_label">Association Name</string>
+    <string name="email_association_name_hint">Collectif Nocturne</string>
+    <string name="email_association_name_description">Used as default signature for the Digital Wallet Pass branding and sender name.</string>
+    <string name="email_include_digital_wallet_pass_label">Include Digital Wallet Pass</string>
+    <string name="email_include_digital_wallet_pass_description">Attach a Digital Wallet Pass (.pkpass) that works with Apple Wallet and compatible Android wallet apps</string>
     <string name="email_include_logo_label">Include Association Logo</string>
     <string name="email_include_logo_description">Add your organization\'s logo to the email</string>
     <string name="email_logo_upload">Upload Logo</string>
@@ -643,6 +763,9 @@
     <string name="email_html_footer">This email was sent automatically. Please keep your QR code safe.</string>
     <string name="email_qr_attachment_text">QR Code\nattached</string>
     <string name="email_qr_attachment_note">The QR code is available as an attachment</string>
+    <string name="email_wallet_section_title">Add to Wallet</string>
+    <string name="email_wallet_section_description">Your Digital Wallet Pass is attached to this email. Save it in Apple Wallet or a compatible Android wallet app for faster check-in.</string>
+    <string name="email_wallet_section_compatibility">Digital Wallet Pass (.pkpass): Apple Wallet + compatible Android apps.</string>
     <string name="personal_information">Personal Information</string>
     <string name="name">Name</string>
     <string name="abbreviation">Abbreviation</string>
@@ -884,8 +1007,16 @@
     
     <!-- Entry Validation -->
     <string name="validate_entry">Validate Entry</string>
-    <string name="validate_entry_description">This volunteer has an unused free entry benefit from an after-midnight shift. Slide to confirm their entry.</string>
+    <string name="validate_entry_description">This volunteer has an unused free entry benefit from a can\'t enjoy evening shift. Slide to confirm their entry.</string>
+    <string name="validate_entry_description_one_future">This volunteer has one future event entry left (single use). Slide to confirm this entry.</string>
+    <string name="validate_entry_description_n_remaining">This volunteer has %d future event entries left (single use). Slide to confirm one entry.</string>
+    <string name="validate_entry_description_with_invites">Entry for the volunteer + %d guest(s). Slide to confirm.</string>
+    <string name="validate_entry_description_solo">Solo entry (no guests). Slide to confirm.</string>
     <string name="slide_to_confirm">Slide to confirm entry</string>
+    <string name="future_entry_group_label_invites">%1$d entry left (+%2$d inv.)</string>
+    <string name="future_entries_group_label_invites">%1$d entries left (+%2$d inv.)</string>
+    <string name="future_entry_group_label_solo">%1$d entry left (solo)</string>
+    <string name="future_entries_group_label_solo">%1$d entries left (solo)</string>
     
     <!-- Activity Status -->
     <string name="activity_status_never_worked">Never worked</string>

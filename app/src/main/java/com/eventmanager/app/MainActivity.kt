@@ -1,5 +1,6 @@
 package com.eventmanager.app
 
+import android.app.Activity
 import android.content.Context
 import android.content.res.Configuration
 import android.os.Bundle
@@ -40,6 +41,9 @@ import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.LocalBar
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.ConfirmationNumber
+import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material3.*
 import com.eventmanager.app.ui.components.QRScannerDialog
 import com.eventmanager.app.ui.components.ScannerMatch
@@ -117,6 +121,9 @@ import com.eventmanager.app.ui.screens.GuestListScreen
 import com.eventmanager.app.ui.screens.JobTrackingScreen
 import com.eventmanager.app.ui.screens.JobTypeManagementScreen
 import com.eventmanager.app.ui.screens.SettingsScreen
+import com.eventmanager.app.ui.screens.SetupWizardScreen
+import com.eventmanager.app.ui.screens.AdminAuthScreen
+import com.eventmanager.app.ui.screens.TicketCheckScreen
 import com.eventmanager.app.ui.screens.VenueManagementScreen
 import com.eventmanager.app.ui.screens.VolunteerScreen
 import com.eventmanager.app.ui.theme.EventManagerTheme
@@ -364,8 +371,11 @@ fun EventManagerApp() {
     val settingsManager = remember { SettingsManager(appContext) }
 
     // Use rememberSaveable to persist state across configuration changes
-    // The welcome screen should be shown on every fresh app launch.
+    // When Google Sheets is not configured, setup runs first; then the welcome screen on every launch.
     var showWelcome by rememberSaveable { mutableStateOf(true) }
+    var showSetupWizard by rememberSaveable { mutableStateOf(settingsManager.shouldShowSetupWizard()) }
+    var showAdminAuth by rememberSaveable { mutableStateOf(false) }
+    var showTicketCheck by rememberSaveable { mutableStateOf(false) }
     var selectedTab by rememberSaveable { mutableStateOf(0) }
     var previousTab by rememberSaveable { mutableStateOf(0) }
     val pageAnimationsEnabled = settingsManager.isPageAnimationsEnabled()
@@ -382,10 +392,28 @@ fun EventManagerApp() {
     var showUpdateDialog by remember { mutableStateOf(false) }
     var hasCheckedUpdate by remember { mutableStateOf(false) }
     
-    if (showWelcome) {
+    if (showSetupWizard) {
+        SetupWizardScreen(
+            onSetupComplete = {
+                showSetupWizard = false
+            }
+        )
+    } else if (showWelcome) {
         WelcomeScreen(
-            onStartManaging = {
+            onAdminSelected = {
                 showWelcome = false
+                showAdminAuth = true
+            },
+            onTicketCheckSelected = {
+                showWelcome = false
+                showTicketCheck = true
+            }
+        )
+    } else if (showTicketCheck) {
+        TicketCheckScreen(
+            onBack = {
+                showTicketCheck = false
+                showWelcome = true
             }
         )
     } else {
@@ -508,7 +536,26 @@ fun EventManagerApp() {
                 }
             }
         }
+
+        // Repair sheet headers (e.g. Admin column) and re-sync before NFC/QR admin gate
+        LaunchedEffect(showAdminAuth) {
+            if (showAdminAuth) {
+                viewModel.prepareForAdminAuthentication()
+            }
+        }
         
+        if (showAdminAuth) {
+            AdminAuthScreen(
+                volunteers = volunteers,
+                guests = guests,
+                isSyncing = isSyncing,
+                onAuthSuccess = { showAdminAuth = false },
+                onBack = {
+                    showAdminAuth = false
+                    showWelcome = true
+                }
+            )
+        } else {
         // Defer sync operations on tab switch to allow instant UI response
         // OPTIMIZED: Syncs are triggered 250ms after tab change to ensure animation completes first
         LaunchedEffect(selectedTab) {
@@ -878,7 +925,17 @@ if (pageAnimationsEnabled) {
                                     showVenueManagement = false
                                 }
                             }
-                            screenState == "tab:0" -> key("dashboard") { DashboardScreenWithViewModel(viewModel) }
+                            screenState == "tab:0" -> key("dashboard") {
+                                DashboardScreenWithViewModel(
+                                    viewModel = viewModel,
+                                    onLogout = {
+                                        showWelcome = true
+                                        showAdminAuth = false
+                                        showTicketCheck = false
+                                        selectedTab = 0
+                                    }
+                                )
+                            }
                             screenState == "tab:1" -> key("guest_list") { GuestListScreenWithViewModel(viewModel) }
                             screenState == "tab:2" -> key("volunteers") { VolunteerScreenWithViewModel(viewModel) }
                             screenState == "tab:3" -> key("jobs") { JobTrackingScreenWithViewModel(viewModel) }
@@ -915,7 +972,17 @@ if (pageAnimationsEnabled) {
                                 showVenueManagement = false
                             }
                         }
-                        selectedTab == 0 -> key("dashboard") { DashboardScreenWithViewModel(viewModel) }
+                        selectedTab == 0 -> key("dashboard") {
+                            DashboardScreenWithViewModel(
+                                viewModel = viewModel,
+                                onLogout = {
+                                    showWelcome = true
+                                    showAdminAuth = false
+                                    showTicketCheck = false
+                                    selectedTab = 0
+                                }
+                            )
+                        }
                         selectedTab == 1 -> key("guest_list") { GuestListScreenWithViewModel(viewModel) }
                         selectedTab == 2 -> key("volunteers") { VolunteerScreenWithViewModel(viewModel) }
                         selectedTab == 3 -> key("jobs") { JobTrackingScreenWithViewModel(viewModel) }
@@ -1004,8 +1071,9 @@ if (pageAnimationsEnabled) {
                     volunteerBenefitStatus = memoizedBenefitStatus,
                     volunteerJobs = memoizedVolunteerJobs,
                     venues = venues,
+                    jobTypeConfigs = jobTypeConfigs,
                     onClose = { showVolunteerBenefits = null },
-                    onConfirmEntry = { job -> viewModel.markBenefitAsUsed(job) },
+                    onConfirmEntry = { job, selectedInvites -> viewModel.markBenefitAsUsed(job, selectedInvites) },
                     onAssignNfcUid = { updatedVolunteer, uid ->
                         viewModel.updateVolunteer(
                             updatedVolunteer.copy(
@@ -1226,6 +1294,7 @@ if (pageAnimationsEnabled) {
             onDismiss = { viewModel.dismissSyncStatusDialog() },
             statusMessage = syncStatusMessage
         )
+        } // end of showAdminAuth else (main app content)
     }
 }
 
@@ -1378,7 +1447,10 @@ fun QRScannerButton(
 
 // Dashboard Screen
 @Composable
-fun DashboardScreenWithViewModel(viewModel: EventManagerViewModel) {
+fun DashboardScreenWithViewModel(
+    viewModel: EventManagerViewModel,
+    onLogout: () -> Unit = {}
+) {
     val guests by viewModel.guests.collectAsState()
     val volunteers by viewModel.volunteers.collectAsState()
     val jobs by viewModel.jobs.collectAsState()
@@ -1401,7 +1473,8 @@ fun DashboardScreenWithViewModel(viewModel: EventManagerViewModel) {
         jobTypeConfigs = jobTypeConfigs,
         isSyncing = isSyncing,
         lastSyncTime = settingsManager.getLastSyncTime(),
-        repository = viewModel.repository
+        repository = viewModel.repository,
+        onLogout = onLogout
     )
 }
 
@@ -1414,7 +1487,8 @@ fun DashboardScreen(
     jobTypeConfigs: List<JobTypeConfig> = emptyList(),
     isSyncing: Boolean = false,
     lastSyncTime: Long = 0L,
-    repository: com.eventmanager.app.data.repository.EventManagerRepository? = null
+    repository: com.eventmanager.app.data.repository.EventManagerRepository? = null,
+    onLogout: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val isCompact = isCompactScreen()
@@ -1461,6 +1535,7 @@ fun DashboardScreen(
         // Visibility settings
         val isPeopleCounterVisible = remember { settingsManager.isPeopleCounterVisible() }
         val isStatisticsVisible = remember { settingsManager.isStatisticsVisible() }
+        val dateChangeOffsetHours = remember { settingsManager.getDateChangeOffsetHours() }
         
         // Memoize formatters to avoid recreating them unnecessarily
         val timeFormatter = remember(userTimeFormat) { 
@@ -1531,11 +1606,12 @@ fun DashboardScreen(
         // Derived calculation - no remember needed since operands are already memoized
         val totalPeople = allGuests + totalInvites + activeVolunteersCount
         // Move expensive calculation to background if needed
-        val totalFreeDrinks = remember(volunteers, jobs, jobTypeConfigs) { 
+        val totalFreeDrinks = remember(volunteers, jobs, jobTypeConfigs, dateChangeOffsetHours) {
             com.eventmanager.app.data.models.BenefitCalculator.calculateTotalFreeDrinks(
                 volunteers = volunteers,
                 jobs = jobs,
-                jobTypeConfigs = jobTypeConfigs
+                jobTypeConfigs = jobTypeConfigs,
+                offsetHours = dateChangeOffsetHours
             )
         }
         
@@ -1729,6 +1805,59 @@ fun DashboardScreen(
                         }
                     }
                 )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(if (isPhone) 16.dp else 24.dp))
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(if (isPhone) 14.dp else 16.dp),
+                verticalArrangement = Arrangement.spacedBy(if (isPhone) 10.dp else 12.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        Icons.Default.ExitToApp,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(if (isPhone) 22.dp else 24.dp)
+                    )
+                    Text(
+                        text = context.getString(R.string.settings_logout),
+                        style = if (isPhone) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                Text(
+                    text = context.getString(R.string.settings_logout_description),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Button(
+                    onClick = onLogout,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
+                ) {
+                    Icon(
+                        Icons.Default.ExitToApp,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(context.getString(R.string.settings_logout))
+                }
             }
         }
         
@@ -1950,10 +2079,10 @@ fun GuestListScreenWithViewModel(viewModel: EventManagerViewModel) {
         onRefreshTemporaryGuests = {
             viewModel.refreshTemporaryGuests()
         },
-        onConfirmEntry = { job ->
+        onConfirmEntry = { job, selectedInvites ->
             coroutineScope.launch {
                 try {
-                    viewModel.markBenefitAsUsed(job)
+                    viewModel.markBenefitAsUsed(job, selectedInvites)
                 } catch (e: Exception) {
                     println("Benefit confirmation failed: ${e.message}")
                 }
@@ -1981,6 +2110,7 @@ fun VolunteerScreenWithViewModel(viewModel: EventManagerViewModel) {
         volunteerJobs = jobs,
         venues = venues,
         jobTypeConfigs = jobTypeConfigs,
+        onConfirmFutureEntry = { job, selectedInvites -> viewModel.markBenefitAsUsed(job, selectedInvites) },
         scrollBehavior = scrollBehavior,
         onAddVolunteer = { 
             coroutineScope.launch { 
@@ -2084,10 +2214,14 @@ fun BenefitsScreenWithViewModel(viewModel: EventManagerViewModel) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WelcomeScreen(onStartManaging: () -> Unit) {
+fun WelcomeScreen(onAdminSelected: () -> Unit, onTicketCheckSelected: () -> Unit) {
     val context = LocalContext.current
     val settingsManager = remember { SettingsManager(context) }
     val colorScheme = MaterialTheme.colorScheme
+
+    BackHandler {
+        (context as? Activity)?.finish()
+    }
     
     // Haptic feedback for start button
     val vibrator = remember { context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator }
@@ -2290,36 +2424,72 @@ fun WelcomeScreen(onStartManaging: () -> Unit) {
                 }
             }
 
-            // Bottom Start button - use theme primary color
+            // Bottom buttons - Admin and Ticket Check
             val buttonColor = if (isPrideDay) {
-                Color(0xFFE40303) // Pride red for the button
+                Color(0xFFE40303)
             } else {
                 colorScheme.primary
             }
             
-            Button(
-                onClick = {
-                    // Strong haptic feedback when starting the app
-                    performStrongHaptic(vibrator)
-                    onStartManaging()
-                },
+            Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(horizontal = 24.dp, vertical = 24.dp)
-                    .fillMaxWidth(if (isLandscape) 0.6f else 1f)
-                    .height(if (isLandscape) 48.dp else 64.dp),
-                shape = RoundedCornerShape(if (isLandscape) 24.dp else 32.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = buttonColor,
-                    contentColor = colorScheme.onPrimary
-                )
+                    .fillMaxWidth(if (isLandscape) 0.6f else 1f),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(
-                    text = context.getString(R.string.start_admin),
-                    style = if (isLandscape) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Black,
-                    color = colorScheme.onPrimary
-                )
+                Button(
+                    onClick = {
+                        performStrongHaptic(vibrator)
+                        onAdminSelected()
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(if (isLandscape) 44.dp else 56.dp),
+                    shape = RoundedCornerShape(if (isLandscape) 22.dp else 28.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = buttonColor,
+                        contentColor = colorScheme.onPrimary
+                    )
+                ) {
+                    Icon(
+                        Icons.Default.Lock,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = context.getString(R.string.admin_mode),
+                        style = if (isLandscape) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                OutlinedButton(
+                    onClick = {
+                        performStrongHaptic(vibrator)
+                        onTicketCheckSelected()
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(if (isLandscape) 44.dp else 56.dp),
+                    shape = RoundedCornerShape(if (isLandscape) 22.dp else 28.dp),
+                    border = BorderStroke(1.5.dp, buttonColor.copy(alpha = 0.6f))
+                ) {
+                    Icon(
+                        Icons.Default.ConfirmationNumber,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = buttonColor
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = context.getString(R.string.ticket_check_mode),
+                        style = if (isLandscape) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = buttonColor
+                    )
+                }
             }
         }
     }

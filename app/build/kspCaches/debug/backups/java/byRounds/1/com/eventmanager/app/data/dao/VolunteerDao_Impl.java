@@ -58,7 +58,7 @@ public final class VolunteerDao_Impl implements VolunteerDao {
       @Override
       @NonNull
       protected String createQuery() {
-        return "INSERT OR REPLACE INTO `volunteers` (`id`,`sheetsId`,`name`,`lastNameAbbreviation`,`email`,`phoneNumber`,`dateOfBirth`,`gender`,`currentRank`,`isActive`,`lastShiftDate`,`lastModified`,`nfcCardUid`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)";
+        return "INSERT OR REPLACE INTO `volunteers` (`id`,`sheetsId`,`name`,`lastNameAbbreviation`,`email`,`phoneNumber`,`dateOfBirth`,`gender`,`currentRank`,`isActive`,`lastShiftDate`,`lastModified`,`nfcCardUid`,`isAdmin`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
       }
 
       @Override
@@ -96,6 +96,8 @@ public final class VolunteerDao_Impl implements VolunteerDao {
         }
         statement.bindLong(12, entity.getLastModified());
         statement.bindString(13, entity.getNfcCardUid());
+        final int _tmp_3 = entity.isAdmin() ? 1 : 0;
+        statement.bindLong(14, _tmp_3);
       }
     };
     this.__deletionAdapterOfVolunteer = new EntityDeletionOrUpdateAdapter<Volunteer>(__db) {
@@ -115,7 +117,7 @@ public final class VolunteerDao_Impl implements VolunteerDao {
       @Override
       @NonNull
       protected String createQuery() {
-        return "UPDATE OR ABORT `volunteers` SET `id` = ?,`sheetsId` = ?,`name` = ?,`lastNameAbbreviation` = ?,`email` = ?,`phoneNumber` = ?,`dateOfBirth` = ?,`gender` = ?,`currentRank` = ?,`isActive` = ?,`lastShiftDate` = ?,`lastModified` = ?,`nfcCardUid` = ? WHERE `id` = ?";
+        return "UPDATE OR ABORT `volunteers` SET `id` = ?,`sheetsId` = ?,`name` = ?,`lastNameAbbreviation` = ?,`email` = ?,`phoneNumber` = ?,`dateOfBirth` = ?,`gender` = ?,`currentRank` = ?,`isActive` = ?,`lastShiftDate` = ?,`lastModified` = ?,`nfcCardUid` = ?,`isAdmin` = ? WHERE `id` = ?";
       }
 
       @Override
@@ -153,7 +155,9 @@ public final class VolunteerDao_Impl implements VolunteerDao {
         }
         statement.bindLong(12, entity.getLastModified());
         statement.bindString(13, entity.getNfcCardUid());
-        statement.bindString(14, entity.getId());
+        final int _tmp_3 = entity.isAdmin() ? 1 : 0;
+        statement.bindLong(14, _tmp_3);
+        statement.bindString(15, entity.getId());
       }
     };
     this.__preparedStmtOfDeleteVolunteerById = new SharedSQLiteStatement(__db) {
@@ -396,6 +400,7 @@ public final class VolunteerDao_Impl implements VolunteerDao {
           final int _cursorIndexOfLastShiftDate = CursorUtil.getColumnIndexOrThrow(_cursor, "lastShiftDate");
           final int _cursorIndexOfLastModified = CursorUtil.getColumnIndexOrThrow(_cursor, "lastModified");
           final int _cursorIndexOfNfcCardUid = CursorUtil.getColumnIndexOrThrow(_cursor, "nfcCardUid");
+          final int _cursorIndexOfIsAdmin = CursorUtil.getColumnIndexOrThrow(_cursor, "isAdmin");
           final List<Volunteer> _result = new ArrayList<Volunteer>(_cursor.getCount());
           while (_cursor.moveToNext()) {
             final Volunteer _item;
@@ -447,7 +452,11 @@ public final class VolunteerDao_Impl implements VolunteerDao {
             _tmpLastModified = _cursor.getLong(_cursorIndexOfLastModified);
             final String _tmpNfcCardUid;
             _tmpNfcCardUid = _cursor.getString(_cursorIndexOfNfcCardUid);
-            _item = new Volunteer(_tmpId,_tmpSheetsId,_tmpName,_tmpLastNameAbbreviation,_tmpEmail,_tmpPhoneNumber,_tmpDateOfBirth,_tmpGender,_tmpCurrentRank,_tmpIsActive,_tmpLastShiftDate,_tmpLastModified,_tmpNfcCardUid);
+            final boolean _tmpIsAdmin;
+            final int _tmp_3;
+            _tmp_3 = _cursor.getInt(_cursorIndexOfIsAdmin);
+            _tmpIsAdmin = _tmp_3 != 0;
+            _item = new Volunteer(_tmpId,_tmpSheetsId,_tmpName,_tmpLastNameAbbreviation,_tmpEmail,_tmpPhoneNumber,_tmpDateOfBirth,_tmpGender,_tmpCurrentRank,_tmpIsActive,_tmpLastShiftDate,_tmpLastModified,_tmpNfcCardUid,_tmpIsAdmin);
             _result.add(_item);
           }
           return _result;
@@ -486,6 +495,7 @@ public final class VolunteerDao_Impl implements VolunteerDao {
           final int _cursorIndexOfLastShiftDate = CursorUtil.getColumnIndexOrThrow(_cursor, "lastShiftDate");
           final int _cursorIndexOfLastModified = CursorUtil.getColumnIndexOrThrow(_cursor, "lastModified");
           final int _cursorIndexOfNfcCardUid = CursorUtil.getColumnIndexOrThrow(_cursor, "nfcCardUid");
+          final int _cursorIndexOfIsAdmin = CursorUtil.getColumnIndexOrThrow(_cursor, "isAdmin");
           final List<Volunteer> _result = new ArrayList<Volunteer>(_cursor.getCount());
           while (_cursor.moveToNext()) {
             final Volunteer _item;
@@ -537,7 +547,11 @@ public final class VolunteerDao_Impl implements VolunteerDao {
             _tmpLastModified = _cursor.getLong(_cursorIndexOfLastModified);
             final String _tmpNfcCardUid;
             _tmpNfcCardUid = _cursor.getString(_cursorIndexOfNfcCardUid);
-            _item = new Volunteer(_tmpId,_tmpSheetsId,_tmpName,_tmpLastNameAbbreviation,_tmpEmail,_tmpPhoneNumber,_tmpDateOfBirth,_tmpGender,_tmpCurrentRank,_tmpIsActive,_tmpLastShiftDate,_tmpLastModified,_tmpNfcCardUid);
+            final boolean _tmpIsAdmin;
+            final int _tmp_3;
+            _tmp_3 = _cursor.getInt(_cursorIndexOfIsAdmin);
+            _tmpIsAdmin = _tmp_3 != 0;
+            _item = new Volunteer(_tmpId,_tmpSheetsId,_tmpName,_tmpLastNameAbbreviation,_tmpEmail,_tmpPhoneNumber,_tmpDateOfBirth,_tmpGender,_tmpCurrentRank,_tmpIsActive,_tmpLastShiftDate,_tmpLastModified,_tmpNfcCardUid,_tmpIsAdmin);
             _result.add(_item);
           }
           return _result;
@@ -576,6 +590,7 @@ public final class VolunteerDao_Impl implements VolunteerDao {
           final int _cursorIndexOfLastShiftDate = CursorUtil.getColumnIndexOrThrow(_cursor, "lastShiftDate");
           final int _cursorIndexOfLastModified = CursorUtil.getColumnIndexOrThrow(_cursor, "lastModified");
           final int _cursorIndexOfNfcCardUid = CursorUtil.getColumnIndexOrThrow(_cursor, "nfcCardUid");
+          final int _cursorIndexOfIsAdmin = CursorUtil.getColumnIndexOrThrow(_cursor, "isAdmin");
           final List<Volunteer> _result = new ArrayList<Volunteer>(_cursor.getCount());
           while (_cursor.moveToNext()) {
             final Volunteer _item;
@@ -627,7 +642,11 @@ public final class VolunteerDao_Impl implements VolunteerDao {
             _tmpLastModified = _cursor.getLong(_cursorIndexOfLastModified);
             final String _tmpNfcCardUid;
             _tmpNfcCardUid = _cursor.getString(_cursorIndexOfNfcCardUid);
-            _item = new Volunteer(_tmpId,_tmpSheetsId,_tmpName,_tmpLastNameAbbreviation,_tmpEmail,_tmpPhoneNumber,_tmpDateOfBirth,_tmpGender,_tmpCurrentRank,_tmpIsActive,_tmpLastShiftDate,_tmpLastModified,_tmpNfcCardUid);
+            final boolean _tmpIsAdmin;
+            final int _tmp_3;
+            _tmp_3 = _cursor.getInt(_cursorIndexOfIsAdmin);
+            _tmpIsAdmin = _tmp_3 != 0;
+            _item = new Volunteer(_tmpId,_tmpSheetsId,_tmpName,_tmpLastNameAbbreviation,_tmpEmail,_tmpPhoneNumber,_tmpDateOfBirth,_tmpGender,_tmpCurrentRank,_tmpIsActive,_tmpLastShiftDate,_tmpLastModified,_tmpNfcCardUid,_tmpIsAdmin);
             _result.add(_item);
           }
           return _result;
@@ -670,6 +689,7 @@ public final class VolunteerDao_Impl implements VolunteerDao {
           final int _cursorIndexOfLastShiftDate = CursorUtil.getColumnIndexOrThrow(_cursor, "lastShiftDate");
           final int _cursorIndexOfLastModified = CursorUtil.getColumnIndexOrThrow(_cursor, "lastModified");
           final int _cursorIndexOfNfcCardUid = CursorUtil.getColumnIndexOrThrow(_cursor, "nfcCardUid");
+          final int _cursorIndexOfIsAdmin = CursorUtil.getColumnIndexOrThrow(_cursor, "isAdmin");
           final Volunteer _result;
           if (_cursor.moveToFirst()) {
             final String _tmpId;
@@ -720,7 +740,11 @@ public final class VolunteerDao_Impl implements VolunteerDao {
             _tmpLastModified = _cursor.getLong(_cursorIndexOfLastModified);
             final String _tmpNfcCardUid;
             _tmpNfcCardUid = _cursor.getString(_cursorIndexOfNfcCardUid);
-            _result = new Volunteer(_tmpId,_tmpSheetsId,_tmpName,_tmpLastNameAbbreviation,_tmpEmail,_tmpPhoneNumber,_tmpDateOfBirth,_tmpGender,_tmpCurrentRank,_tmpIsActive,_tmpLastShiftDate,_tmpLastModified,_tmpNfcCardUid);
+            final boolean _tmpIsAdmin;
+            final int _tmp_3;
+            _tmp_3 = _cursor.getInt(_cursorIndexOfIsAdmin);
+            _tmpIsAdmin = _tmp_3 != 0;
+            _result = new Volunteer(_tmpId,_tmpSheetsId,_tmpName,_tmpLastNameAbbreviation,_tmpEmail,_tmpPhoneNumber,_tmpDateOfBirth,_tmpGender,_tmpCurrentRank,_tmpIsActive,_tmpLastShiftDate,_tmpLastModified,_tmpNfcCardUid,_tmpIsAdmin);
           } else {
             _result = null;
           }
@@ -763,6 +787,7 @@ public final class VolunteerDao_Impl implements VolunteerDao {
           final int _cursorIndexOfLastShiftDate = CursorUtil.getColumnIndexOrThrow(_cursor, "lastShiftDate");
           final int _cursorIndexOfLastModified = CursorUtil.getColumnIndexOrThrow(_cursor, "lastModified");
           final int _cursorIndexOfNfcCardUid = CursorUtil.getColumnIndexOrThrow(_cursor, "nfcCardUid");
+          final int _cursorIndexOfIsAdmin = CursorUtil.getColumnIndexOrThrow(_cursor, "isAdmin");
           final List<Volunteer> _result = new ArrayList<Volunteer>(_cursor.getCount());
           while (_cursor.moveToNext()) {
             final Volunteer _item;
@@ -814,7 +839,11 @@ public final class VolunteerDao_Impl implements VolunteerDao {
             _tmpLastModified = _cursor.getLong(_cursorIndexOfLastModified);
             final String _tmpNfcCardUid;
             _tmpNfcCardUid = _cursor.getString(_cursorIndexOfNfcCardUid);
-            _item = new Volunteer(_tmpId,_tmpSheetsId,_tmpName,_tmpLastNameAbbreviation,_tmpEmail,_tmpPhoneNumber,_tmpDateOfBirth,_tmpGender,_tmpCurrentRank,_tmpIsActive,_tmpLastShiftDate,_tmpLastModified,_tmpNfcCardUid);
+            final boolean _tmpIsAdmin;
+            final int _tmp_4;
+            _tmp_4 = _cursor.getInt(_cursorIndexOfIsAdmin);
+            _tmpIsAdmin = _tmp_4 != 0;
+            _item = new Volunteer(_tmpId,_tmpSheetsId,_tmpName,_tmpLastNameAbbreviation,_tmpEmail,_tmpPhoneNumber,_tmpDateOfBirth,_tmpGender,_tmpCurrentRank,_tmpIsActive,_tmpLastShiftDate,_tmpLastModified,_tmpNfcCardUid,_tmpIsAdmin);
             _result.add(_item);
           }
           return _result;
@@ -857,6 +886,7 @@ public final class VolunteerDao_Impl implements VolunteerDao {
           final int _cursorIndexOfLastShiftDate = CursorUtil.getColumnIndexOrThrow(_cursor, "lastShiftDate");
           final int _cursorIndexOfLastModified = CursorUtil.getColumnIndexOrThrow(_cursor, "lastModified");
           final int _cursorIndexOfNfcCardUid = CursorUtil.getColumnIndexOrThrow(_cursor, "nfcCardUid");
+          final int _cursorIndexOfIsAdmin = CursorUtil.getColumnIndexOrThrow(_cursor, "isAdmin");
           final List<Volunteer> _result = new ArrayList<Volunteer>(_cursor.getCount());
           while (_cursor.moveToNext()) {
             final Volunteer _item;
@@ -908,7 +938,11 @@ public final class VolunteerDao_Impl implements VolunteerDao {
             _tmpLastModified = _cursor.getLong(_cursorIndexOfLastModified);
             final String _tmpNfcCardUid;
             _tmpNfcCardUid = _cursor.getString(_cursorIndexOfNfcCardUid);
-            _item = new Volunteer(_tmpId,_tmpSheetsId,_tmpName,_tmpLastNameAbbreviation,_tmpEmail,_tmpPhoneNumber,_tmpDateOfBirth,_tmpGender,_tmpCurrentRank,_tmpIsActive,_tmpLastShiftDate,_tmpLastModified,_tmpNfcCardUid);
+            final boolean _tmpIsAdmin;
+            final int _tmp_3;
+            _tmp_3 = _cursor.getInt(_cursorIndexOfIsAdmin);
+            _tmpIsAdmin = _tmp_3 != 0;
+            _item = new Volunteer(_tmpId,_tmpSheetsId,_tmpName,_tmpLastNameAbbreviation,_tmpEmail,_tmpPhoneNumber,_tmpDateOfBirth,_tmpGender,_tmpCurrentRank,_tmpIsActive,_tmpLastShiftDate,_tmpLastModified,_tmpNfcCardUid,_tmpIsAdmin);
             _result.add(_item);
           }
           return _result;
@@ -947,6 +981,7 @@ public final class VolunteerDao_Impl implements VolunteerDao {
           final int _cursorIndexOfLastShiftDate = CursorUtil.getColumnIndexOrThrow(_cursor, "lastShiftDate");
           final int _cursorIndexOfLastModified = CursorUtil.getColumnIndexOrThrow(_cursor, "lastModified");
           final int _cursorIndexOfNfcCardUid = CursorUtil.getColumnIndexOrThrow(_cursor, "nfcCardUid");
+          final int _cursorIndexOfIsAdmin = CursorUtil.getColumnIndexOrThrow(_cursor, "isAdmin");
           final Volunteer _result;
           if (_cursor.moveToFirst()) {
             final String _tmpId;
@@ -997,7 +1032,11 @@ public final class VolunteerDao_Impl implements VolunteerDao {
             _tmpLastModified = _cursor.getLong(_cursorIndexOfLastModified);
             final String _tmpNfcCardUid;
             _tmpNfcCardUid = _cursor.getString(_cursorIndexOfNfcCardUid);
-            _result = new Volunteer(_tmpId,_tmpSheetsId,_tmpName,_tmpLastNameAbbreviation,_tmpEmail,_tmpPhoneNumber,_tmpDateOfBirth,_tmpGender,_tmpCurrentRank,_tmpIsActive,_tmpLastShiftDate,_tmpLastModified,_tmpNfcCardUid);
+            final boolean _tmpIsAdmin;
+            final int _tmp_3;
+            _tmp_3 = _cursor.getInt(_cursorIndexOfIsAdmin);
+            _tmpIsAdmin = _tmp_3 != 0;
+            _result = new Volunteer(_tmpId,_tmpSheetsId,_tmpName,_tmpLastNameAbbreviation,_tmpEmail,_tmpPhoneNumber,_tmpDateOfBirth,_tmpGender,_tmpCurrentRank,_tmpIsActive,_tmpLastShiftDate,_tmpLastModified,_tmpNfcCardUid,_tmpIsAdmin);
           } else {
             _result = null;
           }
@@ -1037,6 +1076,7 @@ public final class VolunteerDao_Impl implements VolunteerDao {
           final int _cursorIndexOfLastShiftDate = CursorUtil.getColumnIndexOrThrow(_cursor, "lastShiftDate");
           final int _cursorIndexOfLastModified = CursorUtil.getColumnIndexOrThrow(_cursor, "lastModified");
           final int _cursorIndexOfNfcCardUid = CursorUtil.getColumnIndexOrThrow(_cursor, "nfcCardUid");
+          final int _cursorIndexOfIsAdmin = CursorUtil.getColumnIndexOrThrow(_cursor, "isAdmin");
           final Volunteer _result;
           if (_cursor.moveToFirst()) {
             final String _tmpId;
@@ -1087,7 +1127,11 @@ public final class VolunteerDao_Impl implements VolunteerDao {
             _tmpLastModified = _cursor.getLong(_cursorIndexOfLastModified);
             final String _tmpNfcCardUid;
             _tmpNfcCardUid = _cursor.getString(_cursorIndexOfNfcCardUid);
-            _result = new Volunteer(_tmpId,_tmpSheetsId,_tmpName,_tmpLastNameAbbreviation,_tmpEmail,_tmpPhoneNumber,_tmpDateOfBirth,_tmpGender,_tmpCurrentRank,_tmpIsActive,_tmpLastShiftDate,_tmpLastModified,_tmpNfcCardUid);
+            final boolean _tmpIsAdmin;
+            final int _tmp_3;
+            _tmp_3 = _cursor.getInt(_cursorIndexOfIsAdmin);
+            _tmpIsAdmin = _tmp_3 != 0;
+            _result = new Volunteer(_tmpId,_tmpSheetsId,_tmpName,_tmpLastNameAbbreviation,_tmpEmail,_tmpPhoneNumber,_tmpDateOfBirth,_tmpGender,_tmpCurrentRank,_tmpIsActive,_tmpLastShiftDate,_tmpLastModified,_tmpNfcCardUid,_tmpIsAdmin);
           } else {
             _result = null;
           }
@@ -1129,6 +1173,7 @@ public final class VolunteerDao_Impl implements VolunteerDao {
           final int _cursorIndexOfLastShiftDate = CursorUtil.getColumnIndexOrThrow(_cursor, "lastShiftDate");
           final int _cursorIndexOfLastModified = CursorUtil.getColumnIndexOrThrow(_cursor, "lastModified");
           final int _cursorIndexOfNfcCardUid = CursorUtil.getColumnIndexOrThrow(_cursor, "nfcCardUid");
+          final int _cursorIndexOfIsAdmin = CursorUtil.getColumnIndexOrThrow(_cursor, "isAdmin");
           final Volunteer _result;
           if (_cursor.moveToFirst()) {
             final String _tmpId;
@@ -1179,7 +1224,11 @@ public final class VolunteerDao_Impl implements VolunteerDao {
             _tmpLastModified = _cursor.getLong(_cursorIndexOfLastModified);
             final String _tmpNfcCardUid;
             _tmpNfcCardUid = _cursor.getString(_cursorIndexOfNfcCardUid);
-            _result = new Volunteer(_tmpId,_tmpSheetsId,_tmpName,_tmpLastNameAbbreviation,_tmpEmail,_tmpPhoneNumber,_tmpDateOfBirth,_tmpGender,_tmpCurrentRank,_tmpIsActive,_tmpLastShiftDate,_tmpLastModified,_tmpNfcCardUid);
+            final boolean _tmpIsAdmin;
+            final int _tmp_3;
+            _tmp_3 = _cursor.getInt(_cursorIndexOfIsAdmin);
+            _tmpIsAdmin = _tmp_3 != 0;
+            _result = new Volunteer(_tmpId,_tmpSheetsId,_tmpName,_tmpLastNameAbbreviation,_tmpEmail,_tmpPhoneNumber,_tmpDateOfBirth,_tmpGender,_tmpCurrentRank,_tmpIsActive,_tmpLastShiftDate,_tmpLastModified,_tmpNfcCardUid,_tmpIsAdmin);
           } else {
             _result = null;
           }

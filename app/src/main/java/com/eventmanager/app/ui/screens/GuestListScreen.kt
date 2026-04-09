@@ -53,7 +53,7 @@ fun GuestListScreen(
     onUpdateVolunteer: (Volunteer) -> Unit,
     onDeleteGuest: (Guest) -> Unit,
     onRefreshTemporaryGuests: () -> Unit = {},
-    onConfirmEntry: ((Job) -> Unit)? = null,
+    onConfirmEntry: ((Job, Int) -> Unit)? = null,
     @Suppress("UNUSED_PARAMETER") isSyncing: Boolean = false,
     @Suppress("UNUSED_PARAMETER") lastSyncTime: Long = 0L,
     scrollBehavior: String = SettingsManager.FULL_SCROLL
@@ -675,63 +675,96 @@ fun GuestListScreen(
     if (showVolunteerBenefits != null) {
         val volunteer = showVolunteerBenefits!!
         
-        // Memoize benefit status and jobs to prevent unnecessary recompositions
+        // Scalar version key that changes whenever any job entry counter or timestamp is modified.
+        // Ensures remember caches inside the Dialog are invalidated reliably.
+        val jobsVersion = remember(jobs) {
+            jobs.fold(0L) { acc, j -> acc + j.lastModified + (j.benefitFutureEntriesRemaining ?: 0) }
+        }
         val benefitContext = LocalContext.current
         val settingsManager = remember { SettingsManager(benefitContext) }
         val offsetHours = remember { settingsManager.getDateChangeOffsetHours() }
-        val memoizedBenefitStatus = remember(volunteer.id, jobs, jobTypeConfigs, offsetHours) {
+        val memoizedBenefitStatus = remember(volunteer.id, jobs, jobTypeConfigs, offsetHours, jobsVersion) {
             BenefitCalculator.calculateVolunteerBenefitStatus(volunteer, jobs, jobTypeConfigs, offsetHours = offsetHours)
         }
-        val memoizedVolunteerJobs = remember(volunteer.id, jobs) {
+        val memoizedVolunteerJobs = remember(volunteer.id, jobs, jobsVersion) {
             jobs.filter { it.volunteerId == volunteer.id }
         }
         
-        Dialog(onDismissRequest = { showVolunteerBenefits = null }) {
-            VolunteerBenefitsPanel(
-                volunteer = volunteer,
-                volunteerBenefitStatus = memoizedBenefitStatus,
-                volunteerJobs = memoizedVolunteerJobs,
-                venues = venues,
-                onClose = { showVolunteerBenefits = null },
-                onConfirmEntry = onConfirmEntry,
-                onAssignNfcUid = { updatedVolunteer, uid ->
-                    onUpdateVolunteer(
-                        updatedVolunteer.copy(
-                            nfcCardUid = uid,
-                            lastModified = System.currentTimeMillis()
-                        )
+        val benefitsTablet = isTablet()
+        Dialog(
+            onDismissRequest = { showVolunteerBenefits = null },
+            properties = DialogProperties(usePlatformDefaultWidth = !benefitsTablet)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(
+                        if (benefitsTablet) Modifier.padding(getTabletDialogScreenEdgeInset())
+                        else Modifier
                     )
-                    showVolunteerBenefits = updatedVolunteer.copy(nfcCardUid = uid)
-                }
-            )
+            ) {
+                VolunteerBenefitsPanel(
+                    modifier = Modifier.fillMaxSize(),
+                    volunteer = volunteer,
+                    volunteerBenefitStatus = memoizedBenefitStatus,
+                    volunteerJobs = memoizedVolunteerJobs,
+                    venues = venues,
+                    jobTypeConfigs = jobTypeConfigs,
+                    onClose = { showVolunteerBenefits = null },
+                    onConfirmEntry = onConfirmEntry,
+                    onAssignNfcUid = { updatedVolunteer, uid ->
+                        onUpdateVolunteer(
+                            updatedVolunteer.copy(
+                                nfcCardUid = uid,
+                                lastModified = System.currentTimeMillis()
+                            )
+                        )
+                        showVolunteerBenefits = updatedVolunteer.copy(nfcCardUid = uid)
+                    }
+                )
+            }
         }
     }
     
     // Guest Detail Panel
     if (showGuestDetailPanel != null) {
-        Dialog(onDismissRequest = { showGuestDetailPanel = null }) {
-            GuestDetailPanel(
-                guest = showGuestDetailPanel!!,
-                venues = venues,
-                onEdit = { guest ->
-                    showGuestDetailPanel = null
-                    showEditGuestDialog = guest
-                },
-                onAssignNfcUid = { guest, uid ->
-                    onUpdateGuest(
-                        guest.copy(
-                            nfcCardUid = uid,
-                            lastModified = System.currentTimeMillis()
-                        )
+        val guestDetailTablet = isTablet()
+        Dialog(
+            onDismissRequest = { showGuestDetailPanel = null },
+            properties = DialogProperties(usePlatformDefaultWidth = !guestDetailTablet)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(
+                        if (guestDetailTablet) Modifier.padding(getTabletDialogScreenEdgeInset())
+                        else Modifier
                     )
-                    showGuestDetailPanel = guest.copy(nfcCardUid = uid)
-                },
-                onDelete = { guest ->
-                    showGuestDetailPanel = null
-                    onDeleteGuest(guest)
-                },
-                onClose = { showGuestDetailPanel = null }
-            )
+            ) {
+                GuestDetailPanel(
+                    modifier = Modifier.fillMaxSize(),
+                    guest = showGuestDetailPanel!!,
+                    venues = venues,
+                    onEdit = { guest ->
+                        showGuestDetailPanel = null
+                        showEditGuestDialog = guest
+                    },
+                    onAssignNfcUid = { guest, uid ->
+                        onUpdateGuest(
+                            guest.copy(
+                                nfcCardUid = uid,
+                                lastModified = System.currentTimeMillis()
+                            )
+                        )
+                        showGuestDetailPanel = guest.copy(nfcCardUid = uid)
+                    },
+                    onDelete = { guest ->
+                        showGuestDetailPanel = null
+                        onDeleteGuest(guest)
+                    },
+                    onClose = { showGuestDetailPanel = null }
+                )
+            }
         }
     }
     
@@ -1646,8 +1679,6 @@ fun AddGuestDialog(
     val isCompact = isCompactScreen()
     val scrollState = rememberScrollState()
     val isTabletDevice = isTablet()
-    val tabletMaxWidth = getTabletConstrainedDialogMaxWidth()
-    val tabletMaxHeight = getTabletConstrainedDialogMaxHeight()
     
     // Memoize active venues to avoid repeated filtering
     val activeVenues = remember(venues) { venues.filter { it.isActive } }
@@ -1663,15 +1694,15 @@ fun AddGuestDialog(
                 .then(
                     if (isTabletDevice) {
                         Modifier
-                            .widthIn(max = tabletMaxWidth)
-                            .heightIn(max = tabletMaxHeight)
+                            .fillMaxSize()
+                            .padding(getTabletDialogScreenEdgeInset())
                     } else {
                         Modifier
                             .fillMaxWidth()
                             .fillMaxHeight(0.9f)
+                            .padding(16.dp)
                     }
                 )
-                .padding(16.dp)
         ) {
             Card(
                 modifier = Modifier.fillMaxSize(),
@@ -1857,8 +1888,6 @@ fun EditGuestDialog(
     val isCompact = isCompactScreen()
     val scrollState = rememberScrollState()
     val isTabletDevice = isTablet()
-    val tabletMaxWidth = getTabletConstrainedDialogMaxWidth()
-    val tabletMaxHeight = getTabletConstrainedDialogMaxHeight()
     
     // Memoize active venues to avoid repeated filtering
     val activeVenues = remember(venues) { venues.filter { it.isActive } }
@@ -1874,15 +1903,15 @@ fun EditGuestDialog(
                 .then(
                     if (isTabletDevice) {
                         Modifier
-                            .widthIn(max = tabletMaxWidth)
-                            .heightIn(max = tabletMaxHeight)
+                            .fillMaxSize()
+                            .padding(getTabletDialogScreenEdgeInset())
                     } else {
                         Modifier
                             .fillMaxWidth()
                             .fillMaxHeight(0.9f)
+                            .padding(16.dp)
                     }
                 )
-                .padding(16.dp)
         ) {
             Card(
                 modifier = Modifier.fillMaxSize(),

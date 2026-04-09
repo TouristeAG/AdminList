@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.eventmanager.app.data.models.*
 import com.eventmanager.app.data.sync.SettingsManager
+import com.eventmanager.app.data.utils.groupFutureEntriesByInvites
 import com.eventmanager.app.ui.components.SearchBarWithFilter
 import com.eventmanager.app.ui.utils.*
 import com.eventmanager.app.R
@@ -50,11 +51,13 @@ fun BenefitsScreen(
     var selectedFilter by remember { mutableStateOf<String?>(null) }
     
     val volunteerBenefits = remember(volunteers, jobs, jobTypeConfigs, offsetHours) {
+        val currentTime = System.currentTimeMillis()
         volunteers.map { volunteer ->
-            val status = BenefitCalculator.calculateVolunteerBenefitStatus(volunteer, jobs, jobTypeConfigs, offsetHours = offsetHours)
+            val status = BenefitCalculator.calculateVolunteerBenefitStatus(volunteer, jobs, jobTypeConfigs, currentTime = currentTime, offsetHours = offsetHours)
             volunteer to status
         }
     }
+    val jobsByVolunteerId = remember(jobs) { jobs.groupBy { it.volunteerId } }
 
     val isCompact = isCompactScreen()
     val responsivePadding = getResponsivePadding()
@@ -240,7 +243,12 @@ fun BenefitsScreen(
                     items = filteredVolunteerBenefits,
                     key = { (volunteer, _) -> volunteer.id }
                 ) { (volunteer, status) ->
-                    BenefitCard(volunteer = volunteer, status = status)
+                    BenefitCard(
+                        volunteer = volunteer,
+                        status = status,
+                        volunteerJobs = jobsByVolunteerId[volunteer.id].orEmpty(),
+                        jobTypeConfigs = jobTypeConfigs
+                    )
                 }
             }
             }
@@ -401,7 +409,12 @@ fun BenefitsScreen(
                     items = filteredVolunteerBenefits,
                     key = { (volunteer, _) -> volunteer.id }
                 ) { (volunteer, status) ->
-                    BenefitCard(volunteer = volunteer, status = status)
+                    BenefitCard(
+                        volunteer = volunteer,
+                        status = status,
+                        volunteerJobs = jobsByVolunteerId[volunteer.id].orEmpty(),
+                        jobTypeConfigs = jobTypeConfigs
+                    )
                 }
             }
         }
@@ -556,21 +569,41 @@ fun BenefitsScreen(
                     items = filteredVolunteerBenefits,
                     key = { (volunteer, _) -> volunteer.id }
                 ) { (volunteer, status) ->
-                    BenefitCard(volunteer = volunteer, status = status)
+                    BenefitCard(
+                        volunteer = volunteer,
+                        status = status,
+                        volunteerJobs = jobsByVolunteerId[volunteer.id].orEmpty(),
+                        jobTypeConfigs = jobTypeConfigs
+                    )
                 }
             }
         }
     }
 }
 
+private data class FutureEntryDisplayGroup(val invites: Int, val remaining: Int)
+
 @Composable
 fun BenefitCard(
     volunteer: Volunteer,
     status: VolunteerBenefitStatus,
+    volunteerJobs: List<Job>,
+    jobTypeConfigs: List<JobTypeConfig>,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val benefit = status.benefits
+    val configsByName = remember(jobTypeConfigs) { jobTypeConfigs.associateBy { it.name } }
+    val settingsManager = remember { com.eventmanager.app.data.sync.SettingsManager(context) }
+    val offsetHours = remember { settingsManager.getDateChangeOffsetHours() }
+    // Keep the exact same source of truth as guest list / volunteer profile:
+    // aggregate from tracked job balances, grouped by invite count.
+    val futureEntryGroups = remember(volunteerJobs, configsByName, offsetHours) {
+        val t = System.currentTimeMillis()
+        groupFutureEntriesByInvites(volunteerJobs, configsByName, t, offsetHours)
+            .map { FutureEntryDisplayGroup(invites = it.invites, remaining = it.totalRemaining) }
+    }
+    val totalFutureEntriesRemaining = remember(futureEntryGroups) { futureEntryGroups.sumOf { it.remaining } }
     val isCompact = isCompactScreen()
     val responsivePadding = getResponsiveCardPadding()
     val responsiveAvatarSize = getResponsiveAvatarSize()
@@ -729,6 +762,37 @@ fun BenefitCard(
                                 text = benefitText,
                                 style = if (isCompact) MaterialTheme.typography.labelSmall else MaterialTheme.typography.bodySmall
                             )
+                        }
+                    }
+
+                    if (totalFutureEntriesRemaining > 0) {
+                        HorizontalDivider(modifier = Modifier.padding(vertical = if (isCompact) 4.dp else 6.dp))
+                        futureEntryGroups.forEach { group ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(vertical = if (isCompact) 1.dp else 2.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(if (isCompact) 14.dp else 16.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.width(if (isCompact) 6.dp else 8.dp))
+                                val label = if (group.invites > 0) {
+                                    if (group.remaining == 1) context.getString(R.string.future_entry_remaining_with_invites, group.remaining, group.invites)
+                                    else context.getString(R.string.future_entries_remaining_with_invites, group.remaining, group.invites)
+                                } else {
+                                    if (group.remaining == 1) context.getString(R.string.future_entry_solo, group.remaining)
+                                    else context.getString(R.string.future_entries_solo, group.remaining)
+                                }
+                                Text(
+                                    text = label,
+                                    style = if (isCompact) MaterialTheme.typography.labelSmall else MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
                     }
                 }

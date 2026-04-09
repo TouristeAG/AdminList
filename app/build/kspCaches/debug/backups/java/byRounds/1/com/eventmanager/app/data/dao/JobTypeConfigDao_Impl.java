@@ -17,6 +17,7 @@ import com.eventmanager.app.data.models.BenefitSystemType;
 import com.eventmanager.app.data.models.Converters;
 import com.eventmanager.app.data.models.JobTypeConfig;
 import com.eventmanager.app.data.models.ManualRewards;
+import com.eventmanager.app.data.models.NovaJobType;
 import java.lang.Class;
 import java.lang.Exception;
 import java.lang.Long;
@@ -58,7 +59,7 @@ public final class JobTypeConfigDao_Impl implements JobTypeConfigDao {
       @Override
       @NonNull
       protected String createQuery() {
-        return "INSERT OR REPLACE INTO `job_type_configs` (`id`,`sheetsId`,`name`,`isActive`,`isShiftJob`,`isOrionJob`,`requiresShiftTime`,`benefitSystemType`,`manualRewards`,`description`,`lastModified`) VALUES (nullif(?, 0),?,?,?,?,?,?,?,?,?,?)";
+        return "INSERT OR REPLACE INTO `job_type_configs` (`id`,`sheetsId`,`name`,`isActive`,`isShiftJob`,`isOrionJob`,`requiresShiftTime`,`novaJobType`,`benefitSystemType`,`manualRewards`,`description`,`lastModified`) VALUES (nullif(?, 0),?,?,?,?,?,?,?,?,?,?,?)";
       }
 
       @Override
@@ -79,16 +80,18 @@ public final class JobTypeConfigDao_Impl implements JobTypeConfigDao {
         statement.bindLong(6, _tmp_2);
         final int _tmp_3 = entity.getRequiresShiftTime() ? 1 : 0;
         statement.bindLong(7, _tmp_3);
-        final String _tmp_4 = __converters.fromBenefitSystemType(entity.getBenefitSystemType());
+        final String _tmp_4 = __converters.fromNovaJobType(entity.getNovaJobType());
         statement.bindString(8, _tmp_4);
-        final String _tmp_5 = __converters.fromManualRewards(entity.getManualRewards());
-        if (_tmp_5 == null) {
-          statement.bindNull(9);
+        final String _tmp_5 = __converters.fromBenefitSystemType(entity.getBenefitSystemType());
+        statement.bindString(9, _tmp_5);
+        final String _tmp_6 = __converters.fromManualRewards(entity.getManualRewards());
+        if (_tmp_6 == null) {
+          statement.bindNull(10);
         } else {
-          statement.bindString(9, _tmp_5);
+          statement.bindString(10, _tmp_6);
         }
-        statement.bindString(10, entity.getDescription());
-        statement.bindLong(11, entity.getLastModified());
+        statement.bindString(11, entity.getDescription());
+        statement.bindLong(12, entity.getLastModified());
       }
     };
     this.__deletionAdapterOfJobTypeConfig = new EntityDeletionOrUpdateAdapter<JobTypeConfig>(__db) {
@@ -108,7 +111,7 @@ public final class JobTypeConfigDao_Impl implements JobTypeConfigDao {
       @Override
       @NonNull
       protected String createQuery() {
-        return "UPDATE OR ABORT `job_type_configs` SET `id` = ?,`sheetsId` = ?,`name` = ?,`isActive` = ?,`isShiftJob` = ?,`isOrionJob` = ?,`requiresShiftTime` = ?,`benefitSystemType` = ?,`manualRewards` = ?,`description` = ?,`lastModified` = ? WHERE `id` = ?";
+        return "UPDATE OR ABORT `job_type_configs` SET `id` = ?,`sheetsId` = ?,`name` = ?,`isActive` = ?,`isShiftJob` = ?,`isOrionJob` = ?,`requiresShiftTime` = ?,`novaJobType` = ?,`benefitSystemType` = ?,`manualRewards` = ?,`description` = ?,`lastModified` = ? WHERE `id` = ?";
       }
 
       @Override
@@ -129,17 +132,19 @@ public final class JobTypeConfigDao_Impl implements JobTypeConfigDao {
         statement.bindLong(6, _tmp_2);
         final int _tmp_3 = entity.getRequiresShiftTime() ? 1 : 0;
         statement.bindLong(7, _tmp_3);
-        final String _tmp_4 = __converters.fromBenefitSystemType(entity.getBenefitSystemType());
+        final String _tmp_4 = __converters.fromNovaJobType(entity.getNovaJobType());
         statement.bindString(8, _tmp_4);
-        final String _tmp_5 = __converters.fromManualRewards(entity.getManualRewards());
-        if (_tmp_5 == null) {
-          statement.bindNull(9);
+        final String _tmp_5 = __converters.fromBenefitSystemType(entity.getBenefitSystemType());
+        statement.bindString(9, _tmp_5);
+        final String _tmp_6 = __converters.fromManualRewards(entity.getManualRewards());
+        if (_tmp_6 == null) {
+          statement.bindNull(10);
         } else {
-          statement.bindString(9, _tmp_5);
+          statement.bindString(10, _tmp_6);
         }
-        statement.bindString(10, entity.getDescription());
-        statement.bindLong(11, entity.getLastModified());
-        statement.bindLong(12, entity.getId());
+        statement.bindString(11, entity.getDescription());
+        statement.bindLong(12, entity.getLastModified());
+        statement.bindLong(13, entity.getId());
       }
     };
     this.__preparedStmtOfDeleteJobTypeConfigById = new SharedSQLiteStatement(__db) {
@@ -377,6 +382,7 @@ public final class JobTypeConfigDao_Impl implements JobTypeConfigDao {
           final int _cursorIndexOfIsShiftJob = CursorUtil.getColumnIndexOrThrow(_cursor, "isShiftJob");
           final int _cursorIndexOfIsOrionJob = CursorUtil.getColumnIndexOrThrow(_cursor, "isOrionJob");
           final int _cursorIndexOfRequiresShiftTime = CursorUtil.getColumnIndexOrThrow(_cursor, "requiresShiftTime");
+          final int _cursorIndexOfNovaJobType = CursorUtil.getColumnIndexOrThrow(_cursor, "novaJobType");
           final int _cursorIndexOfBenefitSystemType = CursorUtil.getColumnIndexOrThrow(_cursor, "benefitSystemType");
           final int _cursorIndexOfManualRewards = CursorUtil.getColumnIndexOrThrow(_cursor, "manualRewards");
           final int _cursorIndexOfDescription = CursorUtil.getColumnIndexOrThrow(_cursor, "description");
@@ -410,23 +416,27 @@ public final class JobTypeConfigDao_Impl implements JobTypeConfigDao {
             final int _tmp_3;
             _tmp_3 = _cursor.getInt(_cursorIndexOfRequiresShiftTime);
             _tmpRequiresShiftTime = _tmp_3 != 0;
-            final BenefitSystemType _tmpBenefitSystemType;
+            final NovaJobType _tmpNovaJobType;
             final String _tmp_4;
-            _tmp_4 = _cursor.getString(_cursorIndexOfBenefitSystemType);
-            _tmpBenefitSystemType = __converters.toBenefitSystemType(_tmp_4);
-            final ManualRewards _tmpManualRewards;
+            _tmp_4 = _cursor.getString(_cursorIndexOfNovaJobType);
+            _tmpNovaJobType = __converters.toNovaJobType(_tmp_4);
+            final BenefitSystemType _tmpBenefitSystemType;
             final String _tmp_5;
+            _tmp_5 = _cursor.getString(_cursorIndexOfBenefitSystemType);
+            _tmpBenefitSystemType = __converters.toBenefitSystemType(_tmp_5);
+            final ManualRewards _tmpManualRewards;
+            final String _tmp_6;
             if (_cursor.isNull(_cursorIndexOfManualRewards)) {
-              _tmp_5 = null;
+              _tmp_6 = null;
             } else {
-              _tmp_5 = _cursor.getString(_cursorIndexOfManualRewards);
+              _tmp_6 = _cursor.getString(_cursorIndexOfManualRewards);
             }
-            _tmpManualRewards = __converters.toManualRewards(_tmp_5);
+            _tmpManualRewards = __converters.toManualRewards(_tmp_6);
             final String _tmpDescription;
             _tmpDescription = _cursor.getString(_cursorIndexOfDescription);
             final long _tmpLastModified;
             _tmpLastModified = _cursor.getLong(_cursorIndexOfLastModified);
-            _item = new JobTypeConfig(_tmpId,_tmpSheetsId,_tmpName,_tmpIsActive,_tmpIsShiftJob,_tmpIsOrionJob,_tmpRequiresShiftTime,_tmpBenefitSystemType,_tmpManualRewards,_tmpDescription,_tmpLastModified);
+            _item = new JobTypeConfig(_tmpId,_tmpSheetsId,_tmpName,_tmpIsActive,_tmpIsShiftJob,_tmpIsOrionJob,_tmpRequiresShiftTime,_tmpNovaJobType,_tmpBenefitSystemType,_tmpManualRewards,_tmpDescription,_tmpLastModified);
             _result.add(_item);
           }
           return _result;
@@ -459,6 +469,7 @@ public final class JobTypeConfigDao_Impl implements JobTypeConfigDao {
           final int _cursorIndexOfIsShiftJob = CursorUtil.getColumnIndexOrThrow(_cursor, "isShiftJob");
           final int _cursorIndexOfIsOrionJob = CursorUtil.getColumnIndexOrThrow(_cursor, "isOrionJob");
           final int _cursorIndexOfRequiresShiftTime = CursorUtil.getColumnIndexOrThrow(_cursor, "requiresShiftTime");
+          final int _cursorIndexOfNovaJobType = CursorUtil.getColumnIndexOrThrow(_cursor, "novaJobType");
           final int _cursorIndexOfBenefitSystemType = CursorUtil.getColumnIndexOrThrow(_cursor, "benefitSystemType");
           final int _cursorIndexOfManualRewards = CursorUtil.getColumnIndexOrThrow(_cursor, "manualRewards");
           final int _cursorIndexOfDescription = CursorUtil.getColumnIndexOrThrow(_cursor, "description");
@@ -492,23 +503,27 @@ public final class JobTypeConfigDao_Impl implements JobTypeConfigDao {
             final int _tmp_3;
             _tmp_3 = _cursor.getInt(_cursorIndexOfRequiresShiftTime);
             _tmpRequiresShiftTime = _tmp_3 != 0;
-            final BenefitSystemType _tmpBenefitSystemType;
+            final NovaJobType _tmpNovaJobType;
             final String _tmp_4;
-            _tmp_4 = _cursor.getString(_cursorIndexOfBenefitSystemType);
-            _tmpBenefitSystemType = __converters.toBenefitSystemType(_tmp_4);
-            final ManualRewards _tmpManualRewards;
+            _tmp_4 = _cursor.getString(_cursorIndexOfNovaJobType);
+            _tmpNovaJobType = __converters.toNovaJobType(_tmp_4);
+            final BenefitSystemType _tmpBenefitSystemType;
             final String _tmp_5;
+            _tmp_5 = _cursor.getString(_cursorIndexOfBenefitSystemType);
+            _tmpBenefitSystemType = __converters.toBenefitSystemType(_tmp_5);
+            final ManualRewards _tmpManualRewards;
+            final String _tmp_6;
             if (_cursor.isNull(_cursorIndexOfManualRewards)) {
-              _tmp_5 = null;
+              _tmp_6 = null;
             } else {
-              _tmp_5 = _cursor.getString(_cursorIndexOfManualRewards);
+              _tmp_6 = _cursor.getString(_cursorIndexOfManualRewards);
             }
-            _tmpManualRewards = __converters.toManualRewards(_tmp_5);
+            _tmpManualRewards = __converters.toManualRewards(_tmp_6);
             final String _tmpDescription;
             _tmpDescription = _cursor.getString(_cursorIndexOfDescription);
             final long _tmpLastModified;
             _tmpLastModified = _cursor.getLong(_cursorIndexOfLastModified);
-            _item = new JobTypeConfig(_tmpId,_tmpSheetsId,_tmpName,_tmpIsActive,_tmpIsShiftJob,_tmpIsOrionJob,_tmpRequiresShiftTime,_tmpBenefitSystemType,_tmpManualRewards,_tmpDescription,_tmpLastModified);
+            _item = new JobTypeConfig(_tmpId,_tmpSheetsId,_tmpName,_tmpIsActive,_tmpIsShiftJob,_tmpIsOrionJob,_tmpRequiresShiftTime,_tmpNovaJobType,_tmpBenefitSystemType,_tmpManualRewards,_tmpDescription,_tmpLastModified);
             _result.add(_item);
           }
           return _result;
@@ -545,6 +560,7 @@ public final class JobTypeConfigDao_Impl implements JobTypeConfigDao {
           final int _cursorIndexOfIsShiftJob = CursorUtil.getColumnIndexOrThrow(_cursor, "isShiftJob");
           final int _cursorIndexOfIsOrionJob = CursorUtil.getColumnIndexOrThrow(_cursor, "isOrionJob");
           final int _cursorIndexOfRequiresShiftTime = CursorUtil.getColumnIndexOrThrow(_cursor, "requiresShiftTime");
+          final int _cursorIndexOfNovaJobType = CursorUtil.getColumnIndexOrThrow(_cursor, "novaJobType");
           final int _cursorIndexOfBenefitSystemType = CursorUtil.getColumnIndexOrThrow(_cursor, "benefitSystemType");
           final int _cursorIndexOfManualRewards = CursorUtil.getColumnIndexOrThrow(_cursor, "manualRewards");
           final int _cursorIndexOfDescription = CursorUtil.getColumnIndexOrThrow(_cursor, "description");
@@ -577,23 +593,27 @@ public final class JobTypeConfigDao_Impl implements JobTypeConfigDao {
             final int _tmp_3;
             _tmp_3 = _cursor.getInt(_cursorIndexOfRequiresShiftTime);
             _tmpRequiresShiftTime = _tmp_3 != 0;
-            final BenefitSystemType _tmpBenefitSystemType;
+            final NovaJobType _tmpNovaJobType;
             final String _tmp_4;
-            _tmp_4 = _cursor.getString(_cursorIndexOfBenefitSystemType);
-            _tmpBenefitSystemType = __converters.toBenefitSystemType(_tmp_4);
-            final ManualRewards _tmpManualRewards;
+            _tmp_4 = _cursor.getString(_cursorIndexOfNovaJobType);
+            _tmpNovaJobType = __converters.toNovaJobType(_tmp_4);
+            final BenefitSystemType _tmpBenefitSystemType;
             final String _tmp_5;
+            _tmp_5 = _cursor.getString(_cursorIndexOfBenefitSystemType);
+            _tmpBenefitSystemType = __converters.toBenefitSystemType(_tmp_5);
+            final ManualRewards _tmpManualRewards;
+            final String _tmp_6;
             if (_cursor.isNull(_cursorIndexOfManualRewards)) {
-              _tmp_5 = null;
+              _tmp_6 = null;
             } else {
-              _tmp_5 = _cursor.getString(_cursorIndexOfManualRewards);
+              _tmp_6 = _cursor.getString(_cursorIndexOfManualRewards);
             }
-            _tmpManualRewards = __converters.toManualRewards(_tmp_5);
+            _tmpManualRewards = __converters.toManualRewards(_tmp_6);
             final String _tmpDescription;
             _tmpDescription = _cursor.getString(_cursorIndexOfDescription);
             final long _tmpLastModified;
             _tmpLastModified = _cursor.getLong(_cursorIndexOfLastModified);
-            _result = new JobTypeConfig(_tmpId,_tmpSheetsId,_tmpName,_tmpIsActive,_tmpIsShiftJob,_tmpIsOrionJob,_tmpRequiresShiftTime,_tmpBenefitSystemType,_tmpManualRewards,_tmpDescription,_tmpLastModified);
+            _result = new JobTypeConfig(_tmpId,_tmpSheetsId,_tmpName,_tmpIsActive,_tmpIsShiftJob,_tmpIsOrionJob,_tmpRequiresShiftTime,_tmpNovaJobType,_tmpBenefitSystemType,_tmpManualRewards,_tmpDescription,_tmpLastModified);
           } else {
             _result = null;
           }
@@ -627,6 +647,7 @@ public final class JobTypeConfigDao_Impl implements JobTypeConfigDao {
           final int _cursorIndexOfIsShiftJob = CursorUtil.getColumnIndexOrThrow(_cursor, "isShiftJob");
           final int _cursorIndexOfIsOrionJob = CursorUtil.getColumnIndexOrThrow(_cursor, "isOrionJob");
           final int _cursorIndexOfRequiresShiftTime = CursorUtil.getColumnIndexOrThrow(_cursor, "requiresShiftTime");
+          final int _cursorIndexOfNovaJobType = CursorUtil.getColumnIndexOrThrow(_cursor, "novaJobType");
           final int _cursorIndexOfBenefitSystemType = CursorUtil.getColumnIndexOrThrow(_cursor, "benefitSystemType");
           final int _cursorIndexOfManualRewards = CursorUtil.getColumnIndexOrThrow(_cursor, "manualRewards");
           final int _cursorIndexOfDescription = CursorUtil.getColumnIndexOrThrow(_cursor, "description");
@@ -659,23 +680,27 @@ public final class JobTypeConfigDao_Impl implements JobTypeConfigDao {
             final int _tmp_3;
             _tmp_3 = _cursor.getInt(_cursorIndexOfRequiresShiftTime);
             _tmpRequiresShiftTime = _tmp_3 != 0;
-            final BenefitSystemType _tmpBenefitSystemType;
+            final NovaJobType _tmpNovaJobType;
             final String _tmp_4;
-            _tmp_4 = _cursor.getString(_cursorIndexOfBenefitSystemType);
-            _tmpBenefitSystemType = __converters.toBenefitSystemType(_tmp_4);
-            final ManualRewards _tmpManualRewards;
+            _tmp_4 = _cursor.getString(_cursorIndexOfNovaJobType);
+            _tmpNovaJobType = __converters.toNovaJobType(_tmp_4);
+            final BenefitSystemType _tmpBenefitSystemType;
             final String _tmp_5;
+            _tmp_5 = _cursor.getString(_cursorIndexOfBenefitSystemType);
+            _tmpBenefitSystemType = __converters.toBenefitSystemType(_tmp_5);
+            final ManualRewards _tmpManualRewards;
+            final String _tmp_6;
             if (_cursor.isNull(_cursorIndexOfManualRewards)) {
-              _tmp_5 = null;
+              _tmp_6 = null;
             } else {
-              _tmp_5 = _cursor.getString(_cursorIndexOfManualRewards);
+              _tmp_6 = _cursor.getString(_cursorIndexOfManualRewards);
             }
-            _tmpManualRewards = __converters.toManualRewards(_tmp_5);
+            _tmpManualRewards = __converters.toManualRewards(_tmp_6);
             final String _tmpDescription;
             _tmpDescription = _cursor.getString(_cursorIndexOfDescription);
             final long _tmpLastModified;
             _tmpLastModified = _cursor.getLong(_cursorIndexOfLastModified);
-            _result = new JobTypeConfig(_tmpId,_tmpSheetsId,_tmpName,_tmpIsActive,_tmpIsShiftJob,_tmpIsOrionJob,_tmpRequiresShiftTime,_tmpBenefitSystemType,_tmpManualRewards,_tmpDescription,_tmpLastModified);
+            _result = new JobTypeConfig(_tmpId,_tmpSheetsId,_tmpName,_tmpIsActive,_tmpIsShiftJob,_tmpIsOrionJob,_tmpRequiresShiftTime,_tmpNovaJobType,_tmpBenefitSystemType,_tmpManualRewards,_tmpDescription,_tmpLastModified);
           } else {
             _result = null;
           }
@@ -705,6 +730,7 @@ public final class JobTypeConfigDao_Impl implements JobTypeConfigDao {
           final int _cursorIndexOfIsShiftJob = CursorUtil.getColumnIndexOrThrow(_cursor, "isShiftJob");
           final int _cursorIndexOfIsOrionJob = CursorUtil.getColumnIndexOrThrow(_cursor, "isOrionJob");
           final int _cursorIndexOfRequiresShiftTime = CursorUtil.getColumnIndexOrThrow(_cursor, "requiresShiftTime");
+          final int _cursorIndexOfNovaJobType = CursorUtil.getColumnIndexOrThrow(_cursor, "novaJobType");
           final int _cursorIndexOfBenefitSystemType = CursorUtil.getColumnIndexOrThrow(_cursor, "benefitSystemType");
           final int _cursorIndexOfManualRewards = CursorUtil.getColumnIndexOrThrow(_cursor, "manualRewards");
           final int _cursorIndexOfDescription = CursorUtil.getColumnIndexOrThrow(_cursor, "description");
@@ -738,23 +764,27 @@ public final class JobTypeConfigDao_Impl implements JobTypeConfigDao {
             final int _tmp_3;
             _tmp_3 = _cursor.getInt(_cursorIndexOfRequiresShiftTime);
             _tmpRequiresShiftTime = _tmp_3 != 0;
-            final BenefitSystemType _tmpBenefitSystemType;
+            final NovaJobType _tmpNovaJobType;
             final String _tmp_4;
-            _tmp_4 = _cursor.getString(_cursorIndexOfBenefitSystemType);
-            _tmpBenefitSystemType = __converters.toBenefitSystemType(_tmp_4);
-            final ManualRewards _tmpManualRewards;
+            _tmp_4 = _cursor.getString(_cursorIndexOfNovaJobType);
+            _tmpNovaJobType = __converters.toNovaJobType(_tmp_4);
+            final BenefitSystemType _tmpBenefitSystemType;
             final String _tmp_5;
+            _tmp_5 = _cursor.getString(_cursorIndexOfBenefitSystemType);
+            _tmpBenefitSystemType = __converters.toBenefitSystemType(_tmp_5);
+            final ManualRewards _tmpManualRewards;
+            final String _tmp_6;
             if (_cursor.isNull(_cursorIndexOfManualRewards)) {
-              _tmp_5 = null;
+              _tmp_6 = null;
             } else {
-              _tmp_5 = _cursor.getString(_cursorIndexOfManualRewards);
+              _tmp_6 = _cursor.getString(_cursorIndexOfManualRewards);
             }
-            _tmpManualRewards = __converters.toManualRewards(_tmp_5);
+            _tmpManualRewards = __converters.toManualRewards(_tmp_6);
             final String _tmpDescription;
             _tmpDescription = _cursor.getString(_cursorIndexOfDescription);
             final long _tmpLastModified;
             _tmpLastModified = _cursor.getLong(_cursorIndexOfLastModified);
-            _item = new JobTypeConfig(_tmpId,_tmpSheetsId,_tmpName,_tmpIsActive,_tmpIsShiftJob,_tmpIsOrionJob,_tmpRequiresShiftTime,_tmpBenefitSystemType,_tmpManualRewards,_tmpDescription,_tmpLastModified);
+            _item = new JobTypeConfig(_tmpId,_tmpSheetsId,_tmpName,_tmpIsActive,_tmpIsShiftJob,_tmpIsOrionJob,_tmpRequiresShiftTime,_tmpNovaJobType,_tmpBenefitSystemType,_tmpManualRewards,_tmpDescription,_tmpLastModified);
             _result.add(_item);
           }
           return _result;
@@ -787,6 +817,7 @@ public final class JobTypeConfigDao_Impl implements JobTypeConfigDao {
           final int _cursorIndexOfIsShiftJob = CursorUtil.getColumnIndexOrThrow(_cursor, "isShiftJob");
           final int _cursorIndexOfIsOrionJob = CursorUtil.getColumnIndexOrThrow(_cursor, "isOrionJob");
           final int _cursorIndexOfRequiresShiftTime = CursorUtil.getColumnIndexOrThrow(_cursor, "requiresShiftTime");
+          final int _cursorIndexOfNovaJobType = CursorUtil.getColumnIndexOrThrow(_cursor, "novaJobType");
           final int _cursorIndexOfBenefitSystemType = CursorUtil.getColumnIndexOrThrow(_cursor, "benefitSystemType");
           final int _cursorIndexOfManualRewards = CursorUtil.getColumnIndexOrThrow(_cursor, "manualRewards");
           final int _cursorIndexOfDescription = CursorUtil.getColumnIndexOrThrow(_cursor, "description");
@@ -820,23 +851,27 @@ public final class JobTypeConfigDao_Impl implements JobTypeConfigDao {
             final int _tmp_3;
             _tmp_3 = _cursor.getInt(_cursorIndexOfRequiresShiftTime);
             _tmpRequiresShiftTime = _tmp_3 != 0;
-            final BenefitSystemType _tmpBenefitSystemType;
+            final NovaJobType _tmpNovaJobType;
             final String _tmp_4;
-            _tmp_4 = _cursor.getString(_cursorIndexOfBenefitSystemType);
-            _tmpBenefitSystemType = __converters.toBenefitSystemType(_tmp_4);
-            final ManualRewards _tmpManualRewards;
+            _tmp_4 = _cursor.getString(_cursorIndexOfNovaJobType);
+            _tmpNovaJobType = __converters.toNovaJobType(_tmp_4);
+            final BenefitSystemType _tmpBenefitSystemType;
             final String _tmp_5;
+            _tmp_5 = _cursor.getString(_cursorIndexOfBenefitSystemType);
+            _tmpBenefitSystemType = __converters.toBenefitSystemType(_tmp_5);
+            final ManualRewards _tmpManualRewards;
+            final String _tmp_6;
             if (_cursor.isNull(_cursorIndexOfManualRewards)) {
-              _tmp_5 = null;
+              _tmp_6 = null;
             } else {
-              _tmp_5 = _cursor.getString(_cursorIndexOfManualRewards);
+              _tmp_6 = _cursor.getString(_cursorIndexOfManualRewards);
             }
-            _tmpManualRewards = __converters.toManualRewards(_tmp_5);
+            _tmpManualRewards = __converters.toManualRewards(_tmp_6);
             final String _tmpDescription;
             _tmpDescription = _cursor.getString(_cursorIndexOfDescription);
             final long _tmpLastModified;
             _tmpLastModified = _cursor.getLong(_cursorIndexOfLastModified);
-            _item = new JobTypeConfig(_tmpId,_tmpSheetsId,_tmpName,_tmpIsActive,_tmpIsShiftJob,_tmpIsOrionJob,_tmpRequiresShiftTime,_tmpBenefitSystemType,_tmpManualRewards,_tmpDescription,_tmpLastModified);
+            _item = new JobTypeConfig(_tmpId,_tmpSheetsId,_tmpName,_tmpIsActive,_tmpIsShiftJob,_tmpIsOrionJob,_tmpRequiresShiftTime,_tmpNovaJobType,_tmpBenefitSystemType,_tmpManualRewards,_tmpDescription,_tmpLastModified);
             _result.add(_item);
           }
           return _result;
