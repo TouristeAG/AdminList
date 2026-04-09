@@ -104,6 +104,8 @@ tasks.matching { it.name.startsWith('check') && it.name.contains('DuplicateClass
 }
 
 configurations.all {
+    // commons-logging 1.2 bytecode breaks D8 when coreLibraryDesugaring is enabled (invalid stack maps).
+    exclude group: 'commons-logging', module: 'commons-logging'
     resolutionStrategy {
         // Force a single version of xmlbeans and prevent duplicates
         force 'org.apache.xmlbeans:xmlbeans:2.5.0'
@@ -177,9 +179,6 @@ dependencies {
     
     // Google Sign-In for OAuth
     implementation 'com.google.android.gms:play-services-auth:20.7.0'
-    
-    // JavaMail for MIME message creation (needed for Gmail API)
-    implementation 'com.sun.mail:javax.mail:1.6.2'
     
     // JSON parsing
     implementation 'com.google.code.gson:gson:2.10.1'
