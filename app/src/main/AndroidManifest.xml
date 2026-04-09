@@ -33,9 +33,9 @@
             android:screenOrientation="unspecified">
         </activity>
 
-        <!-- Light Icon Alias (Default) -->
+        <!-- Light Icon Alias (Default). Must not use MainActivity.* — tools resolve that as a non-existent inner class. -->
         <activity-alias
-            android:name=".MainActivity.Light"
+            android:name=".LauncherIconLight"
             android:targetActivity=".MainActivity"
             android:enabled="true"
             android:icon="@mipmap/ic_launcher"
@@ -50,7 +50,7 @@
 
         <!-- Dark Icon Alias -->
         <activity-alias
-            android:name=".MainActivity.Dark"
+            android:name=".LauncherIconDark"
             android:targetActivity=".MainActivity"
             android:enabled="false"
             android:icon="@mipmap/ic_launcher_dark"
@@ -65,7 +65,7 @@
 
         <!-- Deep Blue Icon Alias -->
         <activity-alias
-            android:name=".MainActivity.DeepBlue"
+            android:name=".LauncherIconDeepBlue"
             android:targetActivity=".MainActivity"
             android:enabled="false"
             android:icon="@mipmap/ic_launcher_deep_blue"
@@ -80,7 +80,7 @@
 
         <!-- Blue Ocean Icon Alias -->
         <activity-alias
-            android:name=".MainActivity.BlueOcean"
+            android:name=".LauncherIconBlueOcean"
             android:targetActivity=".MainActivity"
             android:enabled="false"
             android:icon="@mipmap/ic_launcher_blue_ocean"
@@ -95,7 +95,7 @@
 
         <!-- Braun Icon Alias -->
         <activity-alias
-            android:name=".MainActivity.Braun"
+            android:name=".LauncherIconBraun"
             android:targetActivity=".MainActivity"
             android:enabled="false"
             android:icon="@mipmap/ic_launcher_braun"
@@ -110,7 +110,7 @@
 
         <!-- Purple Icon Alias -->
         <activity-alias
-            android:name=".MainActivity.Purple"
+            android:name=".LauncherIconPurple"
             android:targetActivity=".MainActivity"
             android:enabled="false"
             android:icon="@mipmap/ic_launcher_purple"
@@ -125,7 +125,7 @@
 
         <!-- Violet Icon Alias -->
         <activity-alias
-            android:name=".MainActivity.Violet"
+            android:name=".LauncherIconViolet"
             android:targetActivity=".MainActivity"
             android:enabled="false"
             android:icon="@mipmap/ic_launcher_violet"

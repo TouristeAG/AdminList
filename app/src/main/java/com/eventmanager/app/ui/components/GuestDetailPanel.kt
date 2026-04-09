@@ -2,6 +2,7 @@ package com.eventmanager.app.ui.components
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
@@ -11,12 +12,16 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -39,6 +44,7 @@ import com.eventmanager.app.R
 import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.data.sync.GmailAuthService
 import com.eventmanager.app.data.sync.GmailSendService
+import com.eventmanager.app.utils.DigitalWalletPassGenerator
 import android.widget.Toast
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
@@ -66,15 +72,57 @@ fun GuestDetailPanel(
     val context = LocalContext.current
     val isPhone = !isTablet()
     val responsivePadding = if (isPhone) getPhonePortraitPadding() else getResponsivePadding()
+    val seasonalFunEnabled = remember { SettingsManager(context).isSeasonalFunEnabled() }
+    val leonardoEasterEggEnabled = remember(guest, seasonalFunEnabled) {
+        seasonalFunEnabled && isLeonardoMondadaProfile(
+            firstName = guest.name,
+            lastNameOrAbbreviation = guest.lastNameAbbreviation
+        )
+    }
+    val glowTransition = rememberInfiniteTransition(label = "guest-glow")
+    val glow by glowTransition.animateFloat(
+        initialValue = 0.88f,
+        targetValue = 1f,
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+            animation = androidx.compose.animation.core.tween(1150),
+            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+        ),
+        label = "guest-glow-alpha"
+    )
     var showQrDialog by remember { mutableStateOf(false) }
     var showNfcDialog by remember { mutableStateOf(false) }
     
     Box(
         modifier = modifier.fillMaxSize()
     ) {
+        ProfileEasterEggBackground(enabled = leonardoEasterEggEnabled)
+
         // Background
         Card(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    if (leonardoEasterEggEnabled) {
+                        shadowElevation = 18.dp.toPx() * glow
+                    }
+                }
+                .then(
+                    if (leonardoEasterEggEnabled) {
+                        Modifier.border(
+                            width = 2.dp,
+                            brush = Brush.linearGradient(
+                                listOf(
+                                    Color(0xFFFFC857).copy(alpha = 0.75f),
+                                    Color(0xFF7F5AF0).copy(alpha = 0.75f),
+                                    Color(0xFF2CB67D).copy(alpha = 0.75f)
+                                )
+                            ),
+                            shape = RoundedCornerShape(if (isPhone) 12.dp else 16.dp)
+                        )
+                    } else {
+                        Modifier
+                    }
+                ),
             shape = RoundedCornerShape(if (isPhone) 12.dp else 16.dp),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surface
@@ -103,7 +151,8 @@ fun GuestDetailPanel(
                             guest = guest,
                             venues = venues,
                             isPhone = isPhone,
-                            onClose = onClose
+                            onClose = onClose,
+                            easterEggEnabled = leonardoEasterEggEnabled
                         )
                     }
                     
@@ -121,6 +170,7 @@ fun GuestDetailPanel(
                 }
             }
         }
+        ProfileEasterEggConfetti(enabled = leonardoEasterEggEnabled)
     }
     
     // Email confirmation dialog state
@@ -408,8 +458,10 @@ fun GuestDetailPanel(
                 val signature = settingsManager.getGuestEmailSignature().ifEmpty { 
                     emailContext.getString(R.string.email_signature_default) 
                 }
+                val includeDigitalWalletPass = settingsManager.isEmailIncludeDigitalWalletPassEnabled()
                 val includeLogo = settingsManager.isEmailIncludeLogoEnabled()
                 val logoUriString = settingsManager.getEmailLogoUri()
+                val associationName = settingsManager.getEmailAssociationName()
                 
                 // Generate QR code for guest (NanoID plain text for Lightspeed compatibility)
                 val qrBitmap = QRCodeUtils.generateQrImageBitmap(guest.nanoId, 512)
@@ -421,6 +473,26 @@ fun GuestDetailPanel(
                     val outputStream = FileOutputStream(qrFile)
                     qrBitmap.asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, outputStream)
                     outputStream.close()
+                }
+
+                val digitalWalletPassFile = if (includeDigitalWalletPass) {
+                    DigitalWalletPassGenerator.createPassFile(
+                        context = emailContext,
+                        serialNumber = "${guest.nanoId}-${System.currentTimeMillis()}",
+                        holderName = guest.name,
+                        qrPayload = guest.nanoId,
+                        logoUriString = logoUriString,
+                        associationName = associationName
+                    ) ?: DigitalWalletPassGenerator.createPassFile(
+                        context = emailContext,
+                        serialNumber = "${guest.nanoId}-${System.currentTimeMillis()}",
+                        holderName = guest.name,
+                        qrPayload = guest.nanoId,
+                        logoUriString = null,
+                        associationName = associationName
+                    )
+                } else {
+                    null
                 }
                 
                 // Save logo file
@@ -453,6 +525,10 @@ fun GuestDetailPanel(
                     footerText = emailContext.getString(R.string.guest_email_html_footer),
                     qrAttachmentText = emailContext.getString(R.string.email_qr_attachment_text),
                     qrAttachmentNote = emailContext.getString(R.string.email_qr_attachment_note),
+                    includeDigitalWalletPass = includeDigitalWalletPass,
+                    digitalWalletPassTitle = emailContext.getString(R.string.email_wallet_section_title),
+                    digitalWalletPassDescription = emailContext.getString(R.string.email_wallet_section_description),
+                    digitalWalletPassCompatibility = emailContext.getString(R.string.email_wallet_section_compatibility),
                     includeLogo = includeLogo,
                     useContentId = true
                 )
@@ -463,6 +539,9 @@ fun GuestDetailPanel(
                     append("\n\n")
                     if (includeQr) {
                         append("[ QR Code - See attachment ]\n\n")
+                    }
+                    if (includeDigitalWalletPass) {
+                        append("[ Digital Wallet Pass (.pkpass) - See attachment ]\n\n")
                     }
                     append(contentAfter)
                     append("\n\n")
@@ -477,7 +556,8 @@ fun GuestDetailPanel(
                     htmlContent = htmlEmail,
                     plainText = plainTextEmail,
                     qrFile = qrFile,
-                    logoFile = logoFile
+                    logoFile = logoFile,
+                    digitalWalletPassFile = digitalWalletPassFile
                 )
                 
                 result.fold(
@@ -597,6 +677,9 @@ fun GuestDetailPanel(
                 val signature = settingsManager.getGuestEmailSignature().ifEmpty { 
                     emailContext.getString(R.string.email_signature_default) 
                 }
+                val includeDigitalWalletPass = settingsManager.isEmailIncludeDigitalWalletPassEnabled()
+                val logoUriString = settingsManager.getEmailLogoUri()
+                val associationName = settingsManager.getEmailAssociationName()
                 
                 // Generate QR code for guest (NanoID plain text for Lightspeed compatibility)
                 val qrBitmap = QRCodeUtils.generateQrImageBitmap(guest.nanoId, 512)
@@ -612,6 +695,10 @@ fun GuestDetailPanel(
                     footerText = emailContext.getString(R.string.guest_email_html_footer),
                     qrAttachmentText = emailContext.getString(R.string.email_qr_attachment_text),
                     qrAttachmentNote = emailContext.getString(R.string.email_qr_attachment_note),
+                    includeDigitalWalletPass = false,
+                    digitalWalletPassTitle = "",
+                    digitalWalletPassDescription = "",
+                    digitalWalletPassCompatibility = "",
                     includeLogo = false,
                     useContentId = false
                 )
@@ -623,12 +710,15 @@ fun GuestDetailPanel(
                     if (includeQr) {
                         append("[ QR Code - See attachment ]\n\n")
                     }
+                    if (includeDigitalWalletPass) {
+                        append("[ Digital Wallet Pass (.pkpass) - See attachment ]\n\n")
+                    }
                     append(contentAfter)
                     append("\n\n")
                     append(signature)
                 }
                 
-                // Save QR code file for attachment
+                // Save QR code / digital wallet pass files for attachments
                 var qrUri: Uri? = null
                 if (includeQr && qrBitmap != null) {
                     val qrFile = File(emailContext.cacheDir, "qr_code_guest_${guest.id}.png")
@@ -642,17 +732,49 @@ fun GuestDetailPanel(
                         qrFile
                     )
                 }
+
+                var walletPassUri: Uri? = null
+                if (includeDigitalWalletPass) {
+                    val walletPassFile = DigitalWalletPassGenerator.createPassFile(
+                        context = emailContext,
+                        serialNumber = "${guest.nanoId}-${System.currentTimeMillis()}",
+                        holderName = guest.name,
+                        qrPayload = guest.nanoId,
+                        logoUriString = logoUriString,
+                        associationName = associationName
+                    ) ?: DigitalWalletPassGenerator.createPassFile(
+                        context = emailContext,
+                        serialNumber = "${guest.nanoId}-${System.currentTimeMillis()}",
+                        holderName = guest.name,
+                        qrPayload = guest.nanoId,
+                        logoUriString = null,
+                        associationName = associationName
+                    )
+                    if (walletPassFile != null && walletPassFile.exists()) {
+                        walletPassUri = FileProvider.getUriForFile(
+                            emailContext,
+                            "${emailContext.packageName}.fileprovider",
+                            walletPassFile
+                        )
+                    }
+                }
                 
                 // Create email intent with HTML and QR attachment
                 val emailIntent = Intent(Intent.ACTION_SEND).apply {
-                    type = "text/html"
+                    type = if (qrUri != null || walletPassUri != null) "*/*" else "text/html"
                     putExtra(Intent.EXTRA_EMAIL, arrayOf(targetEmail))
                     putExtra(Intent.EXTRA_SUBJECT, subject)
                     putExtra(Intent.EXTRA_TEXT, plainTextEmail)
                     putExtra("android.intent.extra.HTML_TEXT", htmlEmail)
-                    
-                    if (qrUri != null) {
-                        putExtra(Intent.EXTRA_STREAM, qrUri)
+
+                    val attachments = ArrayList<Uri>()
+                    qrUri?.let { attachments.add(it) }
+                    walletPassUri?.let { attachments.add(it) }
+                    if (attachments.size == 1) {
+                        putExtra(Intent.EXTRA_STREAM, attachments.first())
+                    } else if (attachments.size > 1) {
+                        putParcelableArrayListExtra(Intent.EXTRA_STREAM, attachments)
+                        action = Intent.ACTION_SEND_MULTIPLE
                     }
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
@@ -822,7 +944,8 @@ private fun GuestInformationSection(
     guest: Guest,
     venues: List<VenueEntity>,
     isPhone: Boolean,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    easterEggEnabled: Boolean
 ) {
     val context = LocalContext.current
     val responsivePadding = if (isPhone) getPhonePortraitCardPadding() else getResponsiveCardPadding()
@@ -870,13 +993,29 @@ private fun GuestInformationSection(
                                 text = guest.name,
                                 style = if (isPhone) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.headlineMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                                color = if (easterEggEnabled) Color(0xFFFFF3B0) else MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = if (easterEggEnabled) {
+                                    Modifier.graphicsLayer {
+                                        shadowElevation = 14.dp.toPx()
+                                        scaleX = 1.02f
+                                        scaleY = 1.02f
+                                    }
+                                } else {
+                                    Modifier
+                                }
                             )
                             if (guest.lastNameAbbreviation.isNotEmpty()) {
                                 Text(
                                     text = guest.lastNameAbbreviation,
                                     style = if (isPhone) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    color = if (easterEggEnabled) Color(0xFFE3FFFB) else MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = if (easterEggEnabled) {
+                                        Modifier.graphicsLayer {
+                                            shadowElevation = 10.dp.toPx()
+                                        }
+                                    } else {
+                                        Modifier
+                                    }
                                 )
                             }
                         }
@@ -1431,6 +1570,10 @@ private fun buildGuestEmailHtml(
     footerText: String,
     qrAttachmentText: String,
     qrAttachmentNote: String,
+    includeDigitalWalletPass: Boolean,
+    digitalWalletPassTitle: String,
+    digitalWalletPassDescription: String,
+    digitalWalletPassCompatibility: String,
     logoBase64: String? = null,
     includeLogo: Boolean,
     useContentId: Boolean = false
@@ -1508,6 +1651,24 @@ private fun buildGuestEmailHtml(
         """
     } else ""
     
+    val walletPassSection = if (includeDigitalWalletPass && useContentId) {
+        """
+        <tr>
+            <td style="padding: 10px 40px 26px 40px;">
+                <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;">
+                    <tr>
+                        <td style="padding: 12px 14px;">
+                            <div style="font-size: 14px; font-weight: 700; color: #1f2937; margin-bottom: 4px;">$digitalWalletPassTitle</div>
+                            <div style="font-size: 12px; color: #475569; line-height: 1.45;">$digitalWalletPassDescription</div>
+                            <div style="margin-top: 4px; font-size: 11px; color: #64748b;">$digitalWalletPassCompatibility</div>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        """
+    } else ""
+
     return """
     <!DOCTYPE html>
     <html lang="en">
@@ -1550,7 +1711,7 @@ private fun buildGuestEmailHtml(
                                 ${contentAfter.toHtmlParagraphs()}
                             </td>
                         </tr>
-                        
+
                         <!-- Signature -->
                         <tr>
                             <td style="padding: 32px 40px; border-top: 2px solid #f1f5f9; background-color: #fafbfc;">
@@ -1580,6 +1741,8 @@ private fun buildGuestEmailHtml(
                                 </table>
                             </td>
                         </tr>
+
+                        $walletPassSection
                         
                     </table>
                     

@@ -102,7 +102,8 @@ class DifferentialSyncService(
         old.venueName != new.venueName ||
         old.notes != new.notes ||
         old.isVolunteerBenefit != new.isVolunteerBenefit ||
-        old.nfcCardUid != new.nfcCardUid
+        old.nfcCardUid != new.nfcCardUid ||
+        old.isAdmin != new.isAdmin
     
     // ========== VOLUNTEER COMPARISON ==========
     
@@ -171,7 +172,8 @@ class DifferentialSyncService(
         old.currentRank != new.currentRank ||
         old.isActive != new.isActive ||
         old.lastShiftDate != new.lastShiftDate ||
-        old.nfcCardUid != new.nfcCardUid
+        old.nfcCardUid != new.nfcCardUid ||
+        old.isAdmin != new.isAdmin
     
     // ========== JOB COMPARISON ==========
     
@@ -215,7 +217,8 @@ class DifferentialSyncService(
         old.venueName != new.venueName ||
         old.date != new.date ||
         old.shiftTime != new.shiftTime ||
-        old.benefitUsed != new.benefitUsed ||
+        old.benefitFutureEntriesRemaining != new.benefitFutureEntriesRemaining ||
+        old.benefitFutureEntryInvites != new.benefitFutureEntryInvites ||
         old.notes != new.notes
     
     // ========== JOB TYPE CONFIG COMPARISON ==========

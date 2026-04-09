@@ -116,6 +116,21 @@ object DateTimeUtils {
     }
     
     /**
+     * Start of the venue "event day" for [timestamp], using the same offset convention as [getEndOfDayWithOffset].
+     * Shift-linked benefits apply only while evaluation time is in [[getStartOfDayWithOffset], [getEndOfDayWithOffset]].
+     */
+    fun getStartOfDayWithOffset(timestamp: Long, offsetHours: Int): Long {
+        val calendar = Calendar.getInstance()
+        calendar.timeInMillis = timestamp
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        calendar.add(Calendar.HOUR_OF_DAY, offsetHours)
+        return calendar.timeInMillis
+    }
+
+    /**
      * Gets the end of day with offset applied for a given timestamp.
      * If offset is +3 hours, end of day for Jan 1 would be Jan 2 3:00 AM (start of next day).
      * 

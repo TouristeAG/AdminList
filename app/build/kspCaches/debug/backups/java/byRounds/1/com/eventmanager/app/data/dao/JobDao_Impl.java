@@ -17,7 +17,6 @@ import com.eventmanager.app.data.models.Converters;
 import com.eventmanager.app.data.models.Job;
 import com.eventmanager.app.data.models.JobType;
 import com.eventmanager.app.data.models.ShiftTime;
-import java.lang.Boolean;
 import java.lang.Class;
 import java.lang.Exception;
 import java.lang.Integer;
@@ -60,7 +59,7 @@ public final class JobDao_Impl implements JobDao {
       @Override
       @NonNull
       protected String createQuery() {
-        return "INSERT OR REPLACE INTO `jobs` (`id`,`sheetsId`,`volunteerId`,`jobType`,`jobTypeName`,`venueName`,`date`,`shiftTime`,`benefitUsed`,`notes`,`lastModified`) VALUES (nullif(?, 0),?,?,?,?,?,?,?,?,?,?)";
+        return "INSERT OR REPLACE INTO `jobs` (`id`,`sheetsId`,`volunteerId`,`jobType`,`jobTypeName`,`venueName`,`date`,`shiftTime`,`benefitFutureEntriesRemaining`,`benefitFutureEntryInvites`,`notes`,`lastModified`) VALUES (nullif(?, 0),?,?,?,?,?,?,?,?,?,?,?)";
       }
 
       @Override
@@ -80,14 +79,18 @@ public final class JobDao_Impl implements JobDao {
         statement.bindLong(7, entity.getDate());
         final String _tmp_1 = __converters.fromShiftTime(entity.getShiftTime());
         statement.bindString(8, _tmp_1);
-        final Integer _tmp_2 = entity.getBenefitUsed() == null ? null : (entity.getBenefitUsed() ? 1 : 0);
-        if (_tmp_2 == null) {
+        if (entity.getBenefitFutureEntriesRemaining() == null) {
           statement.bindNull(9);
         } else {
-          statement.bindLong(9, _tmp_2);
+          statement.bindLong(9, entity.getBenefitFutureEntriesRemaining());
         }
-        statement.bindString(10, entity.getNotes());
-        statement.bindLong(11, entity.getLastModified());
+        if (entity.getBenefitFutureEntryInvites() == null) {
+          statement.bindNull(10);
+        } else {
+          statement.bindLong(10, entity.getBenefitFutureEntryInvites());
+        }
+        statement.bindString(11, entity.getNotes());
+        statement.bindLong(12, entity.getLastModified());
       }
     };
     this.__deletionAdapterOfJob = new EntityDeletionOrUpdateAdapter<Job>(__db) {
@@ -107,7 +110,7 @@ public final class JobDao_Impl implements JobDao {
       @Override
       @NonNull
       protected String createQuery() {
-        return "UPDATE OR ABORT `jobs` SET `id` = ?,`sheetsId` = ?,`volunteerId` = ?,`jobType` = ?,`jobTypeName` = ?,`venueName` = ?,`date` = ?,`shiftTime` = ?,`benefitUsed` = ?,`notes` = ?,`lastModified` = ? WHERE `id` = ?";
+        return "UPDATE OR ABORT `jobs` SET `id` = ?,`sheetsId` = ?,`volunteerId` = ?,`jobType` = ?,`jobTypeName` = ?,`venueName` = ?,`date` = ?,`shiftTime` = ?,`benefitFutureEntriesRemaining` = ?,`benefitFutureEntryInvites` = ?,`notes` = ?,`lastModified` = ? WHERE `id` = ?";
       }
 
       @Override
@@ -127,15 +130,19 @@ public final class JobDao_Impl implements JobDao {
         statement.bindLong(7, entity.getDate());
         final String _tmp_1 = __converters.fromShiftTime(entity.getShiftTime());
         statement.bindString(8, _tmp_1);
-        final Integer _tmp_2 = entity.getBenefitUsed() == null ? null : (entity.getBenefitUsed() ? 1 : 0);
-        if (_tmp_2 == null) {
+        if (entity.getBenefitFutureEntriesRemaining() == null) {
           statement.bindNull(9);
         } else {
-          statement.bindLong(9, _tmp_2);
+          statement.bindLong(9, entity.getBenefitFutureEntriesRemaining());
         }
-        statement.bindString(10, entity.getNotes());
-        statement.bindLong(11, entity.getLastModified());
-        statement.bindLong(12, entity.getId());
+        if (entity.getBenefitFutureEntryInvites() == null) {
+          statement.bindNull(10);
+        } else {
+          statement.bindLong(10, entity.getBenefitFutureEntryInvites());
+        }
+        statement.bindString(11, entity.getNotes());
+        statement.bindLong(12, entity.getLastModified());
+        statement.bindLong(13, entity.getId());
       }
     };
     this.__preparedStmtOfDeleteJobById = new SharedSQLiteStatement(__db) {
@@ -367,7 +374,8 @@ public final class JobDao_Impl implements JobDao {
           final int _cursorIndexOfVenueName = CursorUtil.getColumnIndexOrThrow(_cursor, "venueName");
           final int _cursorIndexOfDate = CursorUtil.getColumnIndexOrThrow(_cursor, "date");
           final int _cursorIndexOfShiftTime = CursorUtil.getColumnIndexOrThrow(_cursor, "shiftTime");
-          final int _cursorIndexOfBenefitUsed = CursorUtil.getColumnIndexOrThrow(_cursor, "benefitUsed");
+          final int _cursorIndexOfBenefitFutureEntriesRemaining = CursorUtil.getColumnIndexOrThrow(_cursor, "benefitFutureEntriesRemaining");
+          final int _cursorIndexOfBenefitFutureEntryInvites = CursorUtil.getColumnIndexOrThrow(_cursor, "benefitFutureEntryInvites");
           final int _cursorIndexOfNotes = CursorUtil.getColumnIndexOrThrow(_cursor, "notes");
           final int _cursorIndexOfLastModified = CursorUtil.getColumnIndexOrThrow(_cursor, "lastModified");
           final List<Job> _result = new ArrayList<Job>(_cursor.getCount());
@@ -397,19 +405,23 @@ public final class JobDao_Impl implements JobDao {
             final String _tmp_1;
             _tmp_1 = _cursor.getString(_cursorIndexOfShiftTime);
             _tmpShiftTime = __converters.toShiftTime(_tmp_1);
-            final Boolean _tmpBenefitUsed;
-            final Integer _tmp_2;
-            if (_cursor.isNull(_cursorIndexOfBenefitUsed)) {
-              _tmp_2 = null;
+            final Integer _tmpBenefitFutureEntriesRemaining;
+            if (_cursor.isNull(_cursorIndexOfBenefitFutureEntriesRemaining)) {
+              _tmpBenefitFutureEntriesRemaining = null;
             } else {
-              _tmp_2 = _cursor.getInt(_cursorIndexOfBenefitUsed);
+              _tmpBenefitFutureEntriesRemaining = _cursor.getInt(_cursorIndexOfBenefitFutureEntriesRemaining);
             }
-            _tmpBenefitUsed = _tmp_2 == null ? null : _tmp_2 != 0;
+            final Integer _tmpBenefitFutureEntryInvites;
+            if (_cursor.isNull(_cursorIndexOfBenefitFutureEntryInvites)) {
+              _tmpBenefitFutureEntryInvites = null;
+            } else {
+              _tmpBenefitFutureEntryInvites = _cursor.getInt(_cursorIndexOfBenefitFutureEntryInvites);
+            }
             final String _tmpNotes;
             _tmpNotes = _cursor.getString(_cursorIndexOfNotes);
             final long _tmpLastModified;
             _tmpLastModified = _cursor.getLong(_cursorIndexOfLastModified);
-            _item = new Job(_tmpId,_tmpSheetsId,_tmpVolunteerId,_tmpJobType,_tmpJobTypeName,_tmpVenueName,_tmpDate,_tmpShiftTime,_tmpBenefitUsed,_tmpNotes,_tmpLastModified);
+            _item = new Job(_tmpId,_tmpSheetsId,_tmpVolunteerId,_tmpJobType,_tmpJobTypeName,_tmpVenueName,_tmpDate,_tmpShiftTime,_tmpBenefitFutureEntriesRemaining,_tmpBenefitFutureEntryInvites,_tmpNotes,_tmpLastModified);
             _result.add(_item);
           }
           return _result;
@@ -445,7 +457,8 @@ public final class JobDao_Impl implements JobDao {
           final int _cursorIndexOfVenueName = CursorUtil.getColumnIndexOrThrow(_cursor, "venueName");
           final int _cursorIndexOfDate = CursorUtil.getColumnIndexOrThrow(_cursor, "date");
           final int _cursorIndexOfShiftTime = CursorUtil.getColumnIndexOrThrow(_cursor, "shiftTime");
-          final int _cursorIndexOfBenefitUsed = CursorUtil.getColumnIndexOrThrow(_cursor, "benefitUsed");
+          final int _cursorIndexOfBenefitFutureEntriesRemaining = CursorUtil.getColumnIndexOrThrow(_cursor, "benefitFutureEntriesRemaining");
+          final int _cursorIndexOfBenefitFutureEntryInvites = CursorUtil.getColumnIndexOrThrow(_cursor, "benefitFutureEntryInvites");
           final int _cursorIndexOfNotes = CursorUtil.getColumnIndexOrThrow(_cursor, "notes");
           final int _cursorIndexOfLastModified = CursorUtil.getColumnIndexOrThrow(_cursor, "lastModified");
           final List<Job> _result = new ArrayList<Job>(_cursor.getCount());
@@ -475,19 +488,23 @@ public final class JobDao_Impl implements JobDao {
             final String _tmp_1;
             _tmp_1 = _cursor.getString(_cursorIndexOfShiftTime);
             _tmpShiftTime = __converters.toShiftTime(_tmp_1);
-            final Boolean _tmpBenefitUsed;
-            final Integer _tmp_2;
-            if (_cursor.isNull(_cursorIndexOfBenefitUsed)) {
-              _tmp_2 = null;
+            final Integer _tmpBenefitFutureEntriesRemaining;
+            if (_cursor.isNull(_cursorIndexOfBenefitFutureEntriesRemaining)) {
+              _tmpBenefitFutureEntriesRemaining = null;
             } else {
-              _tmp_2 = _cursor.getInt(_cursorIndexOfBenefitUsed);
+              _tmpBenefitFutureEntriesRemaining = _cursor.getInt(_cursorIndexOfBenefitFutureEntriesRemaining);
             }
-            _tmpBenefitUsed = _tmp_2 == null ? null : _tmp_2 != 0;
+            final Integer _tmpBenefitFutureEntryInvites;
+            if (_cursor.isNull(_cursorIndexOfBenefitFutureEntryInvites)) {
+              _tmpBenefitFutureEntryInvites = null;
+            } else {
+              _tmpBenefitFutureEntryInvites = _cursor.getInt(_cursorIndexOfBenefitFutureEntryInvites);
+            }
             final String _tmpNotes;
             _tmpNotes = _cursor.getString(_cursorIndexOfNotes);
             final long _tmpLastModified;
             _tmpLastModified = _cursor.getLong(_cursorIndexOfLastModified);
-            _item = new Job(_tmpId,_tmpSheetsId,_tmpVolunteerId,_tmpJobType,_tmpJobTypeName,_tmpVenueName,_tmpDate,_tmpShiftTime,_tmpBenefitUsed,_tmpNotes,_tmpLastModified);
+            _item = new Job(_tmpId,_tmpSheetsId,_tmpVolunteerId,_tmpJobType,_tmpJobTypeName,_tmpVenueName,_tmpDate,_tmpShiftTime,_tmpBenefitFutureEntriesRemaining,_tmpBenefitFutureEntryInvites,_tmpNotes,_tmpLastModified);
             _result.add(_item);
           }
           return _result;
@@ -523,7 +540,8 @@ public final class JobDao_Impl implements JobDao {
           final int _cursorIndexOfVenueName = CursorUtil.getColumnIndexOrThrow(_cursor, "venueName");
           final int _cursorIndexOfDate = CursorUtil.getColumnIndexOrThrow(_cursor, "date");
           final int _cursorIndexOfShiftTime = CursorUtil.getColumnIndexOrThrow(_cursor, "shiftTime");
-          final int _cursorIndexOfBenefitUsed = CursorUtil.getColumnIndexOrThrow(_cursor, "benefitUsed");
+          final int _cursorIndexOfBenefitFutureEntriesRemaining = CursorUtil.getColumnIndexOrThrow(_cursor, "benefitFutureEntriesRemaining");
+          final int _cursorIndexOfBenefitFutureEntryInvites = CursorUtil.getColumnIndexOrThrow(_cursor, "benefitFutureEntryInvites");
           final int _cursorIndexOfNotes = CursorUtil.getColumnIndexOrThrow(_cursor, "notes");
           final int _cursorIndexOfLastModified = CursorUtil.getColumnIndexOrThrow(_cursor, "lastModified");
           final List<Job> _result = new ArrayList<Job>(_cursor.getCount());
@@ -553,19 +571,23 @@ public final class JobDao_Impl implements JobDao {
             final String _tmp_1;
             _tmp_1 = _cursor.getString(_cursorIndexOfShiftTime);
             _tmpShiftTime = __converters.toShiftTime(_tmp_1);
-            final Boolean _tmpBenefitUsed;
-            final Integer _tmp_2;
-            if (_cursor.isNull(_cursorIndexOfBenefitUsed)) {
-              _tmp_2 = null;
+            final Integer _tmpBenefitFutureEntriesRemaining;
+            if (_cursor.isNull(_cursorIndexOfBenefitFutureEntriesRemaining)) {
+              _tmpBenefitFutureEntriesRemaining = null;
             } else {
-              _tmp_2 = _cursor.getInt(_cursorIndexOfBenefitUsed);
+              _tmpBenefitFutureEntriesRemaining = _cursor.getInt(_cursorIndexOfBenefitFutureEntriesRemaining);
             }
-            _tmpBenefitUsed = _tmp_2 == null ? null : _tmp_2 != 0;
+            final Integer _tmpBenefitFutureEntryInvites;
+            if (_cursor.isNull(_cursorIndexOfBenefitFutureEntryInvites)) {
+              _tmpBenefitFutureEntryInvites = null;
+            } else {
+              _tmpBenefitFutureEntryInvites = _cursor.getInt(_cursorIndexOfBenefitFutureEntryInvites);
+            }
             final String _tmpNotes;
             _tmpNotes = _cursor.getString(_cursorIndexOfNotes);
             final long _tmpLastModified;
             _tmpLastModified = _cursor.getLong(_cursorIndexOfLastModified);
-            _item = new Job(_tmpId,_tmpSheetsId,_tmpVolunteerId,_tmpJobType,_tmpJobTypeName,_tmpVenueName,_tmpDate,_tmpShiftTime,_tmpBenefitUsed,_tmpNotes,_tmpLastModified);
+            _item = new Job(_tmpId,_tmpSheetsId,_tmpVolunteerId,_tmpJobType,_tmpJobTypeName,_tmpVenueName,_tmpDate,_tmpShiftTime,_tmpBenefitFutureEntriesRemaining,_tmpBenefitFutureEntryInvites,_tmpNotes,_tmpLastModified);
             _result.add(_item);
           }
           return _result;
@@ -602,7 +624,8 @@ public final class JobDao_Impl implements JobDao {
           final int _cursorIndexOfVenueName = CursorUtil.getColumnIndexOrThrow(_cursor, "venueName");
           final int _cursorIndexOfDate = CursorUtil.getColumnIndexOrThrow(_cursor, "date");
           final int _cursorIndexOfShiftTime = CursorUtil.getColumnIndexOrThrow(_cursor, "shiftTime");
-          final int _cursorIndexOfBenefitUsed = CursorUtil.getColumnIndexOrThrow(_cursor, "benefitUsed");
+          final int _cursorIndexOfBenefitFutureEntriesRemaining = CursorUtil.getColumnIndexOrThrow(_cursor, "benefitFutureEntriesRemaining");
+          final int _cursorIndexOfBenefitFutureEntryInvites = CursorUtil.getColumnIndexOrThrow(_cursor, "benefitFutureEntryInvites");
           final int _cursorIndexOfNotes = CursorUtil.getColumnIndexOrThrow(_cursor, "notes");
           final int _cursorIndexOfLastModified = CursorUtil.getColumnIndexOrThrow(_cursor, "lastModified");
           final Job _result;
@@ -631,19 +654,23 @@ public final class JobDao_Impl implements JobDao {
             final String _tmp_1;
             _tmp_1 = _cursor.getString(_cursorIndexOfShiftTime);
             _tmpShiftTime = __converters.toShiftTime(_tmp_1);
-            final Boolean _tmpBenefitUsed;
-            final Integer _tmp_2;
-            if (_cursor.isNull(_cursorIndexOfBenefitUsed)) {
-              _tmp_2 = null;
+            final Integer _tmpBenefitFutureEntriesRemaining;
+            if (_cursor.isNull(_cursorIndexOfBenefitFutureEntriesRemaining)) {
+              _tmpBenefitFutureEntriesRemaining = null;
             } else {
-              _tmp_2 = _cursor.getInt(_cursorIndexOfBenefitUsed);
+              _tmpBenefitFutureEntriesRemaining = _cursor.getInt(_cursorIndexOfBenefitFutureEntriesRemaining);
             }
-            _tmpBenefitUsed = _tmp_2 == null ? null : _tmp_2 != 0;
+            final Integer _tmpBenefitFutureEntryInvites;
+            if (_cursor.isNull(_cursorIndexOfBenefitFutureEntryInvites)) {
+              _tmpBenefitFutureEntryInvites = null;
+            } else {
+              _tmpBenefitFutureEntryInvites = _cursor.getInt(_cursorIndexOfBenefitFutureEntryInvites);
+            }
             final String _tmpNotes;
             _tmpNotes = _cursor.getString(_cursorIndexOfNotes);
             final long _tmpLastModified;
             _tmpLastModified = _cursor.getLong(_cursorIndexOfLastModified);
-            _result = new Job(_tmpId,_tmpSheetsId,_tmpVolunteerId,_tmpJobType,_tmpJobTypeName,_tmpVenueName,_tmpDate,_tmpShiftTime,_tmpBenefitUsed,_tmpNotes,_tmpLastModified);
+            _result = new Job(_tmpId,_tmpSheetsId,_tmpVolunteerId,_tmpJobType,_tmpJobTypeName,_tmpVenueName,_tmpDate,_tmpShiftTime,_tmpBenefitFutureEntriesRemaining,_tmpBenefitFutureEntryInvites,_tmpNotes,_tmpLastModified);
           } else {
             _result = null;
           }
@@ -678,7 +705,8 @@ public final class JobDao_Impl implements JobDao {
           final int _cursorIndexOfVenueName = CursorUtil.getColumnIndexOrThrow(_cursor, "venueName");
           final int _cursorIndexOfDate = CursorUtil.getColumnIndexOrThrow(_cursor, "date");
           final int _cursorIndexOfShiftTime = CursorUtil.getColumnIndexOrThrow(_cursor, "shiftTime");
-          final int _cursorIndexOfBenefitUsed = CursorUtil.getColumnIndexOrThrow(_cursor, "benefitUsed");
+          final int _cursorIndexOfBenefitFutureEntriesRemaining = CursorUtil.getColumnIndexOrThrow(_cursor, "benefitFutureEntriesRemaining");
+          final int _cursorIndexOfBenefitFutureEntryInvites = CursorUtil.getColumnIndexOrThrow(_cursor, "benefitFutureEntryInvites");
           final int _cursorIndexOfNotes = CursorUtil.getColumnIndexOrThrow(_cursor, "notes");
           final int _cursorIndexOfLastModified = CursorUtil.getColumnIndexOrThrow(_cursor, "lastModified");
           final List<Job> _result = new ArrayList<Job>(_cursor.getCount());
@@ -708,19 +736,23 @@ public final class JobDao_Impl implements JobDao {
             final String _tmp_1;
             _tmp_1 = _cursor.getString(_cursorIndexOfShiftTime);
             _tmpShiftTime = __converters.toShiftTime(_tmp_1);
-            final Boolean _tmpBenefitUsed;
-            final Integer _tmp_2;
-            if (_cursor.isNull(_cursorIndexOfBenefitUsed)) {
-              _tmp_2 = null;
+            final Integer _tmpBenefitFutureEntriesRemaining;
+            if (_cursor.isNull(_cursorIndexOfBenefitFutureEntriesRemaining)) {
+              _tmpBenefitFutureEntriesRemaining = null;
             } else {
-              _tmp_2 = _cursor.getInt(_cursorIndexOfBenefitUsed);
+              _tmpBenefitFutureEntriesRemaining = _cursor.getInt(_cursorIndexOfBenefitFutureEntriesRemaining);
             }
-            _tmpBenefitUsed = _tmp_2 == null ? null : _tmp_2 != 0;
+            final Integer _tmpBenefitFutureEntryInvites;
+            if (_cursor.isNull(_cursorIndexOfBenefitFutureEntryInvites)) {
+              _tmpBenefitFutureEntryInvites = null;
+            } else {
+              _tmpBenefitFutureEntryInvites = _cursor.getInt(_cursorIndexOfBenefitFutureEntryInvites);
+            }
             final String _tmpNotes;
             _tmpNotes = _cursor.getString(_cursorIndexOfNotes);
             final long _tmpLastModified;
             _tmpLastModified = _cursor.getLong(_cursorIndexOfLastModified);
-            _item = new Job(_tmpId,_tmpSheetsId,_tmpVolunteerId,_tmpJobType,_tmpJobTypeName,_tmpVenueName,_tmpDate,_tmpShiftTime,_tmpBenefitUsed,_tmpNotes,_tmpLastModified);
+            _item = new Job(_tmpId,_tmpSheetsId,_tmpVolunteerId,_tmpJobType,_tmpJobTypeName,_tmpVenueName,_tmpDate,_tmpShiftTime,_tmpBenefitFutureEntriesRemaining,_tmpBenefitFutureEntryInvites,_tmpNotes,_tmpLastModified);
             _result.add(_item);
           }
           return _result;
@@ -758,7 +790,8 @@ public final class JobDao_Impl implements JobDao {
           final int _cursorIndexOfVenueName = CursorUtil.getColumnIndexOrThrow(_cursor, "venueName");
           final int _cursorIndexOfDate = CursorUtil.getColumnIndexOrThrow(_cursor, "date");
           final int _cursorIndexOfShiftTime = CursorUtil.getColumnIndexOrThrow(_cursor, "shiftTime");
-          final int _cursorIndexOfBenefitUsed = CursorUtil.getColumnIndexOrThrow(_cursor, "benefitUsed");
+          final int _cursorIndexOfBenefitFutureEntriesRemaining = CursorUtil.getColumnIndexOrThrow(_cursor, "benefitFutureEntriesRemaining");
+          final int _cursorIndexOfBenefitFutureEntryInvites = CursorUtil.getColumnIndexOrThrow(_cursor, "benefitFutureEntryInvites");
           final int _cursorIndexOfNotes = CursorUtil.getColumnIndexOrThrow(_cursor, "notes");
           final int _cursorIndexOfLastModified = CursorUtil.getColumnIndexOrThrow(_cursor, "lastModified");
           final List<Job> _result = new ArrayList<Job>(_cursor.getCount());
@@ -788,19 +821,23 @@ public final class JobDao_Impl implements JobDao {
             final String _tmp_1;
             _tmp_1 = _cursor.getString(_cursorIndexOfShiftTime);
             _tmpShiftTime = __converters.toShiftTime(_tmp_1);
-            final Boolean _tmpBenefitUsed;
-            final Integer _tmp_2;
-            if (_cursor.isNull(_cursorIndexOfBenefitUsed)) {
-              _tmp_2 = null;
+            final Integer _tmpBenefitFutureEntriesRemaining;
+            if (_cursor.isNull(_cursorIndexOfBenefitFutureEntriesRemaining)) {
+              _tmpBenefitFutureEntriesRemaining = null;
             } else {
-              _tmp_2 = _cursor.getInt(_cursorIndexOfBenefitUsed);
+              _tmpBenefitFutureEntriesRemaining = _cursor.getInt(_cursorIndexOfBenefitFutureEntriesRemaining);
             }
-            _tmpBenefitUsed = _tmp_2 == null ? null : _tmp_2 != 0;
+            final Integer _tmpBenefitFutureEntryInvites;
+            if (_cursor.isNull(_cursorIndexOfBenefitFutureEntryInvites)) {
+              _tmpBenefitFutureEntryInvites = null;
+            } else {
+              _tmpBenefitFutureEntryInvites = _cursor.getInt(_cursorIndexOfBenefitFutureEntryInvites);
+            }
             final String _tmpNotes;
             _tmpNotes = _cursor.getString(_cursorIndexOfNotes);
             final long _tmpLastModified;
             _tmpLastModified = _cursor.getLong(_cursorIndexOfLastModified);
-            _item = new Job(_tmpId,_tmpSheetsId,_tmpVolunteerId,_tmpJobType,_tmpJobTypeName,_tmpVenueName,_tmpDate,_tmpShiftTime,_tmpBenefitUsed,_tmpNotes,_tmpLastModified);
+            _item = new Job(_tmpId,_tmpSheetsId,_tmpVolunteerId,_tmpJobType,_tmpJobTypeName,_tmpVenueName,_tmpDate,_tmpShiftTime,_tmpBenefitFutureEntriesRemaining,_tmpBenefitFutureEntryInvites,_tmpNotes,_tmpLastModified);
             _result.add(_item);
           }
           return _result;
@@ -834,7 +871,8 @@ public final class JobDao_Impl implements JobDao {
           final int _cursorIndexOfVenueName = CursorUtil.getColumnIndexOrThrow(_cursor, "venueName");
           final int _cursorIndexOfDate = CursorUtil.getColumnIndexOrThrow(_cursor, "date");
           final int _cursorIndexOfShiftTime = CursorUtil.getColumnIndexOrThrow(_cursor, "shiftTime");
-          final int _cursorIndexOfBenefitUsed = CursorUtil.getColumnIndexOrThrow(_cursor, "benefitUsed");
+          final int _cursorIndexOfBenefitFutureEntriesRemaining = CursorUtil.getColumnIndexOrThrow(_cursor, "benefitFutureEntriesRemaining");
+          final int _cursorIndexOfBenefitFutureEntryInvites = CursorUtil.getColumnIndexOrThrow(_cursor, "benefitFutureEntryInvites");
           final int _cursorIndexOfNotes = CursorUtil.getColumnIndexOrThrow(_cursor, "notes");
           final int _cursorIndexOfLastModified = CursorUtil.getColumnIndexOrThrow(_cursor, "lastModified");
           final Job _result;
@@ -863,19 +901,23 @@ public final class JobDao_Impl implements JobDao {
             final String _tmp_1;
             _tmp_1 = _cursor.getString(_cursorIndexOfShiftTime);
             _tmpShiftTime = __converters.toShiftTime(_tmp_1);
-            final Boolean _tmpBenefitUsed;
-            final Integer _tmp_2;
-            if (_cursor.isNull(_cursorIndexOfBenefitUsed)) {
-              _tmp_2 = null;
+            final Integer _tmpBenefitFutureEntriesRemaining;
+            if (_cursor.isNull(_cursorIndexOfBenefitFutureEntriesRemaining)) {
+              _tmpBenefitFutureEntriesRemaining = null;
             } else {
-              _tmp_2 = _cursor.getInt(_cursorIndexOfBenefitUsed);
+              _tmpBenefitFutureEntriesRemaining = _cursor.getInt(_cursorIndexOfBenefitFutureEntriesRemaining);
             }
-            _tmpBenefitUsed = _tmp_2 == null ? null : _tmp_2 != 0;
+            final Integer _tmpBenefitFutureEntryInvites;
+            if (_cursor.isNull(_cursorIndexOfBenefitFutureEntryInvites)) {
+              _tmpBenefitFutureEntryInvites = null;
+            } else {
+              _tmpBenefitFutureEntryInvites = _cursor.getInt(_cursorIndexOfBenefitFutureEntryInvites);
+            }
             final String _tmpNotes;
             _tmpNotes = _cursor.getString(_cursorIndexOfNotes);
             final long _tmpLastModified;
             _tmpLastModified = _cursor.getLong(_cursorIndexOfLastModified);
-            _result = new Job(_tmpId,_tmpSheetsId,_tmpVolunteerId,_tmpJobType,_tmpJobTypeName,_tmpVenueName,_tmpDate,_tmpShiftTime,_tmpBenefitUsed,_tmpNotes,_tmpLastModified);
+            _result = new Job(_tmpId,_tmpSheetsId,_tmpVolunteerId,_tmpJobType,_tmpJobTypeName,_tmpVenueName,_tmpDate,_tmpShiftTime,_tmpBenefitFutureEntriesRemaining,_tmpBenefitFutureEntryInvites,_tmpNotes,_tmpLastModified);
           } else {
             _result = null;
           }

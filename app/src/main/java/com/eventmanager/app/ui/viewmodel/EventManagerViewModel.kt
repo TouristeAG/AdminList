@@ -22,6 +22,9 @@ import com.eventmanager.app.data.sync.JobTypeSyncResult
 import com.eventmanager.app.data.sync.VenueSyncResult
 import com.eventmanager.app.data.sync.SyncErrorManager
 import com.eventmanager.app.data.sync.AppLogger
+import com.eventmanager.app.data.utils.effectiveBenefitFutureEntriesRemaining
+import com.eventmanager.app.data.utils.effectiveBenefitFutureEntryInvites
+import com.eventmanager.app.data.utils.jobTypeSupportsTrackedFutureEntries
 import com.eventmanager.app.data.update.UpdateChecker
 import com.eventmanager.app.data.update.UpdateCheckResult
 import com.eventmanager.app.data.update.UpdateDownloader
@@ -32,6 +35,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import android.content.Context
 
 fun getRankDisplayName(rank: VolunteerRank?): String {
@@ -46,6 +51,7 @@ class EventManagerViewModel(
     private val googleSheetsService: GoogleSheetsService,
     private val context: Context? = null
 ) : ViewModel() {
+    private val benefitConsumeMutex = Mutex()
     
     // Deletion tracker for handling deletions properly
     private val deletionTracker = context?.let { DeletionTracker(it) }
@@ -597,14 +603,40 @@ class EventManagerViewModel(
         }
     }
 
+    private fun applyInitialBenefitFutureEntries(job: Job, configs: List<JobTypeConfig>): Job {
+        if (job.benefitFutureEntriesRemaining != null) return job
+        val config = configs.find { it.name == job.jobTypeName } ?: return job
+        if (config.benefitSystemType == BenefitSystemType.MANUAL) {
+            val n = config.manualRewards?.futureSingleUseEntries ?: 0
+            if (n > 0) {
+                val inv = config.manualRewards?.futureSingleUseEntryInvites ?: 1
+                return job.copy(benefitFutureEntriesRemaining = n, benefitFutureEntryInvites = inv)
+            }
+            return job
+        }
+        if (config.benefitSystemType == BenefitSystemType.STELLAR && config.isShiftJob) {
+            val entries: Int
+            val invites: Int
+            when (config.novaJobType) {
+                NovaJobType.DEFAULT_SHIFT -> {
+                    if (job.shiftTime != ShiftTime.AFTER_MIDNIGHT) return job
+                    entries = 1; invites = 1
+                }
+                NovaJobType.MEETING -> { entries = 1; invites = 1 }
+                NovaJobType.PHOTOGRAPHER_VIDEOGRAPHER -> { entries = 1; invites = 1 }
+                NovaJobType.GRAPHIC_DESIGNER_EVENT -> { entries = 1; invites = 1 }
+                NovaJobType.GRAPHIC_DESIGNER_ASSOCIATION -> { entries = 2; invites = 1 }
+            }
+            return job.copy(benefitFutureEntriesRemaining = entries, benefitFutureEntryInvites = invites)
+        }
+        return job
+    }
+
     // Job operations
     fun addJob(job: Job) {
         viewModelScope.launch {
             try {
-                // Automatically set benefitUsed for after-midnight shifts
-                val jobWithBenefit = if (job.shiftTime == ShiftTime.AFTER_MIDNIGHT && job.benefitUsed == null) {
-                    job.copy(benefitUsed = false) // Mark as unused benefit
-                } else job
+                val jobWithBenefit = applyInitialBenefitFutureEntries(job, _jobTypeConfigs.value)
                 
                 // Insert job into local database first
                 val jobId = repository.insertJob(jobWithBenefit)
@@ -699,37 +731,77 @@ class EventManagerViewModel(
     }
 
     /**
-     * Mark an after-midnight shift's entry benefit as used (redeemed).
+     * Consumes one future event entry from a job (stellar after-midnight or manual single-use pool).
      * Updates the job locally and in Google Sheets, then recalculates the guest list.
      */
-    fun markBenefitAsUsed(job: Job) {
+    fun markBenefitAsUsed(job: Job, selectedInvitesOverride: Int? = null) {
         viewModelScope.launch {
-            try {
-                val updatedJob = job.copy(
-                    benefitUsed = true,
-                    lastModified = System.currentTimeMillis()
-                )
-                
-                repository.updateJob(updatedJob)
-                
-                // Immediately refresh the jobs StateFlow so every open panel
-                // (benefits, volunteer detail) recomposes with the updated data.
-                refreshJobData()
-                
-                // Sync to Google Sheets
-                if (updatedJob.sheetsId != null) {
-                    try {
-                        googleSheetsService.updateJobInSheets(updatedJob, _venues.value)
-                    } catch (e: Exception) {
+            benefitConsumeMutex.withLock {
+                try {
+                    val offsetHours = context?.let { SettingsManager(it).getDateChangeOffsetHours() } ?: 0
+                    val now = System.currentTimeMillis()
+                    val configsByName = _jobTypeConfigs.value.associateBy { it.name }
+                    val allJobs = _jobs.value
+                    val selectedInvites = selectedInvitesOverride
+                        ?: job.benefitFutureEntryInvites
+                        ?: effectiveBenefitFutureEntryInvites(job, configsByName[job.jobTypeName])
+
+                    val targetJob = allJobs.firstOrNull { candidate ->
+                        val sameRecord = when {
+                            job.sheetsId != null && candidate.sheetsId != null -> candidate.sheetsId == job.sheetsId
+                            else -> candidate.id == job.id
+                        }
+                        val cfg = configsByName[candidate.jobTypeName]
+                        sameRecord &&
+                            jobTypeSupportsTrackedFutureEntries(candidate, cfg) &&
+                            effectiveBenefitFutureEntriesRemaining(candidate, cfg, now, offsetHours) > 0 &&
+                            effectiveBenefitFutureEntryInvites(candidate, cfg) == selectedInvites
+                    } ?: allJobs
+                        .asSequence()
+                        .filter { it.volunteerId == job.volunteerId }
+                        .filter { candidate ->
+                            val cfg = configsByName[candidate.jobTypeName]
+                            jobTypeSupportsTrackedFutureEntries(candidate, cfg) &&
+                                effectiveBenefitFutureEntriesRemaining(candidate, cfg, now, offsetHours) > 0 &&
+                                effectiveBenefitFutureEntryInvites(candidate, cfg) == selectedInvites
+                        }
+                        .sortedBy { it.date }
+                        .firstOrNull()
+                        ?: return@withLock
+
+                    val rem = targetJob.benefitFutureEntriesRemaining ?: return@withLock
+                    if (rem <= 0) return@withLock
+                    val config = _jobTypeConfigs.value.find { it.name == targetJob.jobTypeName }
+                    val effectiveInvites = effectiveBenefitFutureEntryInvites(targetJob, config)
+                    val updatedJob = targetJob.copy(
+                        benefitFutureEntriesRemaining = rem - 1,
+                        benefitFutureEntryInvites = effectiveInvites,
+                        lastModified = System.currentTimeMillis()
+                    )
+
+                    repository.updateJob(updatedJob)
+
+                    // Sync to Google Sheets
+                    if (updatedJob.sheetsId != null) {
+                        try {
+                            googleSheetsService.updateJobInSheets(updatedJob, _venues.value)
+                        } catch (e: Exception) {
+                            twoWaySyncService?.backupJobsToSheets()
+                        }
+                    } else {
                         twoWaySyncService?.backupJobsToSheets()
                     }
-                } else {
-                    twoWaySyncService?.backupJobsToSheets()
+
+                    // Refresh job UI state from DB so the ticket counts update immediately.
+                    refreshJobData()
+
+                    recalcAndUploadVolunteerGuestList()
+
+                    // Refresh guest UI from DB to pick up any changes from recalc.
+                    refreshGuestData()
+                } catch (e: Exception) {
+                    _syncError.value = "Failed to mark benefit as used: ${e.message}"
                 }
-                
-                recalcAndUploadVolunteerGuestList()
-            } catch (e: Exception) {
-                _syncError.value = "Failed to mark benefit as used: ${e.message}"
             }
         }
     }
@@ -2421,44 +2493,71 @@ class EventManagerViewModel(
         }
     }
 
+    /**
+     * Repairs Google Sheet headers (including Admin column on guest/volunteer tabs) and runs
+     * a full download before the admin authentication screen accepts scans.
+     */
+    fun prepareForAdminAuthentication() {
+        viewModelScope.launch {
+            _isSyncing.value = true
+            _syncError.value = null
+            AppLogger.i("EventManagerViewModel", "Preparing sheets and syncing for admin authentication gate")
+            try {
+                val result = withContext(Dispatchers.IO) {
+                    syncManager?.repairSheetStructureThenFullDownload()
+                }
+                if (result?.isSuccess == true) {
+                    println("🔄 Admin gate sync successful, refreshing UI data...")
+                    withContext(Dispatchers.Main) {
+                        refreshAllData()
+                    }
+                    recalcAndUploadVolunteerGuestList()
+                    refreshTemporaryGuestsFromSheets()
+                    updateSyncTime()
+                    AppLogger.i("EventManagerViewModel", "Admin gate preparation completed")
+                } else {
+                    val errorResult = result as? SyncResult.Error
+                    val errorMsg = errorResult?.message ?: "Admin gate sync failed"
+                    _syncError.value = errorMsg
+                    AppLogger.e("EventManagerViewModel", "Admin gate sync failed: $errorMsg")
+                    showSyncErrorIfNotSuppressed(errorMsg)
+                }
+            } catch (e: Exception) {
+                val errorMsg = when {
+                    e.message?.contains("429") == true || e.message?.contains("Rate limit") == true ->
+                        "Rate limit exceeded. Please try again later."
+                    else -> "Admin gate sync failed: ${e.message}"
+                }
+                _syncError.value = errorMsg
+                AppLogger.e("EventManagerViewModel", "Admin gate sync exception", e)
+                showSyncErrorIfNotSuppressed(errorMsg)
+            } finally {
+                _isSyncing.value = false
+            }
+        }
+    }
+
     // Unified guest list: regular guests + volunteer benefits (computed locally)
     private suspend fun computeVolunteerGuestEntries(): List<Guest> {
         try {
-            val statuses = repository.getAllVolunteerBenefitStatuses()
-            val now = System.currentTimeMillis()
+            val offsetHours = context?.let { SettingsManager(it).getDateChangeOffsetHours() } ?: 0
+            val statuses = repository.getAllVolunteerBenefitStatuses(offsetHours)
             val entries = mutableListOf<Guest>()
             
             // Batch load all volunteers instead of querying one-by-one
             val allVolunteers = repository.getAllVolunteers().first()
             val volunteersById = allVolunteers.associateBy { it.id }
             
-            // Load all jobs to check benefit usage status
-            val allJobs = _jobs.value
-            val jobsByVolunteerId = allJobs.groupBy { it.volunteerId }
-            
             for (status in statuses) {
                 val benefits = status.benefits
-                if (!benefits.isActive || !benefits.guestListAccess) continue
-                if (benefits.validUntil != null && now >= benefits.validUntil) continue
+                if (!benefits.guestListAccess) continue
+                val futureEntryPoolRemaining = benefits.futureEventEntriesRemaining ?: 0
+                if (!benefits.isActive && futureEntryPoolRemaining <= 0) continue
 
                 val volunteer = volunteersById[status.volunteerId] ?: continue
 
-                // If guest-list access comes only from ETOILE (after-midnight shifts)
-                // and all benefits have been redeemed, skip the volunteer.
-                val volunteerJobs = jobsByVolunteerId[status.volunteerId] ?: emptyList()
-                val hasUnusedAfterMidnightBenefit = volunteerJobs.any {
-                    it.shiftTime == ShiftTime.AFTER_MIDNIGHT && it.benefitUsed == false
-                }
-                val hasNonEtoileGuestAccess = status.activeBenefits.any {
-                    it.rank != VolunteerRank.ETOILE && it.rank != VolunteerRank.NOVA &&
-                        it.guestListAccess && it.isActive
-                }
-                if (!hasNonEtoileGuestAccess && !hasUnusedAfterMidnightBenefit && status.isEligibleForEtoile) {
-                    continue
-                }
-
-                // BenefitCalculator already excludes ETOILE when all
-                // after-midnight shifts are used, so inviteCount is correct.
+                val hasUnusedFutureEntryVouchers = futureEntryPoolRemaining > 0
+                if (!benefits.isActive && !hasUnusedFutureEntryVouchers) continue
                 entries.add(
                     Guest(
                         name = volunteer.name,
@@ -3104,15 +3203,8 @@ class EventManagerViewModel(
      * DUPLICATE PREVENTION: Remove duplicate entries based on unique identifiers
      * This ensures the UI only shows unique items
      */
-    // Cache for duplicate removal to avoid repeated work on same data
-    private var lastGuestsHash: Int? = null
-    private var cachedUniqueGuests: List<Guest>? = null
     
-    private var lastVolunteersHash: Int? = null
-    private var cachedUniqueVolunteers: List<Volunteer>? = null
     
-    private var lastJobsHash: Int? = null
-    private var cachedUniqueJobs: List<Job>? = null
     
     /**
      * Remove duplicate guests based on the following rules:
@@ -3121,12 +3213,6 @@ class EventManagerViewModel(
      * 3. Everything else should NOT be filtered
      */
     private fun removeDuplicateGuests(guests: List<Guest>): List<Guest> {
-        // Use content hash for caching (simple but effective for this use case)
-        val currentHash = guests.hashCode()
-        if (lastGuestsHash == currentHash && cachedUniqueGuests != null) {
-            return cachedUniqueGuests!!
-        }
-        
         // Group by ID first to handle same-ID duplicates
         val byId = guests.groupBy { it.id }
         
@@ -3137,18 +3223,14 @@ class EventManagerViewModel(
         
         // Now check for content duplicates (different ID but same info)
         // Content key = all identifying fields except ID and timestamps
-        fun contentKey(g: Guest) = "${g.name}_${g.email}_${g.phoneNumber}_${g.venueName}_${g.invitations}_${g.notes}_${g.isVolunteerBenefit}_${g.nfcCardUid}"
+        fun contentKey(g: Guest) = "${g.name}_${g.email}_${g.phoneNumber}_${g.venueName}_${g.invitations}_${g.notes}_${g.isVolunteerBenefit}_${g.volunteerId}_${g.isTemporaryGuest}_${g.nfcCardUid}"
         
         val byContent = uniqueById.groupBy { contentKey(it) }
         
         // For each content group, keep only the oldest (lowest lastModified)
-        val result = byContent.values.map { group ->
+        return byContent.values.map { group ->
             group.minByOrNull { it.lastModified } ?: group.first()
         }
-        
-        lastGuestsHash = currentHash
-        cachedUniqueGuests = result
-        return result
     }
     
     /**
@@ -3158,11 +3240,6 @@ class EventManagerViewModel(
      * 3. Everything else should NOT be filtered
      */
     private fun removeDuplicateVolunteers(volunteers: List<Volunteer>): List<Volunteer> {
-        val currentHash = volunteers.hashCode()
-        if (lastVolunteersHash == currentHash && cachedUniqueVolunteers != null) {
-            return cachedUniqueVolunteers!!
-        }
-        
         // Group by NanoID first to handle same-ID duplicates
         val byNanoId = volunteers.groupBy { it.id }
         
@@ -3178,13 +3255,9 @@ class EventManagerViewModel(
         val byContent = uniqueByNanoId.groupBy { contentKey(it) }
         
         // For each content group, keep only the oldest (lowest lastModified)
-        val result = byContent.values.map { group ->
+        return byContent.values.map { group ->
             group.minByOrNull { it.lastModified } ?: group.first()
         }
-        
-        lastVolunteersHash = currentHash
-        cachedUniqueVolunteers = result
-        return result
     }
     
     /**
@@ -3194,11 +3267,6 @@ class EventManagerViewModel(
      * 3. Everything else should NOT be filtered
      */
     private fun removeDuplicateJobs(jobs: List<Job>): List<Job> {
-        val currentHash = jobs.hashCode()
-        if (lastJobsHash == currentHash && cachedUniqueJobs != null) {
-            return cachedUniqueJobs!!
-        }
-        
         // Only remove true duplicates: same database row appearing more than
         // once (identical primary key). A volunteer can legitimately have
         // multiple shifts with the same type/venue/date, so content-based
@@ -3211,16 +3279,12 @@ class EventManagerViewModel(
         for (job in jobs) {
             if (!seen.add(job.id)) { hasDuplicates = true; break }
         }
-        val result = if (hasDuplicates) {
+        return if (hasDuplicates) {
             seen.clear()
             jobs.filter { seen.add(it.id) }
         } else {
             jobs
         }
-        
-        lastJobsHash = currentHash
-        cachedUniqueJobs = result
-        return result
     }
     
     /**
@@ -3278,7 +3342,8 @@ class EventManagerViewModel(
     // Get volunteer benefits with time-based calculation
     @Suppress("unused")
     suspend fun getVolunteerBenefitStatus(volunteer: Volunteer): VolunteerBenefitStatus? {
-        return repository.getVolunteerBenefitStatus(volunteer.id)
+        val offsetHours = context?.let { SettingsManager(it).getDateChangeOffsetHours() } ?: 0
+        return repository.getVolunteerBenefitStatus(volunteer.id, offsetHours)
     }
     
 

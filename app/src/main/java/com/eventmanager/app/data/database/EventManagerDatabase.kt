@@ -23,7 +23,7 @@ import com.eventmanager.app.data.models.CounterData
 
 @Database(
     entities = [Guest::class, Volunteer::class, Job::class, JobTypeConfig::class, VenueEntity::class, CounterData::class],
-    version = 24,
+    version = 28,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -940,6 +940,120 @@ abstract class EventManagerDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * MIGRATION 24→25: Replace jobs.benefitUsed (boolean) with benefitFutureEntriesRemaining (int?).
+         * Legacy: null → null, false (0) → 1 remaining, true (1) → 0 remaining.
+         */
+        private val MIGRATION_24_25 = object : Migration(24, 25) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                try {
+                    println("Starting migration 24→25: benefitFutureEntriesRemaining on jobs")
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS jobs_new (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                            sheetsId TEXT,
+                            volunteerId TEXT NOT NULL,
+                            jobType TEXT NOT NULL,
+                            jobTypeName TEXT NOT NULL,
+                            venueName TEXT NOT NULL,
+                            date INTEGER NOT NULL,
+                            shiftTime TEXT NOT NULL,
+                            benefitFutureEntriesRemaining INTEGER,
+                            notes TEXT NOT NULL,
+                            lastModified INTEGER NOT NULL
+                        )
+                    """.trimIndent())
+                    db.execSQL("""
+                        INSERT INTO jobs_new (
+                            id, sheetsId, volunteerId, jobType, jobTypeName, venueName,
+                            date, shiftTime, benefitFutureEntriesRemaining, notes, lastModified
+                        )
+                        SELECT
+                            id, sheetsId, volunteerId, jobType, jobTypeName, venueName,
+                            date, shiftTime,
+                            CASE
+                                WHEN benefitUsed IS NULL THEN NULL
+                                WHEN benefitUsed = 0 THEN 1
+                                ELSE 0
+                            END,
+                            notes, lastModified
+                        FROM jobs
+                    """.trimIndent())
+                    db.execSQL("DROP TABLE jobs")
+                    db.execSQL("ALTER TABLE jobs_new RENAME TO jobs")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_jobs_volunteerId ON jobs(volunteerId)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_jobs_date ON jobs(date)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_jobs_venueName ON jobs(venueName)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_jobs_jobTypeName ON jobs(jobTypeName)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_jobs_sheetsId ON jobs(sheetsId)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_jobs_lastModified ON jobs(lastModified)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_jobs_volunteerId_date ON jobs(volunteerId, date)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_jobs_date_shiftTime ON jobs(date, shiftTime)")
+                    println("Migration 24→25 completed successfully")
+                } catch (e: Exception) {
+                    println("Migration 24→25 failed: ${e.message}")
+                    e.printStackTrace()
+                    throw e
+                }
+            }
+        }
+
+        /**
+         * MIGRATION 25→26: Add isAdmin column to guests and volunteers tables.
+         * Defaults to false (0) for all existing rows.
+         */
+        private val MIGRATION_25_26 = object : Migration(25, 26) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                try {
+                    println("Starting migration 25→26: Adding isAdmin column to guests and volunteers tables")
+                    db.execSQL("ALTER TABLE guests ADD COLUMN isAdmin INTEGER NOT NULL DEFAULT 0")
+                    db.execSQL("ALTER TABLE volunteers ADD COLUMN isAdmin INTEGER NOT NULL DEFAULT 0")
+                    println("Migration 25→26 completed successfully")
+                } catch (e: Exception) {
+                    println("Migration 25→26 failed: ${e.message}")
+                    e.printStackTrace()
+                    throw e
+                }
+            }
+        }
+
+        /**
+         * MIGRATION 26→27: Add benefitFutureEntryInvites column to jobs table.
+         * Existing rows with remaining entries default to 1 invite (friend).
+         */
+        private val MIGRATION_26_27 = object : Migration(26, 27) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                try {
+                    println("Starting migration 26→27: Adding benefitFutureEntryInvites column to jobs table")
+                    db.execSQL("ALTER TABLE jobs ADD COLUMN benefitFutureEntryInvites INTEGER DEFAULT NULL")
+                    db.execSQL("UPDATE jobs SET benefitFutureEntryInvites = 1 WHERE benefitFutureEntriesRemaining IS NOT NULL AND benefitFutureEntriesRemaining > 0")
+                    println("Migration 26→27 completed successfully")
+                } catch (e: Exception) {
+                    println("Migration 26→27 failed: ${e.message}")
+                    e.printStackTrace()
+                    throw e
+                }
+            }
+        }
+
+        /**
+         * MIGRATION 27→28: Add novaJobType column to job_type_configs table.
+         * Defaults to DEFAULT_SHIFT for all existing rows.
+         */
+        private val MIGRATION_27_28 = object : Migration(27, 28) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                try {
+                    println("Starting migration 27→28: Adding novaJobType column to job_type_configs table")
+                    db.execSQL("ALTER TABLE job_type_configs ADD COLUMN novaJobType TEXT NOT NULL DEFAULT 'DEFAULT_SHIFT'")
+                    println("Migration 27→28 completed successfully")
+                } catch (e: Exception) {
+                    println("Migration 27→28 failed: ${e.message}")
+                    e.printStackTrace()
+                    throw e
+                }
+            }
+        }
+
         fun getDatabase(context: Context): EventManagerDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -970,7 +1084,11 @@ abstract class EventManagerDatabase : RoomDatabase() {
                     MIGRATION_20_21,
                     MIGRATION_21_22,
                     MIGRATION_22_23,
-                    MIGRATION_23_24
+                    MIGRATION_23_24,
+                    MIGRATION_24_25,
+                    MIGRATION_25_26,
+                    MIGRATION_26_27,
+                    MIGRATION_27_28
                 )
                 .fallbackToDestructiveMigration()
                 .build()

@@ -50,6 +50,7 @@ class SettingsManager(context: Context) {
         private const val KEY_CATEGORY_ANIMATION_EXPANDED = "category_animation_expanded"
         private const val KEY_CATEGORY_DEVELOPER_EXPANDED = "category_developer_expanded"
         private const val KEY_CATEGORY_MAINTENANCE_EXPANDED = "category_maintenance_expanded"
+        private const val KEY_SETUP_WIZARD_COMPLETED = "setup_wizard_completed"
         
         // Email Settings Keys
         private const val KEY_EMAIL_SUBJECT = "email_qr_subject"
@@ -58,6 +59,8 @@ class SettingsManager(context: Context) {
         private const val KEY_EMAIL_CONTENT_AFTER = "email_qr_content_after"
         private const val KEY_EMAIL_SIGNATURE = "email_signature"
         private const val KEY_EMAIL_INCLUDE_LOGO = "email_include_logo"
+        private const val KEY_EMAIL_INCLUDE_DIGITAL_WALLET_PASS = "email_include_digital_wallet_pass"
+        private const val KEY_EMAIL_ASSOCIATION_NAME = "email_association_name"
         private const val KEY_EMAIL_LOGO_URI = "email_logo_uri"
         private const val KEY_EMAIL_GMAIL_ACCOUNT = "email_gmail_account"
         private const val KEY_EMAIL_GMAIL_AUTH_TOKEN = "email_gmail_auth_token"
@@ -423,6 +426,22 @@ class SettingsManager(context: Context) {
     fun setEmailIncludeLogoEnabled(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_EMAIL_INCLUDE_LOGO, enabled).apply()
     }
+
+    fun isEmailIncludeDigitalWalletPassEnabled(): Boolean {
+        return prefs.getBoolean(KEY_EMAIL_INCLUDE_DIGITAL_WALLET_PASS, true)
+    }
+
+    fun setEmailIncludeDigitalWalletPassEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_EMAIL_INCLUDE_DIGITAL_WALLET_PASS, enabled).apply()
+    }
+
+    fun getEmailAssociationName(): String {
+        return prefs.getString(KEY_EMAIL_ASSOCIATION_NAME, "Collectif Nocturne") ?: "Collectif Nocturne"
+    }
+
+    fun saveEmailAssociationName(name: String) {
+        prefs.edit().putString(KEY_EMAIL_ASSOCIATION_NAME, name).apply()
+    }
     
     fun getEmailLogoUri(): String {
         return prefs.getString(KEY_EMAIL_LOGO_URI, "") ?: ""
@@ -562,5 +581,17 @@ class SettingsManager(context: Context) {
     
     fun setCategoryMaintenanceExpanded(expanded: Boolean) {
         prefs.edit().putBoolean(KEY_CATEGORY_MAINTENANCE_EXPANDED, expanded).apply()
+    }
+    
+    fun isSetupWizardCompleted(): Boolean {
+        return prefs.getBoolean(KEY_SETUP_WIZARD_COMPLETED, false)
+    }
+    
+    fun setSetupWizardCompleted(completed: Boolean) {
+        prefs.edit().putBoolean(KEY_SETUP_WIZARD_COMPLETED, completed).apply()
+    }
+    
+    fun shouldShowSetupWizard(): Boolean {
+        return !isSetupWizardCompleted() && !isConfigured()
     }
 }

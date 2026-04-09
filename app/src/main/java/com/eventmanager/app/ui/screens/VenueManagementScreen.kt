@@ -334,8 +334,6 @@ fun AddVenueConfigDialog(
     val isCompact = isCompactScreen()
     val scrollState = rememberScrollState()
     val isTabletDevice = isTablet()
-    val tabletMaxWidth = getTabletConstrainedDialogMaxWidth()
-    val tabletMaxHeight = getTabletConstrainedDialogMaxHeight()
 
     // Custom Dialog with proper scrolling
     Dialog(
@@ -349,15 +347,15 @@ fun AddVenueConfigDialog(
                 .then(
                     if (isTabletDevice) {
                         Modifier
-                            .widthIn(max = tabletMaxWidth)
-                            .heightIn(max = tabletMaxHeight)
+                            .fillMaxSize()
+                            .padding(getTabletDialogScreenEdgeInset())
                     } else {
                         Modifier
                             .fillMaxWidth()
                             .fillMaxHeight(0.9f)
+                            .padding(16.dp)
                     }
                 )
-                .padding(16.dp)
         ) {
             Card(
                 modifier = Modifier.fillMaxSize(),
@@ -458,8 +456,6 @@ fun EditVenueConfigDialog(
     val isCompact = isCompactScreen()
     val scrollState = rememberScrollState()
     val isTabletDevice = isTablet()
-    val tabletMaxWidth = getTabletConstrainedDialogMaxWidth()
-    val tabletMaxHeight = getTabletConstrainedDialogMaxHeight()
 
     // Custom Dialog with proper scrolling
     Dialog(
@@ -468,35 +464,38 @@ fun EditVenueConfigDialog(
             usePlatformDefaultWidth = !isTabletDevice
         )
     ) {
-        Card(
+        Box(
             modifier = Modifier
                 .then(
                     if (isTabletDevice) {
                         Modifier
-                            .widthIn(max = tabletMaxWidth)
-                            .heightIn(max = tabletMaxHeight)
+                            .fillMaxSize()
+                            .padding(getTabletDialogScreenEdgeInset())
                     } else {
                         Modifier
                             .fillMaxWidth()
                             .fillMaxHeight(0.9f)
+                            .padding(16.dp)
                     }
                 )
-                .padding(16.dp),
-            shape = RoundedCornerShape(16.dp)
         ) {
-            Column(
-                modifier = Modifier.fillMaxSize()
+            Card(
+                modifier = Modifier.fillMaxSize(),
+                shape = RoundedCornerShape(16.dp)
             ) {
-                // Header
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier.fillMaxSize()
                 ) {
-                    Text(
-                        text = if (isCompact) stringResource(R.string.edit) else stringResource(R.string.edit_venue_configuration),
+                    // Header
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (isCompact) stringResource(R.string.edit) else stringResource(R.string.edit_venue_configuration),
                         style = if (isTabletDevice) getTabletConstrainedTitleTypography() else getResponsiveTypography(),
                         fontWeight = FontWeight.Bold
                     )
@@ -559,6 +558,7 @@ fun EditVenueConfigDialog(
                     ) {
                         Text(stringResource(R.string.update_venue))
                     }
+                }
                 }
             }
         }

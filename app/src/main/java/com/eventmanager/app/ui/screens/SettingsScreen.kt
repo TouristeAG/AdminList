@@ -177,6 +177,11 @@ private fun EmailSettingsContent(
             contentAfterHint = context.getString(R.string.email_content_after_hint),
             signatureLabel = context.getString(R.string.email_signature_label),
             signatureHint = context.getString(R.string.email_signature_hint),
+            associationNameLabel = context.getString(R.string.email_association_name_label),
+            associationNameHint = context.getString(R.string.email_association_name_hint),
+            associationNameDescription = context.getString(R.string.email_association_name_description),
+            includeDigitalWalletPassLabel = context.getString(R.string.email_include_digital_wallet_pass_label),
+            includeDigitalWalletPassDescription = context.getString(R.string.email_include_digital_wallet_pass_description),
             includeLogoLabel = context.getString(R.string.email_include_logo_label),
             includeLogoDescription = context.getString(R.string.email_include_logo_description),
             logoPreview = context.getString(R.string.email_logo_preview),
@@ -217,6 +222,8 @@ private fun EmailSettingsContent(
     
     // Shared settings
     var emailSignature by remember { mutableStateOf(strings.signatureDefault) }
+    var emailAssociationName by remember { mutableStateOf("Collectif Nocturne") }
+    var emailIncludeDigitalWalletPass by remember { mutableStateOf(true) }
     var emailIncludeLogo by remember { mutableStateOf(false) }
     var emailLogoUri by remember { mutableStateOf("") }
     
@@ -236,6 +243,8 @@ private fun EmailSettingsContent(
         
         // Shared settings
         emailSignature = settingsManager.getEmailSignature().ifEmpty { strings.signatureDefault }
+        emailAssociationName = settingsManager.getEmailAssociationName()
+        emailIncludeDigitalWalletPass = settingsManager.isEmailIncludeDigitalWalletPassEnabled()
         emailIncludeLogo = settingsManager.isEmailIncludeLogoEnabled()
         emailLogoUri = settingsManager.getEmailLogoUri()
     }
@@ -393,9 +402,51 @@ private fun EmailSettingsContent(
             maxLines = 4,
             leadingIcon = { Icon(Icons.Default.Create, contentDescription = null) }
         )
+
+        OutlinedTextField(
+            value = emailAssociationName,
+            onValueChange = {
+                emailAssociationName = it
+                debouncedSave { settingsManager.saveEmailAssociationName(it) }
+            },
+            label = { Text(strings.associationNameLabel) },
+            placeholder = { Text(strings.associationNameHint) },
+            supportingText = { Text(strings.associationNameDescription) },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            leadingIcon = { Icon(Icons.Default.Business, contentDescription = null) }
+        )
         
         HorizontalDivider()
-        
+
+        // Digital Wallet Pass Toggle (shared)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = strings.includeDigitalWalletPassLabel,
+                    style = MaterialTheme.typography.titleSmall
+                )
+                Text(
+                    text = strings.includeDigitalWalletPassDescription,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Switch(
+                checked = emailIncludeDigitalWalletPass,
+                onCheckedChange = {
+                    emailIncludeDigitalWalletPass = it
+                    settingsManager.setEmailIncludeDigitalWalletPassEnabled(it)
+                }
+            )
+        }
+
+        HorizontalDivider()
+
         // Include Logo Toggle (shared)
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -1022,6 +1073,11 @@ private data class EmailSettingsStrings(
     val contentAfterHint: String,
     val signatureLabel: String,
     val signatureHint: String,
+    val associationNameLabel: String,
+    val associationNameHint: String,
+    val associationNameDescription: String,
+    val includeDigitalWalletPassLabel: String,
+    val includeDigitalWalletPassDescription: String,
     val includeLogoLabel: String,
     val includeLogoDescription: String,
     val logoPreview: String,
@@ -3292,7 +3348,7 @@ fun SettingsScreen(
                         text = context.getString(
                             R.string.last_sync,
                             if (settingsManager.getLastSyncTime() > 0)
-                                com.eventmanager.app.data.sync.DateFormatUtils.formatDateTime(
+                                DateFormatUtils.formatDateTime(
                                     settingsManager.getLastSyncTime(),
                                     context
                                 )

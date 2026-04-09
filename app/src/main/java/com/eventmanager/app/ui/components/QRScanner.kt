@@ -20,6 +20,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -54,9 +55,11 @@ import com.google.zxing.DecodeHintType
 import com.eventmanager.app.data.models.Volunteer
 import com.eventmanager.app.data.models.Guest
 import com.eventmanager.app.hardware.Acr122uUsbNfcReader
+import com.eventmanager.app.hardware.rememberUsbHardwareGeneration
 import com.eventmanager.app.ui.utils.*
 import com.eventmanager.app.R
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 
 data class QRCodeData(
@@ -79,6 +82,9 @@ data class NfcUidMatchOption(
     val subtitle: String,
     val typeLabel: String
 )
+
+/** Covers USB host-permission flow (~8s timeout in reader) with slack so the user can respond before we request camera. */
+private const val USB_HOST_PERMISSION_BEFORE_CAMERA_WAIT_MS = 15_000L
 
 /**
  * Check if this is an NVIDIA Shield tablet
@@ -180,16 +186,20 @@ fun QRScannerDialog(
     val activity = remember(context) { context.findActivity() }
     val nfcAdapter = remember(context) { NfcAdapter.getDefaultAdapter(context) }
     val mainHandler = remember { Handler(Looper.getMainLooper()) }
-    val coroutineScope = rememberCoroutineScope()
     var hasPermission by remember { mutableStateOf(false) }
     var cameraAvailable by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var showManualInput by remember { mutableStateOf(false) }
     var lastNfcUid by remember { mutableStateOf<String?>(null) }
     var isUsbReaderBusy by remember { mutableStateOf(false) }
+    var lastUsbDispatchedUid by remember { mutableStateOf<String?>(null) }
+    var lastUsbDispatchElapsedMs by remember { mutableStateOf(0L) }
     var duplicateUid by remember { mutableStateOf<String?>(null) }
     var duplicateUidMatches by remember { mutableStateOf<List<NfcUidMatchOption>>(emptyList()) }
-    val hasExternalReaderConnected = Acr122uUsbNfcReader.isConnected(context)
+    val usbHardwareGeneration = rememberUsbHardwareGeneration()
+    val hasExternalReaderConnected = remember(usbHardwareGeneration, context) {
+        Acr122uUsbNfcReader.isConnected(context)
+    }
     val permanentGuests = remember(guests) { guests.filter { !it.isVolunteerBenefit && !it.isTemporaryGuest } }
     val volunteersByNfcUid = remember(volunteers) {
         volunteers
@@ -270,13 +280,14 @@ fun QRScannerDialog(
         }
     }
     
-    // Check permission and camera availability on first load
+    // Same ordering as AddNfcUidDialog: if a USB reader needs host permission, let [readUid] drive that
+    // dialog first; do not request camera in parallel (competing system dialogs cancel USB permission).
     LaunchedEffect(Unit) {
         hasPermission = ContextCompat.checkSelfPermission(
             context,
             Manifest.permission.CAMERA
         ) == PackageManager.PERMISSION_GRANTED
-        
+
         if (hasPermission) {
             cameraAvailable = isCameraAvailable(context)
             if (!cameraAvailable) {
@@ -287,18 +298,81 @@ fun QRScannerDialog(
                 }
             }
         } else {
-            permissionLauncher.launch(Manifest.permission.CAMERA)
+            if (Acr122uUsbNfcReader.isConnected(context) &&
+                !Acr122uUsbNfcReader.hasUsbPermissionForConnectedReader(context)
+            ) {
+                val deadline = SystemClock.elapsedRealtime() + USB_HOST_PERMISSION_BEFORE_CAMERA_WAIT_MS
+                while (
+                    Acr122uUsbNfcReader.isConnected(context) &&
+                    !Acr122uUsbNfcReader.hasUsbPermissionForConnectedReader(context) &&
+                    SystemClock.elapsedRealtime() < deadline
+                ) {
+                    delay(200)
+                }
+            }
+            if (ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.CAMERA
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                permissionLauncher.launch(Manifest.permission.CAMERA)
+            }
         }
     }
 
+    // Same USB polling model as AddNfcUidDialog: no camera permission / preview required.
+    // Do not key on usbHardwareGeneration: attach/detach during permission can cancel this effect.
+    LaunchedEffect(hasExternalReaderConnected) {
+        if (!hasExternalReaderConnected) {
+            lastUsbDispatchedUid = null
+            lastUsbDispatchElapsedMs = 0L
+            isUsbReaderBusy = false
+            return@LaunchedEffect
+        }
+        try {
+            while (Acr122uUsbNfcReader.isConnected(context)) {
+                ensureActive()
+                isUsbReaderBusy = true
+                val result = Acr122uUsbNfcReader.readUid(context)
+                when {
+                    result.isSuccess -> {
+                        if (duplicateUid == null) {
+                            val norm = result.uid!!.normalizeUid()
+                            val now = SystemClock.elapsedRealtime()
+                            val sameUidReplayGapMs = 850L
+                            if (norm != lastUsbDispatchedUid ||
+                                now - lastUsbDispatchElapsedMs >= sameUidReplayGapMs
+                            ) {
+                                lastUsbDispatchedUid = norm
+                                lastUsbDispatchElapsedMs = now
+                                resolveUidMatch(result.uid!!)
+                            }
+                        }
+                        delay(280)
+                    }
+                    !result.shouldRetryUsbPoll() -> {
+                        errorMessage = result.error ?: context.getString(R.string.nfc_uid_read_failed)
+                        break
+                    }
+                    else -> {
+                        lastUsbDispatchedUid = null
+                        delay(280)
+                    }
+                }
+            }
+        } finally {
+            isUsbReaderBusy = false
+        }
+    }
+
+    // Phone NFC: only enable reader mode when NFC is on — same as AddNfcUidDialog (not while disabled).
     DisposableEffect(activity, nfcAdapter, volunteers, permanentGuests) {
         if (activity == null || nfcAdapter == null) {
             onDispose { }
+        } else if (!nfcAdapter.isEnabled) {
+            errorMessage = context.getString(R.string.nfc_disabled_enable)
+            onDispose { }
         } else {
-            if (!nfcAdapter.isEnabled) {
-                errorMessage = context.getString(R.string.nfc_disabled_enable)
-            }
-
             val callback = NfcAdapter.ReaderCallback { tag ->
                 val uid = tag.id?.toHexUid().orEmpty()
                 mainHandler.post {
@@ -412,115 +486,6 @@ fun QRScannerDialog(
                     )
 
                     Spacer(modifier = Modifier.height(10.dp))
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = if ((nfcAdapter != null && nfcAdapter.isEnabled) || hasExternalReaderConnected) {
-                                MaterialTheme.colorScheme.primaryContainer
-                            } else {
-                                MaterialTheme.colorScheme.surfaceVariant
-                            }
-                        ),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 12.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Nfc,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp),
-                                tint = if ((nfcAdapter != null && nfcAdapter.isEnabled) || hasExternalReaderConnected) {
-                                    MaterialTheme.colorScheme.onPrimaryContainer
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                }
-                            )
-
-                            Column(
-                                modifier = Modifier.weight(1f),
-                                verticalArrangement = Arrangement.spacedBy(2.dp)
-                            ) {
-                                Text(
-                                    text = context.getString(R.string.scan_nfc_card_title),
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = if ((nfcAdapter != null && nfcAdapter.isEnabled) || hasExternalReaderConnected) {
-                                        MaterialTheme.colorScheme.onPrimaryContainer
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurfaceVariant
-                                    }
-                                )
-                                Text(
-                                    text = if (nfcAdapter != null && nfcAdapter.isEnabled && hasExternalReaderConnected) {
-                                        context.getString(R.string.scan_qr_or_nfc_subtitle_phone_and_usb)
-                                    } else if (nfcAdapter != null && nfcAdapter.isEnabled) {
-                                        context.getString(R.string.scan_qr_or_nfc_subtitle_enabled)
-                                    } else if (hasExternalReaderConnected) {
-                                        context.getString(R.string.scan_qr_or_nfc_subtitle_usb_only)
-                                    } else if (nfcAdapter == null) {
-                                        context.getString(R.string.nfc_not_supported_device)
-                                    } else {
-                                        context.getString(R.string.scan_qr_subtitle_nfc_disabled)
-                                    },
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = if ((nfcAdapter != null && nfcAdapter.isEnabled) || hasExternalReaderConnected) {
-                                        MaterialTheme.colorScheme.onPrimaryContainer
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurfaceVariant
-                                    }
-                                )
-                                lastNfcUid?.let { uid ->
-                                    Text(
-                                        text = context.getString(R.string.last_nfc_uid_scanned, uid),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = if ((nfcAdapter != null && nfcAdapter.isEnabled) || hasExternalReaderConnected) {
-                                            MaterialTheme.colorScheme.onPrimaryContainer
-                                        } else {
-                                            MaterialTheme.colorScheme.primary
-                                        }
-                                    )
-                                }
-                            }
-
-                            if (hasExternalReaderConnected) {
-                                OutlinedButton(
-                                    onClick = {
-                                        isUsbReaderBusy = true
-                                        coroutineScope.launch {
-                                            val result = Acr122uUsbNfcReader.readUid(context)
-                                            if (result.isSuccess) {
-                                                resolveUidMatch(result.uid.orEmpty())
-                                            } else {
-                                                errorMessage = result.error ?: context.getString(R.string.nfc_uid_read_failed)
-                                            }
-                                            isUsbReaderBusy = false
-                                        }
-                                    },
-                                    enabled = !isUsbReaderBusy
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Nfc,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = if (isUsbReaderBusy) {
-                                            context.getString(R.string.usb_reader_waiting_card_short)
-                                        } else {
-                                            context.getString(R.string.scan_with_usb_reader)
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
                 } else {
                 // Permission denied state (polished)
                 Card(
@@ -561,12 +526,15 @@ fun QRScannerDialog(
                                 textAlign = TextAlign.Center
                             )
                             Text(
-                                text = if (nfcAdapter == null) {
-                                    context.getString(R.string.nfc_not_supported_device)
-                                } else if (!nfcAdapter.isEnabled) {
-                                    context.getString(R.string.nfc_disabled_enable)
-                                } else {
-                                    context.getString(R.string.scan_qr_or_nfc_subtitle_enabled)
+                                text = when {
+                                    hasExternalReaderConnected ->
+                                        context.getString(R.string.scan_qr_or_nfc_subtitle_usb_only)
+                                    nfcAdapter == null ->
+                                        context.getString(R.string.nfc_unavailable_no_usb_hint)
+                                    !nfcAdapter.isEnabled ->
+                                        context.getString(R.string.nfc_disabled_enable)
+                                    else ->
+                                        context.getString(R.string.scan_qr_or_nfc_subtitle_enabled)
                                 },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -586,7 +554,118 @@ fun QRScannerDialog(
                     }
                 }
                 }
-                
+
+                // NFC / USB strip: visible even without camera (same idea as AddNfcUidDialog).
+                val showNfcStrip =
+                    hasExternalReaderConnected ||
+                        (nfcAdapter != null && nfcAdapter.isEnabled)
+                if (showNfcStrip) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    val nfcStripActive =
+                        hasExternalReaderConnected ||
+                            (nfcAdapter != null && nfcAdapter.isEnabled)
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        ),
+                        border = if (nfcStripActive) {
+                            BorderStroke(
+                                1.dp,
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
+                            )
+                        } else {
+                            null
+                        },
+                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.Top,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Nfc,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .padding(top = 2.dp)
+                                    .size(20.dp),
+                                tint = if (nfcStripActive) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                }
+                            )
+
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = context.getString(R.string.scan_nfc_card_title),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (nfcStripActive) {
+                                        MaterialTheme.colorScheme.onSurface
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    }
+                                )
+                                Text(
+                                    text = when {
+                                        nfcAdapter != null && nfcAdapter.isEnabled && hasExternalReaderConnected ->
+                                            context.getString(R.string.scan_qr_or_nfc_subtitle_phone_and_usb)
+                                        nfcAdapter != null && nfcAdapter.isEnabled ->
+                                            context.getString(R.string.scan_qr_or_nfc_subtitle_enabled)
+                                        hasExternalReaderConnected ->
+                                            context.getString(R.string.scan_qr_or_nfc_subtitle_usb_only)
+                                        nfcAdapter == null ->
+                                            context.getString(R.string.nfc_unavailable_no_usb_hint)
+                                        else ->
+                                            context.getString(R.string.scan_qr_subtitle_nfc_disabled)
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                lastNfcUid?.let { uid ->
+                                    Text(
+                                        text = context.getString(R.string.last_nfc_uid_scanned, uid),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (nfcStripActive) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        }
+                                    )
+                                }
+                                if (hasExternalReaderConnected) {
+                                    Text(
+                                        text = if (isUsbReaderBusy) {
+                                            context.getString(R.string.usb_reader_waiting_card_short)
+                                        } else {
+                                            context.getString(R.string.scan_with_usb_reader)
+                                        },
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        }
+                    }
+                } else if (nfcAdapter == null && !hasExternalReaderConnected) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = context.getString(R.string.nfc_unavailable_no_usb_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
                 // Error message
                 errorMessage?.let { message ->
                     Spacer(modifier = Modifier.height(16.dp))

@@ -51,6 +51,7 @@ fun VolunteerScreen(
     onUpdateVolunteer: (Volunteer) -> Unit,
     onDeleteVolunteer: (Volunteer, Boolean) -> Unit,
     jobTypeConfigs: List<JobTypeConfig> = emptyList(),
+    onConfirmFutureEntry: ((Job, Int) -> Unit)? = null,
     scrollBehavior: String = SettingsManager.FULL_SCROLL
 ) {
     val context = LocalContext.current
@@ -276,32 +277,46 @@ fun VolunteerScreen(
         val filteredJobsForVolunteer = remember(showDetailPanel?.id, volunteerJobs) {
             volunteerJobs.filter { it.volunteerId == showDetailPanel?.id }
         }
-        
-        Dialog(onDismissRequest = { showDetailPanel = null }) {
-            VolunteerDetailPanel(
-                volunteer = showDetailPanel!!,
-                volunteerJobs = filteredJobsForVolunteer,
-                venues = venues,
-                jobTypeConfigs = jobTypeConfigs,
-                onEdit = { volunteer ->
-                    showDetailPanel = null
-                    showEditDialog = volunteer
-                },
-                onAssignNfcUid = { volunteer, uid ->
-                    onUpdateVolunteer(
-                        volunteer.copy(
-                            nfcCardUid = uid,
-                            lastModified = System.currentTimeMillis()
-                        )
+        val volunteerDetailTablet = isTablet()
+        Dialog(
+            onDismissRequest = { showDetailPanel = null },
+            properties = DialogProperties(usePlatformDefaultWidth = !volunteerDetailTablet)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(
+                        if (volunteerDetailTablet) Modifier.padding(getTabletDialogScreenEdgeInset())
+                        else Modifier
                     )
-                    showDetailPanel = volunteer.copy(nfcCardUid = uid)
-                },
-                onDelete = { volunteer ->
-                    showDetailPanel = null
-                    showDeleteDialog = volunteer
-                },
-                onClose = { showDetailPanel = null }
-            )
+            ) {
+                VolunteerDetailPanel(
+                    modifier = Modifier.fillMaxSize(),
+                    volunteer = showDetailPanel!!,
+                    volunteerJobs = filteredJobsForVolunteer,
+                    venues = venues,
+                    jobTypeConfigs = jobTypeConfigs,
+                    onConfirmFutureEntry = onConfirmFutureEntry,
+                    onEdit = { volunteer ->
+                        showDetailPanel = null
+                        showEditDialog = volunteer
+                    },
+                    onAssignNfcUid = { volunteer, uid ->
+                        onUpdateVolunteer(
+                            volunteer.copy(
+                                nfcCardUid = uid,
+                                lastModified = System.currentTimeMillis()
+                            )
+                        )
+                        showDetailPanel = volunteer.copy(nfcCardUid = uid)
+                    },
+                    onDelete = { volunteer ->
+                        showDetailPanel = null
+                        showDeleteDialog = volunteer
+                    },
+                    onClose = { showDetailPanel = null }
+                )
+            }
         }
     }
     
@@ -425,8 +440,6 @@ fun AddVolunteerDialog(
     val isCompact = isCompactScreen()
     val scrollState = rememberScrollState()
     val isTabletDevice = isTablet()
-    val tabletMaxWidth = getTabletConstrainedDialogMaxWidth()
-    val tabletMaxHeight = getTabletConstrainedDialogMaxHeight()
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -439,15 +452,15 @@ fun AddVolunteerDialog(
                 .then(
                     if (isTabletDevice) {
                         Modifier
-                            .widthIn(max = tabletMaxWidth)
-                            .heightIn(max = tabletMaxHeight)
+                            .fillMaxSize()
+                            .padding(getTabletDialogScreenEdgeInset())
                     } else {
                         Modifier
                             .fillMaxWidth()
                             .fillMaxHeight(0.9f)
+                            .padding(16.dp)
                     }
                 )
-                .padding(16.dp)
         ) {
             Card(
                 modifier = Modifier.fillMaxSize(),
@@ -639,8 +652,6 @@ fun EditVolunteerDialog(
     val isCompact = isCompactScreen()
     val scrollState = rememberScrollState()
     val isTabletDevice = isTablet()
-    val tabletMaxWidth = getTabletConstrainedDialogMaxWidth()
-    val tabletMaxHeight = getTabletConstrainedDialogMaxHeight()
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -648,35 +659,38 @@ fun EditVolunteerDialog(
             usePlatformDefaultWidth = !isTabletDevice
         )
     ) {
-        Card(
+        Box(
             modifier = Modifier
                 .then(
                     if (isTabletDevice) {
                         Modifier
-                            .widthIn(max = tabletMaxWidth)
-                            .heightIn(max = tabletMaxHeight)
+                            .fillMaxSize()
+                            .padding(getTabletDialogScreenEdgeInset())
                     } else {
                         Modifier
                             .fillMaxWidth()
                             .fillMaxHeight(0.9f)
+                            .padding(16.dp)
                     }
                 )
-                .padding(16.dp),
-            shape = RoundedCornerShape(16.dp)
         ) {
-            Column(
-                modifier = Modifier.fillMaxSize()
+            Card(
+                modifier = Modifier.fillMaxSize(),
+                shape = RoundedCornerShape(16.dp)
             ) {
-                // Header
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier.fillMaxSize()
                 ) {
-                    Text(
-                        text = if (isCompact) context.getString(R.string.edit_volunteer) else context.getString(R.string.edit_volunteer_details),
+                    // Header
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (isCompact) context.getString(R.string.edit_volunteer) else context.getString(R.string.edit_volunteer_details),
                         style = if (isTabletDevice) getTabletConstrainedTitleTypography() else getResponsiveTypography(),
                         fontWeight = FontWeight.Bold
                     )
@@ -829,6 +843,7 @@ fun EditVolunteerDialog(
                     ) {
                         Text(context.getString(R.string.update_volunteer))
                     }
+                }
                 }
             }
         }

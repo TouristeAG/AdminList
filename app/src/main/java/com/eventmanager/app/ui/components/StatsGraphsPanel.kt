@@ -2906,13 +2906,12 @@ private fun calculateActiveVolunteersData(
     return dataPoints.ifEmpty { emptyList() }
 }
 
-@Suppress("UNUSED_PARAMETER")
 private fun calculateFreeDrinksData(
-    volunteers: List<Volunteer>,  // Kept for API consistency with other graph functions
+    volunteers: List<Volunteer>,
     jobs: List<Job>,
     jobTypeConfigs: List<JobTypeConfig>,
     timePeriod: TimePeriod,
-    offsetHours: Int = 0  // Kept for API consistency with other graph functions
+    offsetHours: Int = 0
 ): List<DataPoint> {
     val now = System.currentTimeMillis()
     val startTime = if (timePeriod == TimePeriod.MAX) {
@@ -2923,90 +2922,32 @@ private fun calculateFreeDrinksData(
 
     val dateFormat = getDateFormat(timePeriod, startTime, now)
     val aggregationMs = getAggregationPeriodMs(timePeriod)
-    
-    // OPTIMIZATION: Pre-compute job type sets once (O(jobTypeConfigs))
-    val shiftJobTypeNames = jobTypeConfigs
-        .filter { it.isShiftJob && it.isActive }
-        .mapTo(HashSet()) { it.name }
-    
-    val manualRewardJobTypes = jobTypeConfigs
-        .filter { it.benefitSystemType == com.eventmanager.app.data.models.BenefitSystemType.MANUAL && it.manualRewards != null }
-        .associateBy { it.name }
-    
-    // OPTIMIZATION: Pre-filter and sort NOVA shifts once - O(jobs) instead of O(periods * jobs)
-    // Only include shifts within our time range
-    val novaShiftsSorted = jobs
-        .filter { job ->
-            job.date >= startTime &&
-            job.shiftTime == com.eventmanager.app.data.models.ShiftTime.BEFORE_MIDNIGHT &&
-            shiftJobTypeNames.contains(job.jobTypeName)
-        }
-        .sortedBy { it.date }
-    
-    // OPTIMIZATION: Pre-compute manual reward periods once - O(volunteers * jobs) total, done once
-    // Instead of O(periods * volunteers * jobs)
-    // Store: (rewardStart, rewardEnd, freeDrinks) for each volunteer with active manual rewards
-    data class ManualRewardPeriod(val start: Long, val end: Long, val drinks: Int)
-    
-    val manualRewardPeriods = if (manualRewardJobTypes.isNotEmpty()) {
-        // Group jobs by volunteer ID once
-        val jobsByVolunteerId = jobs
-            .filter { manualRewardJobTypes.containsKey(it.jobTypeName) }
-            .groupBy { it.volunteerId }
-        
-        jobsByVolunteerId.mapNotNull { (_, volunteerJobs) ->
-            val mostRecentJob = volunteerJobs.maxByOrNull { it.date } ?: return@mapNotNull null
-            val jobTypeConfig = manualRewardJobTypes[mostRecentJob.jobTypeName] ?: return@mapNotNull null
-            val manualRewards = jobTypeConfig.manualRewards ?: return@mapNotNull null
-            
-            if (manualRewards.freeDrinks <= 0) return@mapNotNull null
-            
-            val rewardStart = mostRecentJob.date
-            val rewardEnd = rewardStart + (manualRewards.durationDays * 24L * 60 * 60 * 1000)
-            
-            // Only include if reward period overlaps with our time range
-            if (rewardEnd < startTime) return@mapNotNull null
-            
-            ManualRewardPeriod(rewardStart, rewardEnd, manualRewards.freeDrinks)
-        }
-    } else {
-        emptyList()
-    }
-    
-    // Generate data points using optimized sliding window approach
+
+    // Same source of truth as volunteer benefits: Nova subtypes, Galaxie bonus drink, manual rewards, etc.
     val dataPoints = mutableListOf<DataPoint>()
     var currentDate = startTime
-    var novaStartIndex = 0  // Sliding window start for NOVA shifts
-    
+
     while (currentDate <= now) {
-        val periodEnd = currentDate + aggregationMs
         var totalDrinks = 0
-        
-        // OPTIMIZED Source 1: Count NOVA shifts using sliding window on sorted list
-        // Advance start index past shifts before current period (they won't be needed again)
-        while (novaStartIndex < novaShiftsSorted.size && novaShiftsSorted[novaStartIndex].date < currentDate) {
-            novaStartIndex++
-        }
-        // Count shifts in current period from the start index
-        var novaCount = 0
-        var tempIndex = novaStartIndex
-        while (tempIndex < novaShiftsSorted.size && novaShiftsSorted[tempIndex].date < periodEnd) {
-            novaCount++
-            tempIndex++
-        }
-        totalDrinks += novaCount * 2  // 2 drink tokens per NOVA shift
-        
-        // OPTIMIZED Source 2: Check pre-computed manual reward periods (simple overlap check)
-        // This is O(manualRewardPeriods) per period, but manualRewardPeriods is typically small
-        for (reward in manualRewardPeriods) {
-            if (reward.end >= currentDate && reward.start < periodEnd) {
-                totalDrinks += reward.drinks
+        for (volunteer in volunteers) {
+            val jobsUpToThisDate = jobs.filter { job ->
+                job.volunteerId == volunteer.id && job.date <= currentDate
+            }
+            val benefitStatus = com.eventmanager.app.data.models.BenefitCalculator.calculateVolunteerBenefitStatus(
+                volunteer = volunteer,
+                jobs = jobsUpToThisDate,
+                jobTypeConfigs = jobTypeConfigs,
+                currentTime = currentDate,
+                offsetHours = offsetHours
+            )
+            if (benefitStatus.benefits.isActive) {
+                totalDrinks += benefitStatus.benefits.drinkTokens
             }
         }
-        
+
         val label = dateFormat(currentDate)
         dataPoints.add(DataPoint(label, totalDrinks.toFloat(), currentDate))
-        
+
         currentDate += aggregationMs
     }
 

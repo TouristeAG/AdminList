@@ -259,37 +259,53 @@ fun getResponsiveMinTouchTarget(): Dp {
 }
 
 // ============================================================================
-// TABLET-CONSTRAINED DIALOG UTILITIES
-// These functions provide smaller, more constrained sizes for tablets to prevent
-// dialogs and UI elements from becoming too large on bigger screens.
-// Phone UI remains unchanged - these only affect tablets.
+// TABLET DIALOG UTILITIES
+// On tablets, dialogs use almost the full screen with a small fixed inset from
+// each edge so windows never touch the display border. Phones are unchanged.
 // ============================================================================
 
 /**
- * Returns a constrained maximum width for dialogs on tablets.
- * On phones, returns a large value (effectively no constraint).
- * On tablets, returns a reasonable max width to prevent dialogs from being too wide.
+ * Horizontal/vertical inset between dialog content and the physical screen edge on tablets.
+ * Phones use 0.dp (callers apply their own padding where needed).
  */
 @Composable
-fun getTabletConstrainedDialogMaxWidth(): Dp {
+fun getTabletDialogScreenEdgeInset(): Dp {
     return when (getScreenSize()) {
-        ScreenSize.COMPACT -> 600.dp  // Large enough to not constrain phones
-        ScreenSize.MEDIUM -> 420.dp   // Small tablets: constrained width
-        ScreenSize.EXPANDED -> 480.dp // Large tablets: slightly wider but still constrained
+        ScreenSize.COMPACT -> 0.dp
+        ScreenSize.MEDIUM -> 16.dp
+        ScreenSize.EXPANDED -> 24.dp
     }
 }
 
 /**
- * Returns a constrained maximum height for dialogs on tablets.
- * On phones, returns a large value (effectively no constraint).
- * On tablets, returns a reasonable max height to prevent dialogs from being too tall.
+ * Maximum width for tablet dialogs that size themselves with [Modifier.widthIn] (e.g. QR sheets,
+ * alert-style cards). Equals the screen width minus twice [getTabletDialogScreenEdgeInset].
+ * On phones, returns a large value (effectively no constraint for those call sites).
+ */
+@Composable
+fun getTabletConstrainedDialogMaxWidth(): Dp {
+    val configuration = LocalConfiguration.current
+    return when (getScreenSize()) {
+        ScreenSize.COMPACT -> 600.dp
+        ScreenSize.MEDIUM, ScreenSize.EXPANDED -> {
+            val inset = getTabletDialogScreenEdgeInset()
+            (configuration.screenWidthDp.dp - inset * 2).coerceAtLeast(280.dp)
+        }
+    }
+}
+
+/**
+ * Maximum height for tablet dialogs using [Modifier.heightIn], same rule as max width.
  */
 @Composable
 fun getTabletConstrainedDialogMaxHeight(): Dp {
+    val configuration = LocalConfiguration.current
     return when (getScreenSize()) {
-        ScreenSize.COMPACT -> 800.dp  // Large enough to not constrain phones
-        ScreenSize.MEDIUM -> 500.dp   // Small tablets: constrained height
-        ScreenSize.EXPANDED -> 560.dp // Large tablets: slightly taller but still constrained
+        ScreenSize.COMPACT -> 800.dp
+        ScreenSize.MEDIUM, ScreenSize.EXPANDED -> {
+            val inset = getTabletDialogScreenEdgeInset()
+            (configuration.screenHeightDp.dp - inset * 2).coerceAtLeast(280.dp)
+        }
     }
 }
 
@@ -301,9 +317,9 @@ fun getTabletConstrainedDialogMaxHeight(): Dp {
 @Composable
 fun getTabletConstrainedQRCodeSize(): Dp {
     return when (getScreenSize()) {
-        ScreenSize.COMPACT -> 280.dp  // Good size for phones
-        ScreenSize.MEDIUM -> 240.dp   // Smaller for small tablets
-        ScreenSize.EXPANDED -> 260.dp // Slightly larger for big tablets, but still constrained
+        ScreenSize.COMPACT -> 280.dp
+        ScreenSize.MEDIUM -> 300.dp
+        ScreenSize.EXPANDED -> 340.dp
     }
 }
 
@@ -372,8 +388,7 @@ fun getTabletConstrainedBodyTypography(): TextStyle {
 fun getTabletConstrainedDialogPadding(): Dp {
     return when (getScreenSize()) {
         ScreenSize.COMPACT -> 16.dp
-        ScreenSize.MEDIUM -> 16.dp   // Same as phone
-        ScreenSize.EXPANDED -> 20.dp // Slightly larger
+        ScreenSize.MEDIUM, ScreenSize.EXPANDED -> 0.dp // Outer max size already includes screen inset
     }
 }
 

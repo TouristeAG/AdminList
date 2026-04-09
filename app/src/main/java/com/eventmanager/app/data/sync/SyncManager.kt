@@ -35,6 +35,25 @@ class SyncManager(
             SyncResult.Error("Full sync failed: ${e.message}")
         }
     }
+
+    /**
+     * Runs [GoogleSheetsService.validateAndRepairSheetsStructure] first (adds missing columns
+     * such as Admin on guest/volunteer tabs), then a full download from Google Sheets.
+     * Used before admin NFC/QR gate so the sheet matches the app schema and Admin cells exist.
+     */
+    suspend fun repairSheetStructureThenFullDownload(): SyncResult {
+        return try {
+            googleSheetsService.initializeSheetsService()
+            val structureOk = googleSheetsService.validateAndRepairSheetsStructure()
+            if (!structureOk) {
+                println("⚠️ Sheet structure validation returned false; continuing with full download")
+            }
+            twoWaySyncService.syncFromGoogleSheets()
+            SyncResult.Success("Sheets structure checked and full sync completed")
+        } catch (e: Exception) {
+            SyncResult.Error("Sheet repair/sync failed: ${e.message}")
+        }
+    }
     
     /**
      * DIFFERENTIAL SYNC MODE: Download from Google Sheets and update only what changed
