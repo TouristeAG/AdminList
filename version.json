@@ -1,8 +1,8 @@
 {
-  "latestVersionCode": 13,
-  "latestVersionName": "0.9.9.3",
-  "minSupportedVersionCode": "13",
-  "changelogShort": "New volunteer benefit system, New admin login, New setup instruction, New multiple one time entry tickets management as benefit system with",
-  "downloadUrl": "https://github.com/TouristeAG/AdminList/releases/download/0.9.9.2/app-release-0.9.9.3.apk",
+  "latestVersionCode": 14,
+  "latestVersionName": "0.9.9.4",
+  "minSupportedVersionCode": "14",
+  "changelogShort": "A lot of new stuff and bug fixes",
+  "downloadUrl": "https://github.com/TouristeAG/AdminList/releases/download/0.9.9.4/app-release-0.9.9.4.apk",
   "storeUrl": "https://play.google.com/store/apps/details?id=com.eventmanager.app"
 }
