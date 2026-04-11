@@ -46,6 +46,9 @@
 -keep class com.google.zxing.** { *; }
 -keep class com.journeyapps.** { *; }
 
+# ACS Bluetooth reader library (ACR1255U-J1)
+-keep class com.acs.bluetooth.** { *; }
+
 # Keep Apache POI classes
 -keep class org.apache.poi.** { *; }
 

@@ -69,7 +69,9 @@ private fun FutureEntrySelectionBlock(
     futureEntryGroupsByInvites: List<com.eventmanager.app.data.utils.FutureEntryGroup>,
     futureEntriesByShiftAndRank: List<ShiftEntryInfo>,
     selectedFutureEntryGroupInvites: Int?,
-    onSelectGroup: (Int) -> Unit
+    onSelectGroup: (Int) -> Unit,
+    /** When false (e.g. Billeterie), hide per-shift breakdown under ticket-type cards. */
+    showShiftBreakdown: Boolean = true
 ) {
     futureEntryGroupsByInvites.forEach { group ->
         val isSelected = group.invites == selectedFutureEntryGroupInvites
@@ -120,7 +122,7 @@ private fun FutureEntrySelectionBlock(
         }
     }
 
-    if (futureEntriesByShiftAndRank.isNotEmpty()) {
+    if (showShiftBreakdown && futureEntriesByShiftAndRank.isNotEmpty()) {
         Column(
             verticalArrangement = Arrangement.spacedBy(3.dp),
             modifier = Modifier
@@ -150,7 +152,9 @@ fun VolunteerBenefitsPanel(
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
     onConfirmEntry: ((Job, Int) -> Unit)? = null,
-    onAssignNfcUid: ((Volunteer, String) -> Unit)? = null
+    onAssignNfcUid: ((Volunteer, String) -> Unit)? = null,
+    /** When true (e.g. Billeterie), hide NFC/QR, identifiers, shift history; future-entry UI stays (no shift breakdown). */
+    readOnly: Boolean = false
 ) {
     val context = LocalContext.current
     val isPhone = !isTablet()
@@ -178,13 +182,35 @@ fun VolunteerBenefitsPanel(
     val benefit = volunteerBenefitStatus.benefits
     val configsByName = remember(jobTypeConfigs) { jobTypeConfigs.associateBy { it.name } }
     val offsetHours = remember { SettingsManager(context).getDateChangeOffsetHours() }
+    val meetingNovaBenefitsExcludedForOrion = remember(volunteerJobs, jobTypeConfigs, offsetHours) {
+        val t = System.currentTimeMillis()
+        BenefitCalculator.isVolunteerOrionActive(volunteerJobs, jobTypeConfigs, t, offsetHours)
+    }
+    val benefitForPerkList = remember(
+        volunteerBenefitStatus.benefits,
+        volunteerBenefitStatus.activeBenefits,
+        meetingNovaBenefitsExcludedForOrion
+    ) {
+        val b = volunteerBenefitStatus.benefits
+        if (!meetingNovaBenefitsExcludedForOrion) b
+        else {
+            val leak = volunteerBenefitStatus.activeBenefits
+                .asSequence()
+                .filter { it.isNovaMeetingOnlyStylePerk() }
+                .sumOf { it.drinkTokens }
+            if (leak <= 0) b
+            else b.copy(drinkTokens = (b.drinkTokens - leak).coerceAtLeast(0))
+        }
+    }
     // Scalar key that changes whenever any job's entry counter or timestamp is modified.
     // Prevents stale remember caches inside Dialog compositions where list-equality
     // checks on the volunteerJobs key may not propagate reliably.
     val jobsVersion = remember(volunteerJobs) {
         volunteerJobs.fold(0L) { acc, j -> acc + j.lastModified + (j.benefitFutureEntriesRemaining ?: 0) }
     }
-    val futureEntriesByShiftAndRank = remember(volunteerJobs, configsByName, offsetHours, jobsVersion) {
+    val futureEntriesByShiftAndRank = remember(
+        volunteerJobs, configsByName, offsetHours, jobsVersion, meetingNovaBenefitsExcludedForOrion
+    ) {
         val evaluationTime = System.currentTimeMillis()
         volunteerJobs
             .asSequence()
@@ -192,7 +218,7 @@ fun VolunteerBenefitsPanel(
                 val config = configsByName[job.jobTypeName]
                 if (!jobTypeSupportsTrackedFutureEntries(job, config)) return@mapNotNull null
                 val remaining = effectiveBenefitFutureEntriesRemaining(
-                    job, config, evaluationTime, offsetHours
+                    job, config, evaluationTime, offsetHours, meetingNovaBenefitsExcludedForOrion
                 ).coerceAtLeast(0)
                 if (remaining <= 0) return@mapNotNull null
                 val invites = com.eventmanager.app.data.utils.effectiveBenefitFutureEntryInvites(job, config)
@@ -205,9 +231,15 @@ fun VolunteerBenefitsPanel(
             .sortedByDescending { it.job.date }
             .toList()
     }
-    val futureEntryGroupsByInvites = remember(volunteerJobs, configsByName, offsetHours, jobsVersion) {
+    val futureEntryGroupsByInvites = remember(
+        volunteerJobs, configsByName, offsetHours, jobsVersion, meetingNovaBenefitsExcludedForOrion
+    ) {
         com.eventmanager.app.data.utils.groupFutureEntriesByInvites(
-            volunteerJobs, configsByName, System.currentTimeMillis(), offsetHours
+            volunteerJobs,
+            configsByName,
+            System.currentTimeMillis(),
+            offsetHours,
+            meetingNovaBenefitsExcludedForOrion
         )
     }
     val totalFutureEntriesRemaining = remember(futureEntriesByShiftAndRank) {
@@ -222,15 +254,20 @@ fun VolunteerBenefitsPanel(
             selectedFutureEntryGroupInvites = futureEntryGroupsByInvites.firstOrNull()?.invites
         }
     }
-    val activeBenefitsWithPerks = remember(volunteerBenefitStatus.activeBenefits) {
-        volunteerBenefitStatus.activeBenefits.filter { activeBenefit ->
-            activeBenefit.freeEntry ||
-                activeBenefit.friendInvitation ||
-                activeBenefit.inviteCount > 0 ||
-                activeBenefit.drinkTokens > 0 ||
-                activeBenefit.barDiscount > 0 ||
-                activeBenefit.extraordinaryBenefits
-        }
+    val activeBenefitsWithPerks = remember(
+        volunteerBenefitStatus.activeBenefits,
+        meetingNovaBenefitsExcludedForOrion
+    ) {
+        volunteerBenefitStatus.activeBenefits
+            .filter { activeBenefit ->
+                activeBenefit.freeEntry ||
+                    activeBenefit.friendInvitation ||
+                    activeBenefit.inviteCount > 0 ||
+                    activeBenefit.drinkTokens > 0 ||
+                    activeBenefit.barDiscount > 0 ||
+                    activeBenefit.extraordinaryBenefits
+            }
+            .filterNot { meetingNovaBenefitsExcludedForOrion && it.isNovaMeetingOnlyStylePerk() }
     }
     
     Box(
@@ -516,62 +553,64 @@ fun VolunteerBenefitsPanel(
                     ),
                     verticalArrangement = Arrangement.spacedBy(if (isPhone) 8.dp else 12.dp)
                 ) {
-                    // Actions (QR Code)
-                    item {
-                        if (isPhone) {
-                            Column(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                OutlinedButton(
-                                    onClick = { showNfcDialog = true },
-                                    modifier = Modifier.fillMaxWidth()
+                    // Actions (NFC / QR) — admin only
+                    if (!readOnly) {
+                        item {
+                            if (isPhone) {
+                                Column(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    Icon(Icons.Default.Nfc, contentDescription = null, modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(context.getString(R.string.add_nfc_card))
-                                }
+                                    OutlinedButton(
+                                        onClick = { showNfcDialog = true },
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Icon(Icons.Default.Nfc, contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(context.getString(R.string.add_nfc_card))
+                                    }
 
-                                OutlinedButton(
-                                    onClick = { showQrDialog = true },
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Icon(Icons.Default.QrCode, contentDescription = null, modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(context.getString(R.string.qr_code))
+                                    OutlinedButton(
+                                        onClick = { showQrDialog = true },
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Icon(Icons.Default.QrCode, contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(context.getString(R.string.qr_code))
+                                    }
                                 }
-                            }
-                        } else {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                OutlinedButton(
-                                    onClick = { showNfcDialog = true },
-                                    modifier = Modifier.weight(1f)
+                            } else {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
-                                    Icon(Icons.Default.Nfc, contentDescription = null, modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(context.getString(R.string.add_nfc_card))
-                                }
+                                    OutlinedButton(
+                                        onClick = { showNfcDialog = true },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Icon(Icons.Default.Nfc, contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(context.getString(R.string.add_nfc_card))
+                                    }
 
-                                OutlinedButton(
-                                    onClick = { showQrDialog = true },
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Icon(Icons.Default.QrCode, contentDescription = null, modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(context.getString(R.string.qr_code))
+                                    OutlinedButton(
+                                        onClick = { showQrDialog = true },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Icon(Icons.Default.QrCode, contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(context.getString(R.string.qr_code))
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    item {
-                        NfcUidInfoRow(
-                            uid = volunteer.nfcCardUid,
-                            isPhone = isPhone
-                        )
+                        item {
+                            NfcUidInfoRow(
+                                uid = volunteer.nfcCardUid,
+                                isPhone = isPhone
+                            )
+                        }
                     }
 
                     // Benefit details
@@ -679,7 +718,8 @@ fun VolunteerBenefitsPanel(
                                             futureEntryGroupsByInvites = futureEntryGroupsByInvites,
                                             futureEntriesByShiftAndRank = futureEntriesByShiftAndRank,
                                             selectedFutureEntryGroupInvites = selectedFutureEntryGroupInvites,
-                                            onSelectGroup = { selectedFutureEntryGroupInvites = it }
+                                            onSelectGroup = { selectedFutureEntryGroupInvites = it },
+                                            showShiftBreakdown = !readOnly
                                         )
                                     }
                                 } else {
@@ -688,14 +728,14 @@ fun VolunteerBenefitsPanel(
                                         verticalArrangement = Arrangement.spacedBy(if (isPhone) 4.dp else 8.dp)
                                     ) {
                                         listOfNotNull(
-                                            if (benefit.freeEntry) context.getString(R.string.free_entry) else null,
-                                            if (benefit.friendInvitation) {
-                                                if (benefit.inviteCount > 1) context.getString(R.string.invites_n, benefit.inviteCount)
+                                            if (benefitForPerkList.freeEntry) context.getString(R.string.free_entry) else null,
+                                            if (benefitForPerkList.friendInvitation) {
+                                                if (benefitForPerkList.inviteCount > 1) context.getString(R.string.invites_n, benefitForPerkList.inviteCount)
                                                 else context.getString(R.string.friend_invitation)
                                             } else null,
-                                            if (benefit.drinkTokens > 0) context.getString(R.string.drink_tokens, benefit.drinkTokens) else null,
-                                            if (benefit.barDiscount > 0) context.getString(R.string.bar_discount, benefit.barDiscount) else null,
-                                            if (benefit.extraordinaryBenefits) context.getString(R.string.extraordinary_benefits) else null
+                                            if (benefitForPerkList.drinkTokens > 0) context.getString(R.string.drink_tokens, benefitForPerkList.drinkTokens) else null,
+                                            if (benefitForPerkList.barDiscount > 0) context.getString(R.string.bar_discount, benefitForPerkList.barDiscount) else null,
+                                            if (benefitForPerkList.extraordinaryBenefits) context.getString(R.string.extraordinary_benefits) else null
                                         ).forEach { benefitText ->
                                             Row(
                                                 verticalAlignment = Alignment.CenterVertically,
@@ -725,7 +765,8 @@ fun VolunteerBenefitsPanel(
                                                 futureEntryGroupsByInvites = futureEntryGroupsByInvites,
                                                 futureEntriesByShiftAndRank = futureEntriesByShiftAndRank,
                                                 selectedFutureEntryGroupInvites = selectedFutureEntryGroupInvites,
-                                                onSelectGroup = { selectedFutureEntryGroupInvites = it }
+                                                onSelectGroup = { selectedFutureEntryGroupInvites = it },
+                                                showShiftBreakdown = !readOnly
                                             )
                                         }
                                 }
@@ -733,29 +774,36 @@ fun VolunteerBenefitsPanel(
                         }
                     }
 
-                    item {
-                        VolunteerFutureEntriesSection(
-                            volunteerJobs = volunteerJobs,
-                            jobTypeConfigs = jobTypeConfigs,
-                            onConfirmEntry = onConfirmEntry,
-                            externalSelectedGroupInvites = selectedFutureEntryGroupInvites,
-                            onExternalGroupInvitesChanged = { selectedFutureEntryGroupInvites = it },
-                            showGroupSelector = false
-                        )
+                    if (onConfirmEntry != null) {
+                        item {
+                            VolunteerFutureEntriesSection(
+                                volunteerJobs = volunteerJobs,
+                                jobTypeConfigs = jobTypeConfigs,
+                                onConfirmEntry = onConfirmEntry,
+                                externalSelectedGroupInvites = selectedFutureEntryGroupInvites,
+                                onExternalGroupInvitesChanged = { selectedFutureEntryGroupInvites = it },
+                                showGroupSelector = false,
+                                hasActiveFreeEntryBenefit = benefit.freeEntry,
+                                meetingNovaBenefitsExcludedForOrion = meetingNovaBenefitsExcludedForOrion,
+                                hideSecondaryGroupSummary = readOnly
+                            )
+                        }
                     }
                     
                     // Shift History Section
-                    item {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(if (isPhone) 8.dp else 12.dp)
-                        ) {
-                            Spacer(modifier = Modifier.height(if (isPhone) 8.dp else 12.dp))
-                            
-                            ShiftHistorySection(
-                                jobs = volunteerJobs.sortedByDescending { it.date },
-                                isPhone = isPhone,
-                                venues = venues
-                            )
+                    if (!readOnly) {
+                        item {
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(if (isPhone) 8.dp else 12.dp)
+                            ) {
+                                Spacer(modifier = Modifier.height(if (isPhone) 8.dp else 12.dp))
+
+                                ShiftHistorySection(
+                                    jobs = volunteerJobs.sortedByDescending { it.date },
+                                    isPhone = isPhone,
+                                    venues = venues
+                                )
+                            }
                         }
                     }
                 }
@@ -809,10 +857,7 @@ fun VolunteerBenefitsPanel(
                         fontWeight = FontWeight.Bold
                     )
                     
-                    val payload = remember(volunteer) {
-                        println("🔍 Generating QR code for volunteer: ${volunteer.name} (ID: ${volunteer.id})")
-                        volunteer.id
-                    }
+                    val payload = remember(volunteer) { volunteer.id }
                     val qrImage = remember(payload) { QRCodeUtils.generateQrImageBitmap(payload, 1024) }
                     val qrContext = LocalContext.current
                     
@@ -822,7 +867,39 @@ fun VolunteerBenefitsPanel(
                             .verticalScroll(rememberScrollState()),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        if (qrImage != null) {
+                        if (readOnly) {
+                            if (qrImage != null) {
+                                StaffObfuscatedQrPreview(
+                                    qrImage = qrImage,
+                                    isPhone = isPhone,
+                                    isTabletDevice = isTabletDevice,
+                                    tabletQrSize = tabletQrSize
+                                )
+                                Spacer(modifier = Modifier.height(if (isPhone) 12.dp else 16.dp))
+                                Button(
+                                    onClick = {
+                                        showQrDialog = false
+                                        if (volunteer.email.isNotBlank()) {
+                                            showEmailConfirmDialog = true
+                                        } else {
+                                            showNoEmailDialog = true
+                                        }
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(if (isTabletDevice) 48.dp else 64.dp)
+                                ) {
+                                    Icon(Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(qrContext.getString(R.string.email_send_api))
+                                }
+                            } else {
+                                Text(
+                                    text = qrContext.getString(R.string.failed_to_generate_qr_code),
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        } else if (qrImage != null) {
                             Image(
                                 bitmap = qrImage,
                                 contentDescription = qrContext.getString(R.string.volunteer_qr_code),
@@ -850,7 +927,7 @@ fun VolunteerBenefitsPanel(
                             ) {
                                 OutlinedButton(
                                     onClick = {
-                                        qrImage?.let { bitmap ->
+                                        qrImage.let { bitmap ->
                                             try {
                                                 val file = File(qrContext.cacheDir, "qr_code_${volunteer.id}.png")
                                                 val outputStream = FileOutputStream(file)
@@ -872,7 +949,6 @@ fun VolunteerBenefitsPanel(
                                                 }
                                                 qrContext.startActivity(Intent.createChooser(shareIntent, qrContext.getString(R.string.share_qr_code)))
                                             } catch (e: Exception) {
-                                                // Fallback to text sharing if image sharing fails
                                                 val shareIntent = Intent(Intent.ACTION_SEND).apply {
                                                     type = "text/plain"
                                                     putExtra(Intent.EXTRA_SUBJECT, "Volunteer QR")
@@ -895,7 +971,6 @@ fun VolunteerBenefitsPanel(
                                 }
                                 OutlinedButton(
                                     onClick = {
-                                        // Check if volunteer has email
                                         if (volunteer.email.isNotBlank()) {
                                             showEmailConfirmDialog = true
                                         } else {
@@ -1353,29 +1428,31 @@ fun VolunteerBenefitsPanel(
                     
                     HorizontalDivider()
                     
-                    // Manual Send Option
-                    OutlinedButton(
-                        onClick = {
-                            showEmailConfirmDialog = false
-                            sendEmailManually(emailContext, settingsManager, volunteer)
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.padding(8.dp)
+                    // Manual Send Option — admin only (Billeterie: Gmail API only so staff cannot extract the QR)
+                    if (!readOnly) {
+                        OutlinedButton(
+                            onClick = {
+                                showEmailConfirmDialog = false
+                                sendEmailManually(emailContext, settingsManager, volunteer)
+                            },
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Icon(Icons.Default.Send, contentDescription = null)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = emailContext.getString(R.string.email_send_manual),
-                                style = MaterialTheme.typography.titleSmall
-                            )
-                            Text(
-                                text = emailContext.getString(R.string.email_send_manual_description),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.padding(8.dp)
+                            ) {
+                                Icon(Icons.Default.Send, contentDescription = null)
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = emailContext.getString(R.string.email_send_manual),
+                                    style = MaterialTheme.typography.titleSmall
+                                )
+                                Text(
+                                    text = emailContext.getString(R.string.email_send_manual_description),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
                     

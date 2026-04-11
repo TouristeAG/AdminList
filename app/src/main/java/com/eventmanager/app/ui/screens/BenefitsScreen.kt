@@ -12,16 +12,21 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.HelpOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
 import com.eventmanager.app.data.models.*
 import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.data.utils.groupFutureEntriesByInvites
+import com.eventmanager.app.ui.components.BenefitsSystemHelpDialog
 import com.eventmanager.app.ui.components.SearchBarWithFilter
 import com.eventmanager.app.ui.utils.*
 import com.eventmanager.app.R
@@ -33,6 +38,393 @@ fun getRankDisplayName(rank: VolunteerRank?): String {
     return when (rank) {
         VolunteerRank.SPECIAL -> "✨SPECIAL✨"
         else -> rank?.name ?: context.getString(R.string.no_rank)
+    }
+}
+
+private fun perkBenefitForDisplay(
+    status: VolunteerBenefitStatus,
+    volunteerJobs: List<Job>,
+    jobTypeConfigs: List<JobTypeConfig>,
+    offsetHours: Int,
+    currentTime: Long = System.currentTimeMillis(),
+): Benefit {
+    val excluded = BenefitCalculator.isVolunteerOrionActive(volunteerJobs, jobTypeConfigs, currentTime, offsetHours)
+    val b = status.benefits
+    if (!excluded) return b
+    val leak = status.activeBenefits
+        .asSequence()
+        .filter { it.isNovaMeetingOnlyStylePerk() }
+        .sumOf { it.drinkTokens }
+    return if (leak <= 0) b else b.copy(drinkTokens = (b.drinkTokens - leak).coerceAtLeast(0))
+}
+
+private data class BenefitsDashboardAggregates(
+    val activeBenefitsCount: Int,
+    val with50Bar: Int,
+    val withFreeEntry: Int,
+    val guestSpotsWithFreeEntry: Int,
+    val withExtraordinary: Int,
+    val futureTicketsRemaining: Int,
+    val futureInviteSlotsTotal: Int,
+    val rankCounts: Map<VolunteerRank, Int>,
+    val noRankCount: Int,
+)
+
+private fun computeBenefitsDashboardAggregates(
+    rows: List<Pair<Volunteer, VolunteerBenefitStatus>>,
+    jobsByVolunteerId: Map<String, List<Job>>,
+    jobTypeConfigs: List<JobTypeConfig>,
+    offsetHours: Int,
+): BenefitsDashboardAggregates {
+    val t = System.currentTimeMillis()
+    val configsByName = jobTypeConfigs.associateBy { it.name }
+    var active = 0
+    var with50 = 0
+    var withFree = 0
+    var guestSpots = 0
+    var withExtra = 0
+    var futureTickets = 0
+    var futureInvites = 0
+    val rankMap = mutableMapOf<VolunteerRank, Int>()
+    var noRank = 0
+    rows.forEach { (volunteer, status) ->
+        if (status.benefits.isActive) active++
+        val vJobs = jobsByVolunteerId[volunteer.id].orEmpty()
+        val perk = perkBenefitForDisplay(status, vJobs, jobTypeConfigs, offsetHours, t)
+        if (perk.barDiscount > 0) with50++
+        if (perk.freeEntry) {
+            withFree++
+            guestSpots += perk.inviteCount + if (perk.friendInvitation) 1 else 0
+        }
+        if (perk.extraordinaryBenefits) withExtra++
+        val excluded = BenefitCalculator.isVolunteerOrionActive(vJobs, jobTypeConfigs, t, offsetHours)
+        groupFutureEntriesByInvites(vJobs, configsByName, t, offsetHours, excluded).forEach { g ->
+            futureTickets += g.totalRemaining
+            futureInvites += g.totalRemaining * g.invites
+        }
+        when (val r = status.rank) {
+            null -> noRank++
+            else -> rankMap[r] = (rankMap[r] ?: 0) + 1
+        }
+    }
+    return BenefitsDashboardAggregates(
+        activeBenefitsCount = active,
+        with50Bar = with50,
+        withFreeEntry = withFree,
+        guestSpotsWithFreeEntry = guestSpots,
+        withExtraordinary = withExtra,
+        futureTicketsRemaining = futureTickets,
+        futureInviteSlotsTotal = futureInvites,
+        rankCounts = rankMap.toMap(),
+        noRankCount = noRank,
+    )
+}
+
+private val benefitsOverviewRankOrder = listOf(
+    VolunteerRank.ORION,
+    VolunteerRank.VETERAN,
+    VolunteerRank.GALAXIE,
+    VolunteerRank.NOVA,
+    VolunteerRank.ETOILE,
+    VolunteerRank.SPECIAL,
+)
+
+@Composable
+private fun rankOverviewAccent(rank: VolunteerRank): Color {
+    val scheme = MaterialTheme.colorScheme
+    return when (rank) {
+        VolunteerRank.NOVA -> scheme.primary
+        VolunteerRank.ETOILE -> scheme.secondary
+        VolunteerRank.GALAXIE -> Color(0xFF7C3AED)
+        VolunteerRank.ORION -> scheme.error
+        VolunteerRank.VETERAN -> scheme.outline
+        VolunteerRank.SPECIAL -> scheme.tertiary
+    }
+}
+
+@Composable
+private fun BenefitsOverviewStatLine(text: String) {
+    val scheme = MaterialTheme.colorScheme
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Default.CheckCircle,
+            contentDescription = null,
+            modifier = Modifier.size(14.dp),
+            tint = scheme.primary.copy(alpha = 0.55f)
+        )
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodySmall,
+            color = scheme.onSurface,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun BenefitsRankOverviewRow(rank: VolunteerRank, count: Int) {
+    val scheme = MaterialTheme.colorScheme
+    val accent = rankOverviewAccent(rank)
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = scheme.surfaceContainerHighest.copy(alpha = 0.55f)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(3.dp)
+                    .height(22.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(accent)
+            )
+            Text(
+                text = getRankDisplayName(rank),
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.SemiBold,
+                color = scheme.onSurface,
+                modifier = Modifier.weight(1f)
+            )
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = scheme.primaryContainer.copy(alpha = 0.55f)
+            ) {
+                Text(
+                    text = count.toString(),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = scheme.onPrimaryContainer,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BenefitsOverviewNoRankRow(count: Int) {
+    val scheme = MaterialTheme.colorScheme
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = scheme.surfaceContainerHighest.copy(alpha = 0.4f)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(3.dp)
+                    .height(22.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(scheme.outlineVariant)
+            )
+            Text(
+                text = getRankDisplayName(null),
+                style = MaterialTheme.typography.bodySmall,
+                color = scheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                text = count.toString(),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = scheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun BenefitsOverviewDashboard(
+    aggregates: BenefitsDashboardAggregates,
+    onOpenHelp: () -> Unit,
+    horizontalSpacing: androidx.compose.ui.unit.Dp,
+    verticalSpacing: androidx.compose.ui.unit.Dp,
+) {
+    val context = LocalContext.current
+    val scheme = MaterialTheme.colorScheme
+    val cardPad = getResponsiveCardPadding()
+    val elev = getResponsiveCardElevation()
+    val topRowMin = 88.dp
+    val outerShape = RoundedCornerShape(18.dp)
+
+    Column(verticalArrangement = Arrangement.spacedBy(verticalSpacing)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min),
+            horizontalArrangement = Arrangement.spacedBy(horizontalSpacing),
+            verticalAlignment = Alignment.Top
+        ) {
+            Card(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .heightIn(min = topRowMin),
+                shape = outerShape,
+                colors = CardDefaults.cardColors(containerColor = scheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = elev)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(cardPad),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = aggregates.activeBenefitsCount.toString(),
+                        style = getResponsiveTypography(),
+                        fontWeight = FontWeight.Bold,
+                        color = scheme.primary
+                    )
+                    Text(
+                        text = context.getString(R.string.active_benefits),
+                        style = getResponsiveBodyTypography(),
+                        color = scheme.onSurfaceVariant
+                    )
+                }
+            }
+            TextButton(
+                onClick = onOpenHelp,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .heightIn(min = topRowMin),
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = scheme.onSurfaceVariant
+                ),
+                shape = outerShape
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
+                ) {
+                    Icon(
+                        Icons.Outlined.HelpOutline,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = scheme.onSurfaceVariant.copy(alpha = 0.75f)
+                    )
+                    Text(
+                        text = context.getString(R.string.benefits_overview_info_button),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.Center,
+                        color = scheme.onSurfaceVariant,
+                        maxLines = 2
+                    )
+                }
+            }
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min),
+            horizontalArrangement = Arrangement.spacedBy(horizontalSpacing),
+            verticalAlignment = Alignment.Top
+        ) {
+            Card(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
+                shape = outerShape,
+                colors = CardDefaults.cardColors(containerColor = scheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = elev)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(cardPad),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = context.getString(R.string.benefits_overview_totals_section),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = scheme.primary
+                    )
+                    HorizontalDivider(color = scheme.outlineVariant.copy(alpha = 0.6f))
+                    BenefitsOverviewStatLine(
+                        context.getString(R.string.benefits_overview_line_50_bar, aggregates.with50Bar)
+                    )
+                    BenefitsOverviewStatLine(
+                        context.getString(
+                            R.string.benefits_overview_line_free_entry,
+                            aggregates.withFreeEntry,
+                            aggregates.guestSpotsWithFreeEntry
+                        )
+                    )
+                    BenefitsOverviewStatLine(
+                        context.getString(
+                            R.string.benefits_overview_line_extraordinary,
+                            aggregates.withExtraordinary
+                        )
+                    )
+                    BenefitsOverviewStatLine(
+                        context.getString(
+                            R.string.benefits_overview_line_future_tickets,
+                            aggregates.futureTicketsRemaining,
+                            aggregates.futureInviteSlotsTotal
+                        )
+                    )
+                }
+            }
+            Card(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
+                shape = outerShape,
+                colors = CardDefaults.cardColors(containerColor = scheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = elev)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(cardPad),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = context.getString(R.string.benefits_overview_ranks_section),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = scheme.primary
+                    )
+                    HorizontalDivider(color = scheme.outlineVariant.copy(alpha = 0.6f))
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        benefitsOverviewRankOrder.forEach { rank ->
+                            val c = aggregates.rankCounts[rank] ?: 0
+                            if (c > 0) {
+                                BenefitsRankOverviewRow(rank = rank, count = c)
+                            }
+                        }
+                        if (aggregates.noRankCount > 0) {
+                            BenefitsOverviewNoRankRow(count = aggregates.noRankCount)
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -49,6 +441,7 @@ fun BenefitsScreen(
     val offsetHours = remember { settingsManager.getDateChangeOffsetHours() }
     var searchText by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf<String?>(null) }
+    var showBenefitsHelp by remember { mutableStateOf(false) }
     
     val volunteerBenefits = remember(volunteers, jobs, jobTypeConfigs, offsetHours) {
         val currentTime = System.currentTimeMillis()
@@ -82,15 +475,17 @@ fun BenefitsScreen(
         }.sortedBy { (volunteer, _) -> volunteer.name.lowercase() }
     }
     
-    // Memoize statistics to avoid recounting on every recomposition (used in all scrollBehavior branches)
-    val (activeBenefitsCount, highRankCount) = remember(filteredVolunteerBenefits) {
-        var active = 0
-        var highRank = 0
-        filteredVolunteerBenefits.forEach { (volunteer, status) ->
-            if (status.benefits.isActive) active++
-            if (volunteer.currentRank == VolunteerRank.ORION || volunteer.currentRank == VolunteerRank.VETERAN) highRank++
-        }
-        active to highRank
+    val dashboardStats = remember(filteredVolunteerBenefits, jobsByVolunteerId, jobTypeConfigs, offsetHours) {
+        computeBenefitsDashboardAggregates(
+            filteredVolunteerBenefits,
+            jobsByVolunteerId,
+            jobTypeConfigs,
+            offsetHours
+        )
+    }
+
+    if (showBenefitsHelp) {
+        BenefitsSystemHelpDialog(onDismiss = { showBenefitsHelp = false })
     }
 
     when (scrollBehavior) {
@@ -117,9 +512,9 @@ fun BenefitsScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(responsiveSpacing))
-            
+
             // Search and Filter Section
             SearchBarWithFilter(
                 searchText = searchText,
@@ -129,109 +524,18 @@ fun BenefitsScreen(
                 selectedFilter = selectedFilter,
                 onFilterChange = { selectedFilter = it }
             )
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
-            // Statistics (using memoized counts)
-            if (isCompact) {
-                // Stack vertically on phones
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(responsiveSpacing)
-                ) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        elevation = CardDefaults.cardElevation(defaultElevation = getResponsiveCardElevation())
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(getResponsiveCardPadding()),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = activeBenefitsCount.toString(),
-                                style = getResponsiveTypography(),
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = context.getString(R.string.active_benefits),
-                                style = getResponsiveBodyTypography(),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        elevation = CardDefaults.cardElevation(defaultElevation = getResponsiveCardElevation())
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(getResponsiveCardPadding()),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = highRankCount.toString(),
-                                style = getResponsiveTypography(),
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = context.getString(R.string.high_rank),
-                                style = getResponsiveBodyTypography(),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-            } else {
-                // Side by side on tablets
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(responsiveSpacing)
-                ) {
-                    Card(
-                        modifier = Modifier.weight(1f),
-                        elevation = CardDefaults.cardElevation(defaultElevation = getResponsiveCardElevation())
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(getResponsiveCardPadding()),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = activeBenefitsCount.toString(),
-                                style = getResponsiveTypography(),
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = context.getString(R.string.active_benefits),
-                                style = getResponsiveBodyTypography(),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    
-                    Card(
-                        modifier = Modifier.weight(1f),
-                        elevation = CardDefaults.cardElevation(defaultElevation = getResponsiveCardElevation())
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(getResponsiveCardPadding()),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = highRankCount.toString(),
-                                style = getResponsiveTypography(),
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = context.getString(R.string.high_rank),
-                                style = getResponsiveBodyTypography(),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-            }
-            
+
+            BenefitsOverviewDashboard(
+                aggregates = dashboardStats,
+                onOpenHelp = { showBenefitsHelp = true },
+                horizontalSpacing = responsiveSpacing,
+                verticalSpacing = responsiveSpacing,
+            )
+
             Spacer(modifier = Modifier.height(responsiveSpacing))
-            
+
             // Benefits list - Use LazyColumn for lazy loading and better performance
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(responsiveSpacing),
@@ -306,103 +610,18 @@ fun BenefitsScreen(
                         )
                     }
                 }
-                
-                // Statistics section - scrolls with the list (using memoized counts)
+
                 item {
-                    if (isCompact) {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(responsiveSpacing)
-                        ) {
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                elevation = CardDefaults.cardElevation(defaultElevation = getResponsiveCardElevation())
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(getResponsiveCardPadding()),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Text(
-                                        text = activeBenefitsCount.toString(),
-                                        style = getResponsiveTypography(),
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Text(
-                                        text = context.getString(R.string.active_benefits),
-                                        style = getResponsiveBodyTypography(),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                            
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                elevation = CardDefaults.cardElevation(defaultElevation = getResponsiveCardElevation())
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(getResponsiveCardPadding()),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Text(
-                                        text = highRankCount.toString(),
-                                        style = getResponsiveTypography(),
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Text(
-                                        text = context.getString(R.string.high_rank),
-                                        style = getResponsiveBodyTypography(),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        }
-                    } else {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(responsiveSpacing)
-                        ) {
-                            Card(
-                                modifier = Modifier.weight(1f),
-                                elevation = CardDefaults.cardElevation(defaultElevation = getResponsiveCardElevation())
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(getResponsiveCardPadding()),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Text(
-                                        text = activeBenefitsCount.toString(),
-                                        style = getResponsiveTypography(),
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Text(
-                                        text = context.getString(R.string.active_benefits),
-                                        style = getResponsiveBodyTypography(),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                            
-                            Card(
-                                modifier = Modifier.weight(1f),
-                                elevation = CardDefaults.cardElevation(defaultElevation = getResponsiveCardElevation())
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(getResponsiveCardPadding()),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Text(
-                                        text = highRankCount.toString(),
-                                        style = getResponsiveTypography(),
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Text(
-                                        text = context.getString(R.string.high_rank),
-                                        style = getResponsiveBodyTypography(),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        }
-                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                item {
+                    BenefitsOverviewDashboard(
+                        aggregates = dashboardStats,
+                        onOpenHelp = { showBenefitsHelp = true },
+                        horizontalSpacing = responsiveSpacing,
+                        verticalSpacing = responsiveSpacing,
+                    )
                 }
 
                 items(
@@ -468,101 +687,12 @@ fun BenefitsScreen(
                 }
 
                 item {
-                    // Statistics (using memoized counts)
-                    if (isCompact) {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(responsiveSpacing)
-                        ) {
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                elevation = CardDefaults.cardElevation(defaultElevation = getResponsiveCardElevation())
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(getResponsiveCardPadding()),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Text(
-                                        text = activeBenefitsCount.toString(),
-                                        style = getResponsiveTypography(),
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Text(
-                                        text = context.getString(R.string.active_benefits),
-                                        style = getResponsiveBodyTypography(),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                            
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                elevation = CardDefaults.cardElevation(defaultElevation = getResponsiveCardElevation())
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(getResponsiveCardPadding()),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Text(
-                                        text = highRankCount.toString(),
-                                        style = getResponsiveTypography(),
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Text(
-                                        text = context.getString(R.string.high_rank),
-                                        style = getResponsiveBodyTypography(),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        }
-                    } else {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(responsiveSpacing)
-                        ) {
-                            Card(
-                                modifier = Modifier.weight(1f),
-                                elevation = CardDefaults.cardElevation(defaultElevation = getResponsiveCardElevation())
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(getResponsiveCardPadding()),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Text(
-                                        text = activeBenefitsCount.toString(),
-                                        style = getResponsiveTypography(),
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Text(
-                                        text = context.getString(R.string.active_benefits),
-                                        style = getResponsiveBodyTypography(),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                            
-                            Card(
-                                modifier = Modifier.weight(1f),
-                                elevation = CardDefaults.cardElevation(defaultElevation = getResponsiveCardElevation())
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(getResponsiveCardPadding()),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Text(
-                                        text = highRankCount.toString(),
-                                        style = getResponsiveTypography(),
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Text(
-                                        text = context.getString(R.string.high_rank),
-                                        style = getResponsiveBodyTypography(),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        }
-                    }
+                    BenefitsOverviewDashboard(
+                        aggregates = dashboardStats,
+                        onOpenHelp = { showBenefitsHelp = true },
+                        horizontalSpacing = responsiveSpacing,
+                        verticalSpacing = responsiveSpacing,
+                    )
                 }
 
                 items(
@@ -596,11 +726,25 @@ fun BenefitCard(
     val configsByName = remember(jobTypeConfigs) { jobTypeConfigs.associateBy { it.name } }
     val settingsManager = remember { com.eventmanager.app.data.sync.SettingsManager(context) }
     val offsetHours = remember { settingsManager.getDateChangeOffsetHours() }
+    val meetingNovaBenefitsExcludedForOrion = remember(volunteerJobs, jobTypeConfigs, offsetHours) {
+        val t = System.currentTimeMillis()
+        BenefitCalculator.isVolunteerOrionActive(volunteerJobs, jobTypeConfigs, t, offsetHours)
+    }
+    val benefitForPerkList = remember(
+        status.benefits,
+        status.activeBenefits,
+        volunteerJobs,
+        jobTypeConfigs,
+        offsetHours
+    ) {
+        perkBenefitForDisplay(status, volunteerJobs, jobTypeConfigs, offsetHours)
+    }
     // Keep the exact same source of truth as guest list / volunteer profile:
     // aggregate from tracked job balances, grouped by invite count.
-    val futureEntryGroups = remember(volunteerJobs, configsByName, offsetHours) {
+    val futureEntryGroups = remember(volunteerJobs, configsByName, offsetHours, jobTypeConfigs) {
         val t = System.currentTimeMillis()
-        groupFutureEntriesByInvites(volunteerJobs, configsByName, t, offsetHours)
+        val excluded = BenefitCalculator.isVolunteerOrionActive(volunteerJobs, jobTypeConfigs, t, offsetHours)
+        groupFutureEntriesByInvites(volunteerJobs, configsByName, t, offsetHours, excluded)
             .map { FutureEntryDisplayGroup(invites = it.invites, remaining = it.totalRemaining) }
     }
     val totalFutureEntriesRemaining = remember(futureEntryGroups) { futureEntryGroups.sumOf { it.remaining } }
@@ -741,11 +885,11 @@ fun BenefitCard(
                     verticalArrangement = Arrangement.spacedBy(if (isCompact) 4.dp else 8.dp)
                 ) {
                     listOfNotNull(
-                        if (benefit.freeEntry) context.getString(R.string.free_entry) else null,
-                        if (benefit.friendInvitation) context.getString(R.string.friend_invitation) else null,
-                        if (benefit.drinkTokens > 0) context.getString(R.string.drink_tokens, benefit.drinkTokens) else null,
-                        if (benefit.barDiscount > 0) context.getString(R.string.bar_discount, benefit.barDiscount) else null,
-                        if (benefit.extraordinaryBenefits) context.getString(R.string.extraordinary_benefits) else null
+                        if (benefitForPerkList.freeEntry) context.getString(R.string.free_entry) else null,
+                        if (benefitForPerkList.friendInvitation) context.getString(R.string.friend_invitation) else null,
+                        if (benefitForPerkList.drinkTokens > 0) context.getString(R.string.drink_tokens, benefitForPerkList.drinkTokens) else null,
+                        if (benefitForPerkList.barDiscount > 0) context.getString(R.string.bar_discount, benefitForPerkList.barDiscount) else null,
+                        if (benefitForPerkList.extraordinaryBenefits) context.getString(R.string.extraordinary_benefits) else null
                     ).forEach { benefitText ->
                         Row(
                             verticalAlignment = Alignment.CenterVertically,

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- App Name -->
-    <string name="app_name">AdminList</string>
+    <string name="app_name">NoctuList</string>
     
     <!-- Settings Screen -->
     <string name="settings_title">Settings &amp; Configuration</string>
@@ -220,7 +220,7 @@
     <string name="stellar_benefits_info_title">Perks cheat sheet</string>
 
     <string name="benefits_help_dialog_title">Perks cheat sheet</string>
-    <string name="benefits_help_dialog_subtitle">Collectif Nocturne · 2026–27</string>
+    <string name="benefits_help_dialog_subtitle">Collectif Nocturne · 2026-27</string>
     <string name="benefits_help_intro">Match the shift to what actually happened. Stellar = auto; Manual = you type it.</string>
 
     <string name="benefits_help_tab_modes">Modes</string>
@@ -228,50 +228,50 @@
     <string name="benefits_help_tab_extras">Bonuses &amp; timing</string>
 
     <string name="benefits_help_app_stellar">Shift job on → pick a Nova type\nOrion job on → mandate year (Veteran the year after)\nDrinks, guest list, future entries → calculated for you</string>
-    <string name="benefits_help_app_manual">You enter days, drinks, bar %%, guests, extras\nFor one-offs outside the usual grid\nDon\'t double-count the same real shift if it\'s already Stellar</string>
+    <string name="benefits_help_app_manual">You enter days, drinks, bar \u0025, guests, extras\nFor one-offs outside the usual grid\nDon\'t double-count the same real shift if it\'s already Stellar</string>
 
     <string name="benefits_help_section_profité_title">Profité / non-profité</string>
-    <string name="benefits_help_section_profité_body">Default shift only, when “enjoy evening” is on\nStayed for the party vs. left after work — not about midnight math\nOther Nova types: this toggle is hidden</string>
+    <string name="benefits_help_section_profité_body">Default shift only, when “enjoy evening” is on.\nNot about entry: it is whether the shift hours still let the person enjoy the night or not.\nOther Nova types: this toggle is hidden.</string>
 
     <string name="benefits_help_section_nova_title">Nova perks (shift job)</string>
-    <string name="benefits_help_nova_profité_title">Default shift — profité</string>
+    <string name="benefits_help_nova_profité_title">Default shift - profité</string>
     <string name="benefits_help_nova_profité_rationale">That event night only.</string>
-    <string name="benefits_help_nova_profité_perks">Free entry + 1 guest — event night\n50%% bar — event night\n2 free drinks (~10 CHF) — event night</string>
+    <string name="benefits_help_nova_profité_perks">Free entry + 1 guest - event night\n50\u0025 bar - event night\n2 free drinks (~10 CHF) - event night</string>
 
-    <string name="benefits_help_nova_non_profité_title">Default shift — non-profité</string>
+    <string name="benefits_help_nova_non_profité_title">Default shift - non-profité</string>
     <string name="benefits_help_nova_non_profité_rationale">Night package + seasonal comp (+1 guest).</string>
     <string name="benefits_help_nova_non_profité_perks">Same event-night package as profité\nPlus 1 seasonal free entry + 1 guest (in app)</string>
 
     <string name="benefits_help_nova_photo_title">Photographer / videographer</string>
     <string name="benefits_help_nova_photo_rationale">Same ballpark as non-profité default.</string>
-    <string name="benefits_help_nova_photo_perks">Free entry + 1 guest — covered night\n50%% bar — covered night\n2 free drinks (~10 CHF) — covered night\n1 seasonal free entry + 1 guest</string>
+    <string name="benefits_help_nova_photo_perks">Free entry + 1 guest - covered night\n50\u0025 bar - covered night\n2 free drinks (~10 CHF) - covered night\n1 seasonal free entry + 1 guest</string>
 
     <string name="benefits_help_nova_meeting_title">Meeting</string>
-    <string name="benefits_help_nova_meeting_rationale">3 meetings in a month still pump Galaxie — except Orion (meetings don\'t count).</string>
+    <string name="benefits_help_nova_meeting_rationale">3 meetings in a month still pump Galaxie - except Orion (meetings don\'t count).</string>
     <string name="benefits_help_nova_meeting_perks">1 seasonal free entry + 1 guest\n1 free drink (~5 CHF)</string>
 
-    <string name="benefits_help_nova_gd_event_title">Graphic designer — one event</string>
+    <string name="benefits_help_nova_gd_event_title">Graphic designer - one event</string>
     <string name="benefits_help_nova_gd_event_rationale">Same vibe as photo/video that night.</string>
-    <string name="benefits_help_nova_gd_event_perks">Free entry + 1 guest — event night\n50%% bar — event night\n2 free drinks (~10 CHF) — event night\n1 seasonal free entry + 1 guest</string>
+    <string name="benefits_help_nova_gd_event_perks">Free entry + 1 guest - event night\n50\u0025 bar - event night\n2 free drinks (~10 CHF) - event night\n1 seasonal free entry + 1 guest</string>
 
-    <string name="benefits_help_nova_gd_asso_title">Graphic designer — association-wide</string>
-    <string name="benefits_help_nova_gd_asso_rationale">Not tied to one party → more drinks, no bar %%.</string>
+    <string name="benefits_help_nova_gd_asso_title">Graphic designer - association-wide</string>
+    <string name="benefits_help_nova_gd_asso_rationale">Not tied to one party → more drinks, no bar \u0025.</string>
     <string name="benefits_help_nova_gd_asso_perks">2 seasonal free entries + 1 guest each\n4 free drinks (~20 CHF)</string>
 
     <string name="benefits_help_section_galaxie_title">Galaxie</string>
-    <string name="benefits_help_section_galaxie_body">3 contributions in the same calendar month (shifts + meetings)\nOrion: meetings don\'t count toward the 3\nThat month: free entry everywhere + 50%% bar + 1 extra drink\nStacks with normal shift perks</string>
+    <string name="benefits_help_section_galaxie_body">3 contributions in the same calendar month (shifts + meetings)\nOrion: meetings don\'t count toward the 3\nThat month: free entry everywhere + 50\u0025 bar + 1 extra drink\nStacks with normal shift perks</string>
 
     <string name="benefits_help_section_orion_title">Orion</string>
-    <string name="benefits_help_section_orion_body">Tag the job type as Orion\n1 year from mandate start: free entry + 50%% bar + 1 guest\n270 CHF wallet (shirt pot + drink budget)</string>
+    <string name="benefits_help_section_orion_body">Tag the job type as Orion\n1 year from mandate start: free entry + 50\u0025 bar + 1 guest\n270 CHF wallet (shirt pot + drink budget)</string>
 
     <string name="benefits_help_section_veteran_title">Veteran</string>
-    <string name="benefits_help_section_veteran_body">Year after Orion\nStill: free entry + 50%% bar\nWallet stops when the mandate ends</string>
+    <string name="benefits_help_section_veteran_body">Year after Orion\nStill: free entry + 50\u0025 bar\nWallet stops when the mandate ends</string>
 
     <string name="benefits_help_section_timing_title">When the app turns perks on</string>
     <string name="benefits_help_section_timing_body">Night-of perks = that venue\'s event day (Settings → day-change time)\nFuture entries unlock from the same moment\nOrion / Galaxie / Veteran use longer windows</string>
 
     <string name="benefits_help_footer_title">Heads-up</string>
-    <string name="benefits_help_footer_bullets">Profité = you partied, not punch-clock\n50%% tracks Lightspeed prices\nGalaxie stacks with shift perks\nCN changes wallet or shirt? Tell volunteers\nAssoc. designer drinks: flexible if ticketing says OK</string>
+    <string name="benefits_help_footer_bullets">Profité / non-profité - whether shift hours let you enjoy the night or not (not about entry)\nThe 50\u0025 bar rate tracks Lightspeed prices\nGalaxie stacks with shift perks</string>
 
     <string name="nova_job_type_label">Nova Benefits Type</string>
     <string name="nova_type_default_shift">Default shift</string>
@@ -331,7 +331,7 @@
     
     <!-- App Information -->
     <string name="app_info_title">App Information</string>
-    <string name="app_version">AdminList 0.9</string>
+    <string name="app_version">NoctuList 0.9</string>
     <string name="app_designed_for">Designed for Collectif Nocturne venues</string>
     <!-- Single full sentence to avoid spacing issues across locales -->
     <string name="app_developed_full">Developed for the Collectif Nocturne by Leonardo Mondada</string>
@@ -461,7 +461,7 @@
     <!-- Welcome Screen -->
     <string name="start_admin">Start Admin</string>
     <string name="admin_mode">Admin</string>
-    <string name="ticket_check_mode">Ticket Check</string>
+    <string name="ticket_check_mode">Ticketing</string>
 
     <!-- Admin Auth Screen -->
     <string name="admin_auth_title">Admin Authentication</string>
@@ -474,10 +474,16 @@
     <string name="admin_auth_not_found">No matching profile found</string>
     <string name="admin_auth_try_again">Try Again</string>
 
-    <!-- Ticket Check Screen -->
-    <string name="ticket_check_title">Ticket Check</string>
+    <!-- Ticketing (Billeterie) hub -->
+    <string name="ticket_check_title">Ticketing</string>
     <string name="ticket_check_coming_soon">This feature is coming soon</string>
-    <string name="ticket_check_description">The ticket check system is currently being built. Stay tuned!</string>
+    <string name="ticket_check_description">Quick access to the guest list and scanner at the door.</string>
+    <string name="billeterie_stat_permanent_guests">Permanent guests</string>
+    <string name="billeterie_stat_temporary_guests_today">Temporary guests (today)</string>
+    <string name="billeterie_stat_volunteers_on_list">Volunteers on list</string>
+    <string name="billeterie_stat_total_without_invites">On list (excl. +1s)</string>
+    <string name="billeterie_button_guest_list">Guest list</string>
+    <string name="billeterie_button_scanner">Scanner</string>
 
     <!-- Setup Wizard -->
     <string name="setup_continue">Continue</string>
@@ -488,6 +494,12 @@
     <string name="setup_language_description">Select the language you\'d like to use in the app</string>
     <string name="setup_theme_title">Pick a Theme</string>
     <string name="setup_theme_description">Choose how the app looks — you can always change this later in Settings</string>
+    <string name="setup_color_profile_title">Color profile</string>
+    <string name="setup_color_profile_description">Choose accent colors. System follows your wallpaper on supported devices.</string>
+    <string name="setup_layout_size_title">Layout size</string>
+    <string name="setup_layout_size_description">Adjust how large the interface appears — you can fine-tune this anytime in Settings.</string>
+    <string name="setup_layout_nvidia_hint">On NVIDIA tablets, 107% is often a better fit for this display.</string>
+    <string name="setup_layout_use_recommended">Use 107%</string>
     <string name="setup_spreadsheet_title">Google Sheets ID</string>
     <string name="setup_spreadsheet_description">Enter the ID of the Google Spreadsheet to sync with your event data</string>
     <string name="setup_spreadsheet_hint">Find the ID in your Google Sheets URL:\nhttps://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit</string>
@@ -536,6 +548,10 @@
     <string name="venue_le_terreau">Le Terreau</string>
     <string name="add_guest">Add Guest</string>
     <string name="add_new_guest">Add New Guest</string>
+    <string name="add_guest_tab_permanent">Permanent</string>
+    <string name="add_guest_tab_temporary">Temporary</string>
+    <string name="add_guest_add_another_name">Add another guest name</string>
+    <string name="add_guest_additional_name_label">Guest name (%1$d)</string>
     <string name="last_synced">Last synced:</string>
     <string name="just_now">Just now</string>
     <string name="minutes_ago">%d minutes ago</string>
@@ -543,7 +559,8 @@
     <string name="days_ago">%d days ago</string>
     <string name="search_guests_placeholder">Search guests by name, email, or phone...</string>
     <string name="filter_volunteer_benefits">Volunteer Benefits</string>
-    <string name="filter_regular_guests">Regular Guests</string>
+    <string name="filter_permanent_guests">Permanent guests</string>
+    <string name="filter_temporary_guests">Temporary guests</string>
     <string name="guests_count">Guests</string>
     <string name="total_guests_count">Total Guests</string>
     <string name="invitations_count">Invitations</string>
@@ -573,6 +590,13 @@
     <string name="no_rank">No Rank</string>
     <string name="high_rank">High Rank</string>
     <string name="active_benefits">Active Benefits</string>
+    <string name="benefits_overview_info_button">Guide</string>
+    <string name="benefits_overview_totals_section">Totals</string>
+    <string name="benefits_overview_ranks_section">By rank</string>
+    <string name="benefits_overview_line_50_bar">50%% bar: %d</string>
+    <string name="benefits_overview_line_free_entry">Free entry: %1$d · %2$d inv.</string>
+    <string name="benefits_overview_line_extraordinary">Extra: %d</string>
+    <string name="benefits_overview_line_future_tickets">Tickets: %1$d · %2$d inv.</string>
     <string name="current_benefits">✨ Current Benefits</string>
     <string name="days_left">%d days left</string>
     <string name="expires_soon">Expires soon</string>
@@ -607,6 +631,7 @@
     <!-- QR Code Related -->
     <string name="qr_code">QR Code</string>
     <string name="volunteer_qr_code">Volunteer QR Code</string>
+    <string name="qr_code_anonymized_label">Anonymized</string>
     <string name="edit_volunteer_button">Edit Volunteer</string>
     <string name="delete_volunteer_button">Delete Volunteer</string>
     <string name="camera_permission_required">Camera permission is required to scan QR codes</string>
@@ -618,9 +643,9 @@
     <string name="add_nfc_card_uid_title">Add NFC card UID</string>
     <string name="enter_uid_manually">Enter UID manually</string>
     <string name="read_uid_with_phone_nfc">Read UID with phone (NFC)</string>
-    <string name="read_uid_with_usb_reader">Read UID with USB reader (ACR122U)</string>
+    <string name="read_uid_with_usb_reader">Read UID with external reader (USB ACR122U or Bluetooth ACR1255U-J1)</string>
     <string name="usb_reader_not_connected">No external USB NFC reader detected.</string>
-    <string name="usb_reader_waiting_card">Waiting for an NFC card on the USB reader...</string>
+    <string name="usb_reader_waiting_card">Waiting for an NFC card on the external reader (USB or Bluetooth)…</string>
     <string name="enter_nfc_uid_title">Enter NFC UID</string>
     <string name="uid_label">UID</string>
     <string name="scan_nfc_card_title">Scan NFC card</string>
@@ -633,18 +658,20 @@
     <string name="back">Back</string>
     <string name="scan_qr_or_nfc_title">Scan QR Code or NFC Card</string>
     <string name="scan_qr_or_nfc_subtitle_enabled">Camera QR scanner and NFC card scanner are active. You can use either one.</string>
-    <string name="scan_qr_or_nfc_subtitle_phone_and_usb">QR scanner, phone NFC, and USB NFC reader are available.</string>
-    <string name="scan_qr_or_nfc_subtitle_usb_only">QR scanner and USB NFC reader are available. Phone NFC is not active.</string>
+    <string name="scan_qr_or_nfc_subtitle_phone_and_usb">QR scanner, phone NFC, and an external NFC reader (USB or Bluetooth) are available.</string>
+    <string name="scan_qr_or_nfc_subtitle_usb_only">QR scanner and an external NFC reader (USB or Bluetooth) are available. Phone NFC is not active.</string>
     <string name="scan_qr_subtitle_nfc_disabled">Camera QR scanner is active. NFC is disabled on this device.</string>
-    <string name="scan_with_usb_reader">Scan with USB reader</string>
+    <string name="scan_with_usb_reader">Scan with external reader</string>
     <string name="usb_reader_waiting_card_short">Waiting card...</string>
     <string name="nfc_not_supported_device">This device does not support NFC scanning.</string>
-    <string name="nfc_unavailable_no_usb_hint">This device has no NFC, and no USB reader is connected.</string>
-    <string name="nfc_phone_unavailable_use_usb_reader">This device has no built-in NFC. Use the USB reader option below to scan.</string>
+    <string name="nfc_unavailable_no_usb_hint">This device has no NFC, and no external reader is connected (USB or Bluetooth).</string>
+    <string name="nfc_phone_unavailable_use_usb_reader">This device has no built-in NFC. Use the external reader option below (USB ACR122U or Bluetooth ACR1255U-J1).</string>
     <string name="nfc_disabled_enable">NFC is disabled. Enable NFC in your phone settings to scan cards.</string>
     <string name="nfc_uid_read_failed">Unable to read NFC card UID. Try again.</string>
     <string name="nfc_uid_not_found">No volunteer or permanent guest found for NFC UID: %s</string>
     <string name="nfc_reader_error">NFC reader error: %s</string>
+    <string name="external_reader_bt_blocked_hint">Bluetooth access for the external reader was denied. Tap below to open Android app settings, then allow Bluetooth / Nearby devices for this app. If you already chose \"Don\'t ask again\", you must enable it there.</string>
+    <string name="open_app_settings_for_reader">Open app settings</string>
     <string name="last_nfc_uid_scanned">Last NFC UID scanned: %s</string>
     <string name="invalid_qr_or_nfc_data">Invalid QR/NFC data.</string>
     <string name="permanent_guest_label">Permanent guest</string>
@@ -749,6 +776,7 @@
     <string name="email_send_api_description">Send automatically via Gmail API with embedded images</string>
     <string name="email_no_email_title">No Email Address</string>
     <string name="email_no_email_message">This volunteer doesn\'t have an email address. Please add one first.</string>
+    <string name="email_no_email_guest_staff_message">This guest has no email address on file. An administrator must add one before the QR can be sent from this screen.</string>
     <string name="email_send">Send</string>
     <string name="email_sending">Sending…</string>
     <string name="email_error_title">Email Error</string>
@@ -943,23 +971,35 @@
     <!-- App Icon Settings -->
     <string name="app_icon_title">App Icon</string>
     <string name="app_icon_description">Select your preferred icon style</string>
-    <string name="app_icon_light">Light</string>
-    <string name="app_icon_dark">Dark</string>
-    <string name="app_icon_deep_blue">Deep Blue</string>
-    <string name="app_icon_blue_ocean">Blue Ocean</string>
-    <string name="app_icon_braun">Braun</string>
-    <string name="app_icon_purple">Purple</string>
-    <string name="app_icon_violet">Violet</string>
+    <string name="app_icon_white">White</string>
+    <string name="app_icon_black">Black</string>
+    <string name="app_icon_brown">Brown</string>
+    <string name="app_icon_creme_black">Crème &amp; Black</string>
+    <string name="app_icon_dark_blue">Dark Blue</string>
+    <string name="app_icon_dark_legacy">Dark Legacy</string>
+    <string name="app_icon_dark_turquoise">Dark Turquoise</string>
+    <string name="app_icon_dark_violet">Dark Violet</string>
+    <string name="app_icon_light_blue">Light Blue</string>
+    <string name="app_icon_light_legacy">Light Legacy</string>
+    <string name="app_icon_light_violet">Light Violet</string>
+    <string name="app_icon_orange">Orange</string>
+    <string name="app_icon_pink">Pink</string>
     <string name="app_icon_selected">✓ Selected</string>
     <string name="app_icon_auto_adapt_title">Auto-Adapt Icon Based on System Theme</string>
     <string name="app_icon_auto_adapt_description">Automatically switch between light and dark icons based on your system theme</string>
-    <string name="app_icon_light_applied">Light icon applied.</string>
-    <string name="app_icon_dark_applied">Dark icon applied.</string>
-    <string name="app_icon_deep_blue_applied">Deep Blue icon applied.</string>
-    <string name="app_icon_blue_ocean_applied">Blue Ocean icon applied.</string>
-    <string name="app_icon_braun_applied">Braun icon applied.</string>
-    <string name="app_icon_purple_applied">Purple icon applied.</string>
-    <string name="app_icon_violet_applied">Violet icon applied.</string>
+    <string name="app_icon_white_applied">White icon applied.</string>
+    <string name="app_icon_black_applied">Black icon applied.</string>
+    <string name="app_icon_brown_applied">Brown icon applied.</string>
+    <string name="app_icon_creme_black_applied">Crème &amp; Black icon applied.</string>
+    <string name="app_icon_dark_blue_applied">Dark Blue icon applied.</string>
+    <string name="app_icon_dark_legacy_applied">Dark Legacy icon applied.</string>
+    <string name="app_icon_dark_turquoise_applied">Dark Turquoise icon applied.</string>
+    <string name="app_icon_dark_violet_applied">Dark Violet icon applied.</string>
+    <string name="app_icon_light_blue_applied">Light Blue icon applied.</string>
+    <string name="app_icon_light_legacy_applied">Light Legacy icon applied.</string>
+    <string name="app_icon_light_violet_applied">Light Violet icon applied.</string>
+    <string name="app_icon_orange_applied">Orange icon applied.</string>
+    <string name="app_icon_pink_applied">Pink icon applied.</string>
     <string name="app_icon_auto_adapt_enabled">Auto-adapt enabled. Icon will update based on system theme.</string>
     <string name="app_icon_restart_title">Restart App</string>
     <string name="app_icon_restart_message">Please restart the app for the icon change to take effect.</string>
@@ -1025,4 +1065,18 @@
     <string name="activity_status_active_months_ago">Active (%d months ago)</string>
     <string name="activity_status_inactive_years_ago">Inactive (%d years ago)</string>
     <string name="legend_badge_label">Legend</string>
+
+    <!-- Billeterie Scanner -->
+    <string name="billeterie_scanner_tap_to_activate">Tap to activate camera</string>
+    <string name="billeterie_scanner_tap_to_pause">Tap to pause</string>
+    <string name="billeterie_scanner_entry_approved">Entry Approved</string>
+    <string name="billeterie_scanner_entry_validated">Entry Validated!</string>
+    <string name="billeterie_scanner_scan_next">Scan Next</string>
+    <string name="billeterie_scanner_no_entry">No Entry</string>
+    <string name="billeterie_scanner_no_benefits">This person does not have entry benefits</string>
+    <string name="billeterie_scanner_guest_found">Guest Found</string>
+    <string name="billeterie_scanner_validate_ticket">Validate Ticket</string>
+    <string name="billeterie_scanner_ready">Ready to scan…</string>
+    <string name="billeterie_scanner_with_invites">+%d invitation(s)</string>
+    <string name="billeterie_scanner_error">Error</string>
 </resources>

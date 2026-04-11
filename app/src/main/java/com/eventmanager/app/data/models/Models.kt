@@ -44,6 +44,18 @@ data class Guest(
     val isAdmin: Boolean = false
 ) : Parcelable
 
+/**
+ * Manual add of temporary guests from the guest list: one Google Sheet row per [guestNames]
+ * entry, sharing event date, artist, emergency contact phone, and comments.
+ */
+data class ManualTemporaryGuestBatch(
+    val eventDateMillis: Long,
+    val artistName: String,
+    val emergencyContactPhone: String,
+    val comments: String,
+    val guestNames: List<String>
+)
+
 @Entity(
     tableName = "volunteers",
     indices = [
@@ -122,6 +134,16 @@ data class Benefit(
     /** Invites (friends) per future entry use; null = not applicable. */
     val futureEventEntryInvites: Int? = null
 ) : Parcelable
+
+/**
+ * True for active NOVA perks that match a Nova **MEETING** same-day package (one off-event drink only).
+ * Orion volunteers must not receive these; used to hide matching rows if they appear in [VolunteerBenefitStatus.activeBenefits].
+ */
+fun Benefit.isNovaMeetingOnlyStylePerk(): Boolean {
+    if (rank != VolunteerRank.NOVA || !isActive) return false
+    if (freeEntry || friendInvitation || barDiscount > 0) return false
+    return drinkTokens == 1 && inviteCount == 0
+}
 
 @Parcelize
 data class VolunteerBenefitStatus(
@@ -516,6 +538,23 @@ object BenefitCalculator {
         return calculateWithContext(volunteer, volunteerJobs, ctx)
     }
 
+    /**
+     * True while the volunteer is in the Orion mandate window (from first Orion job date, 1 year),
+     * used to suppress Nova **meeting** shift perks and their contribution to the monthly Galaxie count.
+     */
+    fun isVolunteerOrionActive(
+        volunteerJobs: List<Job>,
+        jobTypeConfigs: List<JobTypeConfig>,
+        currentTime: Long = System.currentTimeMillis(),
+        offsetHours: Int = 0
+    ): Boolean {
+        val ctx = CalculationContext(jobTypeConfigs, currentTime, offsetHours)
+        val orionJobs = volunteerJobs
+            .filter { ctx.orionJobTypeNames.contains(it.jobTypeName) }
+            .sortedByDescending { it.date }
+        return isVolunteerOrionOptimized(orionJobs, ctx)
+    }
+
     fun calculateWithContext(
         volunteer: Volunteer,
         volunteerJobs: List<Job>,
@@ -686,8 +725,10 @@ object BenefitCalculator {
 
         val futurePool = shiftJobs.sumOf { job ->
             val config = ctx.jobTypeConfigsByName[job.jobTypeName]
-            if (isOrion && config?.novaJobType == NovaJobType.MEETING) return@sumOf 0
-            val r = effectiveBenefitFutureEntriesRemaining(job, config, ctx.currentTime, ctx.offsetHours)
+            val r = effectiveBenefitFutureEntriesRemaining(
+                job, config, ctx.currentTime, ctx.offsetHours,
+                meetingNovaBenefitsExcludedForOrion = isOrion
+            )
             if (r <= 0) return@sumOf 0
             r
         }

@@ -67,7 +67,9 @@ fun GuestDetailPanel(
     onAssignNfcUid: (Guest, String) -> Unit,
     onDelete: (Guest) -> Unit,
     onClose: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** When true (e.g. Billeterie guest list), hide identifiers and all mutation actions. */
+    readOnly: Boolean = false
 ) {
     val context = LocalContext.current
     val isPhone = !isTablet()
@@ -152,20 +154,28 @@ fun GuestDetailPanel(
                             venues = venues,
                             isPhone = isPhone,
                             onClose = onClose,
-                            easterEggEnabled = leonardoEasterEggEnabled
+                            easterEggEnabled = leonardoEasterEggEnabled,
+                            readOnly = readOnly,
+                            onShowQr = if (readOnly && !guest.isTemporaryGuest) {
+                                { showQrDialog = true }
+                            } else {
+                                null
+                            }
                         )
                     }
                     
                     // Action Buttons Section
-                    item {
-                        ActionButtonsSection(
-                            guest = guest,
-                            onEdit = onEdit,
-                            onAddNfcCard = { showNfcDialog = true },
-                            onDelete = onDelete,
-                            onShowQr = { showQrDialog = true },
-                            isPhone = isPhone
-                        )
+                    if (!readOnly) {
+                        item {
+                            ActionButtonsSection(
+                                guest = guest,
+                                onEdit = onEdit,
+                                onAddNfcCard = { showNfcDialog = true },
+                                onDelete = onDelete,
+                                onShowQr = { showQrDialog = true },
+                                isPhone = isPhone
+                            )
+                        }
                     }
                 }
             }
@@ -177,6 +187,9 @@ fun GuestDetailPanel(
     var showEmailConfirmDialog by remember { mutableStateOf(false) }
     var showEmailInputDialog by remember { mutableStateOf(false) }
     var emailInputValue by remember { mutableStateOf("") }
+    var showGuestNoEmailStaffDialog by remember { mutableStateOf(false) }
+
+    val staffSafeGuestQrMode = readOnly && !guest.isTemporaryGuest
 
     if (showQrDialog) {
         val tabletMaxWidth = getTabletConstrainedDialogMaxWidth()
@@ -219,10 +232,7 @@ fun GuestDetailPanel(
                         fontWeight = FontWeight.Bold
                     )
                     
-                    val payload = remember(guest) {
-                        println("🔍 Generating QR code for guest: ${guest.name} (NanoID: ${guest.nanoId})")
-                        guest.nanoId
-                    }
+                    val payload = remember(guest) { guest.nanoId }
                     val qrImage = remember(payload) { QRCodeUtils.generateQrImageBitmap(payload, 1024) }
                     val qrContext = LocalContext.current
                     
@@ -232,7 +242,39 @@ fun GuestDetailPanel(
                             .verticalScroll(rememberScrollState()),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        if (qrImage != null) {
+                        if (staffSafeGuestQrMode) {
+                            if (qrImage != null) {
+                                StaffObfuscatedQrPreview(
+                                    qrImage = qrImage,
+                                    isPhone = isPhone,
+                                    isTabletDevice = isTabletDevice,
+                                    tabletQrSize = tabletQrSize
+                                )
+                                Spacer(modifier = Modifier.height(if (isPhone) 12.dp else 16.dp))
+                                Button(
+                                    onClick = {
+                                        showQrDialog = false
+                                        if (guest.email.isNotBlank()) {
+                                            showEmailConfirmDialog = true
+                                        } else {
+                                            showGuestNoEmailStaffDialog = true
+                                        }
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(if (isTabletDevice) 48.dp else 64.dp)
+                                ) {
+                                    Icon(Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(qrContext.getString(R.string.email_send_api))
+                                }
+                            } else {
+                                Text(
+                                    text = getStringResource(R.string.failed_to_generate_qr_code),
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        } else if (qrImage != null) {
                             Image(
                                 bitmap = qrImage,
                                 contentDescription = getStringResource(R.string.guest_qr_code),
@@ -261,7 +303,7 @@ fun GuestDetailPanel(
                             ) {
                                 OutlinedButton(
                                     onClick = {
-                                        qrImage?.let { bitmap ->
+                                        qrImage.let { bitmap ->
                                             try {
                                                 val file = File(qrContext.cacheDir, "qr_code_guest_${guest.id}.png")
                                                 val outputStream = FileOutputStream(file)
@@ -283,7 +325,6 @@ fun GuestDetailPanel(
                                                 }
                                                 qrContext.startActivity(Intent.createChooser(shareIntent, qrContext.getString(R.string.share_qr_code)))
                                             } catch (e: Exception) {
-                                                // Fallback to text sharing if image sharing fails
                                                 val shareIntent = Intent(Intent.ACTION_SEND).apply {
                                                     type = "text/plain"
                                                     putExtra(Intent.EXTRA_SUBJECT, "Guest QR")
@@ -306,11 +347,9 @@ fun GuestDetailPanel(
                                 }
                                 OutlinedButton(
                                     onClick = {
-                                        // Check if guest has email
                                         if (guest.email.isNotBlank()) {
                                             showEmailConfirmDialog = true
                                         } else {
-                                            // Ask for email address
                                             emailInputValue = ""
                                             showEmailInputDialog = true
                                         }
@@ -816,29 +855,31 @@ fun GuestDetailPanel(
                     
                     HorizontalDivider()
                     
-                    // Manual Send Option
-                    OutlinedButton(
-                        onClick = {
-                            showEmailConfirmDialog = false
-                            sendGuestEmailManually(emailContext, settingsManager, guest, targetEmail)
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.padding(8.dp)
+                    // Manual send — admin only (Billeterie: Gmail API only)
+                    if (!readOnly) {
+                        OutlinedButton(
+                            onClick = {
+                                showEmailConfirmDialog = false
+                                sendGuestEmailManually(emailContext, settingsManager, guest, targetEmail)
+                            },
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Icon(Icons.Default.Send, contentDescription = null)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = getStringResource(R.string.email_send_manual),
-                                style = MaterialTheme.typography.titleSmall
-                            )
-                            Text(
-                                text = getStringResource(R.string.email_send_manual_description),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.padding(8.dp)
+                            ) {
+                                Icon(Icons.Default.Send, contentDescription = null)
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = getStringResource(R.string.email_send_manual),
+                                    style = MaterialTheme.typography.titleSmall
+                                )
+                                Text(
+                                    text = getStringResource(R.string.email_send_manual_description),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
                     
@@ -928,6 +969,37 @@ fun GuestDetailPanel(
         )
     }
 
+    if (showGuestNoEmailStaffDialog) {
+        AlertDialog(
+            onDismissRequest = { showGuestNoEmailStaffDialog = false },
+            icon = {
+                Icon(
+                    Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
+            title = {
+                Text(
+                    text = getStringResource(R.string.email_no_email_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = getStringResource(R.string.email_no_email_guest_staff_message),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { showGuestNoEmailStaffDialog = false }) {
+                    Text(getStringResource(R.string.ok))
+                }
+            }
+        )
+    }
+
     if (showNfcDialog) {
         AddNfcUidDialog(
             onDismiss = { showNfcDialog = false },
@@ -945,7 +1017,10 @@ private fun GuestInformationSection(
     venues: List<VenueEntity>,
     isPhone: Boolean,
     onClose: () -> Unit,
-    easterEggEnabled: Boolean
+    easterEggEnabled: Boolean,
+    readOnly: Boolean = false,
+    /** Billeterie permanent guest: open staff-safe QR dialog (blurred + API email only). */
+    onShowQr: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val responsivePadding = if (isPhone) getPhonePortraitCardPadding() else getResponsiveCardPadding()
@@ -954,7 +1029,8 @@ private fun GuestInformationSection(
         TemporaryGuestInformationSection(
             guest = guest,
             isPhone = isPhone,
-            onClose = onClose
+            onClose = onClose,
+            readOnly = readOnly
         )
     } else {
         Card(
@@ -1019,12 +1095,26 @@ private fun GuestInformationSection(
                                 )
                             }
                         }
-                        IconButton(onClick = onClose) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = context.getString(R.string.close),
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            onShowQr?.let { openQr ->
+                                IconButton(onClick = openQr) {
+                                    Icon(
+                                        imageVector = Icons.Default.QrCode,
+                                        contentDescription = context.getString(R.string.qr_code),
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                            }
+                            IconButton(onClick = onClose) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = context.getString(R.string.close),
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
                         }
                     }
                 }
@@ -1105,18 +1195,20 @@ private fun GuestInformationSection(
                     }
                 }
 
-                NfcUidInfoRow(
-                    uid = guest.nfcCardUid,
-                    isPhone = isPhone
-                )
+                if (!readOnly) {
+                    NfcUidInfoRow(
+                        uid = guest.nfcCardUid,
+                        isPhone = isPhone
+                    )
 
-                Spacer(modifier = Modifier.height(if (isPhone) 6.dp else 8.dp))
+                    Spacer(modifier = Modifier.height(if (isPhone) 6.dp else 8.dp))
 
-                NanoIdInfoRow(
-                    label = "NanoID",
-                    value = guest.nanoId,
-                    isPhone = isPhone
-                )
+                    NanoIdInfoRow(
+                        label = "NanoID",
+                        value = guest.nanoId,
+                        isPhone = isPhone
+                    )
+                }
             }
         }
     }
@@ -1126,7 +1218,8 @@ private fun GuestInformationSection(
 private fun TemporaryGuestInformationSection(
     guest: Guest,
     isPhone: Boolean,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    readOnly: Boolean = false
 ) {
     val context = LocalContext.current
     val responsivePadding = if (isPhone) getPhonePortraitCardPadding() else getResponsiveCardPadding()
@@ -1260,13 +1353,15 @@ private fun TemporaryGuestInformationSection(
                 }
             }
 
-            Spacer(modifier = Modifier.height(if (isPhone) 6.dp else 8.dp))
+            if (!readOnly) {
+                Spacer(modifier = Modifier.height(if (isPhone) 6.dp else 8.dp))
 
-            NanoIdInfoRow(
-                label = "NanoID",
-                value = guest.nanoId,
-                isPhone = isPhone
-            )
+                NanoIdInfoRow(
+                    label = "NanoID",
+                    value = guest.nanoId,
+                    isPhone = isPhone
+                )
+            }
         }
     }
 }

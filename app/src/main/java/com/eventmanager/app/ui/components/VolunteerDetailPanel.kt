@@ -133,6 +133,9 @@ fun VolunteerDetailPanel(
     val volunteerBenefitStatus = remember(volunteer.id, volunteerJobs, jobTypeConfigs, offsetHours) {
         BenefitCalculator.calculateVolunteerBenefitStatus(volunteer, volunteerJobs, jobTypeConfigs, offsetHours = offsetHours)
     }
+    val meetingNovaBenefitsExcludedForOrion = remember(volunteer.id, volunteerJobs, jobTypeConfigs, offsetHours) {
+        BenefitCalculator.isVolunteerOrionActive(volunteerJobs, jobTypeConfigs, offsetHours = offsetHours)
+    }
     val currentRank = volunteerBenefitStatus.rank
     
     Box(
@@ -302,7 +305,9 @@ fun VolunteerDetailPanel(
                         VolunteerFutureEntriesSection(
                             volunteerJobs = volunteerJobs,
                             jobTypeConfigs = jobTypeConfigs,
-                            onConfirmEntry = onConfirmFutureEntry
+                            onConfirmEntry = onConfirmFutureEntry,
+                            hasActiveFreeEntryBenefit = volunteerBenefitStatus.benefits.freeEntry,
+                            meetingNovaBenefitsExcludedForOrion = meetingNovaBenefitsExcludedForOrion
                         )
                     }
                     

@@ -44,6 +44,7 @@ import androidx.compose.material.icons.filled.LocalBar
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.ConfirmationNumber
 import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import com.eventmanager.app.ui.components.QRScannerDialog
 import com.eventmanager.app.ui.components.ScannerMatch
@@ -59,6 +60,7 @@ import com.eventmanager.app.data.models.VenueEntity
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -123,7 +125,9 @@ import com.eventmanager.app.ui.screens.JobTypeManagementScreen
 import com.eventmanager.app.ui.screens.SettingsScreen
 import com.eventmanager.app.ui.screens.SetupWizardScreen
 import com.eventmanager.app.ui.screens.AdminAuthScreen
-import com.eventmanager.app.ui.screens.TicketCheckScreen
+import com.eventmanager.app.ui.screens.BilleterieHomeScreen
+import com.eventmanager.app.ui.screens.BilleterieScannerScreen
+import com.eventmanager.app.ui.screens.BilleterieSettingsScreen
 import com.eventmanager.app.ui.screens.VenueManagementScreen
 import com.eventmanager.app.ui.screens.VolunteerScreen
 import com.eventmanager.app.ui.theme.EventManagerTheme
@@ -132,6 +136,7 @@ import com.eventmanager.app.ui.viewmodel.EventManagerViewModel
 import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.ui.utils.*
 import com.eventmanager.app.ui.components.AnimatedBackground
+import com.eventmanager.app.ui.components.DashboardClockCard
 import com.eventmanager.app.ui.components.SnowAnimation
 import com.eventmanager.app.ui.components.FireworksAnimation
 import com.eventmanager.app.ui.components.ValentineAnimation
@@ -157,8 +162,65 @@ import com.eventmanager.app.data.update.UpdateCheckResult
 import com.eventmanager.app.data.update.DownloadState
 import androidx.compose.runtime.LaunchedEffect
 import android.net.Uri
+import android.content.BroadcastReceiver
+import android.content.IntentFilter
+import android.os.SystemClock
+import android.view.MotionEvent
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
+
+/** Admin main UI only (not billeterie, not welcome, not NFC gate). */
+private const val ADMIN_SESSION_IDLE_TIMEOUT_MS = 5 * 60 * 1000L
 
 class MainActivity : ComponentActivity() {
+
+    /**
+     * Tracks touches while the admin surface is visible and records [ACTION_SCREEN_OFF] for
+     * auto-logout on wake (see [dispatchTouchEvent] and [onResume]).
+     */
+    class AdminSessionWatchdog {
+        @Volatile
+        var monitoring: Boolean = false
+
+        val lastInteractionElapsedMs = AtomicLong(SystemClock.elapsedRealtime())
+        private val logoutAfterSleepPending = AtomicBoolean(false)
+
+        fun onUserInput() {
+            if (monitoring) lastInteractionElapsedMs.set(SystemClock.elapsedRealtime())
+        }
+
+        fun onDisplayTurnedOff() {
+            if (monitoring) logoutAfterSleepPending.set(true)
+        }
+
+        fun consumeLogoutAfterSleepIfPending(): Boolean {
+            if (!monitoring) {
+                logoutAfterSleepPending.set(false)
+                return false
+            }
+            return logoutAfterSleepPending.compareAndSet(true, false)
+        }
+
+        fun stopMonitoring() {
+            monitoring = false
+            logoutAfterSleepPending.set(false)
+        }
+    }
+
+    val adminSessionWatchdog = AdminSessionWatchdog()
+    /** Set from [EventManagerApp] when admin UI is active; cleared on dispose. Same module only. */
+    internal var adminSessionAutoLogout: (() -> Unit)? = null
+
+    private val screenOffReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == Intent.ACTION_SCREEN_OFF) {
+                adminSessionWatchdog.onDisplayTurnedOff()
+            }
+        }
+    }
+
+    private var screenOffReceiverRegistered = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
@@ -177,17 +239,55 @@ class MainActivity : ComponentActivity() {
         
         // Log app startup
         com.eventmanager.app.data.sync.AppLogger.i("MainActivity", "App started - Debug mode: ${settingsManager.getDebugMode()}")
-        
+
+        if (!screenOffReceiverRegistered) {
+            val filter = IntentFilter(Intent.ACTION_SCREEN_OFF)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                registerReceiver(screenOffReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+            } else {
+                @Suppress("DEPRECATION")
+                registerReceiver(screenOffReceiver, filter)
+            }
+            screenOffReceiverRegistered = true
+        }
+
         setContent {
-            val themeMode = ThemeMode.fromString(settingsManager.getThemeMode())
-            
-            EventManagerTheme(themeMode = themeMode) {
-                EventManagerApp()
+            var themeModeString by remember { mutableStateOf(settingsManager.getThemeMode()) }
+            EventManagerTheme(themeMode = ThemeMode.fromString(themeModeString)) {
+                EventManagerApp(
+                    onThemeModeChanged = { themeModeString = it }
+                )
             }
         }
     }
-    
-    
+
+    override fun onDestroy() {
+        if (screenOffReceiverRegistered) {
+            unregisterReceiver(screenOffReceiver)
+            screenOffReceiverRegistered = false
+        }
+        super.onDestroy()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (adminSessionWatchdog.consumeLogoutAfterSleepIfPending()) {
+            adminSessionAutoLogout?.invoke()
+        }
+    }
+
+    override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
+        val result = super.dispatchTouchEvent(ev)
+        if (ev != null && adminSessionWatchdog.monitoring) {
+            when (ev.actionMasked) {
+                MotionEvent.ACTION_DOWN,
+                MotionEvent.ACTION_MOVE,
+                MotionEvent.ACTION_POINTER_DOWN -> adminSessionWatchdog.onUserInput()
+            }
+        }
+        return result
+    }
+
     override fun attachBaseContext(newBase: Context?) {
         super.attachBaseContext(applyLanguageToContext(applyResolutionScalingToContext(newBase)))
     }
@@ -366,7 +466,9 @@ private fun performStrongHaptic(vibrator: Vibrator?) {
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
-fun EventManagerApp() {
+fun EventManagerApp(
+    onThemeModeChanged: (String) -> Unit = {}
+) {
     val appContext = LocalContext.current
     val settingsManager = remember { SettingsManager(appContext) }
 
@@ -396,7 +498,10 @@ fun EventManagerApp() {
         SetupWizardScreen(
             onSetupComplete = {
                 showSetupWizard = false
-            }
+                // Resolution scale is applied in attachBaseContext; recreate so layout size matches prefs.
+                (appContext as? Activity)?.recreate()
+            },
+            onThemeModeChanged = onThemeModeChanged
         )
     } else if (showWelcome) {
         WelcomeScreen(
@@ -407,13 +512,6 @@ fun EventManagerApp() {
             onTicketCheckSelected = {
                 showWelcome = false
                 showTicketCheck = true
-            }
-        )
-    } else if (showTicketCheck) {
-        TicketCheckScreen(
-            onBack = {
-                showTicketCheck = false
-                showWelcome = true
             }
         )
     } else {
@@ -452,6 +550,45 @@ fun EventManagerApp() {
         // Collect update check state
         val updateCheckResult by viewModel.updateCheckState.collectAsState()
         val updateDownloadState by viewModel.updateDownloadState.collectAsState()
+
+        // Admin session: auto-return to welcome after idle timeout or after screen was turned off (sleep).
+        val adminSurfaceActive = !showWelcome && !showAdminAuth && !showTicketCheck
+        val endAdminSession by rememberUpdatedState {
+            showWelcome = true
+            showAdminAuth = false
+            showTicketCheck = false
+            selectedTab = 0
+            showJobTypeManagement = false
+            showVenueManagement = false
+        }
+        val mainActivity = context as? MainActivity
+        DisposableEffect(adminSurfaceActive, mainActivity) {
+            val act = mainActivity ?: return@DisposableEffect onDispose { }
+            if (adminSurfaceActive) {
+                act.adminSessionWatchdog.monitoring = true
+                act.adminSessionWatchdog.lastInteractionElapsedMs.set(SystemClock.elapsedRealtime())
+                act.adminSessionAutoLogout = { endAdminSession() }
+            } else {
+                act.adminSessionWatchdog.stopMonitoring()
+                act.adminSessionAutoLogout = null
+            }
+            onDispose {
+                act.adminSessionWatchdog.stopMonitoring()
+                act.adminSessionAutoLogout = null
+            }
+        }
+        LaunchedEffect(adminSurfaceActive, mainActivity) {
+            if (!adminSurfaceActive || mainActivity == null) return@LaunchedEffect
+            val act = mainActivity
+            while (true) {
+                delay(15_000L)
+                val idleMs = SystemClock.elapsedRealtime() - act.adminSessionWatchdog.lastInteractionElapsedMs.get()
+                if (idleMs >= ADMIN_SESSION_IDLE_TIMEOUT_MS) {
+                    endAdminSession()
+                    break
+                }
+            }
+        }
         
         // State for device time error
         val showDeviceTimeErrorDialog = remember { mutableStateOf(false) }
@@ -555,6 +692,133 @@ fun EventManagerApp() {
                     showWelcome = true
                 }
             )
+        } else {
+        if (showTicketCheck) {
+            var billeterieSection by rememberSaveable { mutableStateOf("home") }
+            var showBilleterieSettings by rememberSaveable { mutableStateOf(false) }
+            val billeterieDashboardScrollState = rememberScrollState(0)
+            val billeterieListContext = LocalContext.current
+
+            LaunchedEffect(showTicketCheck) {
+                if (showTicketCheck) {
+                    kotlinx.coroutines.delay(250)
+                    viewModel.syncGuestsWithTargetedUpdates()
+                }
+            }
+
+            LaunchedEffect(billeterieSection) {
+                if (billeterieSection != "home") {
+                    showBilleterieSettings = false
+                }
+            }
+
+            BackHandler {
+                when {
+                    showBilleterieSettings -> showBilleterieSettings = false
+                    billeterieSection == "guests" || billeterieSection == "scanner" -> billeterieSection = "home"
+                    else -> {
+                        showTicketCheck = false
+                        showWelcome = true
+                    }
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.surface)
+            ) {
+                AnimatedBackground(
+                    enabled = settingsManager.isAnimatedBackgroundEnabled()
+                )
+
+                when (billeterieSection) {
+                    "home" -> {
+                        if (showBilleterieSettings) {
+                            BilleterieSettingsScreen(
+                                viewModel = viewModel,
+                                onBack = { showBilleterieSettings = false }
+                            )
+                        } else {
+                            BilleterieHomeScreen(
+                                guests = guests,
+                                repository = viewModel.repository,
+                                dashboardScrollState = billeterieDashboardScrollState,
+                                onBack = {
+                                    showTicketCheck = false
+                                    showWelcome = true
+                                },
+                                onOpenGuestList = { billeterieSection = "guests" },
+                                onOpenScanner = { billeterieSection = "scanner" },
+                                onOpenSettings = { showBilleterieSettings = true }
+                            )
+                        }
+                    }
+                    "scanner" -> {
+                        BilleterieScannerScreen(
+                            volunteers = volunteers,
+                            guests = guests,
+                            jobs = jobs,
+                            jobTypeConfigs = jobTypeConfigs,
+                            onBack = { billeterieSection = "home" },
+                            onConfirmEntry = { job, selectedInvites ->
+                                viewModel.markBenefitAsUsed(job, selectedInvites)
+                            }
+                        )
+                    }
+                    else -> {
+                        Scaffold(
+                            containerColor = if (settingsManager.isAnimatedBackgroundEnabled()) {
+                                Color.Transparent
+                            } else {
+                                MaterialTheme.colorScheme.surface
+                            },
+                            contentColor = MaterialTheme.colorScheme.onSurface,
+                            topBar = {
+                                CenterAlignedTopAppBar(
+                                    title = {
+                                        Text(
+                                            text = billeterieListContext.getString(R.string.nav_guests),
+                                            style = MaterialTheme.typography.titleLarge,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    },
+                                    navigationIcon = {
+                                        IconButton(onClick = { billeterieSection = "home" }) {
+                                            Icon(
+                                                imageVector = Icons.Default.ArrowBack,
+                                                contentDescription = billeterieListContext.getString(R.string.setup_back)
+                                            )
+                                        }
+                                    },
+                                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                                        containerColor = Color.Transparent,
+                                        scrolledContainerColor = Color.Transparent,
+                                        navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                                        actionIconContentColor = MaterialTheme.colorScheme.onSurface
+                                    )
+                                )
+                            }
+                        ) { innerPadding ->
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(innerPadding)
+                            ) {
+                                GuestListScreenWithViewModel(viewModel, readOnly = true)
+                            }
+                        }
+                    }
+                }
+
+                SyncStatusWidget(
+                    viewModel = viewModel,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(bottom = 8.dp, end = 8.dp)
+                )
+            }
         } else {
         // Defer sync operations on tab switch to allow instant UI response
         // OPTIMIZED: Syncs are triggered 250ms after tab change to ensure animation completes first
@@ -741,6 +1005,17 @@ fun EventManagerApp() {
                             vertical = if (isPhone) 4.dp else 8.dp
                         )
                 ) {
+                    // Root admin: system back would otherwise finish the activity; return to welcome instead
+                    // (same as dashboard logout). Job/venue management screens register their own BackHandler
+                    // after this and take precedence; open dialogs compose later and dismiss first.
+                    BackHandler {
+                        showWelcome = true
+                        showAdminAuth = false
+                        showTicketCheck = false
+                        selectedTab = 0
+                        showJobTypeManagement = false
+                        showVenueManagement = false
+                    }
                     // Animated background
                     AnimatedBackground(
                         enabled = settingsManager.isAnimatedBackgroundEnabled()
@@ -1021,6 +1296,7 @@ if (pageAnimationsEnabled) {
                     )
                 }
             }
+        }
         }
             
         // QR Scanner Dialog
@@ -1518,66 +1794,15 @@ fun DashboardScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(responsivePadding)
         ) {
-        // Clock display - optimize to only update when needed
-        var currentDateTime by remember { mutableStateOf(java.util.Date()) }
-        
-        LaunchedEffect(Unit) {
-            while (true) {
-                kotlinx.coroutines.delay(1000)
-                // Only update if the screen is still visible (reduces unnecessary recompositions)
-                currentDateTime = java.util.Date()
-            }
-        }
-        
-        // Only read format once and cache it - formats rarely change (settingsManager already defined above)
-        val userTimeFormat = remember { settingsManager.getTimeFormat() }
-        val userDateFormat = remember { settingsManager.getDateFormat() }
         // Visibility settings
         val isPeopleCounterVisible = remember { settingsManager.isPeopleCounterVisible() }
         val isStatisticsVisible = remember { settingsManager.isStatisticsVisible() }
         val dateChangeOffsetHours = remember { settingsManager.getDateChangeOffsetHours() }
-        
-        // Memoize formatters to avoid recreating them unnecessarily
-        val timeFormatter = remember(userTimeFormat) { 
-            java.text.SimpleDateFormat(userTimeFormat, Locale.getDefault()) 
-        }
-        val dateFormatter = remember(userDateFormat) { 
-            java.text.SimpleDateFormat(userDateFormat, Locale.getDefault()) 
-        }
-        
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(if (isPhone) 120.dp else 140.dp),
-            shape = RoundedCornerShape(if (isPhone) 12.dp else 16.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(if (isPhone) 12.dp else 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = timeFormatter.format(currentDateTime),
-                    style = if (isPhone) MaterialTheme.typography.displayMedium else MaterialTheme.typography.displayLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                
-                Spacer(modifier = Modifier.height(if (isPhone) 6.dp else 8.dp))
-                
-                Text(
-                    text = dateFormatter.format(currentDateTime),
-                    style = if (isPhone) MaterialTheme.typography.labelLarge else MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
+
+        DashboardClockCard(
+            settingsManager = settingsManager,
+            isPhone = isPhone
+        )
         
         Spacer(modifier = Modifier.height(if (isPhone) 16.dp else 24.dp))
 
@@ -2015,7 +2240,10 @@ fun StatCardV2(
 
 // Wrapper composables that connect screens to ViewModel
 @Composable
-fun GuestListScreenWithViewModel(viewModel: EventManagerViewModel) {
+fun GuestListScreenWithViewModel(
+    viewModel: EventManagerViewModel,
+    readOnly: Boolean = false
+) {
     val guests by viewModel.guests.collectAsState()
     val volunteers by viewModel.volunteers.collectAsState()
     val jobs by viewModel.jobs.collectAsState()
@@ -2039,6 +2267,7 @@ fun GuestListScreenWithViewModel(viewModel: EventManagerViewModel) {
         isSyncing = isSyncing,
         lastSyncTime = settingsManager.getLastSyncTime(),
         scrollBehavior = scrollBehavior,
+        readOnly = readOnly,
         onAddGuest = { 
             coroutineScope.launch { 
                 try {
@@ -2048,6 +2277,15 @@ fun GuestListScreenWithViewModel(viewModel: EventManagerViewModel) {
                     println("Guest addition failed: ${e.message}")
                 }
             } 
+        },
+        onAddTemporaryGuests = { batch ->
+            coroutineScope.launch {
+                try {
+                    viewModel.addTemporaryGuestBatch(batch)
+                } catch (e: Exception) {
+                    println("Temporary guest addition failed: ${e.message}")
+                }
+            }
         },
         onUpdateGuest = { 
             coroutineScope.launch { 
@@ -2256,15 +2494,14 @@ fun WelcomeScreen(onAdminSelected: () -> Unit, onTicketCheckSelected: () -> Unit
             }
             val isLandscape = maxWidth > maxHeight
 
-            Column(
+            // Center logo block without ColumnScope.weight (avoids NoSuchMethodError if Compose layout JARs diverge on device).
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(0.dp, Alignment.Top)
+                contentAlignment = Alignment.Center
             ) {
-                // Spacer to push content higher
-                Spacer(modifier = Modifier.weight(0.3f))
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 // Happy Pride text on Pride Day
                 if (isPrideDay) {
                     Text(
@@ -2317,8 +2554,7 @@ fun WelcomeScreen(onAdminSelected: () -> Unit, onTicketCheckSelected: () -> Unit
                         color = colorScheme.onBackground
                     )
                 }
-                // Spacer at bottom
-                Spacer(modifier = Modifier.weight(0.7f))
+                }
             }
 
             // Show Pride animation on Pride Day instead of ArchedCirclesBackground (drawn on top)
@@ -2350,17 +2586,14 @@ fun WelcomeScreen(onAdminSelected: () -> Unit, onTicketCheckSelected: () -> Unit
                     )
                 }
                 
-                Column(
+                Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = 24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(0.dp, Alignment.Top)
+                    contentAlignment = Alignment.Center
                 ) {
-                    // Spacer to push logo higher - same as box positioning
-                    Spacer(modifier = Modifier.weight(0.3f))
-                    
-                    // Happy Pride text on Pride Day - same spacing as box Column
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    // Happy Pride text on Pride Day - same spacing as glass column
                     if (isPrideDay) {
                         Text(
                             text = "Happy Pride! 🏳️‍🌈",
@@ -2418,13 +2651,11 @@ fun WelcomeScreen(onAdminSelected: () -> Unit, onTicketCheckSelected: () -> Unit
                             )
                         }
                     }
-                    
-                    // Spacer at bottom - same as box positioning
-                    Spacer(modifier = Modifier.weight(0.7f))
+                    }
                 }
             }
 
-            // Bottom buttons - Admin and Ticket Check
+            // Bottom buttons — ticketing (primary) first, admin (outlined) second
             val buttonColor = if (isPrideDay) {
                 Color(0xFFE40303)
             } else {
@@ -2441,7 +2672,7 @@ fun WelcomeScreen(onAdminSelected: () -> Unit, onTicketCheckSelected: () -> Unit
                 Button(
                     onClick = {
                         performStrongHaptic(vibrator)
-                        onAdminSelected()
+                        onTicketCheckSelected()
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -2453,13 +2684,13 @@ fun WelcomeScreen(onAdminSelected: () -> Unit, onTicketCheckSelected: () -> Unit
                     )
                 ) {
                     Icon(
-                        Icons.Default.Lock,
+                        Icons.Default.ConfirmationNumber,
                         contentDescription = null,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        text = context.getString(R.string.admin_mode),
+                        text = context.getString(R.string.ticket_check_mode),
                         style = if (isLandscape) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -2468,7 +2699,7 @@ fun WelcomeScreen(onAdminSelected: () -> Unit, onTicketCheckSelected: () -> Unit
                 OutlinedButton(
                     onClick = {
                         performStrongHaptic(vibrator)
-                        onTicketCheckSelected()
+                        onAdminSelected()
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -2477,14 +2708,14 @@ fun WelcomeScreen(onAdminSelected: () -> Unit, onTicketCheckSelected: () -> Unit
                     border = BorderStroke(1.5.dp, buttonColor.copy(alpha = 0.6f))
                 ) {
                     Icon(
-                        Icons.Default.ConfirmationNumber,
+                        Icons.Default.Lock,
                         contentDescription = null,
                         modifier = Modifier.size(20.dp),
                         tint = buttonColor
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        text = context.getString(R.string.ticket_check_mode),
+                        text = context.getString(R.string.admin_mode),
                         style = if (isLandscape) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = buttonColor

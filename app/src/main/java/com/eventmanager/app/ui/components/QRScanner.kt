@@ -44,6 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.google.gson.Gson
 import com.journeyapps.barcodescanner.CaptureManager
@@ -55,6 +56,8 @@ import com.google.zxing.DecodeHintType
 import com.eventmanager.app.data.models.Volunteer
 import com.eventmanager.app.data.models.Guest
 import com.eventmanager.app.hardware.Acr122uUsbNfcReader
+import com.eventmanager.app.hardware.ExternalAcsUidReader
+import com.eventmanager.app.hardware.ExternalReaderPermissions
 import com.eventmanager.app.hardware.rememberUsbHardwareGeneration
 import com.eventmanager.app.ui.utils.*
 import com.eventmanager.app.R
@@ -191,14 +194,16 @@ fun QRScannerDialog(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var showManualInput by remember { mutableStateOf(false) }
     var lastNfcUid by remember { mutableStateOf<String?>(null) }
-    var isUsbReaderBusy by remember { mutableStateOf(false) }
+    var isExternalReaderBusy by remember { mutableStateOf(false) }
+    var bluetoothConnectResultReturned by remember { mutableStateOf(false) }
+    var externalReaderBtRecoverAttempts by remember { mutableIntStateOf(0) }
     var lastUsbDispatchedUid by remember { mutableStateOf<String?>(null) }
     var lastUsbDispatchElapsedMs by remember { mutableStateOf(0L) }
     var duplicateUid by remember { mutableStateOf<String?>(null) }
     var duplicateUidMatches by remember { mutableStateOf<List<NfcUidMatchOption>>(emptyList()) }
     val usbHardwareGeneration = rememberUsbHardwareGeneration()
     val hasExternalReaderConnected = remember(usbHardwareGeneration, context) {
-        Acr122uUsbNfcReader.isConnected(context)
+        ExternalAcsUidReader.isConnected(context)
     }
     val permanentGuests = remember(guests) { guests.filter { !it.isVolunteerBenefit && !it.isTemporaryGuest } }
     val volunteersByNfcUid = remember(volunteers) {
@@ -259,7 +264,13 @@ fun QRScannerDialog(
             }
         }
     }
-    
+
+    val bluetoothConnectLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) {
+        bluetoothConnectResultReturned = true
+    }
+
     // Check camera permission
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -279,7 +290,7 @@ fun QRScannerDialog(
             }
         }
     }
-    
+
     // Same ordering as AddNfcUidDialog: if a USB reader needs host permission, let [readUid] drive that
     // dialog first; do not request camera in parallel (competing system dialogs cancel USB permission).
     LaunchedEffect(Unit) {
@@ -310,6 +321,14 @@ fun QRScannerDialog(
                     delay(200)
                 }
             }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.BLUETOOTH_CONNECT
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                bluetoothConnectLauncher.launch(Manifest.permission.BLUETOOTH_CONNECT)
+            }
             if (ContextCompat.checkSelfPermission(
                     context,
                     Manifest.permission.CAMERA
@@ -320,24 +339,23 @@ fun QRScannerDialog(
         }
     }
 
-    // Same USB polling model as AddNfcUidDialog: no camera permission / preview required.
+    // External ACS reader (USB or Bluetooth); same polling model as AddNfcUidDialog.
     // Do not key on usbHardwareGeneration: attach/detach during permission can cancel this effect.
     LaunchedEffect(hasExternalReaderConnected) {
         if (!hasExternalReaderConnected) {
             lastUsbDispatchedUid = null
             lastUsbDispatchElapsedMs = 0L
-            isUsbReaderBusy = false
+            isExternalReaderBusy = false
             return@LaunchedEffect
         }
         try {
-            while (Acr122uUsbNfcReader.isConnected(context)) {
+            readerLoop@ while (ExternalAcsUidReader.isConnected(context)) {
                 ensureActive()
-                isUsbReaderBusy = true
-                val result = Acr122uUsbNfcReader.readUid(context)
-                when {
-                    result.isSuccess -> {
+                isExternalReaderBusy = true
+                when (val outcome = ExternalAcsUidReader.readUid(context)) {
+                    is ExternalAcsUidReader.ReadOutcome.Success -> {
                         if (duplicateUid == null) {
-                            val norm = result.uid!!.normalizeUid()
+                            val norm = outcome.uid.normalizeUid()
                             val now = SystemClock.elapsedRealtime()
                             val sameUidReplayGapMs = 850L
                             if (norm != lastUsbDispatchedUid ||
@@ -345,32 +363,56 @@ fun QRScannerDialog(
                             ) {
                                 lastUsbDispatchedUid = norm
                                 lastUsbDispatchElapsedMs = now
-                                resolveUidMatch(result.uid!!)
+                                resolveUidMatch(outcome.uid)
                             }
                         }
                         delay(280)
                     }
-                    !result.shouldRetryUsbPoll() -> {
-                        errorMessage = result.error ?: context.getString(R.string.nfc_uid_read_failed)
-                        break
+                    is ExternalAcsUidReader.ReadOutcome.Fatal -> {
+                        if (outcome.error == ExternalReaderPermissions.BLUETOOTH_CONNECT_DENIED &&
+                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                        ) {
+                            val act = activity
+                            val permanentlyBlocked = act != null &&
+                                bluetoothConnectResultReturned &&
+                                !ActivityCompat.shouldShowRequestPermissionRationale(
+                                    act,
+                                    Manifest.permission.BLUETOOTH_CONNECT
+                                ) &&
+                                !ExternalReaderPermissions.hasBluetoothConnect(context)
+                            if (permanentlyBlocked || externalReaderBtRecoverAttempts >= 5) {
+                                errorMessage = context.getString(R.string.external_reader_bt_blocked_hint)
+                                break@readerLoop
+                            }
+                            externalReaderBtRecoverAttempts++
+                            bluetoothConnectLauncher.launch(Manifest.permission.BLUETOOTH_CONNECT)
+                            errorMessage = context.getString(R.string.nfc_uid_read_failed)
+                            delay(700)
+                            continue@readerLoop
+                        }
+                        errorMessage = outcome.error ?: context.getString(R.string.nfc_uid_read_failed)
+                        break@readerLoop
                     }
-                    else -> {
+                    is ExternalAcsUidReader.ReadOutcome.Retryable -> {
                         lastUsbDispatchedUid = null
                         delay(280)
                     }
+                    ExternalAcsUidReader.ReadOutcome.NoReader -> break@readerLoop
                 }
             }
         } finally {
-            isUsbReaderBusy = false
+            isExternalReaderBusy = false
         }
     }
 
     // Phone NFC: only enable reader mode when NFC is on — same as AddNfcUidDialog (not while disabled).
-    DisposableEffect(activity, nfcAdapter, volunteers, permanentGuests) {
+    DisposableEffect(activity, nfcAdapter, volunteers, permanentGuests, hasExternalReaderConnected) {
         if (activity == null || nfcAdapter == null) {
             onDispose { }
         } else if (!nfcAdapter.isEnabled) {
-            errorMessage = context.getString(R.string.nfc_disabled_enable)
+            if (!hasExternalReaderConnected) {
+                errorMessage = context.getString(R.string.nfc_disabled_enable)
+            }
             onDispose { }
         } else {
             val callback = NfcAdapter.ReaderCallback { tag ->
@@ -643,7 +685,7 @@ fun QRScannerDialog(
                                 }
                                 if (hasExternalReaderConnected) {
                                     Text(
-                                        text = if (isUsbReaderBusy) {
+                                        text = if (isExternalReaderBusy) {
                                             context.getString(R.string.usb_reader_waiting_card_short)
                                         } else {
                                             context.getString(R.string.scan_with_usb_reader)

@@ -454,6 +454,29 @@ class EventManagerViewModel(
         }
     }
 
+    /**
+     * Adds one or more temporary guests as separate rows on the temp guest sheet, then
+     * reloads temporary guests from Sheets (same source of truth as edits/deletes).
+     */
+    fun addTemporaryGuestBatch(batch: ManualTemporaryGuestBatch) {
+        viewModelScope.launch {
+            try {
+                if (!isGoogleSheetsConfigured()) {
+                    _syncError.value = context?.getString(com.eventmanager.app.R.string.sync_status_not_configured)
+                        ?: "Google Sheets is not configured."
+                    return@launch
+                }
+                val names = batch.guestNames.map { it.trim() }.filter { it.isNotEmpty() }
+                if (names.isEmpty()) return@launch
+                googleSheetsService.appendTemporaryGuestManualBatch(batch.copy(guestNames = names))
+                refreshTemporaryGuestsFromSheets()
+            } catch (e: Exception) {
+                println("Failed to add temporary guests: ${e.message}")
+                _syncError.value = "Failed to add temporary guests: ${e.message}"
+            }
+        }
+    }
+
     fun updateGuest(guest: Guest) {
         viewModelScope.launch {
             try {
@@ -603,7 +626,11 @@ class EventManagerViewModel(
         }
     }
 
-    private fun applyInitialBenefitFutureEntries(job: Job, configs: List<JobTypeConfig>): Job {
+    private fun applyInitialBenefitFutureEntries(
+        job: Job,
+        configs: List<JobTypeConfig>,
+        meetingNovaBenefitsExcludedForOrion: Boolean
+    ): Job {
         if (job.benefitFutureEntriesRemaining != null) return job
         val config = configs.find { it.name == job.jobTypeName } ?: return job
         if (config.benefitSystemType == BenefitSystemType.MANUAL) {
@@ -622,7 +649,10 @@ class EventManagerViewModel(
                     if (job.shiftTime != ShiftTime.AFTER_MIDNIGHT) return job
                     entries = 1; invites = 1
                 }
-                NovaJobType.MEETING -> { entries = 1; invites = 1 }
+                NovaJobType.MEETING -> {
+                    if (meetingNovaBenefitsExcludedForOrion) return job
+                    entries = 1; invites = 1
+                }
                 NovaJobType.PHOTOGRAPHER_VIDEOGRAPHER -> { entries = 1; invites = 1 }
                 NovaJobType.GRAPHIC_DESIGNER_EVENT -> { entries = 1; invites = 1 }
                 NovaJobType.GRAPHIC_DESIGNER_ASSOCIATION -> { entries = 2; invites = 1 }
@@ -636,7 +666,13 @@ class EventManagerViewModel(
     fun addJob(job: Job) {
         viewModelScope.launch {
             try {
-                val jobWithBenefit = applyInitialBenefitFutureEntries(job, _jobTypeConfigs.value)
+                val volunteerJobsSame = _jobs.value.filter { it.volunteerId == job.volunteerId }
+                val meetingNovaExcluded = BenefitCalculator.isVolunteerOrionActive(
+                    volunteerJobsSame, _jobTypeConfigs.value
+                )
+                val jobWithBenefit = applyInitialBenefitFutureEntries(
+                    job, _jobTypeConfigs.value, meetingNovaExcluded
+                )
                 
                 // Insert job into local database first
                 val jobId = repository.insertJob(jobWithBenefit)
@@ -742,6 +778,12 @@ class EventManagerViewModel(
                     val now = System.currentTimeMillis()
                     val configsByName = _jobTypeConfigs.value.associateBy { it.name }
                     val allJobs = _jobs.value
+                    val meetingNovaExcluded = BenefitCalculator.isVolunteerOrionActive(
+                        allJobs.filter { it.volunteerId == job.volunteerId },
+                        _jobTypeConfigs.value,
+                        now,
+                        offsetHours
+                    )
                     val selectedInvites = selectedInvitesOverride
                         ?: job.benefitFutureEntryInvites
                         ?: effectiveBenefitFutureEntryInvites(job, configsByName[job.jobTypeName])
@@ -754,7 +796,9 @@ class EventManagerViewModel(
                         val cfg = configsByName[candidate.jobTypeName]
                         sameRecord &&
                             jobTypeSupportsTrackedFutureEntries(candidate, cfg) &&
-                            effectiveBenefitFutureEntriesRemaining(candidate, cfg, now, offsetHours) > 0 &&
+                            effectiveBenefitFutureEntriesRemaining(
+                                candidate, cfg, now, offsetHours, meetingNovaExcluded
+                            ) > 0 &&
                             effectiveBenefitFutureEntryInvites(candidate, cfg) == selectedInvites
                     } ?: allJobs
                         .asSequence()
@@ -762,7 +806,9 @@ class EventManagerViewModel(
                         .filter { candidate ->
                             val cfg = configsByName[candidate.jobTypeName]
                             jobTypeSupportsTrackedFutureEntries(candidate, cfg) &&
-                                effectiveBenefitFutureEntriesRemaining(candidate, cfg, now, offsetHours) > 0 &&
+                                effectiveBenefitFutureEntriesRemaining(
+                                    candidate, cfg, now, offsetHours, meetingNovaExcluded
+                                ) > 0 &&
                                 effectiveBenefitFutureEntryInvites(candidate, cfg) == selectedInvites
                         }
                         .sortedBy { it.date }

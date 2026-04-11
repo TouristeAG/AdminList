@@ -1,184 +1,162 @@
-# Event Manager - Tablet Application
+# Event Manager
 
-A comprehensive Android tablet application for managing guest lists and volunteers for two concert venues: **Groove** and **Le Terreau**.
+Android application for **guest lists**, **volunteers**, **shifts/jobs**, and **volunteer benefits** for live music venues (notably **Groove** and **Le Terreau**). It is optimized for **tablets** and also supports **phones** (responsive layouts, scrollable navigation on small screens).
 
-## Features
+Data is stored locally in **Room (SQLite)** and kept in sync with **Google Sheets** using a **service account**.
 
-### 🎫 Guest List Management
-- Add, edit, and remove guests
-- Manage invitation quotas per guest
-- Venue-specific guest lists (Groove & Le Terreau)
-- Automatic sync with Google Sheets
-- Support for volunteer benefits integration
+---
 
-### 👥 Volunteer Management
-- Add new volunteers with complete profile information
-- Track volunteer jobs and shifts
-- Automatic rank calculation based on volunteer activity
-- Job history tracking
-- Real-time benefits calculation
+## What you can do with the app
 
-### 🏆 Volunteer Ranking System
-- **Nova**: Shift before midnight → Free entry + friend invitation + 2 drink tokens + 50% bar discount
-- **Étoile**: Shift after midnight → Free entry + friend invitation for the month
-- **Galaxie**: 3+ shifts/meetings per month → Free entry + 50% bar discount for all monthly events
-- **Orion**: Committee/coordination roles → Friend invitation + 50% bar discount + extraordinary benefits
-- **Vétéran**: Former Orion rank holders → Year-long guest list access + 50% bar discount
+### First launch: setup wizard
 
-### 📊 Benefits Overview
-- Real-time benefits calculation for all volunteers
-- Clear benefit descriptions and validity periods
-- Easy verification for staff during events
+On a fresh install, a **setup wizard** walks through language, theme, color profile, resolution scaling, Google Sheets connection (spreadsheet ID + service account key), and related options. Until setup is completed, the main app stays behind this flow.
 
-### 🔄 Google Sheets Integration
-- Bidirectional sync with Google Sheets
-- Automatic sync after modifications
-- Manual sync button for staff
-- Support for multiple tablets syncing the same data
+### Welcome screen: two modes
 
-## Technical Stack
+After setup, every launch starts on a **welcome** screen:
 
-- **Language**: Kotlin
-- **UI Framework**: Jetpack Compose
-- **Architecture**: MVVM with Repository pattern
-- **Database**: Room (SQLite)
-- **Dependency Injection**: Hilt
-- **API Integration**: Google Sheets API v4
-- **Navigation**: Navigation Compose
-- **Async**: Coroutines + Flow
+1. **Admin (full manager)** — Authenticate (NFC or QR using a guest or volunteer marked as admin), then use the full back-office UI.
+2. **Billeterie (door / ticketing)** — Lightweight mode for check-in: home stats, guest list focused on the night, barcode/QR scanner, and billeterie-specific settings. Intended for devices at the door without full admin access.
 
-## Project Structure
+The **admin session** returns to the welcome screen after **idle timeout** (no touches for several minutes) or after the **screen was turned off** while admin was active, so shared tablets do not stay logged in indefinitely.
+
+### Admin: main tabs
+
+| Area | Purpose |
+|------|--------|
+| **Dashboard** | Clock, headline counts (guests, invites, volunteers, derived “total people”), optional **people counter**, optional **statistics graphs**, optional seasonal overlays. |
+| **Guests** | Permanent guest list per **venue** (unlimited custom venues via the Venues sheet and in-app venue management). Invitation counts, notes, volunteer-benefit rows, **NanoID** for sync, optional **NFC UID**, admin flag, **temporary guests** for single events (artist, date, contact, batch add). |
+| **Volunteers** | Profiles (including gender), active flag, optional NFC, jobs history entry points. |
+| **Shifts** | Jobs linked to volunteers: job type name, venue, date, **shift time** (evening profited vs non-profited for classic shifts), notes, **“Entries left”** for consumable future free entries (see benefits). |
+| **Benefits** | Live calculation of perks per volunteer, search/filter, dashboard-style aggregates (active benefits, bar discount, free entry, future entries, rank distribution). |
+| **Settings** | Sync (spreadsheet ID, sheet names, auto-sync, manual sync), appearance (theme, color, animations, app icon aliases), localization (language, date/time formats, **venue day offset hours** for “when does the event day roll over”), email templates for QR/wallet passes, optional update manifest URLs, **job type management**, **venue management**, debug logging, etc. |
+
+### Floating tools (admin)
+
+- **QR scanner** (FAB): scan codes to match guests or volunteers and open detail / benefit panels.
+- **Sync status** widget: quick view of sync state; errors can open dedicated dialogs (including device clock skew hints when relevant).
+
+---
+
+## Volunteer benefits (current system)
+
+Benefits are **not** hard-coded only to “Nova = before midnight / Étoile = after midnight”. They are driven by **job type configuration** (`JobTypeConfig` in Room + the **`JobTypes`** sheet in Google Sheets).
+
+### Job types (configuration)
+
+Each named job type can be toggled active/inactive and defines:
+
+- **Shift job** (`isShiftJob`) — Counts toward **NOVA** eligibility and toward **Galaxie** monthly activity when the job falls in the current month (with rules below).
+- **Orion job** (`isOrionJob`) — Counts toward the **Orion** mandate window and later **Veteran** eligibility.
+- **Requires shift time** — For **DEFAULT_SHIFT** Nova types, the app still distinguishes **evening profited** vs **evening non-profited** (stored in Sheets with human-readable labels).
+- **Benefit system** — `STELLAR` (standard rank logic + Nova packages) or `MANUAL` (custom duration perks + optional pooled **future single-use entries**).
+- **Nova job type** (for shift jobs) — Selects which **NOVA perk package** applies, e.g. default shift, meeting, photographer/videographer, graphic designer (event vs association-wide).
+- **Manual rewards** (if `MANUAL`) — Duration in days, free drinks, bar %, free entry, invites, notes, and optional **future single-use entries** + invites per entry.
+
+### Ranks and stacking (summary)
+
+- **NOVA** — One unified **NOVA** benefit built from **all** shift-type jobs (the old **Étoile** split is no longer used for new logic; the enum remains for backward compatibility only).  
+  - **Same-night** perks (free entry + friend + bar discount + drinks) apply only on the **calendar event day** of a qualifying shift (respecting the configured **date-change offset**).  
+  - **Meetings** add **off-event** drinks (Orion volunteers do **not** get meeting perks).  
+  - **Graphic designer (association)** adds a larger off-event drink allowance.  
+  - **Future free entries** are pooled from jobs whose types grant them, using per-job **“Entries left”** in Sheets (supports `n left (+X inv.)` format).
+- **GALAXIE** — **Three or more** qualifying contributions in the **current month** (shift jobs, including meetings in the count). **Orion** volunteers: **meetings** do not count toward the “3+” threshold. Benefit: free entry, bar discount, bonus drink, through month end (see in-app descriptions).
+- **ORION** — Active during the **first year** from the first Orion job; then the volunteer may enter **Veteran** for the following year. Orion perks include free entry, friend invite, bar discount, guest list access, and flagged **extraordinary** perks (see live descriptions in the app).
+- **VETERAN** — **Second year** after Orion start: extended perks (see app text).
+- **SPECIAL** — **Manual** reward jobs: time-limited perks from `MANUAL` job types and/or redeemable **future event entries** even after the duration window ends.
+
+The app may show **multiple active benefit rows** per person (e.g. NOVA + Galaxie + Orion) and an **aggregated** summary for quick scanning.
+
+---
+
+## Google Sheets integration
+
+### Authentication
+
+The app uses a **Google Cloud service account** JSON key (uploaded via setup or Settings, not end-user OAuth). Share the spreadsheet with the service account email (Editor) so the API can read/write.
+
+### Spreadsheet ID
+
+Set in **Settings** (persisted) or default `GoogleSheetsConfig.SPREADSHEET_ID` for development. The built-in **connection test** refuses a blank or placeholder ID.
+
+### Sheet names
+
+Most tabs are **configurable** in Settings (defaults in `GoogleSheetsConfig`). One important exception: **job type sync reads and writes a tab literally named `JobTypes`**. Ensure a sheet with that exact name exists with the header row below.
+
+### Expected structure (headers)
+
+The app can **repair/normalize** some headers; align new spreadsheets with what the sync expects:
+
+| Tab | Role | Header columns (row 1) |
+|-----|------|-------------------------|
+| **Guest List** (name configurable) | Permanent guests | Name, Email, Phone, Invitations, Venue, Notes, Volunteer Benefit, Last Modified, NFC UID, ID, Admin |
+| **Volunteer Guest List** | Benefit-linked guest rows | Name, Last Name Abbreviation, Invitations, Venue, Notes, Volunteer Benefit, Last Modified, NFC UID |
+| **Volunteers** | Volunteer roster | ID, Name, Abbreviation, Email, Phone, Date of Birth, Gender, Rank, Active, Last Modified, NFC UID, Admin |
+| **Shifts** (jobs) | Job history | Volunteer ID, Job Type, Venue, Date, Shift Time, Notes, Last Modified, **Entries left** |
+| **`JobTypes`** (fixed name) | Benefit-driving config | Name, Status, Shift Type, Orion Type, Requires Time, **Benefit System**, **Manual Rewards**, Description, Last Modified, **Nova Job Type** |
+| **Venues** | Venue list | Name, Description, Status, Last Modified |
+| **Temp Guest List** | One-off event guests | Modification Date, Event Date, Artist/Group, Artist Contact Phone, Guest Name, Comment, ID |
+
+**Shift time** values in the jobs sheet use labels such as **Evening shift (profited)** / **Evening shift (non-profited)**; legacy enum-style values may be migrated on sync.
+
+**Entries left** supports forms like `2 left (+1 inv.)`, plain `2 left`, and legacy Yes/No style cells — see `parseJobBenefitFutureEntriesFromSheets` in code if you need exact parsing rules.
+
+---
+
+## Technical stack
+
+- **Language:** Kotlin  
+- **UI:** Jetpack Compose, Material 3  
+- **Architecture:** MVVM, repository, Room, Hilt where applicable  
+- **Networking:** Google Sheets API v4 (service account)  
+- **Concurrency:** Coroutines + Flow  
+- **IDs:** NanoIDs for volunteers and cross-device guest matching where applicable  
+
+---
+
+## Project layout (high level)
 
 ```
-app/
-├── src/main/java/com/eventmanager/app/
-│   ├── data/
-│   │   ├── dao/           # Room DAOs
-│   │   ├── database/      # Database configuration
-│   │   ├── models/        # Data models
-│   │   ├── remote/        # Google Sheets service
-│   │   └── repository/    # Repository pattern
-│   ├── di/                # Dependency injection
-│   ├── ui/
-│   │   ├── components/    # Reusable UI components
-│   │   ├── screens/       # Main screens
-│   │   ├── theme/         # Material Design theme
-│   │   └── viewmodel/     # ViewModels
-│   └── MainActivity.kt
+app/src/main/java/com/eventmanager/app/
+├── data/
+│   ├── dao/, database/, models/, repository/, sync/, utils/
+├── di/
+├── ui/
+│   ├── components/    # Reusable UI (graphs, sync, scanner, etc.)
+│   ├── screens/       # Feature screens (guests, volunteers, billeterie, …)
+│   ├── theme/
+│   └── viewmodel/
+└── MainActivity.kt    # Root composition: wizard, welcome, admin, billeterie
 ```
 
-## Setup Instructions
+---
 
-### 1. Google Sheets API Setup
+## Build and run
 
-1. Go to the [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project or select an existing one
-3. Enable the Google Sheets API
-4. Create credentials (OAuth 2.0 Client ID) for Android
-5. Download the `google-services.json` file
-6. Place it in the `app/` directory
+1. Open the project in **Android Studio** (current Gradle / AGP as in repo).  
+2. **Sync Gradle**.  
+3. Run on a **tablet** or **phone** emulator/device.  
+4. Complete **setup** (or configure Settings): spreadsheet ID + service account JSON + required sheet tabs.
 
-### 2. Configure Google Sheets
+No `google-services.json` is required for Sheets in this project path; credentials are the **service account** file the app stores after upload.
 
-Create a Google Sheets document with three sheets:
+---
 
-#### Sheet 1: "GuestList"
-| Column A | Column B | Column C | Column D | Column E |
-|----------|----------|----------|----------|----------|
-| Name | Invitations | Venue | Notes | IsVolunteerBenefit |
+## Operational tips
 
-#### Sheet 2: "Volunteers"
-| Column A | Column B | Column C | Column D | Column E | Column F | Column G |
-|----------|----------|----------|----------|----------|----------|----------|
-| Name | LastNameAbbr | DateOfBirth | Email | Phone | CurrentRank | IsActive |
+- After changing **job types** or **venues**, use **Job type management** / **Venue management** from Settings or sync flows so Sheets and devices stay aligned.  
+- If benefit totals look wrong near midnight, check **date change offset hours** in Settings (venue “day” boundary).  
+- For door operations, prefer **Billeterie** mode on a dedicated device; use **Admin** only when staff need full CRUD and configuration.
 
-#### Sheet 3: "Shifts"
-| Column A | Column B | Column C | Column D | Column E | Column F | Column G |
-|----------|----------|----------|----------|----------|----------|----------|
-| VolunteerID | JobType | Venue | Date | ShiftTime | IsCompleted | Notes |
-
-### 3. Update Configuration
-
-In `GoogleSheetsService.kt`, update the `SPREADSHEET_ID` constant with your Google Sheets ID:
-
-```kotlin
-private const val SPREADSHEET_ID = "YOUR_SPREADSHEET_ID_HERE"
-```
-
-### 4. Build and Run
-
-1. Open the project in Android Studio
-2. Sync the project with Gradle files
-3. Build and run on a tablet device or emulator
-
-## Usage Guide
-
-### For Staff Members
-
-1. **Guest List Management**:
-   - Switch between Groove and Le Terreau venues using the filter chips
-   - Add new guests using the "Add Guest" button
-   - Edit existing guests by tapping the edit icon
-   - Remove guests using the delete icon (volunteer benefit guests cannot be deleted)
-
-2. **Volunteer Management**:
-   - Add new volunteers with complete information
-   - Record jobs done by volunteers
-   - View volunteer ranks and benefits automatically calculated
-   - Track job history for each volunteer
-
-3. **Benefits Verification**:
-   - Check the Benefits screen to see all volunteer benefits
-   - Verify what benefits each volunteer is entitled to
-   - Benefits are automatically calculated based on recent activity
-
-4. **Synchronization**:
-   - Use the "Sync" button to manually synchronize with Google Sheets
-   - Data automatically syncs after each modification
-   - Multiple tablets can work with the same data
-
-### Tablet Optimization
-
-The application is specifically designed for tablet use with:
-- Landscape orientation lock
-- Large touch targets for easy interaction
-- Optimized layouts for tablet screen sizes
-- Clear typography and spacing
-- Material Design 3 components
-
-## Data Models
-
-### Guest
-- Name, email, phone number, invitation count, venue assignment
-- Support for volunteer benefit guests
-- Notes field for additional information
-
-### Volunteer
-- Complete profile with contact information
-- Current rank based on activity
-- Active/inactive status
-
-### Job
-- Links volunteers to specific work done
-- Venue and date tracking
-- Shift time classification (before/after midnight)
-- Job type categorization
-
-### Benefits
-- Automatic calculation based on volunteer rank
-- Validity period tracking
-- Comprehensive benefit descriptions
+---
 
 ## Contributing
 
-This application is designed for the specific needs of Groove and Le Terreau venues. For modifications or enhancements, please ensure:
+When extending behavior:
 
-1. Maintain tablet-optimized UI
-2. Preserve Google Sheets sync functionality  
-3. Keep volunteer ranking logic intact
-4. Test with multiple tablet synchronization
+- Preserve **Sheets compatibility** (column order, `JobTypes` tab name unless code is updated everywhere).  
+- Keep **benefit math** in `BenefitCalculator` / models testable and consistent with documented sheet columns.  
+- Respect **tablet and phone** layouts and touch targets.
 
-## Support
-
-For technical support or questions about the volunteer ranking system, please refer to the original requirements document or contact the development team.
-
+For product or policy questions (e.g. exact CHF wallet amounts shown in Orion copy), treat the **in-app strings and `Benefit` descriptions** as the source of truth alongside this file.
