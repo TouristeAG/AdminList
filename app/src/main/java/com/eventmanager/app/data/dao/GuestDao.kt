@@ -47,6 +47,9 @@ interface GuestDao {
     
     @Query("SELECT * FROM guests WHERE sheetsId = :sheetsId")
     suspend fun getGuestBySheetsId(sheetsId: String): Guest?
+
+    @Query("SELECT * FROM guests WHERE nanoId = :nanoId LIMIT 1")
+    suspend fun getGuestByNanoId(nanoId: String): Guest?
     
     @Query("SELECT * FROM guests WHERE name = :name")
     suspend fun getGuestByName(name: String): Guest?

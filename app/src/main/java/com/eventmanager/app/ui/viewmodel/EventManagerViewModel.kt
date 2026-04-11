@@ -1695,12 +1695,12 @@ class EventManagerViewModel(
                 continue
             }
             
-            val localGuest = localGuests.find { it.sheetsId == remoteGuest.sheetsId || it.name == remoteGuest.name }
+            val localGuest = localGuests.find { guestSameSyncIdentity(it, remoteGuest) }
             if (localGuest == null) {
                 // New guest from sheets
                 try {
                     repository.insertGuest(remoteGuest)
-                        guestsAdded++
+                    guestsAdded++
                     println("Added new guest: ${remoteGuest.name}")
                 } catch (e: Exception) {
                     println("Failed to add guest: ${remoteGuest.name} - ${e.message}")
@@ -1711,7 +1711,7 @@ class EventManagerViewModel(
                     repository.updateGuest(remoteGuest.copy(id = localGuest.id))
                     guestsUpdated++
                     println("Updated guest: ${remoteGuest.name}")
-            } catch (e: Exception) {
+                } catch (e: Exception) {
                     println("Failed to update guest: ${remoteGuest.name} - ${e.message}")
                 }
             }
@@ -1993,7 +1993,7 @@ class EventManagerViewModel(
                 continue
             }
             
-            val localGuest = localGuests.find { it.sheetsId == remoteGuest.sheetsId || it.name == remoteGuest.name }
+            val localGuest = localGuests.find { guestSameSyncIdentity(it, remoteGuest) }
             if (localGuest == null) {
                 // New guest from sheets
                 try {
@@ -2119,7 +2119,7 @@ class EventManagerViewModel(
                 continue
             }
             
-            val localGuest = localGuests.find { it.sheetsId == remoteGuest.sheetsId || it.name == remoteGuest.name }
+            val localGuest = localGuests.find { guestSameSyncIdentity(it, remoteGuest) }
             if (localGuest == null) {
                 // New guest from sheets
                 try {
@@ -3253,28 +3253,34 @@ class EventManagerViewModel(
     
     
     /**
-     * Remove duplicate guests based on the following rules:
-     * 1. If ID is the same → keep the OLDER one (lower lastModified)
-     * 2. If ID is different BUT all info is exactly the same → keep the OLDER one
-     * 3. Everything else should NOT be filtered
+     * Same logical guest row for merge/sync. Display names can repeat; identity uses
+     * Google Sheets row id, guest NanoID, or volunteer-benefit volunteer id.
+     */
+    private fun guestSameSyncIdentity(local: Guest, remote: Guest): Boolean {
+        if (remote.sheetsId != null && local.sheetsId == remote.sheetsId) return true
+        if (NanoIdGenerator.isValidNanoId(remote.nanoId) &&
+            NanoIdGenerator.isValidNanoId(local.nanoId) &&
+            local.nanoId == remote.nanoId
+        ) {
+            return true
+        }
+        if (local.isVolunteerBenefit && remote.isVolunteerBenefit &&
+            local.volunteerId != null && local.volunteerId == remote.volunteerId
+        ) {
+            return true
+        }
+        return false
+    }
+
+    /**
+     * Remove in-memory duplicate guest rows: collapse by guest [nanoId] when valid;
+     * otherwise fall back to DB row id so rows are not merged by name/content alone.
      */
     private fun removeDuplicateGuests(guests: List<Guest>): List<Guest> {
-        // Group by ID first to handle same-ID duplicates
-        val byId = guests.groupBy { it.id }
-        
-        // For each ID group, keep only the oldest (lowest lastModified)
-        val uniqueById = byId.values.map { group ->
-            group.minByOrNull { it.lastModified } ?: group.first()
-        }
-        
-        // Now check for content duplicates (different ID but same info)
-        // Content key = all identifying fields except ID and timestamps
-        fun contentKey(g: Guest) = "${g.name}_${g.email}_${g.phoneNumber}_${g.venueName}_${g.invitations}_${g.notes}_${g.isVolunteerBenefit}_${g.volunteerId}_${g.isTemporaryGuest}_${g.nfcCardUid}"
-        
-        val byContent = uniqueById.groupBy { contentKey(it) }
-        
-        // For each content group, keep only the oldest (lowest lastModified)
-        return byContent.values.map { group ->
+        fun dedupeKey(g: Guest): String =
+            if (NanoIdGenerator.isValidNanoId(g.nanoId)) g.nanoId else "row:${g.id}"
+        val byKey = guests.groupBy { dedupeKey(it) }
+        return byKey.values.map { group ->
             group.minByOrNull { it.lastModified } ?: group.first()
         }
     }

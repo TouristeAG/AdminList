@@ -79,7 +79,7 @@ import com.eventmanager.app.R
 import com.eventmanager.app.BuildConfig
 import com.eventmanager.app.ui.theme.ThemeMode
 import com.eventmanager.app.ui.components.ResolutionScaleSlider
-import com.eventmanager.app.ui.components.AppRestartDialog
+import com.eventmanager.app.ui.components.restartApp
 import com.eventmanager.app.ui.components.RetroSynthwaveGameDialog
 import com.eventmanager.app.ui.components.OffTheLineGameDialog
 import com.eventmanager.app.ui.components.PizzaUndeliveryGameDialog
@@ -1131,11 +1131,9 @@ fun SettingsScreen(
     var showAnimationSettings by remember { mutableStateOf(settingsManager.isCategoryAnimationExpanded()) }
     var showDeveloperSettings by remember { mutableStateOf(settingsManager.isCategoryDeveloperExpanded()) }
     var showMaintenanceSettings by remember { mutableStateOf(settingsManager.isCategoryMaintenanceExpanded()) }
-    var showRestartDialog by remember { mutableStateOf(false) }
     var currentResolutionScale by remember { mutableStateOf(settingsManager.getResolutionScale()) }
     var pendingResolutionScale by remember { mutableStateOf(settingsManager.getResolutionScale()) }
     var hasUnsavedResolutionChanges by remember { mutableStateOf(false) }
-    var showAppIconRestartDialog by remember { mutableStateOf(false) }
     var showUpdateResultDialog by remember { mutableStateOf(false) }
     var showUpdateSourcesDialog by remember { mutableStateOf(false) }
     
@@ -1769,7 +1767,7 @@ fun SettingsScreen(
                                             selectedColorTheme = "system"
                                             settingsManager.saveColorTheme("system")
                                             showColorThemeMenu = false
-                                            showRestartDialog = true
+                                            (context as? android.app.Activity)?.recreate()
                                         } else {
                                             showColorThemeMenu = false
                                         }
@@ -1782,7 +1780,7 @@ fun SettingsScreen(
                                             selectedColorTheme = "professional_blue"
                                             settingsManager.saveColorTheme("professional_blue")
                                             showColorThemeMenu = false
-                                            showRestartDialog = true
+                                            (context as? android.app.Activity)?.recreate()
                                         } else {
                                             showColorThemeMenu = false
                                         }
@@ -1795,7 +1793,7 @@ fun SettingsScreen(
                                             selectedColorTheme = "neutral_green"
                                             settingsManager.saveColorTheme("neutral_green")
                                             showColorThemeMenu = false
-                                            showRestartDialog = true
+                                            (context as? android.app.Activity)?.recreate()
                                         } else {
                                             showColorThemeMenu = false
                                         }
@@ -1808,7 +1806,7 @@ fun SettingsScreen(
                                             selectedColorTheme = "warm_gray"
                                             settingsManager.saveColorTheme("warm_gray")
                                             showColorThemeMenu = false
-                                            showRestartDialog = true
+                                            (context as? android.app.Activity)?.recreate()
                                         } else {
                                             showColorThemeMenu = false
                                         }
@@ -1821,7 +1819,7 @@ fun SettingsScreen(
                                             selectedColorTheme = "neutral_purple"
                                             settingsManager.saveColorTheme("neutral_purple")
                                             showColorThemeMenu = false
-                                            showRestartDialog = true
+                                            (context as? android.app.Activity)?.recreate()
                                         } else {
                                             showColorThemeMenu = false
                                         }
@@ -1834,7 +1832,7 @@ fun SettingsScreen(
                                             selectedColorTheme = "rich_brown"
                                             settingsManager.saveColorTheme("rich_brown")
                                             showColorThemeMenu = false
-                                            showRestartDialog = true
+                                            (context as? android.app.Activity)?.recreate()
                                         } else {
                                             showColorThemeMenu = false
                                         }
@@ -1881,7 +1879,7 @@ fun SettingsScreen(
                                     currentResolutionScale = pendingResolutionScale
                                     settingsManager.saveResolutionScale(pendingResolutionScale)
                                     hasUnsavedResolutionChanges = false
-                                    showRestartDialog = true
+                                    (context as? android.app.Activity)?.recreate()
                                 },
                                 modifier = Modifier.fillMaxWidth()
                             ) {
@@ -1956,8 +1954,10 @@ fun SettingsScreen(
                                             println("🔄 Applying ${iconOption.style} icon")
                                             appIconManager.setAppIcon(iconOption.style)
                                             println("✅ ${iconOption.style} icon applied")
-                                            // Show restart dialog
-                                            showAppIconRestartDialog = true
+                                            coroutineScope.launch {
+                                                delay(200)
+                                                restartApp(context)
+                                            }
                                         // Show toast to user
                                         android.widget.Toast.makeText(
                                             context,
@@ -2110,8 +2110,10 @@ fun SettingsScreen(
                                     appIconManager.setAppIcon(adaptedIcon)
                                     selectedIconStyle = adaptedIcon
                                     settingsManager.saveAppIconStyle(adaptedIcon)
-                                    // Show restart dialog
-                                    showAppIconRestartDialog = true
+                                    coroutineScope.launch {
+                                        delay(200)
+                                        restartApp(context)
+                                    }
                                     // Show toast to user
                                     android.widget.Toast.makeText(
                                         context,
@@ -3610,49 +3612,6 @@ fun SettingsScreen(
             onDismiss = { showCleanupDialog = false }
         )
     }
-    
-    // Restart App Dialog
-    if (showRestartDialog) {
-        AlertDialog(
-            onDismissRequest = { showRestartDialog = false },
-            title = {
-                Text(
-                    text = context.getString(R.string.restart_required_title),
-                    style = MaterialTheme.typography.headlineSmall
-                )
-            },
-            text = {
-                Text(
-                    text = context.getString(R.string.restart_required_message),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showRestartDialog = false
-                        // Restart the app
-                        (context as? android.app.Activity)?.recreate()
-                    }
-                ) {
-                    Text(context.getString(R.string.restart_now))
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { showRestartDialog = false }
-                ) {
-                    Text(context.getString(R.string.restart_later))
-                }
-            }
-        )
-    }
-    
-    // App Icon Restart Dialog
-    AppRestartDialog(
-        isVisible = showAppIconRestartDialog,
-        onDismiss = { showAppIconRestartDialog = false }
-    )
     
     // Easter Egg Dialog
     if (showEasterEggDialog) {

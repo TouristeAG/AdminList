@@ -503,33 +503,51 @@ fun EventManagerApp(
             },
             onThemeModeChanged = onThemeModeChanged
         )
-    } else if (showWelcome) {
-        WelcomeScreen(
-            onAdminSelected = {
-                showWelcome = false
-                showAdminAuth = true
-            },
-            onTicketCheckSelected = {
-                showWelcome = false
-                showTicketCheck = true
-            }
-        )
     } else {
-        // Initialize database and repository
-        val database = EventManagerDatabase.getDatabase(LocalContext.current)
-        val repository = EventManagerRepository(
-            database.guestDao(),
-            database.volunteerDao(),
-            database.jobDao(),
-            database.jobTypeConfigDao(),
-            database.venueDao(),
-            database.counterDao()
-        )
-        val context = LocalContext.current
-        val googleSheetsService = GoogleSheetsService(context)
-        val viewModel: EventManagerViewModel = viewModel {
-            EventManagerViewModel(repository, googleSheetsService, context)
+        val database = remember { EventManagerDatabase.getDatabase(appContext) }
+        val repository = remember {
+            EventManagerRepository(
+                database.guestDao(),
+                database.volunteerDao(),
+                database.jobDao(),
+                database.jobTypeConfigDao(),
+                database.venueDao(),
+                database.counterDao()
+            )
         }
+        val googleSheetsService = remember { GoogleSheetsService(appContext) }
+        val viewModel: EventManagerViewModel = viewModel {
+            EventManagerViewModel(repository, googleSheetsService, appContext)
+        }
+
+        val updateCheckResult by viewModel.updateCheckState.collectAsState()
+        val updateDownloadState by viewModel.updateDownloadState.collectAsState()
+
+        LaunchedEffect(Unit) {
+            if (!hasCheckedUpdate) {
+                hasCheckedUpdate = true
+                viewModel.checkForAppUpdates()
+            }
+        }
+        LaunchedEffect(updateCheckResult) {
+            if (updateCheckResult is UpdateCheckResult.UpdateAvailable) {
+                showUpdateDialog = true
+            }
+        }
+
+        if (showWelcome) {
+            WelcomeScreen(
+                onAdminSelected = {
+                    showWelcome = false
+                    showAdminAuth = true
+                },
+                onTicketCheckSelected = {
+                    showWelcome = false
+                    showTicketCheck = true
+                }
+            )
+        } else {
+        val context = LocalContext.current
         
         // Properly collect StateFlow values to avoid null pointer exceptions on Android 7
         val guests by viewModel.guests.collectAsState()
@@ -546,10 +564,6 @@ fun EventManagerApp(
         // Collect sync status state
         val syncStatusMessage by viewModel.syncStatusMessage.collectAsState()
         val showSyncStatusDialog by viewModel.showSyncStatusDialog.collectAsState()
-        
-        // Collect update check state
-        val updateCheckResult by viewModel.updateCheckState.collectAsState()
-        val updateDownloadState by viewModel.updateDownloadState.collectAsState()
 
         // Admin session: auto-return to welcome after idle timeout or after screen was turned off (sleep).
         val adminSurfaceActive = !showWelcome && !showAdminAuth && !showTicketCheck
@@ -629,22 +643,6 @@ fun EventManagerApp(
         LaunchedEffect(syncError) {
             if (syncError == null) {
                 wasDeviceSleeping.value = false
-            }
-        }
-        
-        // Trigger update check in background when app starts (after welcome screen is dismissed)
-        LaunchedEffect(Unit) {
-            if (!hasCheckedUpdate) {
-                hasCheckedUpdate = true
-                // Check for updates in background
-                viewModel.checkForAppUpdates()
-            }
-        }
-        
-        // Show update dialog only if update is available
-        LaunchedEffect(updateCheckResult) {
-            if (updateCheckResult is UpdateCheckResult.UpdateAvailable) {
-                showUpdateDialog = true
             }
         }
         
@@ -1438,18 +1436,26 @@ if (pageAnimationsEnabled) {
             }
         )
         
-        // Update dialog - only shown when update is available
-        if (showUpdateDialog && updateCheckResult is UpdateCheckResult.UpdateAvailable) {
+        // Sync Status Dialog
+        SyncStatusDialog(
+            isVisible = showSyncStatusDialog,
+            onDismiss = { viewModel.dismissSyncStatusDialog() },
+            statusMessage = syncStatusMessage
+        )
+        } // end of showAdminAuth else (main app content)
+        }
+
+        if (!showAdminAuth && showUpdateDialog && updateCheckResult is UpdateCheckResult.UpdateAvailable) {
             val manifest = (updateCheckResult as UpdateCheckResult.UpdateAvailable).manifest
             val isRequired = (updateCheckResult as UpdateCheckResult.UpdateAvailable).isRequired
             val currentDownloadState = updateDownloadState
-            
+
             when (currentDownloadState) {
                 is DownloadState.Downloading -> {
                     AlertDialog(
                         onDismissRequest = { },
                         title = {
-                            Text(text = context.getString(R.string.downloading_update))
+                            Text(text = appContext.getString(R.string.downloading_update))
                         },
                         text = {
                             Column {
@@ -1459,7 +1465,7 @@ if (pageAnimationsEnabled) {
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = context.getString(R.string.download_progress, currentDownloadState.progress),
+                                    text = appContext.getString(R.string.download_progress, currentDownloadState.progress),
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                             }
@@ -1479,23 +1485,23 @@ if (pageAnimationsEnabled) {
                             DialogProperties()
                         },
                         title = {
-                            Text(text = context.getString(R.string.download_complete))
+                            Text(text = appContext.getString(R.string.download_complete))
                         },
                         text = {
-                            Text(text = context.getString(R.string.update_available_message))
+                            Text(text = appContext.getString(R.string.update_available_message))
                         },
                         confirmButton = {
                             TextButton(onClick = {
                                 viewModel.installUpdate(currentDownloadState.file)
                                 showUpdateDialog = false
                             }) {
-                                Text(context.getString(R.string.install_update))
+                                Text(appContext.getString(R.string.install_update))
                             }
                         },
                         dismissButton = if (!isRequired) {
                             {
                                 TextButton(onClick = { showUpdateDialog = false }) {
-                                    Text(context.getString(R.string.later))
+                                    Text(appContext.getString(R.string.later))
                                 }
                             }
                         } else null
@@ -1505,57 +1511,54 @@ if (pageAnimationsEnabled) {
                     AlertDialog(
                         onDismissRequest = if (isRequired) { {} } else { { showUpdateDialog = false } },
                         title = {
-                            Text(text = context.getString(R.string.download_error_title))
+                            Text(text = appContext.getString(R.string.download_error_title))
                         },
                         text = {
-                            Text(text = context.getString(R.string.download_error_message, currentDownloadState.message))
+                            Text(text = appContext.getString(R.string.download_error_message, currentDownloadState.message))
                         },
                         confirmButton = {
                             TextButton(onClick = { showUpdateDialog = false }) {
-                                Text(context.getString(R.string.ok))
+                                Text(appContext.getString(R.string.ok))
                             }
                         }
                     )
                 }
                 else -> {
-                    // Show update available dialog
                     AlertDialog(
                         onDismissRequest = if (isRequired) { {} } else { { showUpdateDialog = false } },
                         title = {
-                            Text(text = context.getString(R.string.update_available_title, manifest.latestVersionName))
+                            Text(text = appContext.getString(R.string.update_available_title, manifest.latestVersionName))
                         },
                         text = {
                             Text(
                                 text = manifest.changelogShort
                                     ?: if (isRequired) {
-                                        context.getString(R.string.update_required_message)
+                                        appContext.getString(R.string.update_required_message)
                                     } else {
-                                        context.getString(R.string.update_available_message)
+                                        appContext.getString(R.string.update_available_message)
                                     }
                             )
                         },
                         confirmButton = {
                             TextButton(onClick = {
-                                // Start download instead of opening browser
                                 val downloadUrl = manifest.downloadUrl
                                 if (downloadUrl != null) {
                                     viewModel.downloadUpdate(downloadUrl)
                                 } else {
-                                    // Fallback to browser if no download URL
                                     val targetUrl = manifest.storeUrl
                                         ?: settingsManager.getUpdateStoreUrl()
                                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(targetUrl))
-                                    context.startActivity(intent)
+                                    appContext.startActivity(intent)
                                     showUpdateDialog = false
                                 }
                             }) {
-                                Text(context.getString(R.string.update_now))
+                                Text(appContext.getString(R.string.update_now))
                             }
                         },
                         dismissButton = {
                             if (!isRequired) {
                                 TextButton(onClick = { showUpdateDialog = false }) {
-                                    Text(context.getString(R.string.later))
+                                    Text(appContext.getString(R.string.later))
                                 }
                             }
                         }
@@ -1563,14 +1566,6 @@ if (pageAnimationsEnabled) {
                 }
             }
         }
-        
-        // Sync Status Dialog
-        SyncStatusDialog(
-            isVisible = showSyncStatusDialog,
-            onDismiss = { viewModel.dismissSyncStatusDialog() },
-            statusMessage = syncStatusMessage
-        )
-        } // end of showAdminAuth else (main app content)
     }
 }
 

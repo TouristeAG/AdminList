@@ -37,10 +37,10 @@ class EventManagerRepository(
         } else {
             guest
         }
-        // Check for duplicate names
-        val existingGuest = guestDao.getGuestByName(validatedGuest.name)
-        if (existingGuest != null) {
-            throw IllegalArgumentException("A guest with the name '${validatedGuest.name}' already exists")
+        // Uniqueness is by NanoID (multiple guests may share the same display name)
+        val existingByNanoId = guestDao.getGuestByNanoId(validatedGuest.nanoId)
+        if (existingByNanoId != null) {
+            throw IllegalArgumentException("A guest with NanoID '${validatedGuest.nanoId}' already exists")
         }
         return guestDao.insertGuest(validatedGuest)
     }
@@ -54,10 +54,9 @@ class EventManagerRepository(
         } else {
             guest
         }
-        // Check for duplicate names (excluding current guest)
-        val existingGuest = guestDao.getGuestByName(validatedGuest.name)
-        if (existingGuest != null && existingGuest.id != validatedGuest.id) {
-            throw IllegalArgumentException("A guest with the name '${validatedGuest.name}' already exists")
+        val existingByNanoId = guestDao.getGuestByNanoId(validatedGuest.nanoId)
+        if (existingByNanoId != null && existingByNanoId.id != validatedGuest.id) {
+            throw IllegalArgumentException("A guest with NanoID '${validatedGuest.nanoId}' already exists")
         }
         guestDao.updateGuest(validatedGuest)
     }
