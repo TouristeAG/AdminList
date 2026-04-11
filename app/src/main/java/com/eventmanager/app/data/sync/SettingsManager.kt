@@ -3,6 +3,7 @@ package com.eventmanager.app.data.sync
 import android.content.Context
 import android.content.SharedPreferences
 import com.eventmanager.app.BuildConfig
+import com.eventmanager.app.data.utils.AppIconManager
 
 /**
  * Manages app settings persistence using SharedPreferences
@@ -290,7 +291,26 @@ class SettingsManager(context: Context) {
     
     // App Icon Configuration
     fun getAppIconStyle(): String {
-        return prefs.getString(KEY_APP_ICON_STYLE, "light") ?: "light" // Default to light icon
+        val raw = prefs.getString(KEY_APP_ICON_STYLE, "white") ?: "white"
+        val migrated = migrateLegacyAppIconStyle(raw)
+        if (migrated != raw) {
+            prefs.edit().putString(KEY_APP_ICON_STYLE, migrated).apply()
+        }
+        return migrated
+    }
+
+    private fun migrateLegacyAppIconStyle(raw: String): String {
+        val mapped = when (raw) {
+            "light" -> "white"
+            "dark" -> "black"
+            "deep_blue" -> "dark_blue"
+            "blue_ocean" -> "dark_turquoise"
+            "braun" -> "brown"
+            "purple" -> "dark_violet"
+            "violet" -> "light_violet"
+            else -> raw
+        }
+        return if (mapped in AppIconManager.ALL_ICON_STYLES) mapped else "white"
     }
     
     fun saveAppIconStyle(iconStyle: String) {

@@ -3,6 +3,7 @@ package com.eventmanager.app.ui.screens
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -16,7 +17,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -37,8 +40,48 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import java.time.format.DateTimeFormatter
+import com.eventmanager.app.ui.utils.GuestListDefaultZoneId
+import com.eventmanager.app.ui.utils.rememberGuestListEffectiveToday
 
-private val GENEVA_ZONE: ZoneId = ZoneId.of("Europe/Zurich")
+/** Billeterie (read-only) guest/volunteer profile on phone: shorter card-style window vs. full-screen admin. */
+private const val READ_ONLY_PROFILE_PHONE_HEIGHT_FRACTION = 0.60f
+private val READ_ONLY_PROFILE_PHONE_OUTER_HORIZONTAL_PADDING = 32.dp
+private val READ_ONLY_PROFILE_PHONE_OUTER_VERTICAL_PADDING = 24.dp
+
+@Composable
+private fun BoxScope.ReadOnlyPhoneProfileFrame(
+    enabled: Boolean,
+    content: @Composable () -> Unit
+) {
+    if (enabled) {
+        Box(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .fillMaxWidth()
+                .padding(
+                    horizontal = READ_ONLY_PROFILE_PHONE_OUTER_HORIZONTAL_PADDING,
+                    vertical = READ_ONLY_PROFILE_PHONE_OUTER_VERTICAL_PADDING
+                )
+                .fillMaxHeight(READ_ONLY_PROFILE_PHONE_HEIGHT_FRACTION)
+        ) {
+            content()
+        }
+    } else {
+        content()
+    }
+}
+
+/** Full-screen dialog window has no "outside" for [dismissOnClickOutside]; tap empty area to dismiss. */
+@Composable
+private fun Modifier.readOnlyPhoneProfileScrimDismiss(enabled: Boolean, onDismiss: () -> Unit): Modifier {
+    if (!enabled) return this
+    val interactionSource = remember { MutableInteractionSource() }
+    return this.clickable(
+        interactionSource = interactionSource,
+        indication = null,
+        onClick = onDismiss
+    )
+}
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -49,6 +92,7 @@ fun GuestListScreen(
     jobTypeConfigs: List<JobTypeConfig>,
     venues: List<VenueEntity>,
     onAddGuest: (Guest) -> Unit,
+    onAddTemporaryGuests: (ManualTemporaryGuestBatch) -> Unit,
     onUpdateGuest: (Guest) -> Unit,
     onUpdateVolunteer: (Volunteer) -> Unit,
     onDeleteGuest: (Guest) -> Unit,
@@ -56,7 +100,9 @@ fun GuestListScreen(
     onConfirmEntry: ((Job, Int) -> Unit)? = null,
     @Suppress("UNUSED_PARAMETER") isSyncing: Boolean = false,
     @Suppress("UNUSED_PARAMETER") lastSyncTime: Long = 0L,
-    scrollBehavior: String = SettingsManager.FULL_SCROLL
+    scrollBehavior: String = SettingsManager.FULL_SCROLL,
+    /** Billeterie: view-only list and detail panels (no add/edit/delete/NFC/QR); history/future timeline and future-entry validate allowed. */
+    readOnly: Boolean = false
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -81,14 +127,15 @@ fun GuestListScreen(
     }
 
     // Get filter strings once (getString is cheap, no need for remember)
+    val filterPermanentGuests = context.getString(R.string.filter_permanent_guests)
+    val filterTemporaryGuests = context.getString(R.string.filter_temporary_guests)
     val filterVolunteerBenefits = context.getString(R.string.filter_volunteer_benefits)
-    val filterRegularGuests = context.getString(R.string.filter_regular_guests)
-    val guestFilterOptions = remember(filterVolunteerBenefits, filterRegularGuests) {
-        listOf(filterVolunteerBenefits, filterRegularGuests)
+    val guestFilterOptions = remember(filterPermanentGuests, filterTemporaryGuests, filterVolunteerBenefits) {
+        listOf(filterPermanentGuests, filterTemporaryGuests, filterVolunteerBenefits)
     }
-    val zone = GENEVA_ZONE
+    val zone = GuestListDefaultZoneId
     val offsetHours = settingsManager.getDateChangeOffsetHours()
-    val effectiveToday = rememberEffectiveToday(zone = zone, offsetHours = offsetHours)
+    val effectiveToday = rememberGuestListEffectiveToday(zone = zone, offsetHours = offsetHours)
 
     // Filter guests with proper dependency tracking on all inputs
     // Note: derivedStateOf only tracks Compose State objects, not function parameters like 'guests'
@@ -126,7 +173,8 @@ fun GuestListScreen(
 
             val matchesFilter = when (selectedFilter) {
                 filterVolunteerBenefits -> guest.isVolunteerBenefit
-                filterRegularGuests -> !guest.isVolunteerBenefit
+                filterPermanentGuests -> !guest.isVolunteerBenefit && !guest.isTemporaryGuest
+                filterTemporaryGuests -> !guest.isVolunteerBenefit && guest.isTemporaryGuest
                 else -> true
             }
             if (!matchesFilter) continue
@@ -222,15 +270,17 @@ fun GuestListScreen(
                         }
                     }
                     
-                    Button(
-                        onClick = { showAddDialog = true },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(getResponsiveButtonHeight())
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(context.getString(R.string.add_guest))
+                    if (!readOnly) {
+                        Button(
+                            onClick = { showAddDialog = true },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(getResponsiveButtonHeight())
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(context.getString(R.string.add_guest))
+                        }
                     }
                 }
             } else {
@@ -262,13 +312,15 @@ fun GuestListScreen(
                         }
                     }
                     
-                    Button(
-                        onClick = { showAddDialog = true },
-                        modifier = Modifier.height(getResponsiveButtonHeight())
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(context.getString(R.string.add_guest))
+                    if (!readOnly) {
+                        Button(
+                            onClick = { showAddDialog = true },
+                            modifier = Modifier.height(getResponsiveButtonHeight())
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(context.getString(R.string.add_guest))
+                        }
                     }
                 }
             }
@@ -383,15 +435,17 @@ fun GuestListScreen(
                                 }
                             }
                             
-                            Button(
-                                onClick = { showAddDialog = true },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(getResponsiveButtonHeight())
-                            ) {
-                                Icon(Icons.Default.Add, contentDescription = null)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(context.getString(R.string.add_guest))
+                            if (!readOnly) {
+                                Button(
+                                    onClick = { showAddDialog = true },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(getResponsiveButtonHeight())
+                                ) {
+                                    Icon(Icons.Default.Add, contentDescription = null)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(context.getString(R.string.add_guest))
+                                }
                             }
                         }
                     } else {
@@ -422,13 +476,15 @@ fun GuestListScreen(
                                 }
                             }
                             
-                            Button(
-                                onClick = { showAddDialog = true },
-                                modifier = Modifier.height(getResponsiveButtonHeight())
-                            ) {
-                                Icon(Icons.Default.Add, contentDescription = null)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(context.getString(R.string.add_guest))
+                            if (!readOnly) {
+                                Button(
+                                    onClick = { showAddDialog = true },
+                                    modifier = Modifier.height(getResponsiveButtonHeight())
+                                ) {
+                                    Icon(Icons.Default.Add, contentDescription = null)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(context.getString(R.string.add_guest))
+                                }
                             }
                         }
                     }
@@ -541,15 +597,17 @@ fun GuestListScreen(
                                 }
                             }
                             
-                            Button(
-                                onClick = { showAddDialog = true },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(getResponsiveButtonHeight())
-                            ) {
-                                Icon(Icons.Default.Add, contentDescription = null)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(context.getString(R.string.add_guest))
+                            if (!readOnly) {
+                                Button(
+                                    onClick = { showAddDialog = true },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(getResponsiveButtonHeight())
+                                ) {
+                                    Icon(Icons.Default.Add, contentDescription = null)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(context.getString(R.string.add_guest))
+                                }
                             }
                         }
                     } else {
@@ -580,13 +638,15 @@ fun GuestListScreen(
                                 }
                             }
                             
-                            Button(
-                                onClick = { showAddDialog = true },
-                                modifier = Modifier.height(getResponsiveButtonHeight())
-                            ) {
-                                Icon(Icons.Default.Add, contentDescription = null)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(context.getString(R.string.add_guest))
+                            if (!readOnly) {
+                                Button(
+                                    onClick = { showAddDialog = true },
+                                    modifier = Modifier.height(getResponsiveButtonHeight())
+                                ) {
+                                    Icon(Icons.Default.Add, contentDescription = null)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(context.getString(R.string.add_guest))
+                                }
                             }
                         }
                     }
@@ -647,16 +707,22 @@ fun GuestListScreen(
                 showTemporaryGuestsTimeline = false
                 showGuestDetailPanel = guest
             },
+            onVolunteerEntryClick = { volunteerId ->
+                volunteers.find { it.id == volunteerId }?.let { v ->
+                    showTemporaryGuestsTimeline = false
+                    showVolunteerBenefits = v
+                }
+            },
             onDismiss = { showTemporaryGuestsTimeline = false }
         )
     }
 
     // Add Guest Dialog
-    if (showAddDialog) {
+    if (!readOnly && showAddDialog) {
         AddGuestDialog(
             venues = venues,
             onDismiss = { showAddDialog = false },
-            onConfirm = { name, email, phoneNumber, invitations, venueName, notes ->
+            onConfirmPermanent = { name, email, phoneNumber, invitations, venueName, notes ->
                 val newGuest = Guest(
                     name = name,
                     email = email,
@@ -666,6 +732,10 @@ fun GuestListScreen(
                     notes = notes
                 )
                 onAddGuest(newGuest)
+                showAddDialog = false
+            },
+            onConfirmTemporary = { batch ->
+                onAddTemporaryGuests(batch)
                 showAddDialog = false
             }
         )
@@ -691,37 +761,46 @@ fun GuestListScreen(
         }
         
         val benefitsTablet = isTablet()
+        val compactReadOnlyVolunteerProfile = !benefitsTablet && readOnly
         Dialog(
             onDismissRequest = { showVolunteerBenefits = null },
-            properties = DialogProperties(usePlatformDefaultWidth = !benefitsTablet)
+            properties = DialogProperties(
+                usePlatformDefaultWidth = !benefitsTablet && !readOnly
+            )
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .readOnlyPhoneProfileScrimDismiss(compactReadOnlyVolunteerProfile) {
+                        showVolunteerBenefits = null
+                    }
                     .then(
                         if (benefitsTablet) Modifier.padding(getTabletDialogScreenEdgeInset())
                         else Modifier
                     )
             ) {
-                VolunteerBenefitsPanel(
-                    modifier = Modifier.fillMaxSize(),
-                    volunteer = volunteer,
-                    volunteerBenefitStatus = memoizedBenefitStatus,
-                    volunteerJobs = memoizedVolunteerJobs,
-                    venues = venues,
-                    jobTypeConfigs = jobTypeConfigs,
-                    onClose = { showVolunteerBenefits = null },
-                    onConfirmEntry = onConfirmEntry,
-                    onAssignNfcUid = { updatedVolunteer, uid ->
-                        onUpdateVolunteer(
-                            updatedVolunteer.copy(
-                                nfcCardUid = uid,
-                                lastModified = System.currentTimeMillis()
+                ReadOnlyPhoneProfileFrame(enabled = compactReadOnlyVolunteerProfile) {
+                    VolunteerBenefitsPanel(
+                        modifier = Modifier.fillMaxSize(),
+                        volunteer = volunteer,
+                        volunteerBenefitStatus = memoizedBenefitStatus,
+                        volunteerJobs = memoizedVolunteerJobs,
+                        venues = venues,
+                        jobTypeConfigs = jobTypeConfigs,
+                        onClose = { showVolunteerBenefits = null },
+                        readOnly = readOnly,
+                        onConfirmEntry = onConfirmEntry,
+                        onAssignNfcUid = if (readOnly) null else { updatedVolunteer, uid ->
+                            onUpdateVolunteer(
+                                updatedVolunteer.copy(
+                                    nfcCardUid = uid,
+                                    lastModified = System.currentTimeMillis()
+                                )
                             )
-                        )
-                        showVolunteerBenefits = updatedVolunteer.copy(nfcCardUid = uid)
-                    }
-                )
+                            showVolunteerBenefits = updatedVolunteer.copy(nfcCardUid = uid)
+                        }
+                    )
+                }
             }
         }
     }
@@ -729,47 +808,56 @@ fun GuestListScreen(
     // Guest Detail Panel
     if (showGuestDetailPanel != null) {
         val guestDetailTablet = isTablet()
+        val compactReadOnlyGuestProfile = !guestDetailTablet && readOnly
         Dialog(
             onDismissRequest = { showGuestDetailPanel = null },
-            properties = DialogProperties(usePlatformDefaultWidth = !guestDetailTablet)
+            properties = DialogProperties(
+                usePlatformDefaultWidth = !guestDetailTablet && !readOnly
+            )
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .readOnlyPhoneProfileScrimDismiss(compactReadOnlyGuestProfile) {
+                        showGuestDetailPanel = null
+                    }
                     .then(
                         if (guestDetailTablet) Modifier.padding(getTabletDialogScreenEdgeInset())
                         else Modifier
                     )
             ) {
-                GuestDetailPanel(
-                    modifier = Modifier.fillMaxSize(),
-                    guest = showGuestDetailPanel!!,
-                    venues = venues,
-                    onEdit = { guest ->
-                        showGuestDetailPanel = null
-                        showEditGuestDialog = guest
-                    },
-                    onAssignNfcUid = { guest, uid ->
-                        onUpdateGuest(
-                            guest.copy(
-                                nfcCardUid = uid,
-                                lastModified = System.currentTimeMillis()
+                ReadOnlyPhoneProfileFrame(enabled = compactReadOnlyGuestProfile) {
+                    GuestDetailPanel(
+                        modifier = Modifier.fillMaxSize(),
+                        guest = showGuestDetailPanel!!,
+                        venues = venues,
+                        readOnly = readOnly,
+                        onEdit = { guest ->
+                            showGuestDetailPanel = null
+                            showEditGuestDialog = guest
+                        },
+                        onAssignNfcUid = { guest, uid ->
+                            onUpdateGuest(
+                                guest.copy(
+                                    nfcCardUid = uid,
+                                    lastModified = System.currentTimeMillis()
+                                )
                             )
-                        )
-                        showGuestDetailPanel = guest.copy(nfcCardUid = uid)
-                    },
-                    onDelete = { guest ->
-                        showGuestDetailPanel = null
-                        onDeleteGuest(guest)
-                    },
-                    onClose = { showGuestDetailPanel = null }
-                )
+                            showGuestDetailPanel = guest.copy(nfcCardUid = uid)
+                        },
+                        onDelete = { guest ->
+                            showGuestDetailPanel = null
+                            onDeleteGuest(guest)
+                        },
+                        onClose = { showGuestDetailPanel = null }
+                    )
+                }
             }
         }
     }
     
     // Edit Guest Dialog
-    if (showEditGuestDialog != null) {
+    if (!readOnly && showEditGuestDialog != null) {
         EditGuestDialog(
             guest = showEditGuestDialog!!,
             venues = venues,
@@ -985,7 +1073,7 @@ fun GuestCard(
 private fun GuestStatsAndTimelineRow(
     guestCount: Int,
     invitationCount: Int,
-    onOpenTimeline: () -> Unit
+    onOpenTimeline: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val isPhone = !isTablet()
@@ -1054,6 +1142,7 @@ private fun GuestStatsAndTimelineRow(
             }
         }
 
+        if (onOpenTimeline != null) {
         Card(
             modifier = Modifier
                 .weight(1f)
@@ -1086,6 +1175,7 @@ private fun GuestStatsAndTimelineRow(
                 )
             }
         }
+        }
     }
 }
 
@@ -1110,6 +1200,7 @@ private enum class TempGuestRangeShortLabel(@androidx.annotation.StringRes val l
 }
 
 private data class VolunteerAccessEntry(
+    val volunteerId: String,
     val volunteerName: String,
     val volunteerNameLower: String,
     val volunteerNfcUidLower: String,
@@ -1125,13 +1216,14 @@ private fun TemporaryGuestsTimelineDialog(
     jobs: List<Job>,
     jobTypeConfigs: List<JobTypeConfig>,
     onGuestClick: (Guest) -> Unit,
+    onVolunteerEntryClick: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
     val settingsManager = remember { SettingsManager(context) }
-    val zone = GENEVA_ZONE
+    val zone = GuestListDefaultZoneId
     val offsetHours = remember(settingsManager) { settingsManager.getDateChangeOffsetHours() }
-    val effectiveToday = rememberEffectiveToday(zone = zone, offsetHours = offsetHours)
+    val effectiveToday = rememberGuestListEffectiveToday(zone = zone, offsetHours = offsetHours)
 
     var searchText by remember { mutableStateOf("") }
     var selectedRange by remember { mutableStateOf(TempGuestRange.THREE_DAYS) }
@@ -1260,6 +1352,7 @@ private fun TemporaryGuestsTimelineDialog(
                 } else {
                     entries.add(
                         VolunteerAccessEntry(
+                            volunteerId = volunteer.id,
                             volunteerName = volunteer.name,
                             volunteerNameLower = volunteer.name.lowercase(),
                             volunteerNfcUidLower = volunteer.nfcCardUid.lowercase(),
@@ -1274,6 +1367,7 @@ private fun TemporaryGuestsTimelineDialog(
 
             entries.add(
                 VolunteerAccessEntry(
+                    volunteerId = volunteer.id,
                     volunteerName = volunteer.name,
                     volunteerNameLower = volunteer.name.lowercase(),
                     volunteerNfcUidLower = volunteer.nfcCardUid.lowercase(),
@@ -1441,9 +1535,12 @@ private fun TemporaryGuestsTimelineDialog(
                         } else {
                             items(
                                 items = futureVolunteerEntries,
-                                key = { entry -> "vol_future_${entry.volunteerName}_${entry.accessStartDate}_${entry.accessEndDate}" }
+                                key = { entry -> "vol_future_${entry.volunteerId}_${entry.accessStartDate}_${entry.accessEndDate}" }
                             ) { entry ->
-                                VolunteerTimelineItem(entry = entry)
+                                VolunteerTimelineItem(
+                                    entry = entry,
+                                    onClick = { onVolunteerEntryClick(entry.volunteerId) }
+                                )
                             }
                         }
 
@@ -1460,9 +1557,12 @@ private fun TemporaryGuestsTimelineDialog(
                         } else {
                             items(
                                 items = pastVolunteerEntries,
-                                key = { entry -> "vol_past_${entry.volunteerName}_${entry.accessStartDate}_${entry.accessEndDate}" }
+                                key = { entry -> "vol_past_${entry.volunteerId}_${entry.accessStartDate}_${entry.accessEndDate}" }
                             ) { entry ->
-                                VolunteerTimelineItem(entry = entry)
+                                VolunteerTimelineItem(
+                                    entry = entry,
+                                    onClick = { onVolunteerEntryClick(entry.volunteerId) }
+                                )
                             }
                         }
                     }
@@ -1532,14 +1632,17 @@ private fun TemporaryGuestTimelineItem(
 
 @Composable
 private fun VolunteerTimelineItem(
-    entry: VolunteerAccessEntry
+    entry: VolunteerAccessEntry,
+    onClick: () -> Unit
 ) {
     val rangeText = remember(entry.accessStartDate, entry.accessEndDate) {
         val formatter = DateTimeFormatter.ofPattern("d MMMM yyyy", java.util.Locale.getDefault())
         "${entry.accessStartDate.format(formatter)} - ${entry.accessEndDate.format(formatter)}"
     }
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         shape = RoundedCornerShape(12.dp)
     ) {
@@ -1625,16 +1728,6 @@ private fun TimelineSectionHeader(
     }
 }
 
-private fun getEffectiveToday(zone: ZoneId, offsetHours: Int): LocalDate {
-    val now = java.time.ZonedDateTime.now(zone)
-    val effectiveNow = if (offsetHours != 0 && now.hour < offsetHours) {
-        now.minusDays(1)
-    } else {
-        now
-    }
-    return effectiveNow.toLocalDate()
-}
-
 private fun guestStableKey(guest: Guest): String {
     val typePrefix = when {
         guest.isTemporaryGuest -> "temp"
@@ -1645,19 +1738,44 @@ private fun guestStableKey(guest: Guest): String {
         ?: "$typePrefix:${guest.id}_${guest.name}_${guest.venueName}_${guest.temporaryEventDate}"
 }
 
-@Composable
-private fun rememberEffectiveToday(zone: ZoneId, offsetHours: Int): LocalDate {
-    val effectiveTodayState = produceState(
-        initialValue = getEffectiveToday(zone, offsetHours),
-        key1 = zone,
-        key2 = offsetHours
-    ) {
-        while (true) {
-            delay(60_000)
-            value = getEffectiveToday(zone, offsetHours)
+/**
+ * Normalizes date typing to ISO [yyyy-MM-dd] for Google Sheets: takes up to 8 digits
+ * (YYYYMMDD) and inserts hyphens after the year and month. Pasted values with slashes
+ * or other separators are reduced to digits first.
+ */
+private fun formatTemporaryGuestDateInput(raw: String): String {
+    val digits = raw.filter { it.isDigit() }.take(8)
+    return when (digits.length) {
+        0 -> ""
+        in 1..4 -> digits
+        in 5..6 -> "${digits.substring(0, 4)}-${digits.substring(4)}"
+        else -> "${digits.substring(0, 4)}-${digits.substring(4, 6)}-${digits.substring(6)}"
+    }
+}
+
+/** Keeps the caret after auto-inserted hyphens by mapping “digits before caret” in [incoming] to [formattedText]. */
+private fun cursorAfterIsoDateFormat(formattedText: String, incoming: TextFieldValue): TextRange {
+    val sel = incoming.selection
+    val caret = (
+        if (sel.start == sel.end) sel.start
+        else kotlin.math.max(sel.start, sel.end)
+        ).coerceIn(0, incoming.text.length)
+    val digitsBefore = incoming.text.take(caret).count { it.isDigit() }
+    if (digitsBefore <= 0) {
+        return TextRange(0)
+    }
+    var seen = 0
+    for (i in formattedText.indices) {
+        if (formattedText[i].isDigit()) {
+            seen++
+            if (seen == digitsBefore) {
+                val pos = (i + 1).coerceIn(0, formattedText.length)
+                return TextRange(pos, pos)
+            }
         }
     }
-    return effectiveTodayState.value
+    val end = formattedText.length
+    return TextRange(end, end)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -1665,9 +1783,12 @@ private fun rememberEffectiveToday(zone: ZoneId, offsetHours: Int): LocalDate {
 fun AddGuestDialog(
     venues: List<VenueEntity>,
     onDismiss: () -> Unit,
-    onConfirm: (String, String, String, Int, String, String) -> Unit // name, email, phoneNumber, invitations, venueName, notes
+    onConfirmPermanent: (String, String, String, Int, String, String) -> Unit,
+    onConfirmTemporary: (ManualTemporaryGuestBatch) -> Unit
 ) {
     val context = LocalContext.current
+    var selectedTab by remember { mutableStateOf(0) }
+
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var phoneNumber by remember { mutableStateOf("") }
@@ -1676,12 +1797,30 @@ fun AddGuestDialog(
     var notes by remember { mutableStateOf("") }
     var showVenueDropdown by remember { mutableStateOf(false) }
 
+    var temporaryArtist by remember { mutableStateOf("") }
+    var temporaryEventDateTf by remember { mutableStateOf(TextFieldValue("")) }
+    var temporaryEmergencyPhone by remember { mutableStateOf("") }
+    var temporaryComments by remember { mutableStateOf("") }
+    val temporaryGuestNames = remember { mutableStateListOf("") }
+
     val isCompact = isCompactScreen()
     val scrollState = rememberScrollState()
     val isTabletDevice = isTablet()
-    
-    // Memoize active venues to avoid repeated filtering
+
     val activeVenues = remember(venues) { venues.filter { it.isActive } }
+
+    val parsedTempEventDate = remember(temporaryEventDateTf.text) {
+        runCatching {
+            LocalDate.parse(temporaryEventDateTf.text.trim(), DateTimeFormatter.ISO_LOCAL_DATE)
+        }.getOrNull()
+    }
+    val temporaryEventDateMillis = remember(parsedTempEventDate) {
+        parsedTempEventDate?.atStartOfDay(GuestListDefaultZoneId)?.toInstant()?.toEpochMilli()
+    }
+    val trimmedTempNames = temporaryGuestNames.map { it.trim() }.filter { it.isNotEmpty() }
+    val temporaryFormValid = temporaryEventDateMillis != null &&
+        temporaryArtist.trim().isNotEmpty() &&
+        trimmedTempNames.isNotEmpty()
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -1711,7 +1850,6 @@ fun AddGuestDialog(
                 Column(
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    // Header
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1724,13 +1862,25 @@ fun AddGuestDialog(
                             style = if (isTabletDevice) getTabletConstrainedTitleTypography() else getResponsiveTypography(),
                             fontWeight = FontWeight.Bold
                         )
-                        
+
                         IconButton(onClick = onDismiss) {
                             Icon(Icons.Default.Close, contentDescription = context.getString(R.string.close))
                         }
                     }
-                    
-                    // Scrollable Content
+
+                    TabRow(selectedTabIndex = selectedTab) {
+                        Tab(
+                            selected = selectedTab == 0,
+                            onClick = { selectedTab = 0 },
+                            text = { Text(context.getString(R.string.add_guest_tab_permanent)) }
+                        )
+                        Tab(
+                            selected = selectedTab == 1,
+                            onClick = { selectedTab = 1 },
+                            text = { Text(context.getString(R.string.add_guest_tab_temporary)) }
+                        )
+                    }
+
                     Column(
                         modifier = Modifier
                             .weight(1f)
@@ -1738,100 +1888,183 @@ fun AddGuestDialog(
                             .padding(horizontal = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(if (isCompact) 12.dp else 16.dp)
                     ) {
-                        OutlinedTextField(
-                            value = name,
-                            onValueChange = { name = it },
-                            label = { Text(context.getString(R.string.guest_name)) },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        OutlinedTextField(
-                            value = email,
-                            onValueChange = { email = it },
-                            label = { Text(context.getString(R.string.guest_email)) },
-                            placeholder = { Text(context.getString(R.string.guest_email_placeholder)) },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
-
-                        OutlinedTextField(
-                            value = phoneNumber,
-                            onValueChange = { phoneNumber = it },
-                            label = { Text(context.getString(R.string.guest_phone_number)) },
-                            placeholder = { Text(context.getString(R.string.guest_phone_placeholder)) },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
-
-                        OutlinedTextField(
-                            value = invitations,
-                            onValueChange = { 
-                                if (it.isEmpty() || it.all { char -> char.isDigit() }) {
-                                    invitations = it
-                                }
-                            },
-                            label = { Text(context.getString(R.string.number_of_invitations)) },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        ExposedDropdownMenuBox(
-                            expanded = showVenueDropdown,
-                            onExpandedChange = { showVenueDropdown = !showVenueDropdown }
-                        ) {
+                        if (selectedTab == 0) {
                             OutlinedTextField(
-                                value = selectedVenueName ?: context.getString(R.string.venue),
-                                onValueChange = { },
-                                readOnly = true,
-                                label = { Text(context.getString(R.string.venue)) },
-                                trailingIcon = {
-                                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = showVenueDropdown)
-                                },
-                                modifier = Modifier
-                                    .menuAnchor()
-                                    .fillMaxWidth()
+                                value = name,
+                                onValueChange = { name = it },
+                                label = { Text(context.getString(R.string.guest_name)) },
+                                modifier = Modifier.fillMaxWidth()
                             )
-                            
-                            ExposedDropdownMenu(
-                                expanded = showVenueDropdown,
-                                onDismissRequest = { showVenueDropdown = false }
-                            ) {
-                                // Add BOTH/ALL option
-                                val allOptionText = if (activeVenues.size <= 2) {
-                                    context.getString(R.string.venue_both)
-                                } else {
-                                    context.getString(R.string.venue_all)
-                                }
-                                DropdownMenuItem(
-                                    text = { Text(allOptionText) },
-                                    onClick = {
-                                        selectedVenueName = "BOTH"
-                                        showVenueDropdown = false
+
+                            OutlinedTextField(
+                                value = email,
+                                onValueChange = { email = it },
+                                label = { Text(context.getString(R.string.guest_email)) },
+                                placeholder = { Text(context.getString(R.string.guest_email_placeholder)) },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true
+                            )
+
+                            OutlinedTextField(
+                                value = phoneNumber,
+                                onValueChange = { phoneNumber = it },
+                                label = { Text(context.getString(R.string.guest_phone_number)) },
+                                placeholder = { Text(context.getString(R.string.guest_phone_placeholder)) },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true
+                            )
+
+                            OutlinedTextField(
+                                value = invitations,
+                                onValueChange = {
+                                    if (it.isEmpty() || it.all { char -> char.isDigit() }) {
+                                        invitations = it
                                     }
+                                },
+                                label = { Text(context.getString(R.string.number_of_invitations)) },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            ExposedDropdownMenuBox(
+                                expanded = showVenueDropdown,
+                                onExpandedChange = { showVenueDropdown = !showVenueDropdown }
+                            ) {
+                                OutlinedTextField(
+                                    value = selectedVenueName ?: context.getString(R.string.venue),
+                                    onValueChange = { },
+                                    readOnly = true,
+                                    label = { Text(context.getString(R.string.venue)) },
+                                    trailingIcon = {
+                                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = showVenueDropdown)
+                                    },
+                                    modifier = Modifier
+                                        .menuAnchor()
+                                        .fillMaxWidth()
                                 )
-                                
-                                // Add individual venues (only active ones)
-                                activeVenues.forEach { venue ->
+
+                                ExposedDropdownMenu(
+                                    expanded = showVenueDropdown,
+                                    onDismissRequest = { showVenueDropdown = false }
+                                ) {
+                                    val allOptionText = if (activeVenues.size <= 2) {
+                                        context.getString(R.string.venue_both)
+                                    } else {
+                                        context.getString(R.string.venue_all)
+                                    }
                                     DropdownMenuItem(
-                                        text = { Text(venue.name) },
+                                        text = { Text(allOptionText) },
                                         onClick = {
-                                            selectedVenueName = venue.name
+                                            selectedVenueName = "BOTH"
                                             showVenueDropdown = false
                                         }
                                     )
+
+                                    activeVenues.forEach { venue ->
+                                        DropdownMenuItem(
+                                            text = { Text(venue.name) },
+                                            onClick = {
+                                                selectedVenueName = venue.name
+                                                showVenueDropdown = false
+                                            }
+                                        )
+                                    }
                                 }
                             }
-                        }
 
-                        OutlinedTextField(
-                            value = notes,
-                            onValueChange = { notes = it },
-                            label = { Text(context.getString(R.string.notes)) },
-                            modifier = Modifier.fillMaxWidth(),
-                            maxLines = 3
-                        )
+                            OutlinedTextField(
+                                value = notes,
+                                onValueChange = { notes = it },
+                                label = { Text(context.getString(R.string.notes)) },
+                                modifier = Modifier.fillMaxWidth(),
+                                maxLines = 3
+                            )
+                        } else {
+                            OutlinedTextField(
+                                value = temporaryEventDateTf,
+                                onValueChange = { incoming ->
+                                    val formatted = formatTemporaryGuestDateInput(incoming.text)
+                                    temporaryEventDateTf = TextFieldValue(
+                                        formatted,
+                                        cursorAfterIsoDateFormat(formatted, incoming)
+                                    )
+                                },
+                                label = { Text(context.getString(R.string.temp_guest_event_date_label)) },
+                                placeholder = { Text("YYYY-MM-DD") },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true
+                            )
+
+                            OutlinedTextField(
+                                value = temporaryArtist,
+                                onValueChange = { temporaryArtist = it },
+                                label = { Text(context.getString(R.string.temp_guest_artist_label)) },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            OutlinedTextField(
+                                value = temporaryEmergencyPhone,
+                                onValueChange = { temporaryEmergencyPhone = it },
+                                label = { Text(context.getString(R.string.temp_guest_contact_phone_label)) },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true
+                            )
+
+                            temporaryGuestNames.forEachIndexed { index, guestNameValue ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    OutlinedTextField(
+                                        value = guestNameValue,
+                                        onValueChange = { temporaryGuestNames[index] = it },
+                                        label = {
+                                            Text(
+                                                if (index == 0) {
+                                                    context.getString(R.string.guest_name)
+                                                } else {
+                                                    context.getString(R.string.add_guest_additional_name_label, index + 1)
+                                                }
+                                            )
+                                        },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    if (index > 0) {
+                                        IconButton(
+                                            onClick = {
+                                                if (temporaryGuestNames.size > 1) {
+                                                    temporaryGuestNames.removeAt(index)
+                                                }
+                                            }
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Delete,
+                                                contentDescription = context.getString(R.string.delete)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            TextButton(
+                                onClick = { temporaryGuestNames.add("") },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(context.getString(R.string.add_guest_add_another_name))
+                            }
+
+                            OutlinedTextField(
+                                value = temporaryComments,
+                                onValueChange = { temporaryComments = it },
+                                label = { Text(context.getString(R.string.notes)) },
+                                modifier = Modifier.fillMaxWidth(),
+                                maxLines = 3
+                            )
+                        }
                     }
-                    
-                    // Footer
+
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1843,11 +2076,35 @@ fun AddGuestDialog(
                         }
                         TextButton(
                             onClick = {
-                                val invitationCount = invitations.toIntOrNull() ?: 1
-                                val defaultVenue = activeVenues.firstOrNull()?.name ?: "GROOVE"
-                                onConfirm(name, email, phoneNumber, invitationCount, selectedVenueName ?: defaultVenue, notes)
+                                if (selectedTab == 0) {
+                                    val invitationCount = invitations.toIntOrNull() ?: 1
+                                    val defaultVenue = activeVenues.firstOrNull()?.name ?: "GROOVE"
+                                    onConfirmPermanent(
+                                        name,
+                                        email,
+                                        phoneNumber,
+                                        invitationCount,
+                                        selectedVenueName ?: defaultVenue,
+                                        notes
+                                    )
+                                } else {
+                                    val millis = temporaryEventDateMillis ?: return@TextButton
+                                    onConfirmTemporary(
+                                        ManualTemporaryGuestBatch(
+                                            eventDateMillis = millis,
+                                            artistName = temporaryArtist.trim(),
+                                            emergencyContactPhone = temporaryEmergencyPhone.trim(),
+                                            comments = temporaryComments.trim(),
+                                            guestNames = trimmedTempNames
+                                        )
+                                    )
+                                }
                             },
-                            enabled = name.isNotBlank()
+                            enabled = if (selectedTab == 0) {
+                                name.isNotBlank()
+                            } else {
+                                temporaryFormValid
+                            }
                         ) {
                             Text(context.getString(R.string.add))
                         }
@@ -1876,11 +2133,16 @@ fun EditGuestDialog(
     var notes by remember { mutableStateOf(guest.notes) }
     var temporaryArtistName by remember { mutableStateOf(guest.temporaryArtistName) }
     var temporaryContactPhone by remember { mutableStateOf(guest.temporaryContactPhone) }
-    var temporaryEventDateInput by remember {
+    var temporaryEventDateTf by remember {
         mutableStateOf(
-            guest.temporaryEventDate?.let {
-                Instant.ofEpochMilli(it).atZone(GENEVA_ZONE).toLocalDate().format(DateTimeFormatter.ISO_LOCAL_DATE)
-            } ?: ""
+            run {
+                val initial = guest.temporaryEventDate?.let {
+                    Instant.ofEpochMilli(it).atZone(GuestListDefaultZoneId).toLocalDate()
+                        .format(DateTimeFormatter.ISO_LOCAL_DATE)
+                } ?: ""
+                val end = initial.length
+                TextFieldValue(initial, TextRange(end, end))
+            }
         )
     }
     var showVenueDropdown by remember { mutableStateOf(false) }
@@ -1963,8 +2225,14 @@ fun EditGuestDialog(
                             )
 
                             OutlinedTextField(
-                                value = temporaryEventDateInput,
-                                onValueChange = { temporaryEventDateInput = it },
+                                value = temporaryEventDateTf,
+                                onValueChange = { incoming ->
+                                    val formatted = formatTemporaryGuestDateInput(incoming.text)
+                                    temporaryEventDateTf = TextFieldValue(
+                                        formatted,
+                                        cursorAfterIsoDateFormat(formatted, incoming)
+                                    )
+                                },
                                 label = { Text(context.getString(R.string.temp_guest_event_date_label)) },
                                 placeholder = { Text("YYYY-MM-DD") },
                                 modifier = Modifier.fillMaxWidth(),
@@ -2075,7 +2343,7 @@ fun EditGuestDialog(
                     ) {
                         val parsedTempEventDate = if (isTemporaryGuest) {
                             runCatching {
-                                LocalDate.parse(temporaryEventDateInput.trim(), DateTimeFormatter.ISO_LOCAL_DATE)
+                                LocalDate.parse(temporaryEventDateTf.text.trim(), DateTimeFormatter.ISO_LOCAL_DATE)
                             }.getOrNull()
                         } else {
                             null
@@ -2091,7 +2359,7 @@ fun EditGuestDialog(
                                         notes = notes,
                                         temporaryArtistName = temporaryArtistName,
                                         temporaryContactPhone = temporaryContactPhone,
-                                        temporaryEventDate = parsedTempEventDate?.atStartOfDay(GENEVA_ZONE)?.toInstant()?.toEpochMilli()
+                                        temporaryEventDate = parsedTempEventDate?.atStartOfDay(GuestListDefaultZoneId)?.toInstant()?.toEpochMilli()
                                     )
                                 } else {
                                     val invitationCount = invitations.toIntOrNull() ?: 1

@@ -22,6 +22,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.res.painterResource
@@ -86,6 +87,12 @@ import com.eventmanager.app.ui.components.ScrollGameDialog
 import com.eventmanager.app.utils.ImageUtils
 import androidx.core.content.ContextCompat
 import androidx.compose.ui.graphics.asImageBitmap
+
+/** Full admin settings vs. Billeterie subset (appearance, localization, animations, app info). */
+enum class SettingsScreenVariant {
+    Full,
+    BilleterieBasic
+}
 
 // Data class for icon options
 private data class IconOption(
@@ -1092,7 +1099,9 @@ private data class EmailSettingsStrings(
 fun SettingsScreen(
     viewModel: EventManagerViewModel,
     onNavigateToJobTypeManagement: () -> Unit = {},
-    onNavigateToVenueManagement: () -> Unit = {}
+    onNavigateToVenueManagement: () -> Unit = {},
+    variant: SettingsScreenVariant = SettingsScreenVariant.Full,
+    modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val settingsManager = remember { SettingsManager(context) }
@@ -1128,6 +1137,7 @@ fun SettingsScreen(
     var hasUnsavedResolutionChanges by remember { mutableStateOf(false) }
     var showAppIconRestartDialog by remember { mutableStateOf(false) }
     var showUpdateResultDialog by remember { mutableStateOf(false) }
+    var showUpdateSourcesDialog by remember { mutableStateOf(false) }
     
     // Easter Egg state
     var easterEggTapCount by remember { mutableStateOf(0) }
@@ -1180,11 +1190,12 @@ fun SettingsScreen(
     }
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
-            .padding(16.dp)
             .verticalScroll(rememberScrollState())
+            .padding(16.dp)
     ) {
+        if (variant == SettingsScreenVariant.Full) {
         // Header
         Text(
             text = context.getString(R.string.settings_title),
@@ -1583,9 +1594,11 @@ fun SettingsScreen(
             }
         }
         
+        }
+        
         Spacer(modifier = Modifier.height(24.dp))
         
-        // Email Settings Category
+        // Email Settings Category (admin + Billeterie — Gmail API & templates for volunteer QR emails)
         ExpandableSettingsCategory(
             title = context.getString(R.string.settings_category_email),
             icon = Icons.Default.Email,
@@ -1909,21 +1922,31 @@ fun SettingsScreen(
                         ) {
                             // Define all icon options with their properties
                             val iconOptions = listOf(
-                                IconOption("light", R.string.app_icon_light, R.string.app_icon_light_applied, R.mipmap.ic_launcher_foreground, Color.White),
-                                IconOption("dark", R.string.app_icon_dark, R.string.app_icon_dark_applied, R.mipmap.ic_launcher_foreground_dark, Color(0xFF1A1A1A)),
-                                IconOption("deep_blue", R.string.app_icon_deep_blue, R.string.app_icon_deep_blue_applied, R.mipmap.ic_launcher_foreground_deep_blue, Color(0xFF00283C)),
-                                IconOption("blue_ocean", R.string.app_icon_blue_ocean, R.string.app_icon_blue_ocean_applied, R.mipmap.ic_launcher_foreground_blue_ocean, Color(0xFF000A3C)),
-                                IconOption("braun", R.string.app_icon_braun, R.string.app_icon_braun_applied, R.mipmap.ic_launcher_foreground_braun, Color(0xFF3C1400)),
-                                IconOption("purple", R.string.app_icon_purple, R.string.app_icon_purple_applied, R.mipmap.ic_launcher_foreground_purple, Color(0xFF321E32)),
-                                IconOption("violet", R.string.app_icon_violet, R.string.app_icon_violet_applied, R.mipmap.ic_launcher_foreground_violet, Color(0xFF1E0A32))
+                                IconOption(AppIconManager.ICON_WHITE, R.string.app_icon_white, R.string.app_icon_white_applied, R.mipmap.ic_launcher_foreground, Color(0xFFFFFFFF)),
+                                IconOption(AppIconManager.ICON_BLACK, R.string.app_icon_black, R.string.app_icon_black_applied, R.mipmap.ic_launcher_foreground_dark, Color(0xFF000000)),
+                                IconOption(AppIconManager.ICON_BROWN, R.string.app_icon_brown, R.string.app_icon_brown_applied, R.mipmap.ic_launcher_foreground_braun, Color(0xFF5A3214)),
+                                IconOption(AppIconManager.ICON_CREME_BLACK, R.string.app_icon_creme_black, R.string.app_icon_creme_black_applied, R.mipmap.ic_launcher_foreground_purple, Color(0xFFF0E6DC)),
+                                IconOption(AppIconManager.ICON_DARK_BLUE, R.string.app_icon_dark_blue, R.string.app_icon_dark_blue_applied, R.mipmap.ic_launcher_foreground_deep_blue, Color(0xFF000A3C)),
+                                IconOption(AppIconManager.ICON_DARK_LEGACY, R.string.app_icon_dark_legacy, R.string.app_icon_dark_legacy_applied, R.mipmap.ic_launcher_foreground_dark_legacy, Color(0xFF321E3C)),
+                                IconOption(AppIconManager.ICON_DARK_TURQUOISE, R.string.app_icon_dark_turquoise, R.string.app_icon_dark_turquoise_applied, R.mipmap.ic_launcher_foreground_blue_ocean, Color(0xFF00283C)),
+                                IconOption(AppIconManager.ICON_DARK_VIOLET, R.string.app_icon_dark_violet, R.string.app_icon_dark_violet_applied, R.mipmap.ic_launcher_foreground_violet, Color(0xFF321E32)),
+                                IconOption(AppIconManager.ICON_LIGHT_BLUE, R.string.app_icon_light_blue, R.string.app_icon_light_blue_applied, R.mipmap.ic_launcher_foreground_light_blue, Color(0xFF4696BE)),
+                                IconOption(AppIconManager.ICON_LIGHT_LEGACY, R.string.app_icon_light_legacy, R.string.app_icon_light_legacy_applied, R.mipmap.ic_launcher_foreground_light_legacy, Color(0xFFE6E6DC)),
+                                IconOption(AppIconManager.ICON_LIGHT_VIOLET, R.string.app_icon_light_violet, R.string.app_icon_light_violet_applied, R.mipmap.ic_launcher_foreground_light_violet, Color(0xFF8232C8)),
+                                IconOption(AppIconManager.ICON_ORANGE, R.string.app_icon_orange, R.string.app_icon_orange_applied, R.mipmap.ic_launcher_foreground_orange, Color(0xFF963C0A)),
+                                IconOption(AppIconManager.ICON_PINK, R.string.app_icon_pink, R.string.app_icon_pink_applied, R.mipmap.ic_launcher_foreground_pink, Color(0xFF823C82))
                             )
                             
+                            // Launcher-like preview: large colored plate + full foreground (adaptive) scaled to fit.
+                            val iconPreviewPlate = 120.dp
+                            val iconDecodeMaxDp = 280.dp
+
                             iconOptions.forEach { iconOption ->
                                 val isSelected = selectedIconStyle == iconOption.style
                                 
                             Card(
                                 modifier = Modifier
-                                    .width(140.dp)
+                                    .width(168.dp)
                                     .clickable {
                                             selectedIconStyle = iconOption.style
                                             println("🔄 Saving ${iconOption.style} icon style")
@@ -1967,34 +1990,33 @@ fun SettingsScreen(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.Center
                                 ) {
-                                        // Display icon preview - using actual app icon foreground
+                                        // Display icon preview: adaptive background + foreground, sized like a launcher tile.
                                     Box(
                                         modifier = Modifier
-                                            .size(80.dp)
-                                            .background(
-                                                    color = iconOption.backgroundColor,
-                                                shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
-                                            ),
+                                            .size(iconPreviewPlate)
+                                            .clip(RoundedCornerShape(26.dp))
+                                            .background(color = iconOption.backgroundColor),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        // Load mipmap resource using ImageUtils (painterResource doesn't support mipmap)
                                         val iconBitmap = remember(iconOption.iconResId) {
                                             ImageUtils.loadScaledImageBitmap(
                                                 context = context,
                                                 resId = iconOption.iconResId,
-                                                maxWidthDp = 64.dp,
-                                                maxHeightDp = 64.dp
+                                                maxWidthDp = iconDecodeMaxDp,
+                                                maxHeightDp = iconDecodeMaxDp
                                             )
                                         }
-                                        
+
                                         iconBitmap?.let { bitmap ->
                                             Image(
                                                 bitmap = bitmap,
                                                 contentDescription = context.getString(iconOption.nameResId),
-                                                modifier = Modifier.size(64.dp)
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .padding(6.dp),
+                                                contentScale = ContentScale.Fit
                                             )
                                         } ?: run {
-                                            // Fallback: try loading via ContextCompat
                                             val fallbackBitmap = remember(iconOption.iconResId) {
                                                 ContextCompat.getDrawable(context, iconOption.iconResId)?.let { d ->
                                                     android.graphics.Bitmap.createBitmap(
@@ -2012,7 +2034,10 @@ fun SettingsScreen(
                                                 Image(
                                                     bitmap = bitmap,
                                                     contentDescription = context.getString(iconOption.nameResId),
-                                                    modifier = Modifier.size(64.dp)
+                                                    modifier = Modifier
+                                                        .fillMaxSize()
+                                                        .padding(6.dp),
+                                                    contentScale = ContentScale.Fit
                                                 )
                                             }
                                         }
@@ -2131,37 +2156,37 @@ fun SettingsScreen(
                     
                     Spacer(modifier = Modifier.height(16.dp))
                     
-                    // Statistics Visibility Toggle (Show Graphs)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Start,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        var statisticsVisible by remember { mutableStateOf(settingsManager.isStatisticsVisible()) }
-                        Column(
-                            modifier = Modifier.weight(1f)
+                    if (variant == SettingsScreenVariant.Full) {
+                        // Statistics Visibility Toggle (Show Graphs) — admin only
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Start,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = context.getString(R.string.statistics_visibility_title),
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                            Text(
-                                text = context.getString(R.string.statistics_visibility_description),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            var statisticsVisible by remember { mutableStateOf(settingsManager.isStatisticsVisible()) }
+                            Column(
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    text = context.getString(R.string.statistics_visibility_title),
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                Text(
+                                    text = context.getString(R.string.statistics_visibility_description),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Switch(
+                                checked = statisticsVisible,
+                                onCheckedChange = {
+                                    statisticsVisible = it
+                                    settingsManager.setStatisticsVisible(it)
+                                }
                             )
                         }
-                        Switch(
-                            checked = statisticsVisible,
-                            onCheckedChange = {
-                                statisticsVisible = it
-                                settingsManager.setStatisticsVisible(it)
-                            }
-                        )
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
-                    // (old statistics toggle moved above; this block kept)
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
                     
                     // Scroll Behavior for Manager Pages - Card selector
                     Column(
@@ -2790,6 +2815,7 @@ fun SettingsScreen(
         
         Spacer(modifier = Modifier.height(24.dp))
         
+        if (variant == SettingsScreenVariant.Full) {
         // Developer & Debug Settings
         ExpandableSettingsCategory(
             title = context.getString(R.string.settings_category_developer),
@@ -3073,8 +3099,6 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(24.dp))
         
         // Maintenance Settings
-        var showUpdateSourcesDialog by remember { mutableStateOf(false) }
-        
         ExpandableSettingsCategory(
             title = context.getString(R.string.settings_category_maintenance),
             icon = Icons.Default.Build,
@@ -3163,7 +3187,6 @@ fun SettingsScreen(
             }
         }
         
-        // Update Sources Dialog
         if (showUpdateSourcesDialog) {
             UpdateSourcesDialog(
                 settingsManager = settingsManager,
@@ -3267,6 +3290,7 @@ fun SettingsScreen(
                     Text(context.getString(R.string.manage_venues))
                 }
             }
+        }
         }
         
         Spacer(modifier = Modifier.height(24.dp))

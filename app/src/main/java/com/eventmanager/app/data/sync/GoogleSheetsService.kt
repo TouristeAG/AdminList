@@ -1906,6 +1906,68 @@ class GoogleSheetsService(private val context: Context) {
         }
     }
 
+    /**
+     * Appends one row per name to the temporary guest sheet (columns A–G), matching
+     * [syncTempGuestsFromSheets] / [updateTemporaryGuestInSheets]: modification date,
+     * event date (ISO), artist, contact phone, guest name, comment, NanoID.
+     */
+    suspend fun appendTemporaryGuestManualBatch(batch: ManualTemporaryGuestBatch) = withContext(Dispatchers.IO) {
+        try {
+            if (batch.guestNames.isEmpty()) {
+                println("appendTemporaryGuestManualBatch: empty guestNames, skipping")
+                return@withContext
+            }
+            if (sheetsService == null) {
+                initializeSheetsService()
+            }
+
+            ApiRateLimitHandler.executeWithRetry(
+                operation = {
+                    val spreadsheetId = settingsManager.getSpreadsheetId()
+                    val sheetName = settingsManager.getTempGuestListSheet()
+                    val zone = java.time.ZoneId.of("Europe/Zurich")
+                    val formatter = java.time.format.DateTimeFormatter.ISO_LOCAL_DATE
+                    val today = java.time.LocalDate.now(zone).format(formatter)
+                    val eventDate = java.time.Instant.ofEpochMilli(batch.eventDateMillis)
+                        .atZone(zone).toLocalDate()
+                        .format(formatter)
+
+                    val rows = batch.guestNames.map { name ->
+                        listOf(
+                            today,
+                            eventDate,
+                            batch.artistName,
+                            batch.emergencyContactPhone,
+                            name,
+                            batch.comments,
+                            NanoIdGenerator.generateGuestId()
+                        )
+                    }
+
+                    val valueRange = ValueRange().setValues(rows)
+                    val response = sheetsService?.spreadsheets()?.values()?.append(
+                        spreadsheetId,
+                        "${sheetName}!A:G",
+                        valueRange
+                    )?.setValueInputOption("RAW")?.execute()
+
+                    if (response == null) {
+                        throw IOException("Failed to append temporary guests to Google Sheets - no response received")
+                    }
+                    println("Appended ${rows.size} temporary guest row(s) to sheet $sheetName")
+                },
+                operationName = "append temporary guests to sheets"
+            )
+        } catch (e: Exception) {
+            println("Failed to append temporary guests to sheets: ${e.message}")
+            if (e.message?.contains("429") == true || e.message?.contains("Rate limit") == true) {
+                throw IOException(ApiRateLimitHandler.getBriefRateLimitMessage(), e)
+            } else {
+                throw IOException(createNetworkErrorMessage("append temporary guests to Google Sheets", e), e)
+            }
+        }
+    }
+
     suspend fun deleteTemporaryGuestFromSheets(sheetsId: String?) = withContext(Dispatchers.IO) {
         try {
             if (sheetsId == null) {

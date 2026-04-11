@@ -1,4 +1,5 @@
 import groovy.json.JsonSlurper
+import groovy.json.JsonOutput
 
 plugins {
     id 'com.android.application'
@@ -126,6 +127,8 @@ configurations.all {
 }
 
 dependencies {
+    // ACS official Bluetooth LE reader library (ACR1255U-J1, etc.) — not on Maven Central; vendored from ACS sample.
+    implementation files('libs/acsbt-1.0.0preview8.jar')
     // 2.0.x can miss j$.util.* in the APK with newer Compose runtime (PersistentCompositionLocalHashMap → j$.util.Map).
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
     implementation 'androidx.core:core-ktx:1.12.0'
@@ -254,3 +257,48 @@ dependencies {
     debugImplementation 'androidx.compose.ui:ui-test-manifest'
 }
 
+// When javaPreCompile* is satisfied from the build cache, annotationProcessors.json can be missing locally while
+// compile*JavaWithJavac still expects it (Gradle 8.10 + AGP 8.1). Recreate the Room/KSP marker file if absent.
+afterEvaluate {
+    def roomCompiler = configurations.findByName("ksp")?.dependencies?.find {
+        it.group == "androidx.room" && it.name == "room-compiler"
+    }
+    def roomVer = roomCompiler?.version ?: "2.6.1"
+    def processorKey = "room-compiler-${roomVer}.jar (androidx.room:room-compiler:${roomVer})"
+    def processorJson = JsonOutput.toJson([(processorKey): "KSP_PROCESSOR"])
+
+    ["Debug", "Release"].each { variant ->
+        def slug = variant.toLowerCase()
+        def preCompileTask = "javaPreCompile${variant}"
+        def compileTask = "compile${variant}JavaWithJavac"
+        def ensureTaskName = "ensure${variant}AnnotationProcessorsList"
+        if (tasks.findByName(compileTask) == null) return
+
+        tasks.register(ensureTaskName) {
+            dependsOn(tasks.named(preCompileTask))
+            doLast {
+                def f = file("${layout.buildDirectory.get().asFile}/intermediates/annotation_processor_list/${slug}/annotationProcessors.json")
+                if (!f.exists()) {
+                    f.parentFile.mkdirs()
+                    f.text = processorJson
+                }
+            }
+        }
+        tasks.named(compileTask).configure { dependsOn(tasks.named(ensureTaskName)) }
+    }
+
+    // KSP incremental shadow can throw FileAlreadyExistsException when the destination already exists
+    // (e.g. multiple Kotlin daemons, build cache restore, IDE + CLI). Clear variant output first.
+    ['Debug', 'Release'].each { variant ->
+        def kspTask = tasks.findByName("ksp${variant}Kotlin")
+        if (kspTask != null) {
+            kspTask.doFirst {
+                def slug = variant.toLowerCase()
+                def dir = file("${layout.buildDirectory.get().asFile}/generated/ksp/$slug")
+                if (dir.exists()) {
+                    project.delete(dir)
+                }
+            }
+        }
+    }
+}
