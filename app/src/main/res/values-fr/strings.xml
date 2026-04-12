@@ -238,11 +238,21 @@
     
     <!-- Sync Status -->
     <string name="syncing">Synchronisation...</string>
-    <string name="synced_now">Synchronisé maintenant</string>
-    <string name="synced_minutes_ago">Il y a %d min</string>
-    <string name="synced_hours_ago">Il y a %d h</string>
-    <string name="synced_days_ago">Il y a %d j</string>
-    <string name="never_synced">Jamais synchronisé</string>
+    <string name="last_update_just_now">à l\'instant</string>
+    <string name="last_update_never_brief">—</string>
+    <string name="last_update_seconds_ago">il y a %d s</string>
+    <string name="last_update_min_sec_ago">il y a %1$d min %2$d s</string>
+    <string name="last_update_hour_min_ago">il y a %1$d h %2$d min</string>
+    <string name="last_update_days_ago">il y a %d j</string>
+    <string name="last_update_line">Mise à jour · %s</string>
+    <string name="last_update_none_line">Mise à jour · —</string>
+    <string name="sync_pill_minutes_ago">il y a %d min</string>
+    <string name="sync_pill_hours_ago">il y a %d h</string>
+    <string name="sync_pill_hours_minutes_ago">il y a %1$d h %2$d min</string>
+    <string name="sync_pill_days_ago">il y a %d j</string>
+    <string name="sync_pill_days_hours_ago">il y a %1$d j %2$d h</string>
+    <string name="sync_pill_days_minutes_ago">il y a %1$d j %2$d min</string>
+    <string name="sync_pill_days_hours_minutes_ago">il y a %1$d j %2$d h %3$d min</string>
     
     <!-- Welcome Screen -->
     <string name="start_admin">Démarrer Admin</string>
@@ -379,7 +389,7 @@
     <string name="add_guest_tab_temporary">Temporaire</string>
     <string name="add_guest_add_another_name">Ajouter un autre nom d’invité·e</string>
     <string name="add_guest_additional_name_label">Nom d’invité·e (%1$d)</string>
-    <string name="last_synced">Dernière synchronisation :</string>
+    <string name="last_synced">Dernière mise à jour :</string>
     <string name="just_now">À l\'instant</string>
     <string name="minutes_ago">Il y a %d minutes</string>
     <string name="hours_ago">Il y a %d heures</string>
@@ -628,7 +638,7 @@
     <string name="app_version">NoctuList 0.9</string>
     <string name="app_designed_for">Conçu pour les lieux du Collectif Nocturne</string>
     <string name="app_developed_full">Développé pour le Collectif Nocturne par Leonardo Mondada</string>
-    <string name="last_sync">Dernière synchronisation : %s</string>
+    <string name="last_sync">Dernière mise à jour : %s</string>
     <string name="never">Jamais</string>
     
     <!-- QR Code Related -->
@@ -833,6 +843,14 @@
     <string name="people_counter_hint_tap_plus_minus">Appuyez sur +/- pour ajuster le compte</string>
     <string name="people_counter_hint_long_press">Appui long ±10 personnes</string>
     <string name="people_counter_reset">Réinitialiser le compteur</string>
+    <string name="people_counter_priority">Priorité</string>
+    <string name="people_counter_sheet_synced">Dernière mise à jour du compteur</string>
+    <string name="people_counter_priority_lost">Un autre appareil a la priorité. La vôtre a été désactivée. Pour reprendre la priorité sur cet appareil, maintenez l\'interrupteur Priorité pendant 3 secondes.</string>
+    <string name="people_counter_another_device">Un autre appareil a déjà la priorité pour ce lieu. Pour reprendre la priorité sur cet appareil, maintenez l\'interrupteur Priorité pendant 3 secondes.</string>
+    <string name="people_counter_no_sheet_row">Ce lieu n\'a pas encore de ligne sur la feuille. Synchronisez les lieux dans les réglages.</string>
+    <string name="people_counter_need_sheets">Connectez Google Sheets avant de contrôler le compteur.</string>
+    <string name="people_counter_select_venue">Sélectionnez un lieu une fois les lieux chargés.</string>
+    <string name="people_counter_no_venues">Ajoutez des lieux actifs dans les réglages pour utiliser le compteur.</string>
     
     <!-- QR Code Scanner -->
     <string name="camera_not_available">Le matériel de la caméra n\'est pas disponible ou ne fonctionne pas sur cet appareil</string>

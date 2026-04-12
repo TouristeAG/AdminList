@@ -62,6 +62,7 @@ object ResolutionScaler {
      * Apply resolution scaling to a context by modifying display density
      * This creates a new context with modified density that makes UI elements appear smaller/larger
      */
+    @Suppress("DEPRECATION")
     fun applyResolutionScaling(context: Context, scale: Float): Context {
         val originalMetrics = context.resources.displayMetrics
         val originalDensity = originalMetrics.density

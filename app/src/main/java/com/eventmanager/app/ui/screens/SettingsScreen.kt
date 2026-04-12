@@ -14,7 +14,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.Help
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.automirrored.filled.Subject
 import androidx.compose.material.icons.filled.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -79,7 +82,7 @@ import com.eventmanager.app.R
 import com.eventmanager.app.BuildConfig
 import com.eventmanager.app.ui.theme.ThemeMode
 import com.eventmanager.app.ui.components.ResolutionScaleSlider
-import com.eventmanager.app.ui.components.AppRestartDialog
+import com.eventmanager.app.ui.components.restartApp
 import com.eventmanager.app.ui.components.RetroSynthwaveGameDialog
 import com.eventmanager.app.ui.components.OffTheLineGameDialog
 import com.eventmanager.app.ui.components.PizzaUndeliveryGameDialog
@@ -662,7 +665,7 @@ private fun VolunteerEmailFields(
             placeholder = { Text(strings.subjectHint) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-            leadingIcon = { Icon(Icons.Default.Subject, contentDescription = null) }
+            leadingIcon = { Icon(Icons.AutoMirrored.Filled.Subject, contentDescription = null) }
         )
         
         // Content Before QR Code
@@ -740,7 +743,7 @@ private fun GuestEmailFields(
             placeholder = { Text(strings.subjectHint) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-            leadingIcon = { Icon(Icons.Default.Subject, contentDescription = null) }
+            leadingIcon = { Icon(Icons.AutoMirrored.Filled.Subject, contentDescription = null) }
         )
         
         // Content Before QR Code
@@ -963,7 +966,7 @@ private fun GmailAuthSection(
                     },
                     enabled = !isLoading
                 ) {
-                    Icon(Icons.Default.ExitToApp, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(context.getString(R.string.email_gmail_sign_out))
                 }
@@ -1131,11 +1134,9 @@ fun SettingsScreen(
     var showAnimationSettings by remember { mutableStateOf(settingsManager.isCategoryAnimationExpanded()) }
     var showDeveloperSettings by remember { mutableStateOf(settingsManager.isCategoryDeveloperExpanded()) }
     var showMaintenanceSettings by remember { mutableStateOf(settingsManager.isCategoryMaintenanceExpanded()) }
-    var showRestartDialog by remember { mutableStateOf(false) }
     var currentResolutionScale by remember { mutableStateOf(settingsManager.getResolutionScale()) }
     var pendingResolutionScale by remember { mutableStateOf(settingsManager.getResolutionScale()) }
     var hasUnsavedResolutionChanges by remember { mutableStateOf(false) }
-    var showAppIconRestartDialog by remember { mutableStateOf(false) }
     var showUpdateResultDialog by remember { mutableStateOf(false) }
     var showUpdateSourcesDialog by remember { mutableStateOf(false) }
     
@@ -1596,6 +1597,87 @@ fun SettingsScreen(
         
         }
         
+        if (variant == SettingsScreenVariant.BilleterieBasic) {
+            ExpandableSettingsCategory(
+                title = context.getString(R.string.settings_category_sync),
+                icon = Icons.Default.CloudSync,
+                isExpanded = showSyncSettings,
+                onToggleExpanded = {
+                    showSyncSettings = !showSyncSettings
+                    settingsManager.setCategorySyncExpanded(showSyncSettings)
+                }
+            ) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.Sync,
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = context.getString(R.string.sync_config_title),
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        OutlinedTextField(
+                            value = syncInterval.toString(),
+                            onValueChange = {
+                                val newInterval = it.toIntOrNull() ?: 5
+                                if (newInterval >= 1 && newInterval <= 60) {
+                                    syncInterval = newInterval
+                                    settingsManager.saveSyncInterval(newInterval)
+                                    coroutineScope.launch {
+                                        kotlinx.coroutines.delay(500)
+                                        viewModel.updateSyncInterval()
+                                    }
+                                }
+                            },
+                            label = { Text(context.getString(R.string.sync_interval_label)) },
+                            modifier = Modifier.fillMaxWidth(),
+                            supportingText = {
+                                Text(context.getString(R.string.sync_interval_hint))
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Default.Timer, contentDescription = null)
+                            }
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(
+                            onClick = { viewModel.testSyncStatus() },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.BugReport, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(context.getString(R.string.test_sync_status))
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = { viewModel.syncWithGoogleSheets() },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.Sync, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(context.getString(R.string.manual_sync_now))
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
+            }
+        }
+        
         Spacer(modifier = Modifier.height(24.dp))
         
         // Email Settings Category (admin + Billeterie — Gmail API & templates for volunteer QR emails)
@@ -1769,7 +1851,7 @@ fun SettingsScreen(
                                             selectedColorTheme = "system"
                                             settingsManager.saveColorTheme("system")
                                             showColorThemeMenu = false
-                                            showRestartDialog = true
+                                            (context as? android.app.Activity)?.recreate()
                                         } else {
                                             showColorThemeMenu = false
                                         }
@@ -1782,7 +1864,7 @@ fun SettingsScreen(
                                             selectedColorTheme = "professional_blue"
                                             settingsManager.saveColorTheme("professional_blue")
                                             showColorThemeMenu = false
-                                            showRestartDialog = true
+                                            (context as? android.app.Activity)?.recreate()
                                         } else {
                                             showColorThemeMenu = false
                                         }
@@ -1795,7 +1877,7 @@ fun SettingsScreen(
                                             selectedColorTheme = "neutral_green"
                                             settingsManager.saveColorTheme("neutral_green")
                                             showColorThemeMenu = false
-                                            showRestartDialog = true
+                                            (context as? android.app.Activity)?.recreate()
                                         } else {
                                             showColorThemeMenu = false
                                         }
@@ -1808,7 +1890,7 @@ fun SettingsScreen(
                                             selectedColorTheme = "warm_gray"
                                             settingsManager.saveColorTheme("warm_gray")
                                             showColorThemeMenu = false
-                                            showRestartDialog = true
+                                            (context as? android.app.Activity)?.recreate()
                                         } else {
                                             showColorThemeMenu = false
                                         }
@@ -1821,7 +1903,7 @@ fun SettingsScreen(
                                             selectedColorTheme = "neutral_purple"
                                             settingsManager.saveColorTheme("neutral_purple")
                                             showColorThemeMenu = false
-                                            showRestartDialog = true
+                                            (context as? android.app.Activity)?.recreate()
                                         } else {
                                             showColorThemeMenu = false
                                         }
@@ -1834,7 +1916,7 @@ fun SettingsScreen(
                                             selectedColorTheme = "rich_brown"
                                             settingsManager.saveColorTheme("rich_brown")
                                             showColorThemeMenu = false
-                                            showRestartDialog = true
+                                            (context as? android.app.Activity)?.recreate()
                                         } else {
                                             showColorThemeMenu = false
                                         }
@@ -1881,7 +1963,7 @@ fun SettingsScreen(
                                     currentResolutionScale = pendingResolutionScale
                                     settingsManager.saveResolutionScale(pendingResolutionScale)
                                     hasUnsavedResolutionChanges = false
-                                    showRestartDialog = true
+                                    (context as? android.app.Activity)?.recreate()
                                 },
                                 modifier = Modifier.fillMaxWidth()
                             ) {
@@ -1956,8 +2038,10 @@ fun SettingsScreen(
                                             println("🔄 Applying ${iconOption.style} icon")
                                             appIconManager.setAppIcon(iconOption.style)
                                             println("✅ ${iconOption.style} icon applied")
-                                            // Show restart dialog
-                                            showAppIconRestartDialog = true
+                                            coroutineScope.launch {
+                                                delay(200)
+                                                restartApp(context)
+                                            }
                                         // Show toast to user
                                         android.widget.Toast.makeText(
                                             context,
@@ -2110,8 +2194,10 @@ fun SettingsScreen(
                                     appIconManager.setAppIcon(adaptedIcon)
                                     selectedIconStyle = adaptedIcon
                                     settingsManager.saveAppIconStyle(adaptedIcon)
-                                    // Show restart dialog
-                                    showAppIconRestartDialog = true
+                                    coroutineScope.launch {
+                                        delay(200)
+                                        restartApp(context)
+                                    }
                                     // Show toast to user
                                     android.widget.Toast.makeText(
                                         context,
@@ -2150,6 +2236,11 @@ fun SettingsScreen(
                             onCheckedChange = {
                                 peopleCounterVisible = it
                                 settingsManager.setPeopleCounterVisible(it)
+                                if (it) {
+                                    coroutineScope.launch {
+                                        viewModel.refreshVenuesForPeopleCounterQuietly()
+                                    }
+                                }
                             }
                         )
                     }
@@ -3611,49 +3702,6 @@ fun SettingsScreen(
         )
     }
     
-    // Restart App Dialog
-    if (showRestartDialog) {
-        AlertDialog(
-            onDismissRequest = { showRestartDialog = false },
-            title = {
-                Text(
-                    text = context.getString(R.string.restart_required_title),
-                    style = MaterialTheme.typography.headlineSmall
-                )
-            },
-            text = {
-                Text(
-                    text = context.getString(R.string.restart_required_message),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showRestartDialog = false
-                        // Restart the app
-                        (context as? android.app.Activity)?.recreate()
-                    }
-                ) {
-                    Text(context.getString(R.string.restart_now))
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { showRestartDialog = false }
-                ) {
-                    Text(context.getString(R.string.restart_later))
-                }
-            }
-        )
-    }
-    
-    // App Icon Restart Dialog
-    AppRestartDialog(
-        isVisible = showAppIconRestartDialog,
-        onDismiss = { showAppIconRestartDialog = false }
-    )
-    
     // Easter Egg Dialog
     if (showEasterEggDialog) {
         RetroSynthwaveGameDialog(
@@ -3732,7 +3780,7 @@ fun GoogleSheetsInstructionsDialog(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Icon(
-                            Icons.Default.OpenInNew,
+                            Icons.AutoMirrored.Filled.OpenInNew,
                             contentDescription = null,
                             modifier = Modifier.size(18.dp)
                         )

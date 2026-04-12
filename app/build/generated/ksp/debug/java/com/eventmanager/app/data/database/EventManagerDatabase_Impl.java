@@ -11,8 +11,6 @@ import androidx.room.util.DBUtil;
 import androidx.room.util.TableInfo;
 import androidx.sqlite.db.SupportSQLiteDatabase;
 import androidx.sqlite.db.SupportSQLiteOpenHelper;
-import com.eventmanager.app.data.dao.CounterDao;
-import com.eventmanager.app.data.dao.CounterDao_Impl;
 import com.eventmanager.app.data.dao.GuestDao;
 import com.eventmanager.app.data.dao.GuestDao_Impl;
 import com.eventmanager.app.data.dao.JobDao;
@@ -49,12 +47,10 @@ public final class EventManagerDatabase_Impl extends EventManagerDatabase {
 
   private volatile VenueDao _venueDao;
 
-  private volatile CounterDao _counterDao;
-
   @Override
   @NonNull
   protected SupportSQLiteOpenHelper createOpenHelper(@NonNull final DatabaseConfiguration config) {
-    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(28) {
+    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(29) {
       @Override
       public void createAllTables(@NonNull final SupportSQLiteDatabase db) {
         db.execSQL("CREATE TABLE IF NOT EXISTS `guests` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sheetsId` TEXT, `nanoId` TEXT NOT NULL, `name` TEXT NOT NULL, `lastNameAbbreviation` TEXT NOT NULL, `email` TEXT NOT NULL, `phoneNumber` TEXT NOT NULL, `invitations` INTEGER NOT NULL, `venueName` TEXT NOT NULL, `notes` TEXT NOT NULL, `isVolunteerBenefit` INTEGER NOT NULL, `volunteerId` TEXT, `lastModified` INTEGER NOT NULL, `isTemporaryGuest` INTEGER NOT NULL, `temporaryArtistName` TEXT NOT NULL, `temporaryEventDate` INTEGER, `temporaryContactPhone` TEXT NOT NULL, `nfcCardUid` TEXT NOT NULL, `isAdmin` INTEGER NOT NULL)");
@@ -82,14 +78,13 @@ public final class EventManagerDatabase_Impl extends EventManagerDatabase {
         db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_job_type_configs_name` ON `job_type_configs` (`name`)");
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_job_type_configs_isActive` ON `job_type_configs` (`isActive`)");
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_job_type_configs_lastModified` ON `job_type_configs` (`lastModified`)");
-        db.execSQL("CREATE TABLE IF NOT EXISTS `venues` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sheetsId` TEXT, `name` TEXT NOT NULL, `description` TEXT NOT NULL, `isActive` INTEGER NOT NULL, `lastModified` INTEGER NOT NULL)");
+        db.execSQL("CREATE TABLE IF NOT EXISTS `venues` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sheetsId` TEXT, `name` TEXT NOT NULL, `description` TEXT NOT NULL, `isActive` INTEGER NOT NULL, `lastModified` INTEGER NOT NULL, `peopleCounterCount` INTEGER NOT NULL, `peopleCounterWriterDeviceId` TEXT NOT NULL, `peopleCounterLastModified` INTEGER NOT NULL)");
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_venues_sheetsId` ON `venues` (`sheetsId`)");
         db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_venues_name` ON `venues` (`name`)");
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_venues_isActive` ON `venues` (`isActive`)");
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_venues_lastModified` ON `venues` (`lastModified`)");
-        db.execSQL("CREATE TABLE IF NOT EXISTS `people_counter` (`id` INTEGER NOT NULL, `count` INTEGER NOT NULL, `lastModified` INTEGER NOT NULL, PRIMARY KEY(`id`))");
         db.execSQL("CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)");
-        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '5e01bc87bcd68669d27f471327e5e427')");
+        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '535ba282bc6cf88d6067ef6f03a1bfc4')");
       }
 
       @Override
@@ -99,7 +94,6 @@ public final class EventManagerDatabase_Impl extends EventManagerDatabase {
         db.execSQL("DROP TABLE IF EXISTS `jobs`");
         db.execSQL("DROP TABLE IF EXISTS `job_type_configs`");
         db.execSQL("DROP TABLE IF EXISTS `venues`");
-        db.execSQL("DROP TABLE IF EXISTS `people_counter`");
         final List<? extends RoomDatabase.Callback> _callbacks = mCallbacks;
         if (_callbacks != null) {
           for (RoomDatabase.Callback _callback : _callbacks) {
@@ -261,13 +255,16 @@ public final class EventManagerDatabase_Impl extends EventManagerDatabase {
                   + " Expected:\n" + _infoJobTypeConfigs + "\n"
                   + " Found:\n" + _existingJobTypeConfigs);
         }
-        final HashMap<String, TableInfo.Column> _columnsVenues = new HashMap<String, TableInfo.Column>(6);
+        final HashMap<String, TableInfo.Column> _columnsVenues = new HashMap<String, TableInfo.Column>(9);
         _columnsVenues.put("id", new TableInfo.Column("id", "INTEGER", true, 1, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsVenues.put("sheetsId", new TableInfo.Column("sheetsId", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsVenues.put("name", new TableInfo.Column("name", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsVenues.put("description", new TableInfo.Column("description", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsVenues.put("isActive", new TableInfo.Column("isActive", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsVenues.put("lastModified", new TableInfo.Column("lastModified", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsVenues.put("peopleCounterCount", new TableInfo.Column("peopleCounterCount", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsVenues.put("peopleCounterWriterDeviceId", new TableInfo.Column("peopleCounterWriterDeviceId", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsVenues.put("peopleCounterLastModified", new TableInfo.Column("peopleCounterLastModified", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         final HashSet<TableInfo.ForeignKey> _foreignKeysVenues = new HashSet<TableInfo.ForeignKey>(0);
         final HashSet<TableInfo.Index> _indicesVenues = new HashSet<TableInfo.Index>(4);
         _indicesVenues.add(new TableInfo.Index("index_venues_sheetsId", false, Arrays.asList("sheetsId"), Arrays.asList("ASC")));
@@ -281,22 +278,9 @@ public final class EventManagerDatabase_Impl extends EventManagerDatabase {
                   + " Expected:\n" + _infoVenues + "\n"
                   + " Found:\n" + _existingVenues);
         }
-        final HashMap<String, TableInfo.Column> _columnsPeopleCounter = new HashMap<String, TableInfo.Column>(3);
-        _columnsPeopleCounter.put("id", new TableInfo.Column("id", "INTEGER", true, 1, null, TableInfo.CREATED_FROM_ENTITY));
-        _columnsPeopleCounter.put("count", new TableInfo.Column("count", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
-        _columnsPeopleCounter.put("lastModified", new TableInfo.Column("lastModified", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
-        final HashSet<TableInfo.ForeignKey> _foreignKeysPeopleCounter = new HashSet<TableInfo.ForeignKey>(0);
-        final HashSet<TableInfo.Index> _indicesPeopleCounter = new HashSet<TableInfo.Index>(0);
-        final TableInfo _infoPeopleCounter = new TableInfo("people_counter", _columnsPeopleCounter, _foreignKeysPeopleCounter, _indicesPeopleCounter);
-        final TableInfo _existingPeopleCounter = TableInfo.read(db, "people_counter");
-        if (!_infoPeopleCounter.equals(_existingPeopleCounter)) {
-          return new RoomOpenHelper.ValidationResult(false, "people_counter(com.eventmanager.app.data.models.CounterData).\n"
-                  + " Expected:\n" + _infoPeopleCounter + "\n"
-                  + " Found:\n" + _existingPeopleCounter);
-        }
         return new RoomOpenHelper.ValidationResult(true, null);
       }
-    }, "5e01bc87bcd68669d27f471327e5e427", "777b8593f987b22adb7e7c73efa64e57");
+    }, "535ba282bc6cf88d6067ef6f03a1bfc4", "35c565a2969daa6ebee2fde9fbf05da3");
     final SupportSQLiteOpenHelper.Configuration _sqliteConfig = SupportSQLiteOpenHelper.Configuration.builder(config.context).name(config.name).callback(_openCallback).build();
     final SupportSQLiteOpenHelper _helper = config.sqliteOpenHelperFactory.create(_sqliteConfig);
     return _helper;
@@ -307,7 +291,7 @@ public final class EventManagerDatabase_Impl extends EventManagerDatabase {
   protected InvalidationTracker createInvalidationTracker() {
     final HashMap<String, String> _shadowTablesMap = new HashMap<String, String>(0);
     final HashMap<String, Set<String>> _viewTables = new HashMap<String, Set<String>>(0);
-    return new InvalidationTracker(this, _shadowTablesMap, _viewTables, "guests","volunteers","jobs","job_type_configs","venues","people_counter");
+    return new InvalidationTracker(this, _shadowTablesMap, _viewTables, "guests","volunteers","jobs","job_type_configs","venues");
   }
 
   @Override
@@ -321,7 +305,6 @@ public final class EventManagerDatabase_Impl extends EventManagerDatabase {
       _db.execSQL("DELETE FROM `jobs`");
       _db.execSQL("DELETE FROM `job_type_configs`");
       _db.execSQL("DELETE FROM `venues`");
-      _db.execSQL("DELETE FROM `people_counter`");
       super.setTransactionSuccessful();
     } finally {
       super.endTransaction();
@@ -341,7 +324,6 @@ public final class EventManagerDatabase_Impl extends EventManagerDatabase {
     _typeConvertersMap.put(JobDao.class, JobDao_Impl.getRequiredConverters());
     _typeConvertersMap.put(JobTypeConfigDao.class, JobTypeConfigDao_Impl.getRequiredConverters());
     _typeConvertersMap.put(VenueDao.class, VenueDao_Impl.getRequiredConverters());
-    _typeConvertersMap.put(CounterDao.class, CounterDao_Impl.getRequiredConverters());
     return _typeConvertersMap;
   }
 
@@ -426,20 +408,6 @@ public final class EventManagerDatabase_Impl extends EventManagerDatabase {
           _venueDao = new VenueDao_Impl(this);
         }
         return _venueDao;
-      }
-    }
-  }
-
-  @Override
-  public CounterDao counterDao() {
-    if (_counterDao != null) {
-      return _counterDao;
-    } else {
-      synchronized(this) {
-        if(_counterDao == null) {
-          _counterDao = new CounterDao_Impl(this);
-        }
-        return _counterDao;
       }
     }
   }

@@ -71,13 +71,20 @@ private fun ColorTheme.toColorScheme(isDark: Boolean): androidx.compose.material
         scrim = colorScheme.scrim,
         inverseSurface = colorScheme.inverseSurface,
         inverseOnSurface = colorScheme.inverseOnSurface,
-        inversePrimary = colorScheme.inversePrimary
+        inversePrimary = colorScheme.inversePrimary,
+        surfaceDim = colorScheme.surfaceDim,
+        surfaceBright = colorScheme.surfaceBright,
+        surfaceContainerLowest = colorScheme.surfaceContainerLowest,
+        surfaceContainerLow = colorScheme.surfaceContainerLow,
+        surfaceContainer = colorScheme.surfaceContainer,
+        surfaceContainerHigh = colorScheme.surfaceContainerHigh,
+        surfaceContainerHighest = colorScheme.surfaceContainerHighest
     )
 }
 
 @Composable
 fun EventManagerTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    @Suppress("UNUSED_PARAMETER") darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
@@ -137,7 +144,7 @@ fun EventManagerTheme(
         SideEffect {
             val window = (view.context as Activity).window
             window.statusBarColor = colorScheme.background.toArgb()
-            WindowCompat.getInsetsController(window, view)?.isAppearanceLightStatusBars = !darkTheme
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }
 

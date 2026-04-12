@@ -205,6 +205,9 @@ fun QRScannerDialog(
     val hasExternalReaderConnected = remember(usbHardwareGeneration, context) {
         ExternalAcsUidReader.isConnected(context)
     }
+    val suppressPhoneNfcReaderMode = remember(usbHardwareGeneration, context) {
+        ExternalAcsUidReader.shouldSuppressPhoneNfcReaderMode(context)
+    }
     val permanentGuests = remember(guests) { guests.filter { !it.isVolunteerBenefit && !it.isTemporaryGuest } }
     val volunteersByNfcUid = remember(volunteers) {
         volunteers
@@ -406,13 +409,15 @@ fun QRScannerDialog(
     }
 
     // Phone NFC: only enable reader mode when NFC is on — same as AddNfcUidDialog (not while disabled).
-    DisposableEffect(activity, nfcAdapter, volunteers, permanentGuests, hasExternalReaderConnected) {
+    DisposableEffect(activity, nfcAdapter, volunteers, permanentGuests, suppressPhoneNfcReaderMode) {
         if (activity == null || nfcAdapter == null) {
             onDispose { }
         } else if (!nfcAdapter.isEnabled) {
             if (!hasExternalReaderConnected) {
                 errorMessage = context.getString(R.string.nfc_disabled_enable)
             }
+            onDispose { }
+        } else if (suppressPhoneNfcReaderMode) {
             onDispose { }
         } else {
             val callback = NfcAdapter.ReaderCallback { tag ->

@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.os.Vibrator
 import android.os.VibrationEffect
 import android.os.Build
+import androidx.core.content.ContextCompat
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.BackHandler
@@ -43,8 +44,8 @@ import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.LocalBar
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.ConfirmationNumber
-import androidx.compose.material.icons.filled.ExitToApp
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material3.*
 import com.eventmanager.app.ui.components.QRScannerDialog
 import com.eventmanager.app.ui.components.ScannerMatch
@@ -61,6 +62,8 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -77,7 +80,6 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.foundation.Canvas
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.togetherWith
@@ -93,19 +95,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.SizeTransform
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import kotlin.random.Random
-import kotlin.math.cos
-import kotlin.math.sin
-import kotlin.math.PI
 import kotlin.math.max
 import kotlin.math.min
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -114,9 +104,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.eventmanager.app.data.database.EventManagerDatabase
 import com.eventmanager.app.data.repository.EventManagerRepository
+import com.eventmanager.app.data.sync.DateFormatUtils
 import com.eventmanager.app.data.sync.GoogleSheetsService
 import com.eventmanager.app.ui.screens.BenefitsScreen
 import com.eventmanager.app.ui.screens.GuestListScreen
@@ -230,12 +222,19 @@ class MainActivity : ComponentActivity() {
         // Apply resolution scaling
         applyResolutionScaling()
         
-        // Initialize app icon settings
-        applyAppIconSettings()
-        
-        // Initialize debug file logger
+        // Defer icon alias work off the main thread so the first frame/window is not delayed
+        // (PackageManager + Thread.sleep in AppIconManager caused startup ANRs on slow devices.)
+        // Initialize debug file logger (before deferred work that may log failures)
         val settingsManager = SettingsManager(this)
         com.eventmanager.app.data.sync.AppLogger.init(this, settingsManager)
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                applyAppIconSettings()
+            } catch (e: Exception) {
+                android.util.Log.e("MainActivity", "Deferred applyAppIconSettings failed", e)
+            }
+        }
         
         // Log app startup
         com.eventmanager.app.data.sync.AppLogger.i("MainActivity", "App started - Debug mode: ${settingsManager.getDebugMode()}")
@@ -292,6 +291,7 @@ class MainActivity : ComponentActivity() {
         super.attachBaseContext(applyLanguageToContext(applyResolutionScalingToContext(newBase)))
     }
     
+    @Suppress("DEPRECATION")
     private fun applyLanguageSettings() {
         val settingsManager = SettingsManager(this)
         val language = settingsManager.getLanguage()
@@ -323,6 +323,7 @@ class MainActivity : ComponentActivity() {
         }
     }
     
+    @Suppress("DEPRECATION")
     private fun applyResolutionScaling() {
         val settingsManager = SettingsManager(this)
         val resolutionScale = settingsManager.getResolutionScale()
@@ -488,7 +489,7 @@ fun EventManagerApp(
     var showScannedGuestDetail: Guest? by remember { mutableStateOf(null) }
     
     // Haptic feedback for page navigation - very subtle vibration
-    val vibrator = remember { appContext.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator }
+    val vibrator = remember { ContextCompat.getSystemService(appContext, Vibrator::class.java) }
 
     // Update check state - only show dialog if update is available
     var showUpdateDialog by remember { mutableStateOf(false) }
@@ -503,33 +504,69 @@ fun EventManagerApp(
             },
             onThemeModeChanged = onThemeModeChanged
         )
-    } else if (showWelcome) {
-        WelcomeScreen(
-            onAdminSelected = {
-                showWelcome = false
-                showAdminAuth = true
-            },
-            onTicketCheckSelected = {
-                showWelcome = false
-                showTicketCheck = true
-            }
-        )
     } else {
-        // Initialize database and repository
-        val database = EventManagerDatabase.getDatabase(LocalContext.current)
-        val repository = EventManagerRepository(
-            database.guestDao(),
-            database.volunteerDao(),
-            database.jobDao(),
-            database.jobTypeConfigDao(),
-            database.venueDao(),
-            database.counterDao()
-        )
-        val context = LocalContext.current
-        val googleSheetsService = GoogleSheetsService(context)
-        val viewModel: EventManagerViewModel = viewModel {
-            EventManagerViewModel(repository, googleSheetsService, context)
+        var database by remember { mutableStateOf<EventManagerDatabase?>(null) }
+        LaunchedEffect(Unit) {
+            database = withContext(Dispatchers.IO) {
+                EventManagerDatabase.getDatabase(appContext)
+            }
         }
+
+        if (showWelcome) {
+            WelcomeScreen(
+                onAdminSelected = {
+                    showWelcome = false
+                    showAdminAuth = true
+                },
+                onTicketCheckSelected = {
+                    showWelcome = false
+                    showTicketCheck = true
+                }
+            )
+        } else if (database == null) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+        } else {
+            val db = database!!
+            val repository = remember(db) {
+                EventManagerRepository(
+                    db.guestDao(),
+                    db.volunteerDao(),
+                    db.jobDao(),
+                    db.jobTypeConfigDao(),
+                    db.venueDao()
+                )
+            }
+            val googleSheetsService = remember { GoogleSheetsService(appContext) }
+            val viewModel: EventManagerViewModel = viewModel {
+                EventManagerViewModel(repository, googleSheetsService, appContext)
+            }
+
+        val updateCheckResult by viewModel.updateCheckState.collectAsState()
+        val updateDownloadState by viewModel.updateDownloadState.collectAsState()
+
+        LaunchedEffect(Unit) {
+            if (!hasCheckedUpdate) {
+                hasCheckedUpdate = true
+                viewModel.checkForAppUpdates()
+            }
+        }
+        LaunchedEffect(updateCheckResult) {
+            if (updateCheckResult is UpdateCheckResult.UpdateAvailable) {
+                showUpdateDialog = true
+            }
+        }
+
+        val context = LocalContext.current
         
         // Properly collect StateFlow values to avoid null pointer exceptions on Android 7
         val guests by viewModel.guests.collectAsState()
@@ -546,10 +583,6 @@ fun EventManagerApp(
         // Collect sync status state
         val syncStatusMessage by viewModel.syncStatusMessage.collectAsState()
         val showSyncStatusDialog by viewModel.showSyncStatusDialog.collectAsState()
-        
-        // Collect update check state
-        val updateCheckResult by viewModel.updateCheckState.collectAsState()
-        val updateDownloadState by viewModel.updateDownloadState.collectAsState()
 
         // Admin session: auto-return to welcome after idle timeout or after screen was turned off (sleep).
         val adminSurfaceActive = !showWelcome && !showAdminAuth && !showTicketCheck
@@ -632,22 +665,6 @@ fun EventManagerApp(
             }
         }
         
-        // Trigger update check in background when app starts (after welcome screen is dismissed)
-        LaunchedEffect(Unit) {
-            if (!hasCheckedUpdate) {
-                hasCheckedUpdate = true
-                // Check for updates in background
-                viewModel.checkForAppUpdates()
-            }
-        }
-        
-        // Show update dialog only if update is available
-        LaunchedEffect(updateCheckResult) {
-            if (updateCheckResult is UpdateCheckResult.UpdateAvailable) {
-                showUpdateDialog = true
-            }
-        }
-        
         // Detect device time errors
         LaunchedEffect(syncError) {
             if (syncError != null && com.eventmanager.app.ui.components.isDeviceTimeError(syncError)) {
@@ -658,10 +675,10 @@ fun EventManagerApp(
         // On app launch: defer sync to allow UI to render first, preventing ANR
         // Use Dispatchers.IO to ensure sync runs on background thread
         LaunchedEffect(Unit) {
-            // Delay initial sync to allow UI to render first
-            kotlinx.coroutines.delay(500) // Small delay to let UI initialize
-            
-            // Run sync on IO dispatcher to prevent blocking main thread
+            // Give the window time to gain focus and run a few frames before heavy IO/network
+            // (reduces "Input dispatching timed out" ANRs on slow tablets after cold start).
+            kotlinx.coroutines.delay(1200)
+
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 println("App started - triggering initial download-only full sync...")
                 try {
@@ -669,7 +686,6 @@ fun EventManagerApp(
                 } catch (e: Exception) {
                     println("❌ Sync error: ${e.message}")
                     e.printStackTrace()
-                    // Error is handled by viewModel's syncError state
                 }
             }
         }
@@ -702,6 +718,8 @@ fun EventManagerApp(
             LaunchedEffect(showTicketCheck) {
                 if (showTicketCheck) {
                     kotlinx.coroutines.delay(250)
+                    // Same background auto-sync as admin (interval from Settings); ensure loop is running after Billeterie entry.
+                    viewModel.updateSyncInterval()
                     viewModel.syncGuestsWithTargetedUpdates()
                 }
             }
@@ -743,6 +761,7 @@ fun EventManagerApp(
                             BilleterieHomeScreen(
                                 guests = guests,
                                 repository = viewModel.repository,
+                                viewModel = viewModel,
                                 dashboardScrollState = billeterieDashboardScrollState,
                                 onBack = {
                                     showTicketCheck = false
@@ -786,7 +805,7 @@ fun EventManagerApp(
                                     navigationIcon = {
                                         IconButton(onClick = { billeterieSection = "home" }) {
                                             Icon(
-                                                imageVector = Icons.Default.ArrowBack,
+                                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                                 contentDescription = billeterieListContext.getString(R.string.setup_back)
                                             )
                                         }
@@ -832,7 +851,12 @@ fun EventManagerApp(
             
             println("Tab changed from $previousTab to $selectedTab - triggering deferred targeted sync")
             when (selectedTab) {
-                0 -> viewModel.syncGuestsWithTargetedUpdates() // Enter Dashboard
+                0 -> {
+                    viewModel.syncGuestsWithTargetedUpdates() // Enter Dashboard
+                    if (settingsManager.isPeopleCounterVisible()) {
+                        viewModel.refreshVenuesForPeopleCounterQuietly()
+                    }
+                }
                 1 -> viewModel.syncGuestsWithTargetedUpdates() // Enter Guest List
                 2 -> viewModel.syncVolunteersWithTargetedUpdates() // Enter Volunteers
                 3 -> viewModel.syncJobsWithTargetedUpdates() // Enter Jobs
@@ -865,14 +889,14 @@ fun EventManagerApp(
                                 .padding(8.dp),
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            val context = LocalContext.current
+                            val navContext = LocalContext.current
                             val tabs = listOf(
-                                context.getString(R.string.nav_dashboard) to Icons.Default.Home,
-                                context.getString(R.string.nav_guests) to Icons.Default.Person,
-                                context.getString(R.string.nav_volunteers) to Icons.Default.Group,
-                                context.getString(R.string.nav_shifts) to Icons.Default.Build,
-                                context.getString(R.string.nav_benefits) to Icons.Default.Star,
-                                context.getString(R.string.nav_settings) to Icons.Default.Settings
+                                navContext.getString(R.string.nav_dashboard) to Icons.Default.Home,
+                                navContext.getString(R.string.nav_guests) to Icons.Default.Person,
+                                navContext.getString(R.string.nav_volunteers) to Icons.Default.Group,
+                                navContext.getString(R.string.nav_shifts) to Icons.Default.Build,
+                                navContext.getString(R.string.nav_benefits) to Icons.Default.Star,
+                                navContext.getString(R.string.nav_settings) to Icons.Default.Settings
                             )
                             
                             tabs.forEachIndexed { index, (title, icon) ->
@@ -946,14 +970,14 @@ fun EventManagerApp(
                                 .padding(horizontal = 12.dp, vertical = 2.dp)
                                 .height(62.dp)
                         ) {
-                            val context = LocalContext.current
+                            val navContextTablet = LocalContext.current
                             val tabs = listOf(
-                                context.getString(R.string.nav_dashboard) to Icons.Default.Home,
-                                context.getString(R.string.nav_guests) to Icons.Default.Person,
-                                context.getString(R.string.nav_volunteers) to Icons.Default.Group,
-                                context.getString(R.string.nav_shifts) to Icons.Default.Build,
-                                context.getString(R.string.nav_benefits) to Icons.Default.Star,
-                                context.getString(R.string.nav_settings) to Icons.Default.Settings
+                                navContextTablet.getString(R.string.nav_dashboard) to Icons.Default.Home,
+                                navContextTablet.getString(R.string.nav_guests) to Icons.Default.Person,
+                                navContextTablet.getString(R.string.nav_volunteers) to Icons.Default.Group,
+                                navContextTablet.getString(R.string.nav_shifts) to Icons.Default.Build,
+                                navContextTablet.getString(R.string.nav_benefits) to Icons.Default.Star,
+                                navContextTablet.getString(R.string.nav_settings) to Icons.Default.Settings
                             )
                             
                             tabs.forEachIndexed { index, (title, icon) ->
@@ -1324,8 +1348,8 @@ if (pageAnimationsEnabled) {
         // Volunteer Benefits Panel
         showVolunteerBenefits?.let { volunteer ->
             // Memoize to prevent unnecessary recompositions
-            val settingsManager = remember { SettingsManager(appContext) }
-            val offsetHours = remember { settingsManager.getDateChangeOffsetHours() }
+            val benefitSettingsManager = remember { SettingsManager(appContext) }
+            val offsetHours = remember { benefitSettingsManager.getDateChangeOffsetHours() }
             val memoizedBenefitStatus = remember(volunteer.id, jobs, jobTypeConfigs, offsetHours) {
                 com.eventmanager.app.data.models.BenefitCalculator.calculateVolunteerBenefitStatus(
                     volunteer = volunteer,
@@ -1338,57 +1362,79 @@ if (pageAnimationsEnabled) {
                 jobs.filter { it.volunteerId == volunteer.id }
             }
 
+            val scanFlowTablet = isTablet()
             androidx.compose.ui.window.Dialog(
                 onDismissRequest = { showVolunteerBenefits = null },
                 properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
             ) {
-                VolunteerBenefitsPanel(
-                    volunteer = volunteer,
-                    volunteerBenefitStatus = memoizedBenefitStatus,
-                    volunteerJobs = memoizedVolunteerJobs,
-                    venues = venues,
-                    jobTypeConfigs = jobTypeConfigs,
-                    onClose = { showVolunteerBenefits = null },
-                    onConfirmEntry = { job, selectedInvites -> viewModel.markBenefitAsUsed(job, selectedInvites) },
-                    onAssignNfcUid = { updatedVolunteer, uid ->
-                        viewModel.updateVolunteer(
-                            updatedVolunteer.copy(
-                                nfcCardUid = uid,
-                                lastModified = System.currentTimeMillis()
-                            )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .then(
+                            if (scanFlowTablet) Modifier.padding(getTabletDialogScreenEdgeInset())
+                            else Modifier
                         )
-                        showVolunteerBenefits = updatedVolunteer.copy(nfcCardUid = uid)
-                    }
-                )
+                ) {
+                    VolunteerBenefitsPanel(
+                        modifier = Modifier.fillMaxSize(),
+                        volunteer = volunteer,
+                        volunteerBenefitStatus = memoizedBenefitStatus,
+                        volunteerJobs = memoizedVolunteerJobs,
+                        venues = venues,
+                        jobTypeConfigs = jobTypeConfigs,
+                        onClose = { showVolunteerBenefits = null },
+                        onConfirmEntry = { job, selectedInvites -> viewModel.markBenefitAsUsed(job, selectedInvites) },
+                        onAssignNfcUid = { updatedVolunteer, uid ->
+                            viewModel.updateVolunteer(
+                                updatedVolunteer.copy(
+                                    nfcCardUid = uid,
+                                    lastModified = System.currentTimeMillis()
+                                )
+                            )
+                            showVolunteerBenefits = updatedVolunteer.copy(nfcCardUid = uid)
+                        }
+                    )
+                }
             }
         }
 
         showScannedGuestDetail?.let { guest ->
+            val scanFlowTablet = isTablet()
             androidx.compose.ui.window.Dialog(
                 onDismissRequest = { showScannedGuestDetail = null },
                 properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
             ) {
-                GuestDetailPanel(
-                    guest = guest,
-                    venues = venues,
-                    onEdit = { updated ->
-                        viewModel.updateGuest(updated)
-                        showScannedGuestDetail = updated
-                    },
-                    onAssignNfcUid = { updatedGuest, uid ->
-                        val withUid = updatedGuest.copy(
-                            nfcCardUid = uid,
-                            lastModified = System.currentTimeMillis()
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .then(
+                            if (scanFlowTablet) Modifier.padding(getTabletDialogScreenEdgeInset())
+                            else Modifier
                         )
-                        viewModel.updateGuest(withUid)
-                        showScannedGuestDetail = withUid
-                    },
-                    onDelete = { toDelete ->
-                        viewModel.deleteGuest(toDelete)
-                        showScannedGuestDetail = null
-                    },
-                    onClose = { showScannedGuestDetail = null }
-                )
+                ) {
+                    GuestDetailPanel(
+                        modifier = Modifier.fillMaxSize(),
+                        guest = guest,
+                        venues = venues,
+                        onEdit = { updated ->
+                            viewModel.updateGuest(updated)
+                            showScannedGuestDetail = updated
+                        },
+                        onAssignNfcUid = { updatedGuest, uid ->
+                            val withUid = updatedGuest.copy(
+                                nfcCardUid = uid,
+                                lastModified = System.currentTimeMillis()
+                            )
+                            viewModel.updateGuest(withUid)
+                            showScannedGuestDetail = withUid
+                        },
+                        onDelete = { toDelete ->
+                            viewModel.deleteGuest(toDelete)
+                            showScannedGuestDetail = null
+                        },
+                        onClose = { showScannedGuestDetail = null }
+                    )
+                }
             }
         }
         
@@ -1438,18 +1484,25 @@ if (pageAnimationsEnabled) {
             }
         )
         
-        // Update dialog - only shown when update is available
-        if (showUpdateDialog && updateCheckResult is UpdateCheckResult.UpdateAvailable) {
+        // Sync Status Dialog
+        SyncStatusDialog(
+            isVisible = showSyncStatusDialog,
+            onDismiss = { viewModel.dismissSyncStatusDialog() },
+            statusMessage = syncStatusMessage
+        )
+        } // end of showAdminAuth else (main app content)
+
+        if (!showAdminAuth && showUpdateDialog && updateCheckResult is UpdateCheckResult.UpdateAvailable) {
             val manifest = (updateCheckResult as UpdateCheckResult.UpdateAvailable).manifest
             val isRequired = (updateCheckResult as UpdateCheckResult.UpdateAvailable).isRequired
             val currentDownloadState = updateDownloadState
-            
+
             when (currentDownloadState) {
                 is DownloadState.Downloading -> {
                     AlertDialog(
                         onDismissRequest = { },
                         title = {
-                            Text(text = context.getString(R.string.downloading_update))
+                            Text(text = appContext.getString(R.string.downloading_update))
                         },
                         text = {
                             Column {
@@ -1459,7 +1512,7 @@ if (pageAnimationsEnabled) {
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = context.getString(R.string.download_progress, currentDownloadState.progress),
+                                    text = appContext.getString(R.string.download_progress, currentDownloadState.progress),
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                             }
@@ -1479,23 +1532,23 @@ if (pageAnimationsEnabled) {
                             DialogProperties()
                         },
                         title = {
-                            Text(text = context.getString(R.string.download_complete))
+                            Text(text = appContext.getString(R.string.download_complete))
                         },
                         text = {
-                            Text(text = context.getString(R.string.update_available_message))
+                            Text(text = appContext.getString(R.string.update_available_message))
                         },
                         confirmButton = {
                             TextButton(onClick = {
                                 viewModel.installUpdate(currentDownloadState.file)
                                 showUpdateDialog = false
                             }) {
-                                Text(context.getString(R.string.install_update))
+                                Text(appContext.getString(R.string.install_update))
                             }
                         },
                         dismissButton = if (!isRequired) {
                             {
                                 TextButton(onClick = { showUpdateDialog = false }) {
-                                    Text(context.getString(R.string.later))
+                                    Text(appContext.getString(R.string.later))
                                 }
                             }
                         } else null
@@ -1505,57 +1558,54 @@ if (pageAnimationsEnabled) {
                     AlertDialog(
                         onDismissRequest = if (isRequired) { {} } else { { showUpdateDialog = false } },
                         title = {
-                            Text(text = context.getString(R.string.download_error_title))
+                            Text(text = appContext.getString(R.string.download_error_title))
                         },
                         text = {
-                            Text(text = context.getString(R.string.download_error_message, currentDownloadState.message))
+                            Text(text = appContext.getString(R.string.download_error_message, currentDownloadState.message))
                         },
                         confirmButton = {
                             TextButton(onClick = { showUpdateDialog = false }) {
-                                Text(context.getString(R.string.ok))
+                                Text(appContext.getString(R.string.ok))
                             }
                         }
                     )
                 }
                 else -> {
-                    // Show update available dialog
                     AlertDialog(
                         onDismissRequest = if (isRequired) { {} } else { { showUpdateDialog = false } },
                         title = {
-                            Text(text = context.getString(R.string.update_available_title, manifest.latestVersionName))
+                            Text(text = appContext.getString(R.string.update_available_title, manifest.latestVersionName))
                         },
                         text = {
                             Text(
                                 text = manifest.changelogShort
                                     ?: if (isRequired) {
-                                        context.getString(R.string.update_required_message)
+                                        appContext.getString(R.string.update_required_message)
                                     } else {
-                                        context.getString(R.string.update_available_message)
+                                        appContext.getString(R.string.update_available_message)
                                     }
                             )
                         },
                         confirmButton = {
                             TextButton(onClick = {
-                                // Start download instead of opening browser
                                 val downloadUrl = manifest.downloadUrl
                                 if (downloadUrl != null) {
                                     viewModel.downloadUpdate(downloadUrl)
                                 } else {
-                                    // Fallback to browser if no download URL
                                     val targetUrl = manifest.storeUrl
                                         ?: settingsManager.getUpdateStoreUrl()
                                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(targetUrl))
-                                    context.startActivity(intent)
+                                    appContext.startActivity(intent)
                                     showUpdateDialog = false
                                 }
                             }) {
-                                Text(context.getString(R.string.update_now))
+                                Text(appContext.getString(R.string.update_now))
                             }
                         },
                         dismissButton = {
                             if (!isRequired) {
                                 TextButton(onClick = { showUpdateDialog = false }) {
-                                    Text(context.getString(R.string.later))
+                                    Text(appContext.getString(R.string.later))
                                 }
                             }
                         }
@@ -1563,14 +1613,7 @@ if (pageAnimationsEnabled) {
                 }
             }
         }
-        
-        // Sync Status Dialog
-        SyncStatusDialog(
-            isVisible = showSyncStatusDialog,
-            onDismiss = { viewModel.dismissSyncStatusDialog() },
-            statusMessage = syncStatusMessage
-        )
-        } // end of showAdminAuth else (main app content)
+        }
     }
 }
 
@@ -1583,7 +1626,27 @@ viewModel: EventManagerViewModel,
     val context = LocalContext.current
     val lastSyncTime by viewModel.lastSyncTime.collectAsState()
     val isSyncing by viewModel.isSyncing.collectAsState()
-    
+
+    var syncPillTick by remember { mutableIntStateOf(0) }
+    LaunchedEffect(lastSyncTime) {
+        if (lastSyncTime <= 0L) return@LaunchedEffect
+        while (true) {
+            delay(30_000L)
+            syncPillTick++
+        }
+    }
+
+    val lastUpdateLabel = remember(lastSyncTime, syncPillTick) {
+        if (lastSyncTime <= 0L) {
+            context.getString(R.string.last_update_none_line)
+        } else {
+            context.getString(
+                R.string.last_update_line,
+                DateFormatUtils.formatSyncPillTimeAgo(context, lastSyncTime, System.currentTimeMillis())
+            )
+        }
+    }
+
     // Interaction source for press feedback
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -1648,17 +1711,7 @@ viewModel: EventManagerViewModel,
                         MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = if (lastSyncTime > 0) {
-                        val timeAgo = System.currentTimeMillis() - lastSyncTime
-                        when {
-                            timeAgo < 60000 -> context.getString(R.string.synced_now)
-                            timeAgo < 3600000 -> context.getString(R.string.synced_minutes_ago, timeAgo / 60000)
-                            timeAgo < 86400000 -> context.getString(R.string.synced_hours_ago, timeAgo / 3600000)
-                            else -> context.getString(R.string.synced_days_ago, timeAgo / 86400000)
-                        }
-                    } else {
-                        context.getString(R.string.never_synced)
-                    },
+                    text = lastUpdateLabel,
                     style = MaterialTheme.typography.labelSmall,
                     color = if (lastSyncTime > 0) 
                         MaterialTheme.colorScheme.onPrimaryContainer 
@@ -1750,6 +1803,7 @@ fun DashboardScreenWithViewModel(
         isSyncing = isSyncing,
         lastSyncTime = settingsManager.getLastSyncTime(),
         repository = viewModel.repository,
+        viewModel = viewModel,
         onLogout = onLogout
     )
 }
@@ -1761,16 +1815,15 @@ fun DashboardScreen(
     jobs: List<Job>,
     venues: List<VenueEntity> = emptyList(),
     jobTypeConfigs: List<JobTypeConfig> = emptyList(),
-    isSyncing: Boolean = false,
-    lastSyncTime: Long = 0L,
-    repository: com.eventmanager.app.data.repository.EventManagerRepository? = null,
+    @Suppress("UNUSED_PARAMETER") isSyncing: Boolean = false,
+    @Suppress("UNUSED_PARAMETER") lastSyncTime: Long = 0L,
+    @Suppress("UNUSED_PARAMETER") repository: com.eventmanager.app.data.repository.EventManagerRepository? = null,
+    viewModel: com.eventmanager.app.ui.viewmodel.EventManagerViewModel? = null,
     onLogout: () -> Unit = {}
 ) {
     val context = LocalContext.current
-    val isCompact = isCompactScreen()
     val isPhone = !isTablet()
     val responsivePadding = if (isPhone) getPhonePortraitPadding() else getResponsivePadding()
-    val responsiveSpacing = if (isPhone) getPhonePortraitSpacing() else getResponsiveSpacing()
     val settingsManager = remember { SettingsManager(context) }
     
     // State for beer animation
@@ -2051,7 +2104,7 @@ fun DashboardScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Icon(
-                        Icons.Default.ExitToApp,
+                        Icons.AutoMirrored.Filled.ExitToApp,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(if (isPhone) 22.dp else 24.dp)
@@ -2076,7 +2129,7 @@ fun DashboardScreen(
                     )
                 ) {
                     Icon(
-                        Icons.Default.ExitToApp,
+                        Icons.AutoMirrored.Filled.ExitToApp,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp)
                     )
@@ -2091,7 +2144,9 @@ fun DashboardScreen(
         // People Counter Component - only show if enabled
         if (isPeopleCounterVisible) {
             Spacer(modifier = Modifier.height(if (isPhone) 16.dp else 24.dp))
-            PeopleCounter(isPhone = isPhone, repository = repository)
+            viewModel?.let { vm ->
+                PeopleCounter(isPhone = isPhone, viewModel = vm)
+            }
         }
         
         // Stats Graphs Panel - only show if statistics are enabled
@@ -2462,7 +2517,7 @@ fun WelcomeScreen(onAdminSelected: () -> Unit, onTicketCheckSelected: () -> Unit
     }
     
     // Haptic feedback for start button
-    val vibrator = remember { context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator }
+    val vibrator = remember { ContextCompat.getSystemService(context, Vibrator::class.java) }
     
     // Determine if dark theme is active
     val themeMode = ThemeMode.fromString(settingsManager.getThemeMode())
@@ -2485,320 +2540,260 @@ fun WelcomeScreen(onAdminSelected: () -> Unit, onTicketCheckSelected: () -> Unit
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(if (isPrideDay) Color.White else colorScheme.background)
+                .background(if (isPrideDay) Color.White else colorScheme.surface)
         ) {
-            // Center content: Logo based on theme (drawn first, behind animations)
             val logoResId = remember(isDarkTheme) {
                 val logoName = if (isDarkTheme) "launch_logo_dark" else "launch_logo_light"
                 context.resources.getIdentifier(logoName, "drawable", context.packageName)
             }
             val isLandscape = maxWidth > maxHeight
+            val welcomeMaxWidth = maxWidth
+            val welcomeMaxHeight = maxHeight
 
-            // Center logo block without ColumnScope.weight (avoids NoSuchMethodError if Compose layout JARs diverge on device).
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 24.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                // Happy Pride text on Pride Day
-                if (isPrideDay) {
-                    Text(
-                        text = "Happy Pride! 🏳️‍🌈",
-                        style = if (isLandscape) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = colorScheme.onBackground,
-                        modifier = Modifier.padding(bottom = 24.dp)
-                    )
-                }
-                
-                if (logoResId != 0) {
-                    // Glass box container for the logo with glassmorphism effect (no logo inside)
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth(if (isLandscape) 0.5f else 0.85f)
-                            .aspectRatio(1f)
-                            .padding(if (isLandscape) 16.dp else 24.dp),
-                        shape = RoundedCornerShape(if (isLandscape) 28.dp else 36.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = colorScheme.surface.copy(alpha = 0.95f)
-                        ),
-                        elevation = CardDefaults.cardElevation(
-                            defaultElevation = 12.dp
-                        ),
-                        border = BorderStroke(
-                            width = 1.5.dp,
-                            color = colorScheme.primaryContainer.copy(alpha = 0.4f)
-                        )
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    brush = Brush.radialGradient(
-                                        colors = listOf(
-                                            colorScheme.primaryContainer.copy(alpha = 0.25f),
-                                            colorScheme.surfaceVariant.copy(alpha = 0.1f)
-                                        )
-                                    ),
-                                    shape = RoundedCornerShape(if (isLandscape) 28.dp else 36.dp)
-                                )
-                        )
-                    }
-                } else {
-                    Text(
-                        text = "CNL",
-                        style = if (isLandscape) MaterialTheme.typography.titleLarge else MaterialTheme.typography.displayLarge,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = colorScheme.onBackground
-                    )
-                }
-                }
-            }
-
-            // Show Pride animation on Pride Day instead of ArchedCirclesBackground (drawn on top)
+            // Same animated circles as admin / Billeterie (AnimatedBackground); Pride day adds overlay on top.
+            AnimatedBackground(
+                enabled = settingsManager.isAnimatedBackgroundEnabled()
+            )
             if (isPrideDay) {
                 PrideAnimation(enabled = true)
-            } else {
-                // Background arches - use theme colors (drawn on top)
-                ArchedCirclesBackground()
             }
 
-            // Logo image with hollow effect (drawn on top of animations)
-            if (logoResId != 0) {
-                val density = androidx.compose.ui.platform.LocalDensity.current
-                // Calculate max size based on screen dimensions to prevent "too large bitmap" error
-                // Use a reasonable maximum (1200dp) to prevent loading huge images even on large screens
-                val maxLogoSizeDp = with(density) {
-                    val maxScreenSize = max(maxWidth.value, maxHeight.value) * 1.2f // 20% larger than screen for quality
-                    val maxAllowed = 1200f // Cap at 1200dp to prevent memory issues
-                    min(maxScreenSize, maxAllowed).dp
-                }
-                
-                // Load scaled bitmap to prevent memory issues on older devices
-                val scaledLogoBitmap = remember(logoResId, maxLogoSizeDp) {
-                    ImageUtils.loadScaledImageBitmap(
-                        context = context,
-                        resId = logoResId,
-                        maxWidthDp = maxLogoSizeDp,
-                        maxHeightDp = maxLogoSizeDp
-                    )
-                }
-                
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 24.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    // Happy Pride text on Pride Day - same spacing as glass column
-                    if (isPrideDay) {
-                        Text(
-                            text = "Happy Pride! 🏳️‍🌈",
-                            style = if (isLandscape) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.headlineLarge,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color.Transparent, // Invisible but maintains spacing
-                            modifier = Modifier.padding(bottom = 24.dp)
-                        )
-                    }
-                    
-                    // Hollow effect: Create outline using multiple offset layers
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(if (isLandscape) 0.5f else 0.85f)
-                            .aspectRatio(1f)
-                            .padding(if (isLandscape) 16.dp else 24.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        val logoPadding = if (isLandscape) 6.dp else 8.dp
-                        val outlineWidth = if (isLandscape) 6.dp else 8.dp
-                        
-                        // Only render if bitmap was loaded successfully
-                        scaledLogoBitmap?.let { bitmap ->
-                            // Create hollow outline effect using multiple offset layers
-                            // Draw outline layers in all directions
-                            for (dx in listOf(-outlineWidth, 0.dp, outlineWidth)) {
-                                for (dy in listOf(-outlineWidth, 0.dp, outlineWidth)) {
-                                    if (dx != 0.dp || dy != 0.dp) {
-                                        Image(
-                                            bitmap = bitmap,
-                                            contentDescription = null,
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .padding(logoPadding)
-                                                .graphicsLayer {
-                                                    translationX = with(density) { dx.toPx() }
-                                                    translationY = with(density) { dy.toPx() }
-                                                    alpha = 0.4f
-                                                },
-                                            colorFilter = ColorFilter.tint(
-                                                colorScheme.primaryContainer.copy(alpha = 0.8f)
-                                            )
-                                        )
-                                    }
-                                }
-                            }
-                            
-                            // Main logo on top
-                            Image(
-                                bitmap = bitmap,
-                                contentDescription = "App Logo",
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(logoPadding)
-                            )
-                        }
-                    }
-                    }
-                }
-            }
-
-            // Bottom buttons — ticketing (primary) first, admin (outlined) second
             val buttonColor = if (isPrideDay) {
                 Color(0xFFE40303)
             } else {
                 colorScheme.primary
             }
-            
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(horizontal = 24.dp, vertical = 24.dp)
-                    .fillMaxWidth(if (isLandscape) 0.6f else 1f),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Button(
-                    onClick = {
-                        performStrongHaptic(vibrator)
-                        onTicketCheckSelected()
-                    },
+
+            // Logo + effects centered vertically in the band above the buttons (midpoint top → ticketing CTA)
+            Column(Modifier.fillMaxSize()) {
+                Box(
                     modifier = Modifier
+                        .weight(1f)
                         .fillMaxWidth()
-                        .height(if (isLandscape) 44.dp else 56.dp),
-                    shape = RoundedCornerShape(if (isLandscape) 22.dp else 28.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = buttonColor,
-                        contentColor = colorScheme.onPrimary
-                    )
                 ) {
-                    Icon(
-                        Icons.Default.ConfirmationNumber,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = context.getString(R.string.ticket_check_mode),
-                        style = if (isLandscape) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            if (isPrideDay) {
+                                Text(
+                                    text = "Happy Pride! 🏳️‍🌈",
+                                    style = if (isLandscape) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.headlineLarge,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = colorScheme.onBackground,
+                                    modifier = Modifier.padding(bottom = 24.dp)
+                                )
+                            }
+
+                            if (logoResId != 0) {
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth(if (isLandscape) 0.5f else 0.85f)
+                                        .aspectRatio(1f)
+                                        .padding(if (isLandscape) 16.dp else 24.dp),
+                                    shape = RoundedCornerShape(if (isLandscape) 28.dp else 36.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = colorScheme.surface.copy(alpha = 0.95f)
+                                    ),
+                                    elevation = CardDefaults.cardElevation(
+                                        defaultElevation = 12.dp
+                                    ),
+                                    border = BorderStroke(
+                                        width = 1.5.dp,
+                                        color = colorScheme.primaryContainer.copy(alpha = 0.4f)
+                                    )
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(
+                                                brush = Brush.radialGradient(
+                                                    colors = listOf(
+                                                        colorScheme.primaryContainer.copy(alpha = 0.25f),
+                                                        colorScheme.surfaceVariant.copy(alpha = 0.1f)
+                                                    )
+                                                ),
+                                                shape = RoundedCornerShape(if (isLandscape) 28.dp else 36.dp)
+                                            )
+                                    )
+                                }
+                            } else {
+                                Text(
+                                    text = "CNL",
+                                    style = if (isLandscape) MaterialTheme.typography.titleLarge else MaterialTheme.typography.displayLarge,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = colorScheme.onBackground
+                                )
+                            }
+                        }
+                    }
+
+                    if (logoResId != 0) {
+                        val density = androidx.compose.ui.platform.LocalDensity.current
+                        val maxLogoSizeDp = with(density) {
+                            val maxScreenSize = max(welcomeMaxWidth.value, welcomeMaxHeight.value) * 1.2f
+                            // Keep decode budget modest — full-screen cap caused huge decodes and ANRs on slower devices.
+                            val maxAllowed = 640f
+                            min(maxScreenSize, maxAllowed).dp
+                        }
+
+                        var scaledLogoBitmap by remember(logoResId, maxLogoSizeDp) {
+                            mutableStateOf<ImageBitmap?>(null)
+                        }
+                        LaunchedEffect(logoResId, maxLogoSizeDp) {
+                            scaledLogoBitmap = null
+                            scaledLogoBitmap = withContext(Dispatchers.Default) {
+                                ImageUtils.loadScaledImageBitmap(
+                                    context = context,
+                                    resId = logoResId,
+                                    maxWidthDp = maxLogoSizeDp,
+                                    maxHeightDp = maxLogoSizeDp
+                                )
+                            }
+                        }
+
+                        val logoFadeAlpha by animateFloatAsState(
+                            targetValue = if (scaledLogoBitmap != null) 1f else 0f,
+                            animationSpec = tween(
+                                durationMillis = 220,
+                                easing = FastOutSlowInEasing
+                            ),
+                            label = "welcomeLogoFadeIn"
+                        )
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                if (isPrideDay) {
+                                    Text(
+                                        text = "Happy Pride! 🏳️‍🌈",
+                                        style = if (isLandscape) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.headlineLarge,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color.Transparent,
+                                        modifier = Modifier.padding(bottom = 24.dp)
+                                    )
+                                }
+
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth(if (isLandscape) 0.5f else 0.85f)
+                                        .aspectRatio(1f)
+                                        .padding(if (isLandscape) 16.dp else 24.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    val logoPadding = if (isLandscape) 6.dp else 8.dp
+                                    val outlineWidth = if (isLandscape) 6.dp else 8.dp
+
+                                    scaledLogoBitmap?.let { bitmap ->
+                                        for (dx in listOf(-outlineWidth, 0.dp, outlineWidth)) {
+                                            for (dy in listOf(-outlineWidth, 0.dp, outlineWidth)) {
+                                                if (dx != 0.dp || dy != 0.dp) {
+                                                    Image(
+                                                        bitmap = bitmap,
+                                                        contentDescription = null,
+                                                        modifier = Modifier
+                                                            .fillMaxSize()
+                                                            .padding(logoPadding)
+                                                            .graphicsLayer {
+                                                                translationX = with(density) { dx.toPx() }
+                                                                translationY = with(density) { dy.toPx() }
+                                                                alpha = 0.4f * logoFadeAlpha
+                                                            },
+                                                        colorFilter = ColorFilter.tint(
+                                                            colorScheme.primaryContainer.copy(alpha = 0.8f)
+                                                        )
+                                                    )
+                                                }
+                                            }
+                                        }
+
+                                        Image(
+                                            bitmap = bitmap,
+                                            contentDescription = "App Logo",
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .padding(logoPadding)
+                                                .graphicsLayer { alpha = logoFadeAlpha }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
 
-                OutlinedButton(
-                    onClick = {
-                        performStrongHaptic(vibrator)
-                        onAdminSelected()
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(if (isLandscape) 44.dp else 56.dp),
-                    shape = RoundedCornerShape(if (isLandscape) 22.dp else 28.dp),
-                    border = BorderStroke(1.5.dp, buttonColor.copy(alpha = 0.6f))
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        Icons.Default.Lock,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                        tint = buttonColor
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = context.getString(R.string.admin_mode),
-                        style = if (isLandscape) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = buttonColor
-                    )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth(if (isLandscape) 0.6f else 1f)
+                            .padding(horizontal = 24.dp, vertical = 24.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                performStrongHaptic(vibrator)
+                                onTicketCheckSelected()
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(if (isLandscape) 44.dp else 56.dp),
+                            shape = RoundedCornerShape(if (isLandscape) 22.dp else 28.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = buttonColor,
+                                contentColor = colorScheme.onPrimary
+                            )
+                        ) {
+                            Icon(
+                                Icons.Default.ConfirmationNumber,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = context.getString(R.string.ticket_check_mode),
+                                style = if (isLandscape) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        OutlinedButton(
+                            onClick = {
+                                performStrongHaptic(vibrator)
+                                onAdminSelected()
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(if (isLandscape) 44.dp else 56.dp),
+                            shape = RoundedCornerShape(if (isLandscape) 22.dp else 28.dp),
+                            border = BorderStroke(1.5.dp, buttonColor.copy(alpha = 0.6f))
+                        ) {
+                            Icon(
+                                Icons.Default.Lock,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = buttonColor
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = context.getString(R.string.admin_mode),
+                                style = if (isLandscape) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = buttonColor
+                            )
+                        }
+                    }
                 }
             }
-        }
-    }
-}
-
-// Data class outside composable to avoid LiveEdit conflicts
-private data class ArchCircleParam(val fx: Float, val fy: Float, val theta: Float, val color: Color)
-
-@Composable
-private fun ArchedCirclesBackground() {
-    val colorScheme = MaterialTheme.colorScheme
-    
-    // Prepare randomized circle layout once per app run
-    // Use theme colors for the circles - lighter variants of surfaceVariant
-    val circles = remember(colorScheme) {
-        val rnd = Random(System.nanoTime())
-        val count = 50 // a lot more circles
-        
-        // Create two subtle color variants based on theme
-        val baseColor = colorScheme.surfaceVariant
-        val variantColor = colorScheme.surfaceVariant.copy(alpha = 0.6f)
-        
-        List(count) { i ->
-            val fx = rnd.nextFloat() // 0..1 normalized
-            val fy = rnd.nextFloat()
-            val theta = rnd.nextFloat() * 2f * PI.toFloat()
-            val color = if (i % 2 == 0) baseColor else variantColor
-            ArchCircleParam(fx, fy, theta, color)
-        }
-    }
-
-    // Subtle perpetual drift animation
-    val infinite = rememberInfiniteTransition(label = "arches")
-    val phase1 by infinite.animateFloat(
-        initialValue = 0f,
-        targetValue = 2f * PI.toFloat(),
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 25000, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "phase1"
-    )
-    val phase2 by infinite.animateFloat(
-        initialValue = 0f,
-        targetValue = 2f * PI.toFloat(),
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 30000, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "phase2"
-    )
-
-    // Draw very large circles so only sweeping arches are visible, adapting to phone/tablet/orientation
-    Canvas(modifier = Modifier.fillMaxSize()) {
-        val maxDim = maxOf(size.width, size.height)
-        val stroke = (maxDim * 0.012f).coerceIn(6f, 18f)
-
-        // Same radius for all, centers distributed and animated
-        val circleRadius = maxDim * 1.2f
-        val amp = maxDim * 0.025f // subtle drift amplitude
-
-        // Allow centers anywhere across and slightly beyond the whole screen
-        val startX = -0.5f * size.width
-        val spanX = size.width * 2.0f
-        val startY = -0.5f * size.height
-        val spanY = size.height * 2.0f
-
-        circles.forEachIndexed { index, p ->
-            val driftX = amp * cos(phase1 + p.theta)
-            val driftY = amp * sin(phase2 + p.theta)
-            val cx = startX + p.fx * spanX + driftX
-            val cy = startY + p.fy * spanY + driftY
-            drawCircle(
-                color = p.color,
-                radius = circleRadius,
-                center = Offset(cx, cy),
-                style = Stroke(width = stroke, cap = StrokeCap.Round)
-            )
         }
     }
 }

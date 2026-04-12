@@ -304,14 +304,10 @@ fun BirthdayDatePicker(
         } else {
             try {
                 val calendar = Calendar.getInstance()
-                var parsedDate: Date? = null
-                
-                // Try to parse as dd.MM.yyyy (display format)
+                // Try to parse as dd.MM.yyyy (display format), then yyyy-MM-dd (storage format)
                 val displayFormat = java.text.SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
                 displayFormat.isLenient = false // Strict parsing
-                parsedDate = displayFormat.parse(displayDateString)
-                
-                // If that fails, try yyyy-MM-dd (storage format)
+                var parsedDate = displayFormat.parse(displayDateString)
                 if (parsedDate == null) {
                     val storageFormat = java.text.SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
                     storageFormat.isLenient = false

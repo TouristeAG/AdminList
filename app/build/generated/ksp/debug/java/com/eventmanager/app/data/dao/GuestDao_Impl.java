@@ -1090,6 +1090,110 @@ public final class GuestDao_Impl implements GuestDao {
   }
 
   @Override
+  public Object getGuestByNanoId(final String nanoId,
+      final Continuation<? super Guest> $completion) {
+    final String _sql = "SELECT * FROM guests WHERE nanoId = ? LIMIT 1";
+    final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, 1);
+    int _argIndex = 1;
+    _statement.bindString(_argIndex, nanoId);
+    final CancellationSignal _cancellationSignal = DBUtil.createCancellationSignal();
+    return CoroutinesRoom.execute(__db, false, _cancellationSignal, new Callable<Guest>() {
+      @Override
+      @Nullable
+      public Guest call() throws Exception {
+        final Cursor _cursor = DBUtil.query(__db, _statement, false, null);
+        try {
+          final int _cursorIndexOfId = CursorUtil.getColumnIndexOrThrow(_cursor, "id");
+          final int _cursorIndexOfSheetsId = CursorUtil.getColumnIndexOrThrow(_cursor, "sheetsId");
+          final int _cursorIndexOfNanoId = CursorUtil.getColumnIndexOrThrow(_cursor, "nanoId");
+          final int _cursorIndexOfName = CursorUtil.getColumnIndexOrThrow(_cursor, "name");
+          final int _cursorIndexOfLastNameAbbreviation = CursorUtil.getColumnIndexOrThrow(_cursor, "lastNameAbbreviation");
+          final int _cursorIndexOfEmail = CursorUtil.getColumnIndexOrThrow(_cursor, "email");
+          final int _cursorIndexOfPhoneNumber = CursorUtil.getColumnIndexOrThrow(_cursor, "phoneNumber");
+          final int _cursorIndexOfInvitations = CursorUtil.getColumnIndexOrThrow(_cursor, "invitations");
+          final int _cursorIndexOfVenueName = CursorUtil.getColumnIndexOrThrow(_cursor, "venueName");
+          final int _cursorIndexOfNotes = CursorUtil.getColumnIndexOrThrow(_cursor, "notes");
+          final int _cursorIndexOfIsVolunteerBenefit = CursorUtil.getColumnIndexOrThrow(_cursor, "isVolunteerBenefit");
+          final int _cursorIndexOfVolunteerId = CursorUtil.getColumnIndexOrThrow(_cursor, "volunteerId");
+          final int _cursorIndexOfLastModified = CursorUtil.getColumnIndexOrThrow(_cursor, "lastModified");
+          final int _cursorIndexOfIsTemporaryGuest = CursorUtil.getColumnIndexOrThrow(_cursor, "isTemporaryGuest");
+          final int _cursorIndexOfTemporaryArtistName = CursorUtil.getColumnIndexOrThrow(_cursor, "temporaryArtistName");
+          final int _cursorIndexOfTemporaryEventDate = CursorUtil.getColumnIndexOrThrow(_cursor, "temporaryEventDate");
+          final int _cursorIndexOfTemporaryContactPhone = CursorUtil.getColumnIndexOrThrow(_cursor, "temporaryContactPhone");
+          final int _cursorIndexOfNfcCardUid = CursorUtil.getColumnIndexOrThrow(_cursor, "nfcCardUid");
+          final int _cursorIndexOfIsAdmin = CursorUtil.getColumnIndexOrThrow(_cursor, "isAdmin");
+          final Guest _result;
+          if (_cursor.moveToFirst()) {
+            final long _tmpId;
+            _tmpId = _cursor.getLong(_cursorIndexOfId);
+            final String _tmpSheetsId;
+            if (_cursor.isNull(_cursorIndexOfSheetsId)) {
+              _tmpSheetsId = null;
+            } else {
+              _tmpSheetsId = _cursor.getString(_cursorIndexOfSheetsId);
+            }
+            final String _tmpNanoId;
+            _tmpNanoId = _cursor.getString(_cursorIndexOfNanoId);
+            final String _tmpName;
+            _tmpName = _cursor.getString(_cursorIndexOfName);
+            final String _tmpLastNameAbbreviation;
+            _tmpLastNameAbbreviation = _cursor.getString(_cursorIndexOfLastNameAbbreviation);
+            final String _tmpEmail;
+            _tmpEmail = _cursor.getString(_cursorIndexOfEmail);
+            final String _tmpPhoneNumber;
+            _tmpPhoneNumber = _cursor.getString(_cursorIndexOfPhoneNumber);
+            final int _tmpInvitations;
+            _tmpInvitations = _cursor.getInt(_cursorIndexOfInvitations);
+            final String _tmpVenueName;
+            _tmpVenueName = _cursor.getString(_cursorIndexOfVenueName);
+            final String _tmpNotes;
+            _tmpNotes = _cursor.getString(_cursorIndexOfNotes);
+            final boolean _tmpIsVolunteerBenefit;
+            final int _tmp;
+            _tmp = _cursor.getInt(_cursorIndexOfIsVolunteerBenefit);
+            _tmpIsVolunteerBenefit = _tmp != 0;
+            final String _tmpVolunteerId;
+            if (_cursor.isNull(_cursorIndexOfVolunteerId)) {
+              _tmpVolunteerId = null;
+            } else {
+              _tmpVolunteerId = _cursor.getString(_cursorIndexOfVolunteerId);
+            }
+            final long _tmpLastModified;
+            _tmpLastModified = _cursor.getLong(_cursorIndexOfLastModified);
+            final boolean _tmpIsTemporaryGuest;
+            final int _tmp_1;
+            _tmp_1 = _cursor.getInt(_cursorIndexOfIsTemporaryGuest);
+            _tmpIsTemporaryGuest = _tmp_1 != 0;
+            final String _tmpTemporaryArtistName;
+            _tmpTemporaryArtistName = _cursor.getString(_cursorIndexOfTemporaryArtistName);
+            final Long _tmpTemporaryEventDate;
+            if (_cursor.isNull(_cursorIndexOfTemporaryEventDate)) {
+              _tmpTemporaryEventDate = null;
+            } else {
+              _tmpTemporaryEventDate = _cursor.getLong(_cursorIndexOfTemporaryEventDate);
+            }
+            final String _tmpTemporaryContactPhone;
+            _tmpTemporaryContactPhone = _cursor.getString(_cursorIndexOfTemporaryContactPhone);
+            final String _tmpNfcCardUid;
+            _tmpNfcCardUid = _cursor.getString(_cursorIndexOfNfcCardUid);
+            final boolean _tmpIsAdmin;
+            final int _tmp_2;
+            _tmp_2 = _cursor.getInt(_cursorIndexOfIsAdmin);
+            _tmpIsAdmin = _tmp_2 != 0;
+            _result = new Guest(_tmpId,_tmpSheetsId,_tmpNanoId,_tmpName,_tmpLastNameAbbreviation,_tmpEmail,_tmpPhoneNumber,_tmpInvitations,_tmpVenueName,_tmpNotes,_tmpIsVolunteerBenefit,_tmpVolunteerId,_tmpLastModified,_tmpIsTemporaryGuest,_tmpTemporaryArtistName,_tmpTemporaryEventDate,_tmpTemporaryContactPhone,_tmpNfcCardUid,_tmpIsAdmin);
+          } else {
+            _result = null;
+          }
+          return _result;
+        } finally {
+          _cursor.close();
+          _statement.release();
+        }
+      }
+    }, $completion);
+  }
+
+  @Override
   public Object getGuestByName(final String name, final Continuation<? super Guest> $completion) {
     final String _sql = "SELECT * FROM guests WHERE name = ?";
     final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, 1);

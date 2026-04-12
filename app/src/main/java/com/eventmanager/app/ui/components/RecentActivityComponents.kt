@@ -1,7 +1,10 @@
 package com.eventmanager.app.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -11,12 +14,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -33,18 +37,24 @@ import androidx.compose.foundation.indication
 import androidx.compose.material3.Icon
 import com.eventmanager.app.R
 import androidx.annotation.StringRes
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.launch
-import com.eventmanager.app.data.models.CounterData
-import com.eventmanager.app.data.repository.EventManagerRepository
+import com.eventmanager.app.data.sync.DateFormatUtils
+import com.eventmanager.app.data.sync.SettingsManager
+import com.eventmanager.app.ui.viewmodel.EventManagerViewModel
 
 /**
  * Data class for a recent activity item
@@ -315,54 +325,79 @@ private fun safeVibrate(vibrator: Vibrator?, duration: Long) {
     }
 }
 
+
 /**
- * People Counter component with improved design and safe vibration
- * - Modern card design aligned with app's design language
- * - Smooth animations and visual feedback
- * - Safe vibration handling with permission checks
- * - Long-press support for bulk operations (+10/-10)
- * - Persistent storage with last modified timestamp
+ * People counter per venue, synced to Google Sheets (venues tab columns E–G).
+ * Single-writer arbitration via "Priority Device ID" (column F) on the sheet.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PeopleCounter(
     isPhone: Boolean = true,
     modifier: Modifier = Modifier,
-    repository: com.eventmanager.app.data.repository.EventManagerRepository? = null
+    viewModel: EventManagerViewModel
 ) {
     val context = LocalContext.current
+    val settingsManager = remember { SettingsManager(context) }
+    val deviceId = remember { settingsManager.getOrCreatePersistentDeviceId() }
     val vibrator = remember { context.getSystemService(android.content.Context.VIBRATOR_SERVICE) as? Vibrator }
-    
-    // Load counter from database if repository is available
-    val counterFlow = remember(repository) {
-        repository?.getCounter() ?: flowOf(null)
+
+    val venues by viewModel.venues.collectAsState()
+    val selectedVenueId by viewModel.peopleCounterSelectedVenueId.collectAsState()
+    val priority by viewModel.peopleCounterPriority.collectAsState()
+    val hint by viewModel.peopleCounterUiHint.collectAsState()
+    val prioritySwitchInteraction = remember { MutableInteractionSource() }
+
+    LaunchedEffect(hint) {
+        if (hint == null) return@LaunchedEffect
+        delay(10_000L)
+        viewModel.clearPeopleCounterUiHint()
     }
-    val counterData by counterFlow.collectAsState(null)
-    
-    var peopleCount by remember { mutableStateOf(0) }
-    var lastModified by remember { mutableStateOf(0L) }
-    var lastAction by remember { mutableStateOf("") }
-    val coroutineScope = rememberCoroutineScope()
-    
-    // Update local state when counterData changes
-    LaunchedEffect(counterData) {
-        counterData?.let {
-            peopleCount = it.count
-            lastModified = it.lastModified
+
+    LaunchedEffect(prioritySwitchInteraction) {
+        var holdJob: Job? = null
+        prioritySwitchInteraction.interactions.collect { interaction ->
+            when (interaction) {
+                is PressInteraction.Press -> {
+                    holdJob?.cancel()
+                    holdJob = launch {
+                        delay(3_000L)
+                        viewModel.forceTakePeopleCounterPriority()
+                    }
+                }
+                is PressInteraction.Release,
+                is PressInteraction.Cancel -> {
+                    holdJob?.cancel()
+                    holdJob = null
+                }
+            }
         }
     }
-    
-    // Animation for counter scale
+
+    val activeVenues = remember(venues) { venues.filter { it.isActive }.sortedBy { it.name } }
+    val selectedVenue = remember(venues, selectedVenueId) { venues.find { it.id == selectedVenueId } }
+    val writerId = selectedVenue?.peopleCounterWriterDeviceId?.trim().orEmpty()
+    val canEdit = selectedVenue != null && priority && (writerId.isEmpty() || writerId == deviceId)
+
+    LaunchedEffect(venues) {
+        viewModel.reconcilePeopleCounterAfterVenuesChanged()
+    }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(15_000L)
+            viewModel.refreshVenuesForPeopleCounterQuietly()
+        }
+    }
+
+    var lastAction by remember { mutableStateOf("") }
     val scale by animateFloatAsState(
         targetValue = if (lastAction == "increment" || lastAction == "decrement") 1.05f else 1f,
         label = "counterScale"
     )
-    
-    // Animation state for buttons
     var minusPressed by remember { mutableStateOf(false) }
     var plusPressed by remember { mutableStateOf(false) }
     var resetPressed by remember { mutableStateOf(false) }
-    
     val minusScale by animateFloatAsState(
         targetValue = if (minusPressed) 0.95f else 1f,
         label = "minusScale"
@@ -375,322 +410,431 @@ fun PeopleCounter(
         targetValue = if (resetPressed) 0.95f else 1f,
         label = "resetScale"
     )
-    
+
+    val count = selectedVenue?.peopleCounterCount ?: 0
+    val sheetMod = selectedVenue?.peopleCounterLastModified ?: 0L
+
+    var sheetClockTick by remember { mutableStateOf(0) }
+    LaunchedEffect(sheetMod) {
+        if (sheetMod <= 0L) return@LaunchedEffect
+        while (true) {
+            delay(1000L)
+            sheetClockTick++
+        }
+    }
+
+    val resetCountAnim = remember { Animatable(0f) }
+    var isResetCountAnimation by remember { mutableStateOf(false) }
+    var resetProgressFireConsumed by remember { mutableStateOf(false) }
+
+    var isResetting by remember { mutableStateOf(false) }
+    val longPressDuration = 600L
+    val animatedResetProgress by animateFloatAsState(
+        targetValue = if (isResetting) 1f else 0f,
+        animationSpec = tween(durationMillis = longPressDuration.toInt(), easing = LinearEasing),
+        label = "resetProgress"
+    )
+
+    LaunchedEffect(selectedVenueId) {
+        if (isResetCountAnimation) {
+            resetCountAnim.stop()
+            resetCountAnim.snapTo(0f)
+            isResetCountAnimation = false
+        }
+        resetProgressFireConsumed = false
+    }
+
+    LaunchedEffect(isResetting, animatedResetProgress) {
+        if (!isResetting && animatedResetProgress < 0.2f) {
+            resetProgressFireConsumed = false
+        }
+    }
+
+    LaunchedEffect(canEdit, selectedVenueId) {
+        snapshotFlow {
+            Triple(
+                animatedResetProgress,
+                isResetting,
+                selectedVenue?.id ?: -1L
+            )
+        }.collect { (progress, resetting, _) ->
+            if (progress < 0.99f || !resetting || !canEdit || selectedVenue == null || resetProgressFireConsumed) {
+                return@collect
+            }
+            resetProgressFireConsumed = true
+            lastAction = "reset"
+            safeVibrate(vibrator, 10)
+            isResetting = false
+            val venue = selectedVenue ?: return@collect
+            val venueId = venue.id
+            val start = venue.peopleCounterCount.coerceAtLeast(0)
+            if (start > 0) {
+                isResetCountAnimation = true
+                resetCountAnim.snapTo(start.toFloat())
+                try {
+                    resetCountAnim.animateTo(
+                        0f,
+                        animationSpec = tween(
+                            durationMillis = 420,
+                            easing = LinearEasing
+                        )
+                    )
+                } finally {
+                    isResetCountAnimation = false
+                    resetCountAnim.snapTo(0f)
+                }
+            }
+            viewModel.resetPeopleCounterForVenue(venueId)
+        }
+    }
+
+    val displayedCount = if (isResetCountAnimation) {
+        resetCountAnim.value.toInt().coerceAtLeast(0)
+    } else {
+        count
+    }
+
+    val scheme = MaterialTheme.colorScheme
+
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(if (isPhone) 20.dp else 24.dp),
+        shape = RoundedCornerShape(if (isPhone) 26.dp else 30.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = scheme.surfaceContainerLow
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 3.dp,
+            pressedElevation = 6.dp
+        ),
         border = androidx.compose.foundation.BorderStroke(
             1.dp,
-            MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)
+            scheme.outlineVariant.copy(alpha = 0.45f)
         )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(if (isPhone) 20.dp else 24.dp)
+                .padding(if (isPhone) 18.dp else 22.dp)
         ) {
-            // Title Section
             Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = if (isPhone) 16.dp else 20.dp)
+                    .horizontalScroll(rememberScrollState())
+                    .padding(bottom = if (isPhone) 6.dp else 8.dp)
             ) {
-                // Icon badge
+                activeVenues.forEach { v ->
+                    FilterChip(
+                        selected = v.id == selectedVenueId,
+                        onClick = { viewModel.setPeopleCounterSelectedVenueId(v.id) },
+                        label = {
+                            Text(
+                                v.name,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.LocationOn,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    )
+                }
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = if (isPhone) 10.dp else 14.dp)
+            ) {
                 Box(
                     modifier = Modifier
-                        .size(if (isPhone) 44.dp else 52.dp)
+                        .size(if (isPhone) 48.dp else 56.dp)
                         .background(
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
-                            shape = RoundedCornerShape(if (isPhone) 12.dp else 14.dp)
+                            brush = Brush.linearGradient(
+                                colors = listOf(
+                                    scheme.primaryContainer,
+                                    scheme.secondaryContainer.copy(alpha = 0.85f)
+                                )
+                            ),
+                            shape = RoundedCornerShape(if (isPhone) 14.dp else 16.dp)
                         ),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Group,
                         contentDescription = null,
-                        modifier = Modifier.size(if (isPhone) 26.dp else 30.dp),
-                        tint = MaterialTheme.colorScheme.primary
+                        modifier = Modifier.size(if (isPhone) 28.dp else 32.dp),
+                        tint = scheme.primary
                     )
                 }
-                
-                Text(
-                    text = context.getString(R.string.people_counter_title),
-                    style = if (isPhone) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-            
-            // Counter Display Section
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = if (isPhone) 12.dp else 16.dp),
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
-                shape = RoundedCornerShape(if (isPhone) 16.dp else 20.dp),
-                border = androidx.compose.foundation.BorderStroke(
-                    1.5.dp,
-                    MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                )
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(if (isPhone) 24.dp else 32.dp),
-                    contentAlignment = Alignment.Center
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = context.getString(R.string.people_counter_title),
+                        style = if (isPhone) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = scheme.onSurface
+                    )
+                    Text(
+                        text = context.getString(R.string.people_counter_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = scheme.onSurfaceVariant
+                    )
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.padding(start = 2.dp)
                 ) {
                     Text(
-                        text = peopleCount.toString(),
-                        style = if (isPhone) MaterialTheme.typography.displayLarge else MaterialTheme.typography.displayMedium,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.scale(scale)
+                        text = context.getString(R.string.people_counter_priority),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = scheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.widthIn(max = if (isPhone) 100.dp else 120.dp)
                     )
+                    Box(
+                        modifier = Modifier
+                            .scale(0.78f)
+                            .wrapContentSize(Alignment.Center),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Switch(
+                            checked = priority,
+                            onCheckedChange = { viewModel.setPeopleCounterPriority(it) },
+                            interactionSource = prioritySwitchInteraction,
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = scheme.onPrimary,
+                                checkedTrackColor = scheme.primary,
+                                uncheckedThumbColor = scheme.outline,
+                                uncheckedTrackColor = scheme.surfaceContainerHighest,
+                                uncheckedBorderColor = scheme.outline.copy(alpha = 0.6f)
+                            )
+                        )
+                    }
                 }
             }
-            
-            Spacer(modifier = Modifier.height(if (isPhone) 8.dp else 12.dp))
-            
-            // Last Modified Display
-            if (lastModified > 0) {
-                // Use remember to cache the formatted string and avoid recomputation
-                val formattedTime = remember(lastModified) {
-                    formatCounterTime(lastModified)
-                }
+
+            if (hint != null) {
                 Text(
-                    text = "Last modified: $formattedTime",
-                    style = if (isPhone) MaterialTheme.typography.labelSmall else MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = hint!!,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = scheme.error,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = if (isPhone) 8.dp else 12.dp),
-                    textAlign = TextAlign.Center
+                        .padding(bottom = 8.dp)
                 )
             }
-            
-            Spacer(modifier = Modifier.height(if (isPhone) 16.dp else 20.dp))
-            
-            // Control Buttons Section
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(if (isPhone) 12.dp else 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Minus Button with long-press support for -10
+
+            if (activeVenues.isEmpty()) {
+                Text(
+                    text = context.getString(R.string.people_counter_no_venues),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = scheme.onSurfaceVariant
+                )
+            } else {
                 Surface(
                     modifier = Modifier
-                        .weight(1f)
-                        .height(if (isPhone) 56.dp else 64.dp)
-                        .combinedClickable(
-                            onClick = {
-                                if (peopleCount > 0) {
-                                    peopleCount--
-                                    lastAction = "decrement"
-                                    lastModified = System.currentTimeMillis()
+                        .fillMaxWidth()
+                        .padding(vertical = if (isPhone) 12.dp else 16.dp)
+                        .alpha(if (canEdit) 1f else 0.55f),
+                    color = scheme.primaryContainer.copy(alpha = 0.55f),
+                    shape = RoundedCornerShape(if (isPhone) 16.dp else 20.dp),
+                    tonalElevation = 1.dp,
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.5.dp,
+                        scheme.outline.copy(alpha = 0.35f)
+                    )
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(if (isPhone) 24.dp else 32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = displayedCount.toString(),
+                            style = if (isPhone) MaterialTheme.typography.displayLarge else MaterialTheme.typography.displayMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = if (canEdit) scheme.primary else scheme.onSurfaceVariant,
+                            modifier = Modifier.scale(scale)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(if (isPhone) 8.dp else 12.dp))
+
+                if (sheetMod > 0L) {
+                    val formatted = remember(sheetMod, sheetClockTick) {
+                        DateFormatUtils.formatRelativeSinceSync(context, sheetMod)
+                    }
+                    Text(
+                        text = "${context.getString(R.string.people_counter_sheet_synced)}: $formatted",
+                        style = if (isPhone) MaterialTheme.typography.labelSmall else MaterialTheme.typography.labelMedium,
+                        color = scheme.primary,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = if (isPhone) 8.dp else 12.dp)
+                            .clickable { viewModel.resyncPeopleCounterLastUpdatedLine() },
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(if (isPhone) 16.dp else 20.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(if (isPhone) 12.dp else 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(if (isPhone) 56.dp else 64.dp)
+                            .alpha(if (canEdit) 1f else 0.45f)
+                            .combinedClickable(
+                                onClick = {
+                                    if (!canEdit || selectedVenue == null) return@combinedClickable
+                                    if (count > 0) {
+                                        lastAction = "decrement"
+                                        safeVibrate(vibrator, 5)
+                                        viewModel.adjustPeopleCounterCount(selectedVenue.id, -1)
+                                    }
+                                },
+                                onLongClick = {
+                                    if (!canEdit || selectedVenue == null) return@combinedClickable
+                                    if (count >= 10) {
+                                        lastAction = "decrement"
+                                        safeVibrate(vibrator, 8)
+                                        viewModel.adjustPeopleCounterCount(selectedVenue.id, -10)
+                                    }
+                                }
+                            )
+                            .scale(minusScale),
+                        shape = RoundedCornerShape(if (isPhone) 14.dp else 16.dp),
+                        color = scheme.secondaryContainer,
+                        tonalElevation = 2.dp,
+                        shadowElevation = 2.dp
+                    ) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Remove,
+                                contentDescription = null,
+                                modifier = Modifier.size(if (isPhone) 24.dp else 28.dp),
+                                tint = scheme.onSecondaryContainer
+                            )
+                        }
+                    }
+
+                    Surface(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(if (isPhone) 56.dp else 64.dp)
+                            .alpha(if (canEdit) 1f else 0.45f)
+                            .combinedClickable(
+                                onClick = {
+                                    if (!canEdit || selectedVenue == null) return@combinedClickable
+                                    lastAction = "increment"
                                     safeVibrate(vibrator, 5)
-                                    repository?.let {
-                                        coroutineScope.launch {
-                                            it.updateCounter(peopleCount)
-                                        }
-                                    }
-                                }
-                            },
-                            onLongClick = {
-                                if (peopleCount >= 10) {
-                                    peopleCount -= 10
-                                    lastAction = "decrement"
-                                    lastModified = System.currentTimeMillis()
+                                    viewModel.adjustPeopleCounterCount(selectedVenue.id, 1)
+                                },
+                                onLongClick = {
+                                    if (!canEdit || selectedVenue == null) return@combinedClickable
+                                    lastAction = "increment"
                                     safeVibrate(vibrator, 8)
-                                    repository?.let {
-                                        coroutineScope.launch {
-                                            it.updateCounter(peopleCount)
-                                        }
-                                    }
+                                    viewModel.adjustPeopleCounterCount(selectedVenue.id, 10)
                                 }
-                            }
-                        )
-                        .scale(minusScale),
-                    shape = RoundedCornerShape(if (isPhone) 14.dp else 16.dp),
-                    color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.85f),
-                    shadowElevation = 4.dp
-                ) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                            )
+                            .scale(plusScale),
+                        shape = RoundedCornerShape(if (isPhone) 14.dp else 16.dp),
+                        color = scheme.primary,
+                        tonalElevation = 2.dp,
+                        shadowElevation = 2.dp
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Remove,
-                            contentDescription = null,
-                            modifier = Modifier.size(if (isPhone) 24.dp else 28.dp),
-                            tint = MaterialTheme.colorScheme.onSecondary
-                        )
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = null,
+                                modifier = Modifier.size(if (isPhone) 24.dp else 28.dp),
+                                tint = scheme.onPrimary
+                            )
+                        }
                     }
                 }
-                
-                // Plus Button with long-press support for +10
+
+                Spacer(modifier = Modifier.height(if (isPhone) 12.dp else 16.dp))
+
                 Surface(
                     modifier = Modifier
-                        .weight(1f)
-                        .height(if (isPhone) 56.dp else 64.dp)
-                        .combinedClickable(
-                            onClick = {
-                                peopleCount++
-                                lastAction = "increment"
-                                lastModified = System.currentTimeMillis()
-                                safeVibrate(vibrator, 5)
-                                repository?.let {
-                                    coroutineScope.launch {
-                                        it.updateCounter(peopleCount)
-                                    }
+                        .fillMaxWidth()
+                        .height(if (isPhone) 48.dp else 56.dp)
+                        .alpha(if (canEdit) 1f else 0.45f)
+                        .pointerInput(canEdit, selectedVenue) {
+                            if (!canEdit || selectedVenue == null) return@pointerInput
+                            detectTapGestures(
+                                onPress = {
+                                    isResetting = true
+                                    tryAwaitRelease()
+                                    isResetting = false
                                 }
-                            },
-                            onLongClick = {
-                                peopleCount += 10
-                                lastAction = "increment"
-                                lastModified = System.currentTimeMillis()
-                                safeVibrate(vibrator, 8)
-                                repository?.let {
-                                    coroutineScope.launch {
-                                        it.updateCounter(peopleCount)
-                                    }
-                                }
-                            }
-                        )
-                        .scale(plusScale),
-                    shape = RoundedCornerShape(if (isPhone) 14.dp else 16.dp),
-                    color = MaterialTheme.colorScheme.primary,
-                    shadowElevation = 4.dp
+                            )
+                        }
+                        .scale(resetScale),
+                    shape = RoundedCornerShape(if (isPhone) 12.dp else 14.dp),
+                    color = scheme.surfaceContainerHigh,
+                    tonalElevation = 1.dp,
+                    shadowElevation = 1.dp
                 ) {
                     Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(scheme.surfaceContainerHigh)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = null,
-                            modifier = Modifier.size(if (isPhone) 24.dp else 28.dp),
-                            tint = MaterialTheme.colorScheme.onPrimary
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .fillMaxWidth(animatedResetProgress)
+                                .background(scheme.primaryContainer.copy(alpha = 0.65f))
                         )
-                    }
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(if (isPhone) 12.dp else 16.dp))
-            
-            // Reset Button - Long press only
-            var isResetting by remember { mutableStateOf(false) }
-            val longPressDuration = 600L // 600ms long-press duration
-            
-            val animatedResetProgress by animateFloatAsState(
-                targetValue = if (isResetting) 1f else 0f,
-                animationSpec = tween(durationMillis = longPressDuration.toInt(), easing = LinearEasing),
-                label = "resetProgress"
-            )
-            
-            // Auto-trigger action when animation completes
-            LaunchedEffect(animatedResetProgress) {
-                if (animatedResetProgress >= 0.99f && isResetting) {
-                    // Progress animation completed, trigger the action
-                    peopleCount = 0
-                    lastAction = "reset"
-                    lastModified = System.currentTimeMillis()
-                    safeVibrate(vibrator, 10)
-                    isResetting = false
-                    repository?.let {
-                        coroutineScope.launch {
-                            it.resetCounter()
+                        Row(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.RestartAlt,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = scheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = context.getString(R.string.people_counter_reset),
+                                fontWeight = FontWeight.SemiBold,
+                                color = scheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
             }
-            
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(if (isPhone) 48.dp else 56.dp)
-                    .pointerInput(Unit) {
-                        detectTapGestures(
-                            onPress = {
-                                isResetting = true
-                                tryAwaitRelease()
-                                isResetting = false
-                            }
-                        )
-                    }
-                    .scale(resetScale),
-                shape = RoundedCornerShape(if (isPhone) 12.dp else 14.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                shadowElevation = 2.dp
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                ) {
-                    // Progress fill background - fills entire button
-                    Box(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .fillMaxWidth(animatedResetProgress)
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
-                    )
-                    
-                    // Button content on top
-                    Row(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.RestartAlt,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = context.getString(R.string.people_counter_reset),
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
         }
     }
 }
 
-/**
- * Thread-safe cached SimpleDateFormat instance for counter time formatting
- */
-private val counterTimeFormatterCache = ThreadLocal.withInitial {
-    SimpleDateFormat("MMM d, HH:mm", Locale.getDefault())
-}
-
-/**
- * Format counter timestamp to readable string
- * Optimized to reuse cached SimpleDateFormat instance and avoid creating Date objects unnecessarily
- */
-fun formatCounterTime(timestamp: Long): String {
-    val now = System.currentTimeMillis()
-    val diffMs = now - timestamp
-    
-    return when {
-        diffMs < 1000 -> "just now"
-        diffMs < 60000 -> "${diffMs / 1000}s ago"
-        diffMs < 3600000 -> "${diffMs / 60000}m ago"
-        diffMs < 86400000 -> "${diffMs / 3600000}h ago"
-        else -> {
-            val formatter = counterTimeFormatterCache.get()
-            formatter.format(Date(timestamp))
-        }
-    }
-}

@@ -26,7 +26,15 @@ class DataStructureValidator(
         "volunteers" to listOf("ID", "Name", "Abbreviation", "Email", "Phone", "Date of Birth", "Gender", "Rank", "Active", "Last Modified", "NFC UID", "Admin"),
         "jobs" to listOf("Volunteer ID", "Job Type", "Venue", "Date", "Shift Time", "Notes", "Last Modified", "Entries left"),
         "job_types" to listOf("Name", "Status", "Shift Type", "Orion Type", "Requires Time", "Benefit System", "Manual Rewards", "Description", "Last Modified", "Nova Job Type"),
-        "venues" to listOf("Name", "Description", "Status", "Last Modified")
+        "venues" to listOf(
+            "Name",
+            "Description",
+            "Status",
+            "Last Modified",
+            "Number of people",
+            "Priority Device ID",
+            "Last Modified (counter)"
+        )
     )
     
     /**
@@ -225,7 +233,6 @@ class DataStructureValidator(
             // Validate again after fixing
             val revalidationResult = validateSheet(sheetType, sheetName)
             if (revalidationResult.isValid) {
-                val successResult = revalidationResult as SheetValidationResult.Success
                 SheetValidationResult.Success(
                     sheetName = sheetName,
                     expectedHeaders = expectedHeaders,

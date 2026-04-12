@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.eventmanager.app.BuildConfig
 import com.eventmanager.app.data.utils.AppIconManager
+import com.eventmanager.app.data.utils.NanoIdGenerator
 
 /**
  * Manages app settings persistence using SharedPreferences
@@ -39,6 +40,14 @@ class SettingsManager(context: Context) {
         private const val KEY_APP_ICON_STYLE = "app_icon_style"
         private const val KEY_APP_ICON_AUTO_ADAPT = "app_icon_auto_adapt"
         private const val KEY_PEOPLE_COUNTER_VISIBLE = "people_counter_visible"
+        private const val KEY_APP_DEVICE_NANOID = "app_device_nano_id"
+        private const val KEY_PEOPLE_COUNTER_SELECTED_VENUE_ID = "people_counter_selected_venue_id"
+        /** @deprecated Migrated into [KEY_PEOPLE_COUNTER_PRIORITY_VENUE_IDS]. */
+        private const val KEY_PEOPLE_COUNTER_PRIORITY = "people_counter_priority"
+        /** Venue ids (as strings) where this device wants people-counter upload priority. */
+        private const val KEY_PEOPLE_COUNTER_PRIORITY_VENUE_IDS = "people_counter_priority_venue_ids"
+        /** Legacy key — migrated once to [KEY_PEOPLE_COUNTER_PRIORITY] (inverted meaning). */
+        private const val KEY_PEOPLE_COUNTER_USER_READ_ONLY_LEGACY = "people_counter_user_read_only"
         private const val KEY_STATISTICS_VISIBLE = "statistics_visible"
         private const val KEY_PAGE_SCROLL_BEHAVIOR = "page_scroll_behavior"
         private const val KEY_UPDATE_MANIFEST_URL = "update_manifest_url"
@@ -332,6 +341,74 @@ class SettingsManager(context: Context) {
     
     fun setPeopleCounterVisible(visible: Boolean) {
         prefs.edit().putBoolean(KEY_PEOPLE_COUNTER_VISIBLE, visible).apply()
+    }
+
+    /** Stable per-installation ID used for people-counter writer arbitration on Google Sheets. */
+    fun getOrCreatePersistentDeviceId(): String {
+        val existing = prefs.getString(KEY_APP_DEVICE_NANOID, null)?.trim().orEmpty()
+        if (existing.isNotEmpty()) return existing
+        val created = NanoIdGenerator.generateGuestId()
+        prefs.edit().putString(KEY_APP_DEVICE_NANOID, created).apply()
+        return created
+    }
+
+    fun getPeopleCounterSelectedVenueId(): Long {
+        return prefs.getLong(KEY_PEOPLE_COUNTER_SELECTED_VENUE_ID, 0L)
+    }
+
+    fun setPeopleCounterSelectedVenueId(id: Long) {
+        prefs.edit().putLong(KEY_PEOPLE_COUNTER_SELECTED_VENUE_ID, id).apply()
+    }
+
+    private fun ensurePeopleCounterPriorityVenuesMigrated() {
+        if (prefs.contains(KEY_PEOPLE_COUNTER_PRIORITY_VENUE_IDS)) {
+            prefs.edit()
+                .remove(KEY_PEOPLE_COUNTER_USER_READ_ONLY_LEGACY)
+                .remove(KEY_PEOPLE_COUNTER_PRIORITY)
+                .apply()
+            return
+        }
+        var venueIds: Set<String> = emptySet()
+        when {
+            prefs.contains(KEY_PEOPLE_COUNTER_USER_READ_ONLY_LEGACY) -> {
+                val legacyReadOnly = prefs.getBoolean(KEY_PEOPLE_COUNTER_USER_READ_ONLY_LEGACY, true)
+                if (!legacyReadOnly) {
+                    val sel = prefs.getLong(KEY_PEOPLE_COUNTER_SELECTED_VENUE_ID, 0L)
+                    if (sel > 0L) venueIds = setOf(sel.toString())
+                }
+            }
+            prefs.contains(KEY_PEOPLE_COUNTER_PRIORITY) -> {
+                if (prefs.getBoolean(KEY_PEOPLE_COUNTER_PRIORITY, false)) {
+                    val sel = prefs.getLong(KEY_PEOPLE_COUNTER_SELECTED_VENUE_ID, 0L)
+                    if (sel > 0L) venueIds = setOf(sel.toString())
+                }
+            }
+        }
+        prefs.edit()
+            .remove(KEY_PEOPLE_COUNTER_USER_READ_ONLY_LEGACY)
+            .remove(KEY_PEOPLE_COUNTER_PRIORITY)
+            .putStringSet(KEY_PEOPLE_COUNTER_PRIORITY_VENUE_IDS, HashSet(venueIds))
+            .apply()
+    }
+
+    /**
+     * When true, this device requests people-counter upload priority for [venueId] only.
+     * Each venue is independent; default is off until the user enables priority for that venue.
+     */
+    fun isPeopleCounterPriority(venueId: Long): Boolean {
+        if (venueId <= 0L) return false
+        ensurePeopleCounterPriorityVenuesMigrated()
+        val set = prefs.getStringSet(KEY_PEOPLE_COUNTER_PRIORITY_VENUE_IDS, emptySet()) ?: emptySet()
+        return set.contains(venueId.toString())
+    }
+
+    fun setPeopleCounterPriority(venueId: Long, enabled: Boolean) {
+        if (venueId <= 0L) return
+        ensurePeopleCounterPriorityVenuesMigrated()
+        val raw = prefs.getStringSet(KEY_PEOPLE_COUNTER_PRIORITY_VENUE_IDS, emptySet()) ?: emptySet()
+        val next = HashSet(raw)
+        if (enabled) next.add(venueId.toString()) else next.remove(venueId.toString())
+        prefs.edit().putStringSet(KEY_PEOPLE_COUNTER_PRIORITY_VENUE_IDS, next).apply()
     }
     
     // Statistics Visibility Configuration
