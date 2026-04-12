@@ -14,7 +14,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.Help
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.automirrored.filled.Subject
 import androidx.compose.material.icons.filled.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -662,7 +665,7 @@ private fun VolunteerEmailFields(
             placeholder = { Text(strings.subjectHint) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-            leadingIcon = { Icon(Icons.Default.Subject, contentDescription = null) }
+            leadingIcon = { Icon(Icons.AutoMirrored.Filled.Subject, contentDescription = null) }
         )
         
         // Content Before QR Code
@@ -740,7 +743,7 @@ private fun GuestEmailFields(
             placeholder = { Text(strings.subjectHint) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-            leadingIcon = { Icon(Icons.Default.Subject, contentDescription = null) }
+            leadingIcon = { Icon(Icons.AutoMirrored.Filled.Subject, contentDescription = null) }
         )
         
         // Content Before QR Code
@@ -963,7 +966,7 @@ private fun GmailAuthSection(
                     },
                     enabled = !isLoading
                 ) {
-                    Icon(Icons.Default.ExitToApp, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(context.getString(R.string.email_gmail_sign_out))
                 }
@@ -1594,6 +1597,87 @@ fun SettingsScreen(
         
         }
         
+        if (variant == SettingsScreenVariant.BilleterieBasic) {
+            ExpandableSettingsCategory(
+                title = context.getString(R.string.settings_category_sync),
+                icon = Icons.Default.CloudSync,
+                isExpanded = showSyncSettings,
+                onToggleExpanded = {
+                    showSyncSettings = !showSyncSettings
+                    settingsManager.setCategorySyncExpanded(showSyncSettings)
+                }
+            ) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.Sync,
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = context.getString(R.string.sync_config_title),
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        OutlinedTextField(
+                            value = syncInterval.toString(),
+                            onValueChange = {
+                                val newInterval = it.toIntOrNull() ?: 5
+                                if (newInterval >= 1 && newInterval <= 60) {
+                                    syncInterval = newInterval
+                                    settingsManager.saveSyncInterval(newInterval)
+                                    coroutineScope.launch {
+                                        kotlinx.coroutines.delay(500)
+                                        viewModel.updateSyncInterval()
+                                    }
+                                }
+                            },
+                            label = { Text(context.getString(R.string.sync_interval_label)) },
+                            modifier = Modifier.fillMaxWidth(),
+                            supportingText = {
+                                Text(context.getString(R.string.sync_interval_hint))
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Default.Timer, contentDescription = null)
+                            }
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(
+                            onClick = { viewModel.testSyncStatus() },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.BugReport, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(context.getString(R.string.test_sync_status))
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = { viewModel.syncWithGoogleSheets() },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.Sync, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(context.getString(R.string.manual_sync_now))
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
+            }
+        }
+        
         Spacer(modifier = Modifier.height(24.dp))
         
         // Email Settings Category (admin + Billeterie — Gmail API & templates for volunteer QR emails)
@@ -2152,6 +2236,11 @@ fun SettingsScreen(
                             onCheckedChange = {
                                 peopleCounterVisible = it
                                 settingsManager.setPeopleCounterVisible(it)
+                                if (it) {
+                                    coroutineScope.launch {
+                                        viewModel.refreshVenuesForPeopleCounterQuietly()
+                                    }
+                                }
                             }
                         )
                     }
@@ -3691,7 +3780,7 @@ fun GoogleSheetsInstructionsDialog(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Icon(
-                            Icons.Default.OpenInNew,
+                            Icons.AutoMirrored.Filled.OpenInNew,
                             contentDescription = null,
                             modifier = Modifier.size(18.dp)
                         )

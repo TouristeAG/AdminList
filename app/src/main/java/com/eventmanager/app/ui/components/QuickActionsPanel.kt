@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -27,7 +28,7 @@ fun QuickActionsPanel(
     jobs: List<Job>,
     venues: List<VenueEntity>,
     isPhone: Boolean = true,
-    context: Context
+    @Suppress("UNUSED_PARAMETER") context: Context
 ) {
     // Calculate insights
     val totalVolunteers = volunteers.size
@@ -88,7 +89,7 @@ fun QuickActionsPanel(
                 )
             }
             
-            Divider(
+            HorizontalDivider(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(1.dp),
@@ -176,7 +177,7 @@ fun QuickActionsPanel(
                 StatRowCard(
                     label = "Avg. Shifts per Venue",
                     value = averageShiftsPerVenue.toString(),
-                    icon = Icons.Default.TrendingUp,
+                    icon = Icons.AutoMirrored.Filled.TrendingUp,
                     isPhone = isPhone
                 )
             }

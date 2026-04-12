@@ -335,7 +335,7 @@
     <string name="app_designed_for">Designed for Collectif Nocturne venues</string>
     <!-- Single full sentence to avoid spacing issues across locales -->
     <string name="app_developed_full">Developed for the Collectif Nocturne by Leonardo Mondada</string>
-    <string name="last_sync">Last sync: %s</string>
+    <string name="last_sync">Last update: %s</string>
     <string name="never">Never</string>
     
     <!-- Instructions Dialog -->
@@ -452,11 +452,21 @@
     
     <!-- Sync Status -->
     <string name="syncing">Syncing...</string>
-    <string name="synced_now">Synced now</string>
-    <string name="synced_minutes_ago">%dm ago</string>
-    <string name="synced_hours_ago">%dh ago</string>
-    <string name="synced_days_ago">%dd ago</string>
-    <string name="never_synced">Never synced</string>
+    <string name="last_update_just_now">just now</string>
+    <string name="last_update_never_brief">—</string>
+    <string name="last_update_seconds_ago">%d sec ago</string>
+    <string name="last_update_min_sec_ago">%1$dmin %2$ds ago</string>
+    <string name="last_update_hour_min_ago">%1$dh %2$dm ago</string>
+    <string name="last_update_days_ago">%dd ago</string>
+    <string name="last_update_line">Last update · %s</string>
+    <string name="last_update_none_line">Last update · —</string>
+    <string name="sync_pill_minutes_ago">%dmin ago</string>
+    <string name="sync_pill_hours_ago">%dh ago</string>
+    <string name="sync_pill_hours_minutes_ago">%1$dh %2$dmin ago</string>
+    <string name="sync_pill_days_ago">%dd ago</string>
+    <string name="sync_pill_days_hours_ago">%1$dd %2$dh ago</string>
+    <string name="sync_pill_days_minutes_ago">%1$dd %2$dmin ago</string>
+    <string name="sync_pill_days_hours_minutes_ago">%1$dd %2$dh %3$dmin ago</string>
     
     <!-- Welcome Screen -->
     <string name="start_admin">Start Admin</string>
@@ -552,7 +562,7 @@
     <string name="add_guest_tab_temporary">Temporary</string>
     <string name="add_guest_add_another_name">Add another guest name</string>
     <string name="add_guest_additional_name_label">Guest name (%1$d)</string>
-    <string name="last_synced">Last synced:</string>
+    <string name="last_synced">Last update:</string>
     <string name="just_now">Just now</string>
     <string name="minutes_ago">%d minutes ago</string>
     <string name="hours_ago">%d hours ago</string>
@@ -849,6 +859,14 @@
     <string name="people_counter_hint_tap_plus_minus">Tap +/- to adjust count</string>
     <string name="people_counter_hint_long_press">Long press ±10 people</string>
     <string name="people_counter_reset">Reset Counter</string>
+    <string name="people_counter_priority">Priority</string>
+    <string name="people_counter_sheet_synced">Counter last updated</string>
+    <string name="people_counter_priority_lost">Another device has priority. Yours was turned off. To take over on this device, long-press the Priority switch for 3 seconds.</string>
+    <string name="people_counter_another_device">Another device already has priority for this venue. To take over on this device, long-press the Priority switch for 3 seconds.</string>
+    <string name="people_counter_no_sheet_row">This venue has no sheet row yet. Sync venues from Settings.</string>
+    <string name="people_counter_need_sheets">Connect Google Sheets before controlling the counter.</string>
+    <string name="people_counter_select_venue">Select a venue after venues are loaded.</string>
+    <string name="people_counter_no_venues">Add active venues in Settings to use the counter.</string>
     
     <!-- QR Code Scanner -->
     <string name="camera_not_available">Camera hardware is not available or not working on this device</string>

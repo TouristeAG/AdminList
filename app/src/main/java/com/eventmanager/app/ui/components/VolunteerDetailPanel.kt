@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.animation.core.animateFloat
@@ -103,6 +104,8 @@ fun VolunteerDetailPanel(
             lastNameOrAbbreviation = volunteer.lastNameAbbreviation
         )
     }
+    val (easterNameColor, easterSubtitleColor) = leonardoEasterEggProfileNameColors()
+    val easterHeaderIconTint = leonardoEasterEggHeaderIconTint()
     val glowTransition = rememberInfiniteTransition(label = "volunteer-glow")
     val glow by glowTransition.animateFloat(
         initialValue = 0.88f,
@@ -205,7 +208,7 @@ fun VolunteerDetailPanel(
                                     text = volunteer.name,
                                     style = if (isPhone) getPhonePortraitTypography() else getResponsiveTypography(),
                                     fontWeight = FontWeight.Bold,
-                                    color = if (leonardoEasterEggEnabled) Color(0xFFFFF3B0) else MaterialTheme.colorScheme.onPrimaryContainer,
+                                    color = if (leonardoEasterEggEnabled) easterNameColor else MaterialTheme.colorScheme.onPrimaryContainer,
                                     modifier = if (leonardoEasterEggEnabled) {
                                         Modifier.graphicsLayer {
                                             shadowElevation = 14.dp.toPx()
@@ -222,7 +225,7 @@ fun VolunteerDetailPanel(
                                 Text(
                                     text = "${volunteer.lastNameAbbreviation} • ${volunteer.email}",
                                     style = if (isPhone) getPhonePortraitBodyTypography() else getResponsiveBodyTypography(),
-                                    color = if (leonardoEasterEggEnabled) Color(0xFFE3FFFB) else MaterialTheme.colorScheme.onPrimaryContainer,
+                                    color = if (leonardoEasterEggEnabled) easterSubtitleColor else MaterialTheme.colorScheme.onPrimaryContainer,
                                     modifier = if (leonardoEasterEggEnabled) {
                                         Modifier.graphicsLayer {
                                             shadowElevation = 10.dp.toPx()
@@ -237,7 +240,7 @@ fun VolunteerDetailPanel(
                                 Icon(
                                     imageVector = Icons.Default.Close,
                                     contentDescription = getStringResource(R.string.close),
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                    tint = if (leonardoEasterEggEnabled) easterHeaderIconTint else MaterialTheme.colorScheme.onPrimaryContainer
                                 )
                             }
                         }
@@ -510,7 +513,7 @@ fun VolunteerDetailPanel(
     // Email Confirmation Dialog
     if (showEmailConfirmDialog) {
         val emailContext = LocalContext.current
-        val settingsManager = remember { SettingsManager(emailContext) }
+        val emailPanelSettingsManager = remember { SettingsManager(emailContext) }
         val gmailAuthService = remember { GmailAuthService(emailContext) }
         val gmailSendService = remember { GmailSendService(emailContext) }
         val coroutineScope = rememberCoroutineScope()
@@ -735,7 +738,7 @@ fun VolunteerDetailPanel(
                 coroutineScope.launch {
                     sendEmailViaApi(
                         emailContext,
-                        settingsManager,
+                        emailPanelSettingsManager,
                         gmailAuthService,
                         gmailSendService,
                         volunteer,
@@ -921,7 +924,7 @@ fun VolunteerDetailPanel(
                     OutlinedButton(
                         onClick = {
                             showEmailConfirmDialog = false
-                            sendEmailManually(emailContext, settingsManager, volunteer)
+                            sendEmailManually(emailContext, emailPanelSettingsManager, volunteer)
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -929,7 +932,7 @@ fun VolunteerDetailPanel(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier.padding(8.dp)
                         ) {
-                            Icon(Icons.Default.Send, contentDescription = null)
+                            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null)
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = getStringResource(R.string.email_send_manual),
@@ -952,7 +955,7 @@ fun VolunteerDetailPanel(
                                 coroutineScope.launch {
                                     sendEmailViaApi(
                                         emailContext,
-                                        settingsManager,
+                                        emailPanelSettingsManager,
                                         gmailAuthService,
                                         gmailSendService,
                                         volunteer,
@@ -1475,95 +1478,48 @@ private fun ActionButtonsSection(
             }
             
             Spacer(modifier = Modifier.height(responsiveSpacing))
-            
-            if (isPhone) {
-                // Stack vertically on phones
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = { onShowQr(volunteer) },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(Icons.Default.QrCode, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(getStringResource(R.string.qr_code))
-                    }
-                    
-                    OutlinedButton(
-                        onClick = onAddNfcCard,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(Icons.Default.Nfc, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(getStringResource(R.string.add_nfc_card))
-                    }
 
-                    OutlinedButton(
-                        onClick = { onEdit(volunteer) },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(getStringResource(R.string.edit_volunteer_button))
-                    }
-                    
-                    OutlinedButton(
-                        onClick = { onDelete(volunteer) },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
-                        )
-                    ) {
-                        Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(getStringResource(R.string.delete_volunteer_button))
-                    }
+            // Full-width stack: horizontal row squeezed four labels on tablet admin detail.
+            Column(
+                verticalArrangement = Arrangement.spacedBy(if (isPhone) 8.dp else 12.dp)
+            ) {
+                OutlinedButton(
+                    onClick = { onShowQr(volunteer) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.QrCode, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(getStringResource(R.string.qr_code))
                 }
-            } else {
-                // Row layout on tablets
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = { onShowQr(volunteer) },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(Icons.Default.QrCode, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(getStringResource(R.string.qr_code))
-                    }
-                    
-                    OutlinedButton(
-                        onClick = onAddNfcCard,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(Icons.Default.Nfc, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(getStringResource(R.string.add_nfc_card))
-                    }
 
-                    OutlinedButton(
-                        onClick = { onEdit(volunteer) },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(getStringResource(R.string.edit_volunteer_button))
-                    }
-                    
-                    OutlinedButton(
-                        onClick = { onDelete(volunteer) },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
-                        )
-                    ) {
-                        Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(getStringResource(R.string.delete_volunteer_button))
-                    }
+                OutlinedButton(
+                    onClick = onAddNfcCard,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.Nfc, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(getStringResource(R.string.add_nfc_card))
+                }
+
+                OutlinedButton(
+                    onClick = { onEdit(volunteer) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(getStringResource(R.string.edit_volunteer_button))
+                }
+
+                OutlinedButton(
+                    onClick = { onDelete(volunteer) },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(getStringResource(R.string.delete_volunteer_button))
                 }
             }
         }

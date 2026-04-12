@@ -12,6 +12,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.animation.core.animateFloat
@@ -631,7 +633,7 @@ fun VolunteerBenefitsPanel(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     Icon(
-                                        Icons.Default.List,
+                                        Icons.AutoMirrored.Filled.List,
                                         contentDescription = null,
                                         modifier = Modifier.size(if (isPhone) 20.dp else 24.dp),
                                         tint = MaterialTheme.colorScheme.primary
@@ -706,12 +708,12 @@ fun VolunteerBenefitsPanel(
                                         }
                                         
                                         if (index < activeBenefitsWithPerks.size - 1) {
-                                            Divider(modifier = Modifier.padding(vertical = 8.dp))
+                                            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                                         }
                                     }
 
                                     if (totalFutureEntriesRemaining > 0) {
-                                        Divider(modifier = Modifier.padding(vertical = 8.dp))
+                                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                                         FutureEntrySelectionBlock(
                                             isPhone = isPhone,
                                             context = context,
@@ -758,7 +760,7 @@ fun VolunteerBenefitsPanel(
                                     }
 
                                         if (totalFutureEntriesRemaining > 0) {
-                                            Divider(modifier = Modifier.padding(vertical = 8.dp))
+                                            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                                             FutureEntrySelectionBlock(
                                                 isPhone = isPhone,
                                                 context = context,
@@ -1441,7 +1443,7 @@ fun VolunteerBenefitsPanel(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 modifier = Modifier.padding(8.dp)
                             ) {
-                                Icon(Icons.Default.Send, contentDescription = null)
+                                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null)
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = emailContext.getString(R.string.email_send_manual),

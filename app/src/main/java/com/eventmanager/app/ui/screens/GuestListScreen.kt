@@ -751,10 +751,10 @@ fun GuestListScreen(
             jobs.fold(0L) { acc, j -> acc + j.lastModified + (j.benefitFutureEntriesRemaining ?: 0) }
         }
         val benefitContext = LocalContext.current
-        val settingsManager = remember { SettingsManager(benefitContext) }
-        val offsetHours = remember { settingsManager.getDateChangeOffsetHours() }
-        val memoizedBenefitStatus = remember(volunteer.id, jobs, jobTypeConfigs, offsetHours, jobsVersion) {
-            BenefitCalculator.calculateVolunteerBenefitStatus(volunteer, jobs, jobTypeConfigs, offsetHours = offsetHours)
+        val benefitSettingsManager = remember { SettingsManager(benefitContext) }
+        val benefitOffsetHours = remember { benefitSettingsManager.getDateChangeOffsetHours() }
+        val memoizedBenefitStatus = remember(volunteer.id, jobs, jobTypeConfigs, benefitOffsetHours, jobsVersion) {
+            BenefitCalculator.calculateVolunteerBenefitStatus(volunteer, jobs, jobTypeConfigs, offsetHours = benefitOffsetHours)
         }
         val memoizedVolunteerJobs = remember(volunteer.id, jobs, jobsVersion) {
             jobs.filter { it.volunteerId == volunteer.id }
@@ -1412,15 +1412,31 @@ private fun TemporaryGuestsTimelineDialog(
             .sortedWith(compareByDescending<VolunteerAccessEntry> { it.accessEndDate }.thenBy { it.volunteerName.lowercase() })
     }
 
+    val temporaryTimelineTablet = isTablet()
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(
+                    if (temporaryTimelineTablet) Modifier.padding(getTabletDialogScreenEdgeInset())
+                    else Modifier
+                )
+        ) {
         Card(
             modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.95f)
-                .padding(16.dp),
+                .then(
+                    if (temporaryTimelineTablet) {
+                        Modifier.fillMaxSize()
+                    } else {
+                        Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(0.95f)
+                            .padding(16.dp)
+                    }
+                ),
             shape = RoundedCornerShape(16.dp)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
@@ -1568,6 +1584,7 @@ private fun TemporaryGuestsTimelineDialog(
                     }
                 }
             }
+        }
         }
     }
 }
@@ -1734,8 +1751,10 @@ private fun guestStableKey(guest: Guest): String {
         guest.isVolunteerBenefit -> "vol"
         else -> "reg"
     }
-    return guest.sheetsId?.let { "$typePrefix:$it" }
-        ?: "$typePrefix:${guest.id}_${guest.name}_${guest.venueName}_${guest.temporaryEventDate}"
+    if (!guest.sheetsId.isNullOrBlank()) return "$typePrefix:${guest.sheetsId}"
+    // nanoId is unique per guest row; id/name/venue/date alone can collide (e.g. vol:0_a_BOTH_null).
+    if (guest.nanoId.isNotBlank()) return "$typePrefix:n_${guest.nanoId}"
+    return "$typePrefix:f_${guest.id}_${guest.lastModified}_${guest.name}_${guest.venueName}_${guest.invitations}_${guest.temporaryEventDate}"
 }
 
 /**

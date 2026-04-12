@@ -756,10 +756,42 @@ class TwoWaySyncService(
             val venueChanges = differentialSyncService.compareVenues(remoteVenues, mainVenues)
             println("📋 Changes detected: ${venueChanges.new.size} new, ${venueChanges.modified.size} modified, ${venueChanges.deleted.size} deleted")
             
+            val myId = settingsManager.getOrCreatePersistentDeviceId()
+            val mainByKey = mainVenues.associateBy { venueDifferentialKey(it) }
+            val mergedModified = venueChanges.modified.map { remote ->
+                val local = mainByKey[venueDifferentialKey(remote)]
+                var merged = mergeVenueFromSheetKeepingPriorityCounter(remote, local, myId)
+                if (local != null &&
+                    shouldPreserveLocalPeopleCounterOnVenuePull(local, myId) &&
+                    venuePeopleCounterCellsDiffer(remote, local)
+                ) {
+                    val row = local.sheetsId?.toIntOrNull()
+                    if (row != null) {
+                        try {
+                            val now = System.currentTimeMillis()
+                            val writer = local.peopleCounterWriterDeviceId.trim().ifBlank { myId }
+                            googleSheetsService.updateVenuePeopleCounterCells(
+                                row,
+                                local.peopleCounterCount,
+                                writer,
+                                now
+                            )
+                            merged = merged.copy(
+                                peopleCounterWriterDeviceId = writer,
+                                peopleCounterLastModified = now
+                            )
+                        } catch (e: Exception) {
+                            println("⚠️ People counter push after venue pull failed: ${e.message}")
+                        }
+                    }
+                }
+                merged
+            }
+
             // STEP 4: Apply changes to database
             if (venueChanges.hasChanges) {
                 venueChanges.new.forEach { repository.insertVenue(it) }
-                venueChanges.modified.forEach { repository.updateVenue(it) }
+                mergedModified.forEach { repository.updateVenue(it) }
                 venueChanges.deleted.forEach { repository.deleteVenue(it) }
                 println("✅ Applied ${venueChanges.totalChanges} venue changes to database")
             } else {
@@ -771,8 +803,12 @@ class TwoWaySyncService(
             
             println("✅ Differential venue sync completed successfully")
             
-            // Return changes for UI to apply targeted updates
-            venueChanges
+            // Return merged rows so in-memory _venues matches DB (priority counter not clobbered by stale sheet)
+            if (venueChanges.hasChanges) {
+                venueChanges.copy(modified = mergedModified)
+            } else {
+                venueChanges
+            }
             
         } catch (e: Exception) {
             println("❌ Differential venue sync failed: ${e.message}")
@@ -781,6 +817,76 @@ class TwoWaySyncService(
         }
         }
     }
+
+    private fun venueDifferentialKey(v: VenueEntity): String = v.sheetsId ?: v.name
+
+    private fun shouldPreserveLocalPeopleCounterOnVenuePull(local: VenueEntity, myId: String): Boolean {
+        if (!settingsManager.isPeopleCounterPriority(local.id)) return false
+        val w = local.peopleCounterWriterDeviceId.trim()
+        return w.isEmpty() || w == myId
+    }
+
+    private fun venuePeopleCounterCellsDiffer(remote: VenueEntity, local: VenueEntity): Boolean =
+        remote.peopleCounterCount != local.peopleCounterCount ||
+            remote.peopleCounterWriterDeviceId.trim() != local.peopleCounterWriterDeviceId.trim()
+
+    /**
+     * Applies sheet row [remote] to local id, but keeps E–G from [local] when this device owns priority
+     * for that venue so a stale sheet cannot overwrite an in-progress local count.
+     */
+    private fun mergeVenueFromSheetKeepingPriorityCounter(
+        remote: VenueEntity,
+        local: VenueEntity?,
+        myId: String
+    ): VenueEntity {
+        if (local == null) return remote
+        val base = remote.copy(id = local.id)
+        if (!shouldPreserveLocalPeopleCounterOnVenuePull(local, myId)) return base
+        return base.copy(
+            peopleCounterCount = local.peopleCounterCount,
+            peopleCounterWriterDeviceId = local.peopleCounterWriterDeviceId,
+            peopleCounterLastModified = local.peopleCounterLastModified
+        )
+    }
+
+    /**
+     * Single-row update for venue people counter (columns E–G), serialized with other sheet operations.
+     */
+    suspend fun updateVenuePeopleCounterOnSheets(
+        sheetRow1Based: Int,
+        peopleCount: Int,
+        writerDeviceId: String,
+        counterLastModifiedMs: Long
+    ) = withContext(Dispatchers.IO) {
+        sheetsOpMutex.withLock {
+            if (!isGoogleSheetsConfigured()) {
+                throw IOException("Google Sheets not configured")
+            }
+            googleSheetsService.initializeSheetsService()
+            googleSheetsService.updateVenuePeopleCounterCells(
+                sheetRow1Based,
+                peopleCount,
+                writerDeviceId,
+                counterLastModifiedMs
+            )
+        }
+    }
+
+    /**
+     * Reads the current people-counter cells (E–G) for a venue row from Sheets.
+     * Serialized with other sheet operations so reads see a consistent state with writes.
+     */
+    suspend fun readVenuePeopleCounterFromSheet(sheetRow1Based: Int): Triple<Int, String, Long>? =
+        withContext(Dispatchers.IO) {
+            sheetsOpMutex.withLock {
+                if (!isGoogleSheetsConfigured()) {
+                    null
+                } else {
+                    googleSheetsService.initializeSheetsService()
+                    googleSheetsService.readVenuePeopleCounterCells(sheetRow1Based)
+                }
+            }
+        }
     
     /**
      * BACKUP SPECIFIC DATASET: Upload specific dataset to Google Sheets

@@ -7,6 +7,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -769,7 +770,7 @@ private fun JobTypeDialogFields(
     onNovaJobTypeChange: (NovaJobType) -> Unit = {},
     manualRewards: ManualRewards,
     onManualRewardsChange: (ManualRewards) -> Unit,
-    isCompact: Boolean
+    @Suppress("UNUSED_PARAMETER") isCompact: Boolean
 ) {
     var showStellarInfoDialog by remember { mutableStateOf(false) }
 
@@ -811,7 +812,7 @@ private fun JobTypeDialogFields(
                     modifier = Modifier.size(32.dp)
                 ) {
                     Icon(
-                        Icons.Default.HelpOutline,
+                        Icons.AutoMirrored.Filled.HelpOutline,
                         contentDescription = stringResource(R.string.benefits_help_dialog_title),
                         modifier = Modifier.size(18.dp),
                         tint = MaterialTheme.colorScheme.primary

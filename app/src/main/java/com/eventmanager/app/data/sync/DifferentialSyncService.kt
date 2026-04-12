@@ -304,7 +304,10 @@ class DifferentialSyncService(
     private fun hasVenueChanged(old: VenueEntity, new: VenueEntity): Boolean =
         old.name != new.name ||
         old.description != new.description ||
-        old.isActive != new.isActive
+        old.isActive != new.isActive ||
+        old.peopleCounterCount != new.peopleCounterCount ||
+        old.peopleCounterWriterDeviceId != new.peopleCounterWriterDeviceId ||
+        old.peopleCounterLastModified != new.peopleCounterLastModified
     
     // ========== APPLY CHANGES ==========
     

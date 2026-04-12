@@ -12,7 +12,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.HelpOutline
+import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,7 +20,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
 import com.eventmanager.app.data.models.*
@@ -249,12 +248,14 @@ private fun BenefitsOverviewNoRankRow(count: Int) {
     }
 }
 
+@Suppress("UNUSED_PARAMETER")
 @Composable
 private fun BenefitsOverviewDashboard(
     aggregates: BenefitsDashboardAggregates,
-    onOpenHelp: () -> Unit,
     horizontalSpacing: androidx.compose.ui.unit.Dp,
     verticalSpacing: androidx.compose.ui.unit.Dp,
+    /** Unused: help is opened from [BenefitsScreenTitleRow]; kept so call sites can still pass this argument. */
+    onOpenHelp: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
@@ -264,73 +265,32 @@ private fun BenefitsOverviewDashboard(
     val outerShape = RoundedCornerShape(18.dp)
 
     Column(verticalArrangement = Arrangement.spacedBy(verticalSpacing)) {
-        Row(
+        Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(IntrinsicSize.Min),
-            horizontalArrangement = Arrangement.spacedBy(horizontalSpacing),
-            verticalAlignment = Alignment.Top
+                .heightIn(min = topRowMin),
+            shape = outerShape,
+            colors = CardDefaults.cardColors(containerColor = scheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = elev)
         ) {
-            Card(
+            Column(
                 modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .heightIn(min = topRowMin),
-                shape = outerShape,
-                colors = CardDefaults.cardColors(containerColor = scheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = elev)
+                    .fillMaxWidth()
+                    .padding(cardPad),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(cardPad),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = aggregates.activeBenefitsCount.toString(),
-                        style = getResponsiveTypography(),
-                        fontWeight = FontWeight.Bold,
-                        color = scheme.primary
-                    )
-                    Text(
-                        text = context.getString(R.string.active_benefits),
-                        style = getResponsiveBodyTypography(),
-                        color = scheme.onSurfaceVariant
-                    )
-                }
-            }
-            TextButton(
-                onClick = onOpenHelp,
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .heightIn(min = topRowMin),
-                colors = ButtonDefaults.textButtonColors(
-                    contentColor = scheme.onSurfaceVariant
-                ),
-                shape = outerShape
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
-                ) {
-                    Icon(
-                        Icons.Outlined.HelpOutline,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                        tint = scheme.onSurfaceVariant.copy(alpha = 0.75f)
-                    )
-                    Text(
-                        text = context.getString(R.string.benefits_overview_info_button),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Medium,
-                        textAlign = TextAlign.Center,
-                        color = scheme.onSurfaceVariant,
-                        maxLines = 2
-                    )
-                }
+                Text(
+                    text = aggregates.activeBenefitsCount.toString(),
+                    style = getResponsiveTypography(),
+                    fontWeight = FontWeight.Bold,
+                    color = scheme.primary
+                )
+                Text(
+                    text = context.getString(R.string.active_benefits),
+                    style = getResponsiveBodyTypography(),
+                    color = scheme.onSurfaceVariant
+                )
             }
         }
 
@@ -428,6 +388,33 @@ private fun BenefitsOverviewDashboard(
     }
 }
 
+@Composable
+private fun BenefitsScreenTitleRow(
+    title: String,
+    onOpenHelp: () -> Unit,
+) {
+    val context = LocalContext.current
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.weight(1f)
+        )
+        IconButton(onClick = onOpenHelp) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.HelpOutline,
+                contentDescription = context.getString(R.string.benefits_overview_info_button),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun BenefitsScreen(
@@ -496,11 +483,10 @@ fun BenefitsScreen(
                     .fillMaxSize()
                     .padding(responsivePadding)
             ) {
-            // Header
-            Text(
-                text = if (isCompact) context.getString(R.string.benefits_title) else context.getString(R.string.volunteer_benefits_overview),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
+            // Header + help (top right, same row as title)
+            BenefitsScreenTitleRow(
+                title = if (isCompact) context.getString(R.string.benefits_title) else context.getString(R.string.volunteer_benefits_overview),
+                onOpenHelp = { showBenefitsHelp = true },
             )
             
             Spacer(modifier = Modifier.height(if (isCompact) 4.dp else 8.dp))
@@ -529,7 +515,6 @@ fun BenefitsScreen(
 
             BenefitsOverviewDashboard(
                 aggregates = dashboardStats,
-                onOpenHelp = { showBenefitsHelp = true },
                 horizontalSpacing = responsiveSpacing,
                 verticalSpacing = responsiveSpacing,
             )
@@ -567,10 +552,9 @@ fun BenefitsScreen(
             ) {
                 // Header section (scrolls away)
                 item {
-                    Text(
-                        text = if (isCompact) context.getString(R.string.benefits_title) else context.getString(R.string.volunteer_benefits_overview),
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold
+                    BenefitsScreenTitleRow(
+                        title = if (isCompact) context.getString(R.string.benefits_title) else context.getString(R.string.volunteer_benefits_overview),
+                        onOpenHelp = { showBenefitsHelp = true },
                     )
                 }
 
@@ -618,7 +602,6 @@ fun BenefitsScreen(
                 item {
                     BenefitsOverviewDashboard(
                         aggregates = dashboardStats,
-                        onOpenHelp = { showBenefitsHelp = true },
                         horizontalSpacing = responsiveSpacing,
                         verticalSpacing = responsiveSpacing,
                     )
@@ -646,10 +629,9 @@ fun BenefitsScreen(
                 verticalArrangement = Arrangement.spacedBy(responsiveSpacing)
             ) {
                 item {
-                    Text(
-                        text = if (isCompact) context.getString(R.string.benefits_title) else context.getString(R.string.volunteer_benefits_overview),
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold
+                    BenefitsScreenTitleRow(
+                        title = if (isCompact) context.getString(R.string.benefits_title) else context.getString(R.string.volunteer_benefits_overview),
+                        onOpenHelp = { showBenefitsHelp = true },
                     )
                 }
 
@@ -689,7 +671,6 @@ fun BenefitsScreen(
                 item {
                     BenefitsOverviewDashboard(
                         aggregates = dashboardStats,
-                        onOpenHelp = { showBenefitsHelp = true },
                         horizontalSpacing = responsiveSpacing,
                         verticalSpacing = responsiveSpacing,
                     )
@@ -726,10 +707,6 @@ fun BenefitCard(
     val configsByName = remember(jobTypeConfigs) { jobTypeConfigs.associateBy { it.name } }
     val settingsManager = remember { com.eventmanager.app.data.sync.SettingsManager(context) }
     val offsetHours = remember { settingsManager.getDateChangeOffsetHours() }
-    val meetingNovaBenefitsExcludedForOrion = remember(volunteerJobs, jobTypeConfigs, offsetHours) {
-        val t = System.currentTimeMillis()
-        BenefitCalculator.isVolunteerOrionActive(volunteerJobs, jobTypeConfigs, t, offsetHours)
-    }
     val benefitForPerkList = remember(
         status.benefits,
         status.activeBenefits,

@@ -5,7 +5,6 @@ import com.eventmanager.app.data.dao.JobDao
 import com.eventmanager.app.data.dao.JobTypeConfigDao
 import com.eventmanager.app.data.dao.VenueDao
 import com.eventmanager.app.data.dao.VolunteerDao
-import com.eventmanager.app.data.dao.CounterDao
 import com.eventmanager.app.data.models.*
 import com.eventmanager.app.data.utils.NanoIdGenerator
 import kotlinx.coroutines.flow.Flow
@@ -23,8 +22,7 @@ class EventManagerRepository(
     private val volunteerDao: VolunteerDao,
     private val jobDao: JobDao,
     private val jobTypeConfigDao: JobTypeConfigDao,
-    private val venueDao: VenueDao,
-    private val counterDao: CounterDao
+    private val venueDao: VenueDao
 ) {
     // Guest operations
     fun getAllGuests(): Flow<List<Guest>> = guestDao.getAllGuests()
@@ -96,8 +94,9 @@ class EventManagerRepository(
         
         // Find existing volunteer - use sheetsId first (most reliable), then name+abbreviation
         // This allows multiple volunteers with the same first name but different last names
-        val existingVolunteer = if (validatedVolunteer.sheetsId != null) {
-            volunteerDao.getVolunteerBySheetsId(validatedVolunteer.sheetsId!!)
+        val sheetsId = validatedVolunteer.sheetsId
+        val existingVolunteer = if (sheetsId != null) {
+            volunteerDao.getVolunteerBySheetsId(sheetsId)
         } else {
             null
         } ?: volunteerDao.getVolunteerByNameAndAbbreviation(
@@ -148,8 +147,9 @@ class EventManagerRepository(
         
         // Find existing volunteer - use sheetsId first (most reliable), then name+abbreviation
         // This allows multiple volunteers with the same first name but different last names
-        val existingVolunteer = if (validatedVolunteer.sheetsId != null) {
-            volunteerDao.getVolunteerBySheetsId(validatedVolunteer.sheetsId!!)
+        val sheetsIdForUpdate = validatedVolunteer.sheetsId
+        val existingVolunteer = if (sheetsIdForUpdate != null) {
+            volunteerDao.getVolunteerBySheetsId(sheetsIdForUpdate)
         } else {
             null
         } ?: volunteerDao.getVolunteerByNameAndAbbreviation(
@@ -208,8 +208,9 @@ class EventManagerRepository(
             
             // Find existing volunteer - use sheetsId first (most reliable), then name+abbreviation
             // This allows multiple volunteers with the same first name but different last names
-            val existingVolunteer = if (validatedVolunteer.sheetsId != null) {
-                volunteerDao.getVolunteerBySheetsId(validatedVolunteer.sheetsId!!)
+            val batchSheetsId = validatedVolunteer.sheetsId
+            val existingVolunteer = if (batchSheetsId != null) {
+                volunteerDao.getVolunteerBySheetsId(batchSheetsId)
             } else {
                 null
             } ?: volunteerDao.getVolunteerByNameAndAbbreviation(
@@ -264,6 +265,7 @@ class EventManagerRepository(
 
     // Venue operations
     fun getAllVenues(): Flow<List<VenueEntity>> = venueDao.getAllVenues()
+    suspend fun getVenueById(id: Long): VenueEntity? = venueDao.getVenueById(id)
     suspend fun insertVenue(venue: VenueEntity): Long = venueDao.insertVenue(venue)
     suspend fun updateVenue(venue: VenueEntity) = venueDao.updateVenue(venue)
     suspend fun deleteVenue(venue: VenueEntity) = venueDao.deleteVenue(venue)
@@ -334,27 +336,5 @@ class EventManagerRepository(
         jobTypeConfigDao.deleteAllJobTypeConfigs()
     }
     
-    // Counter operations
-    fun getCounter(): Flow<CounterData?> = counterDao.getCounter()
-    
-    suspend fun getCounterOnce(): CounterData? = counterDao.getCounterOnce()
-    
-    suspend fun updateCounter(count: Int) {
-        val counter = CounterData(
-            id = 1,
-            count = count,
-            lastModified = System.currentTimeMillis()
-        )
-        counterDao.insertOrUpdateCounter(counter)
-    }
-    
-    suspend fun resetCounter() {
-        val counter = CounterData(
-            id = 1,
-            count = 0,
-            lastModified = System.currentTimeMillis()
-        )
-        counterDao.insertOrUpdateCounter(counter)
-    }
 }
 

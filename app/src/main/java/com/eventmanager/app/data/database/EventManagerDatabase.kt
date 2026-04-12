@@ -12,18 +12,16 @@ import com.eventmanager.app.data.dao.JobDao
 import com.eventmanager.app.data.dao.JobTypeConfigDao
 import com.eventmanager.app.data.dao.VenueDao
 import com.eventmanager.app.data.dao.VolunteerDao
-import com.eventmanager.app.data.dao.CounterDao
 import com.eventmanager.app.data.models.Converters
 import com.eventmanager.app.data.models.Guest
 import com.eventmanager.app.data.models.Job
 import com.eventmanager.app.data.models.JobTypeConfig
 import com.eventmanager.app.data.models.VenueEntity
 import com.eventmanager.app.data.models.Volunteer
-import com.eventmanager.app.data.models.CounterData
 
 @Database(
-    entities = [Guest::class, Volunteer::class, Job::class, JobTypeConfig::class, VenueEntity::class, CounterData::class],
-    version = 28,
+    entities = [Guest::class, Volunteer::class, Job::class, JobTypeConfig::class, VenueEntity::class],
+    version = 29,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -33,7 +31,6 @@ abstract class EventManagerDatabase : RoomDatabase() {
     abstract fun jobDao(): JobDao
     abstract fun jobTypeConfigDao(): JobTypeConfigDao
     abstract fun venueDao(): VenueDao
-    abstract fun counterDao(): CounterDao
 
     companion object {
         @Volatile
@@ -1054,6 +1051,26 @@ abstract class EventManagerDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * MIGRATION 28→29: Per-venue people counter (Google Sheets E–G); remove legacy single counter table.
+         */
+        private val MIGRATION_28_29 = object : Migration(28, 29) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                try {
+                    println("Starting migration 28→29: Venue people counter columns + drop people_counter")
+                    db.execSQL("ALTER TABLE venues ADD COLUMN peopleCounterCount INTEGER NOT NULL DEFAULT 0")
+                    db.execSQL("ALTER TABLE venues ADD COLUMN peopleCounterWriterDeviceId TEXT NOT NULL DEFAULT ''")
+                    db.execSQL("ALTER TABLE venues ADD COLUMN peopleCounterLastModified INTEGER NOT NULL DEFAULT 0")
+                    db.execSQL("DROP TABLE IF EXISTS people_counter")
+                    println("Migration 28→29 completed successfully")
+                } catch (e: Exception) {
+                    println("Migration 28→29 failed: ${e.message}")
+                    e.printStackTrace()
+                    throw e
+                }
+            }
+        }
+
         fun getDatabase(context: Context): EventManagerDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -1088,7 +1105,8 @@ abstract class EventManagerDatabase : RoomDatabase() {
                     MIGRATION_24_25,
                     MIGRATION_25_26,
                     MIGRATION_26_27,
-                    MIGRATION_27_28
+                    MIGRATION_27_28,
+                    MIGRATION_28_29
                 )
                 .fallbackToDestructiveMigration()
                 .build()

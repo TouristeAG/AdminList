@@ -1,8 +1,8 @@
 {
-  "latestVersionCode": 14,
-  "latestVersionName": "0.9.9.4",
+  "latestVersionCode": 15,
+  "latestVersionName": "0.9.9.5",
   "minSupportedVersionCode": "14",
-  "changelogShort": "A lot of new stuff and bug fixes",
-  "downloadUrl": "https://github.com/TouristeAG/AdminList/releases/download/0.9.9.4/app-release-0.9.9.4.apk",
+  "changelogShort": "New synced people counter per venue, new bug fixes and UI adaptations",
+  "downloadUrl": "https://github.com/TouristeAG/AdminList/releases/download/0.9.9.5/app-release-0.9.9.5.apk",
   "storeUrl": "https://play.google.com/store/apps/details?id=com.eventmanager.app"
 }

@@ -260,8 +260,9 @@ fun getResponsiveMinTouchTarget(): Dp {
 
 // ============================================================================
 // TABLET DIALOG UTILITIES
-// On tablets, dialogs use almost the full screen with a small fixed inset from
-// each edge so windows never touch the display border. Phones are unchanged.
+// On tablets, dialogs may use most of the inner area but keep a generous fixed
+// inset from each physical screen edge so windows never feel edge-to-edge.
+// Phones are unchanged.
 // ============================================================================
 
 /**
@@ -272,8 +273,8 @@ fun getResponsiveMinTouchTarget(): Dp {
 fun getTabletDialogScreenEdgeInset(): Dp {
     return when (getScreenSize()) {
         ScreenSize.COMPACT -> 0.dp
-        ScreenSize.MEDIUM -> 16.dp
-        ScreenSize.EXPANDED -> 24.dp
+        ScreenSize.MEDIUM -> 48.dp
+        ScreenSize.EXPANDED -> 72.dp
     }
 }
 

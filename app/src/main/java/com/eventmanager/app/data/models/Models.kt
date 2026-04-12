@@ -252,16 +252,13 @@ data class VenueEntity(
     val name: String,
     val description: String = "",
     val isActive: Boolean = true,
-    val lastModified: Long = System.currentTimeMillis()
-) : Parcelable
-
-@Entity(tableName = "people_counter")
-@Parcelize
-data class CounterData(
-    @PrimaryKey
-    val id: Long = 1, // Always use the same ID for single counter
-    val count: Int = 0,
-    val lastModified: Long = System.currentTimeMillis()
+    val lastModified: Long = System.currentTimeMillis(),
+    /** Google Sheets column E — header "Number of people"; people count for this venue (synced). */
+    val peopleCounterCount: Int = 0,
+    /** Google Sheets column F — header "Priority Device ID"; device ID that may write counter updates. */
+    val peopleCounterWriterDeviceId: String = "",
+    /** Google Sheets column G — header "Last Modified (counter)"; millis when counter cells were last written. */
+    val peopleCounterLastModified: Long = 0L
 ) : Parcelable
 
 enum class ShiftTime {
@@ -884,7 +881,7 @@ object BenefitCalculator {
 
     private fun calculateBenefitsForRank(
         rank: VolunteerRank?,
-        jobs: List<Job>,
+        @Suppress("UNUSED_PARAMETER") jobs: List<Job>,
         orionJobs: List<Job>,
         ctx: CalculationContext
     ): Benefit {

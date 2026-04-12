@@ -86,7 +86,14 @@ object ColorThemes {
             scrim = this.scrim,
             inverseSurface = this.inverseSurface,
             inverseOnSurface = this.inverseOnSurface,
-            inversePrimary = this.inversePrimary
+            inversePrimary = this.inversePrimary,
+            surfaceDim = this.surfaceDim,
+            surfaceBright = this.surfaceBright,
+            surfaceContainerLowest = this.surfaceContainerLowest,
+            surfaceContainerLow = this.surfaceContainerLow,
+            surfaceContainer = this.surfaceContainer,
+            surfaceContainerHigh = this.surfaceContainerHigh,
+            surfaceContainerHighest = this.surfaceContainerHighest
         )
     }
     

@@ -1417,12 +1417,27 @@ class GoogleSheetsService(private val context: Context) {
                         venue.name,
                         venue.description,
                         if (venue.isActive) "Active" else "Inactive",
-                        venue.lastModified.toString()
+                        venue.lastModified.toString(),
+                        venue.peopleCounterCount.toString(),
+                        venue.peopleCounterWriterDeviceId,
+                        venue.peopleCounterLastModified.toString()
                     )
                 }
                 
                 val valueRange = ValueRange()
-                    .setValues(listOf(listOf("Name", "Description", "Status", "Last Modified")) + values)
+                    .setValues(
+                        listOf(
+                            listOf(
+                                "Name",
+                                "Description",
+                                "Status",
+                                "Last Modified",
+                                "Number of people",
+                                "Priority Device ID",
+                                "Last Modified (counter)"
+                            )
+                        ) + values
+                    )
                 
                 println("📤 Sending ${values.size + 1} rows (including header) to Google Sheets...")
                 
@@ -1460,7 +1475,7 @@ class GoogleSheetsService(private val context: Context) {
                 operation = {
                 val response = sheetsService?.spreadsheets()?.values()?.get(
                     settingsManager.getSpreadsheetId(),
-                    "${settingsManager.getVenuesSheet()}!A2:D"
+                    "${settingsManager.getVenuesSheet()}!A2:G"
                 )?.execute()
                 
                 if (response == null) {
@@ -1480,7 +1495,10 @@ class GoogleSheetsService(private val context: Context) {
                                 name = row[0].toString(),
                                 description = row[1].toString(),
                                 isActive = row[2].toString().equals("Active", ignoreCase = true),
-                                lastModified = row[3].toString().toLongOrNull() ?: System.currentTimeMillis()
+                                lastModified = row[3].toString().toLongOrNull() ?: System.currentTimeMillis(),
+                                peopleCounterCount = row.getOrNull(4)?.toString()?.toIntOrNull() ?: 0,
+                                peopleCounterWriterDeviceId = row.getOrNull(5)?.toString()?.trim() ?: "",
+                                peopleCounterLastModified = row.getOrNull(6)?.toString()?.toLongOrNull() ?: 0L
                             )
                         } catch (e: Exception) {
                             println("Failed to parse venue row ${index + 2}: ${e.message}")
@@ -1503,6 +1521,78 @@ class GoogleSheetsService(private val context: Context) {
                 throw IOException(ApiRateLimitHandler.getBriefRateLimitMessage(), e)
             } else {
                 throw IOException(createNetworkErrorMessage("sync venues from Google Sheets", e), e)
+            }
+        }
+    }
+
+    /**
+     * Reads columns E–G (people count, writer device id, counter last modified) for one venue row.
+     */
+    suspend fun readVenuePeopleCounterCells(sheetRow1Based: Int): Triple<Int, String, Long>? = withContext(Dispatchers.IO) {
+        try {
+            if (sheetsService == null) {
+                initializeSheetsService()
+            }
+            val sheet = settingsManager.getVenuesSheet()
+            val response = sheetsService?.spreadsheets()?.values()?.get(
+                settingsManager.getSpreadsheetId(),
+                "$sheet!E$sheetRow1Based:G$sheetRow1Based"
+            )?.execute()
+            val row = response?.getValues()?.firstOrNull() ?: return@withContext null
+            val count = row.getOrNull(0)?.toString()?.toIntOrNull() ?: 0
+            val writer = row.getOrNull(1)?.toString()?.trim().orEmpty()
+            val mod = row.getOrNull(2)?.toString()?.toLongOrNull() ?: 0L
+            Triple(count, writer, mod)
+        } catch (e: Exception) {
+            println("Failed to read venue people counter cells: ${e.message}")
+            null
+        }
+    }
+
+    /**
+     * Updates only columns E–G on the venues sheet for one row (people counter).
+     * Uses a single API write to limit quota usage.
+     */
+    suspend fun updateVenuePeopleCounterCells(
+        sheetRow1Based: Int,
+        peopleCount: Int,
+        writerDeviceId: String,
+        counterLastModifiedMs: Long
+    ) = withContext(Dispatchers.IO) {
+        try {
+            if (sheetsService == null) {
+                initializeSheetsService()
+            }
+            val sheet = settingsManager.getVenuesSheet()
+            ApiRateLimitHandler.executeWithRetry(
+                operation = {
+                    val valueRange = ValueRange().setValues(
+                        listOf(
+                            listOf(
+                                peopleCount.toString(),
+                                writerDeviceId,
+                                counterLastModifiedMs.toString()
+                            )
+                        )
+                    )
+                    val response = sheetsService?.spreadsheets()?.values()?.update(
+                        settingsManager.getSpreadsheetId(),
+                        "$sheet!E$sheetRow1Based:G$sheetRow1Based",
+                        valueRange
+                    )?.setValueInputOption("RAW")?.execute()
+                    if (response == null) {
+                        throw IOException("Failed to update venue people counter in Google Sheets - no response")
+                    }
+                    println("✅ Updated venue counter row $sheetRow1Based (count=$peopleCount)")
+                },
+                operationName = "update venue people counter cells"
+            )
+        } catch (e: Exception) {
+            println("Failed to update venue people counter cells: ${e.message}")
+            if (e.message?.contains("429") == true || e.message?.contains("Rate limit") == true) {
+                throw IOException(ApiRateLimitHandler.getBriefRateLimitMessage(), e)
+            } else {
+                throw IOException(createNetworkErrorMessage("update venue people counter in Google Sheets", e), e)
             }
         }
     }
@@ -1726,7 +1816,15 @@ class GoogleSheetsService(private val context: Context) {
         ),
         SheetDefinition(
             settingsManager.getVenuesSheet(),
-            listOf("Name", "Description", "Status", "Last Modified")
+            listOf(
+                "Name",
+                "Description",
+                "Status",
+                "Last Modified",
+                "Number of people",
+                "Priority Device ID",
+                "Last Modified (counter)"
+            )
         ),
         SheetDefinition(
             settingsManager.getTempGuestListSheet(),

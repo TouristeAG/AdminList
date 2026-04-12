@@ -10,6 +10,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Notes
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.animation.core.animateFloat
@@ -868,7 +870,7 @@ fun GuestDetailPanel(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 modifier = Modifier.padding(8.dp)
                             ) {
-                                Icon(Icons.Default.Send, contentDescription = null)
+                                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null)
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = getStringResource(R.string.email_send_manual),
@@ -1024,6 +1026,8 @@ private fun GuestInformationSection(
 ) {
     val context = LocalContext.current
     val responsivePadding = if (isPhone) getPhonePortraitCardPadding() else getResponsiveCardPadding()
+    val (easterNameColor, easterSubtitleColor) = leonardoEasterEggProfileNameColors()
+    val easterHeaderIconTint = leonardoEasterEggHeaderIconTint()
     
     if (guest.isTemporaryGuest) {
         TemporaryGuestInformationSection(
@@ -1069,7 +1073,7 @@ private fun GuestInformationSection(
                                 text = guest.name,
                                 style = if (isPhone) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.headlineMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = if (easterEggEnabled) Color(0xFFFFF3B0) else MaterialTheme.colorScheme.onPrimaryContainer,
+                                color = if (easterEggEnabled) easterNameColor else MaterialTheme.colorScheme.onPrimaryContainer,
                                 modifier = if (easterEggEnabled) {
                                     Modifier.graphicsLayer {
                                         shadowElevation = 14.dp.toPx()
@@ -1084,7 +1088,7 @@ private fun GuestInformationSection(
                                 Text(
                                     text = guest.lastNameAbbreviation,
                                     style = if (isPhone) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge,
-                                    color = if (easterEggEnabled) Color(0xFFE3FFFB) else MaterialTheme.colorScheme.onPrimaryContainer,
+                                    color = if (easterEggEnabled) easterSubtitleColor else MaterialTheme.colorScheme.onPrimaryContainer,
                                     modifier = if (easterEggEnabled) {
                                         Modifier.graphicsLayer {
                                             shadowElevation = 10.dp.toPx()
@@ -1104,7 +1108,7 @@ private fun GuestInformationSection(
                                     Icon(
                                         imageVector = Icons.Default.QrCode,
                                         contentDescription = context.getString(R.string.qr_code),
-                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                        tint = if (easterEggEnabled) easterHeaderIconTint else MaterialTheme.colorScheme.onPrimaryContainer
                                     )
                                 }
                             }
@@ -1112,7 +1116,7 @@ private fun GuestInformationSection(
                                 Icon(
                                     imageVector = Icons.Default.Close,
                                     contentDescription = context.getString(R.string.close),
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                    tint = if (easterEggEnabled) easterHeaderIconTint else MaterialTheme.colorScheme.onPrimaryContainer
                                 )
                             }
                         }
@@ -1159,7 +1163,7 @@ private fun GuestInformationSection(
                             Triple(
                                 context.getString(R.string.notes),
                                 guest.notes,
-                                Icons.Default.Notes
+                                Icons.AutoMirrored.Filled.Notes
                             )
                         )
                     }
@@ -1317,7 +1321,7 @@ private fun TemporaryGuestInformationSection(
                     DetailTile(
                         label = context.getString(R.string.notes),
                         value = notesText,
-                        icon = Icons.Default.Notes
+                        icon = Icons.AutoMirrored.Filled.Notes
                     )
                 }
             } else {
@@ -1346,7 +1350,7 @@ private fun TemporaryGuestInformationSection(
                         DetailTile(
                             label = context.getString(R.string.notes),
                             value = notesText,
-                            icon = Icons.Default.Notes,
+                            icon = Icons.AutoMirrored.Filled.Notes,
                             modifier = Modifier.weight(1f)
                         )
                     }

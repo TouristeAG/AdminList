@@ -53,7 +53,7 @@ public final class VenueDao_Impl implements VenueDao {
       @Override
       @NonNull
       protected String createQuery() {
-        return "INSERT OR REPLACE INTO `venues` (`id`,`sheetsId`,`name`,`description`,`isActive`,`lastModified`) VALUES (nullif(?, 0),?,?,?,?,?)";
+        return "INSERT OR REPLACE INTO `venues` (`id`,`sheetsId`,`name`,`description`,`isActive`,`lastModified`,`peopleCounterCount`,`peopleCounterWriterDeviceId`,`peopleCounterLastModified`) VALUES (nullif(?, 0),?,?,?,?,?,?,?,?)";
       }
 
       @Override
@@ -70,6 +70,9 @@ public final class VenueDao_Impl implements VenueDao {
         final int _tmp = entity.isActive() ? 1 : 0;
         statement.bindLong(5, _tmp);
         statement.bindLong(6, entity.getLastModified());
+        statement.bindLong(7, entity.getPeopleCounterCount());
+        statement.bindString(8, entity.getPeopleCounterWriterDeviceId());
+        statement.bindLong(9, entity.getPeopleCounterLastModified());
       }
     };
     this.__deletionAdapterOfVenueEntity = new EntityDeletionOrUpdateAdapter<VenueEntity>(__db) {
@@ -89,7 +92,7 @@ public final class VenueDao_Impl implements VenueDao {
       @Override
       @NonNull
       protected String createQuery() {
-        return "UPDATE OR ABORT `venues` SET `id` = ?,`sheetsId` = ?,`name` = ?,`description` = ?,`isActive` = ?,`lastModified` = ? WHERE `id` = ?";
+        return "UPDATE OR ABORT `venues` SET `id` = ?,`sheetsId` = ?,`name` = ?,`description` = ?,`isActive` = ?,`lastModified` = ?,`peopleCounterCount` = ?,`peopleCounterWriterDeviceId` = ?,`peopleCounterLastModified` = ? WHERE `id` = ?";
       }
 
       @Override
@@ -106,7 +109,10 @@ public final class VenueDao_Impl implements VenueDao {
         final int _tmp = entity.isActive() ? 1 : 0;
         statement.bindLong(5, _tmp);
         statement.bindLong(6, entity.getLastModified());
-        statement.bindLong(7, entity.getId());
+        statement.bindLong(7, entity.getPeopleCounterCount());
+        statement.bindString(8, entity.getPeopleCounterWriterDeviceId());
+        statement.bindLong(9, entity.getPeopleCounterLastModified());
+        statement.bindLong(10, entity.getId());
       }
     };
     this.__preparedStmtOfDeleteVenueById = new SharedSQLiteStatement(__db) {
@@ -339,6 +345,9 @@ public final class VenueDao_Impl implements VenueDao {
           final int _cursorIndexOfDescription = CursorUtil.getColumnIndexOrThrow(_cursor, "description");
           final int _cursorIndexOfIsActive = CursorUtil.getColumnIndexOrThrow(_cursor, "isActive");
           final int _cursorIndexOfLastModified = CursorUtil.getColumnIndexOrThrow(_cursor, "lastModified");
+          final int _cursorIndexOfPeopleCounterCount = CursorUtil.getColumnIndexOrThrow(_cursor, "peopleCounterCount");
+          final int _cursorIndexOfPeopleCounterWriterDeviceId = CursorUtil.getColumnIndexOrThrow(_cursor, "peopleCounterWriterDeviceId");
+          final int _cursorIndexOfPeopleCounterLastModified = CursorUtil.getColumnIndexOrThrow(_cursor, "peopleCounterLastModified");
           final List<VenueEntity> _result = new ArrayList<VenueEntity>(_cursor.getCount());
           while (_cursor.moveToNext()) {
             final VenueEntity _item;
@@ -360,7 +369,13 @@ public final class VenueDao_Impl implements VenueDao {
             _tmpIsActive = _tmp != 0;
             final long _tmpLastModified;
             _tmpLastModified = _cursor.getLong(_cursorIndexOfLastModified);
-            _item = new VenueEntity(_tmpId,_tmpSheetsId,_tmpName,_tmpDescription,_tmpIsActive,_tmpLastModified);
+            final int _tmpPeopleCounterCount;
+            _tmpPeopleCounterCount = _cursor.getInt(_cursorIndexOfPeopleCounterCount);
+            final String _tmpPeopleCounterWriterDeviceId;
+            _tmpPeopleCounterWriterDeviceId = _cursor.getString(_cursorIndexOfPeopleCounterWriterDeviceId);
+            final long _tmpPeopleCounterLastModified;
+            _tmpPeopleCounterLastModified = _cursor.getLong(_cursorIndexOfPeopleCounterLastModified);
+            _item = new VenueEntity(_tmpId,_tmpSheetsId,_tmpName,_tmpDescription,_tmpIsActive,_tmpLastModified,_tmpPeopleCounterCount,_tmpPeopleCounterWriterDeviceId,_tmpPeopleCounterLastModified);
             _result.add(_item);
           }
           return _result;
@@ -392,6 +407,9 @@ public final class VenueDao_Impl implements VenueDao {
           final int _cursorIndexOfDescription = CursorUtil.getColumnIndexOrThrow(_cursor, "description");
           final int _cursorIndexOfIsActive = CursorUtil.getColumnIndexOrThrow(_cursor, "isActive");
           final int _cursorIndexOfLastModified = CursorUtil.getColumnIndexOrThrow(_cursor, "lastModified");
+          final int _cursorIndexOfPeopleCounterCount = CursorUtil.getColumnIndexOrThrow(_cursor, "peopleCounterCount");
+          final int _cursorIndexOfPeopleCounterWriterDeviceId = CursorUtil.getColumnIndexOrThrow(_cursor, "peopleCounterWriterDeviceId");
+          final int _cursorIndexOfPeopleCounterLastModified = CursorUtil.getColumnIndexOrThrow(_cursor, "peopleCounterLastModified");
           final List<VenueEntity> _result = new ArrayList<VenueEntity>(_cursor.getCount());
           while (_cursor.moveToNext()) {
             final VenueEntity _item;
@@ -413,7 +431,13 @@ public final class VenueDao_Impl implements VenueDao {
             _tmpIsActive = _tmp != 0;
             final long _tmpLastModified;
             _tmpLastModified = _cursor.getLong(_cursorIndexOfLastModified);
-            _item = new VenueEntity(_tmpId,_tmpSheetsId,_tmpName,_tmpDescription,_tmpIsActive,_tmpLastModified);
+            final int _tmpPeopleCounterCount;
+            _tmpPeopleCounterCount = _cursor.getInt(_cursorIndexOfPeopleCounterCount);
+            final String _tmpPeopleCounterWriterDeviceId;
+            _tmpPeopleCounterWriterDeviceId = _cursor.getString(_cursorIndexOfPeopleCounterWriterDeviceId);
+            final long _tmpPeopleCounterLastModified;
+            _tmpPeopleCounterLastModified = _cursor.getLong(_cursorIndexOfPeopleCounterLastModified);
+            _item = new VenueEntity(_tmpId,_tmpSheetsId,_tmpName,_tmpDescription,_tmpIsActive,_tmpLastModified,_tmpPeopleCounterCount,_tmpPeopleCounterWriterDeviceId,_tmpPeopleCounterLastModified);
             _result.add(_item);
           }
           return _result;
@@ -448,6 +472,9 @@ public final class VenueDao_Impl implements VenueDao {
           final int _cursorIndexOfDescription = CursorUtil.getColumnIndexOrThrow(_cursor, "description");
           final int _cursorIndexOfIsActive = CursorUtil.getColumnIndexOrThrow(_cursor, "isActive");
           final int _cursorIndexOfLastModified = CursorUtil.getColumnIndexOrThrow(_cursor, "lastModified");
+          final int _cursorIndexOfPeopleCounterCount = CursorUtil.getColumnIndexOrThrow(_cursor, "peopleCounterCount");
+          final int _cursorIndexOfPeopleCounterWriterDeviceId = CursorUtil.getColumnIndexOrThrow(_cursor, "peopleCounterWriterDeviceId");
+          final int _cursorIndexOfPeopleCounterLastModified = CursorUtil.getColumnIndexOrThrow(_cursor, "peopleCounterLastModified");
           final VenueEntity _result;
           if (_cursor.moveToFirst()) {
             final long _tmpId;
@@ -468,7 +495,13 @@ public final class VenueDao_Impl implements VenueDao {
             _tmpIsActive = _tmp != 0;
             final long _tmpLastModified;
             _tmpLastModified = _cursor.getLong(_cursorIndexOfLastModified);
-            _result = new VenueEntity(_tmpId,_tmpSheetsId,_tmpName,_tmpDescription,_tmpIsActive,_tmpLastModified);
+            final int _tmpPeopleCounterCount;
+            _tmpPeopleCounterCount = _cursor.getInt(_cursorIndexOfPeopleCounterCount);
+            final String _tmpPeopleCounterWriterDeviceId;
+            _tmpPeopleCounterWriterDeviceId = _cursor.getString(_cursorIndexOfPeopleCounterWriterDeviceId);
+            final long _tmpPeopleCounterLastModified;
+            _tmpPeopleCounterLastModified = _cursor.getLong(_cursorIndexOfPeopleCounterLastModified);
+            _result = new VenueEntity(_tmpId,_tmpSheetsId,_tmpName,_tmpDescription,_tmpIsActive,_tmpLastModified,_tmpPeopleCounterCount,_tmpPeopleCounterWriterDeviceId,_tmpPeopleCounterLastModified);
           } else {
             _result = null;
           }
@@ -501,6 +534,9 @@ public final class VenueDao_Impl implements VenueDao {
           final int _cursorIndexOfDescription = CursorUtil.getColumnIndexOrThrow(_cursor, "description");
           final int _cursorIndexOfIsActive = CursorUtil.getColumnIndexOrThrow(_cursor, "isActive");
           final int _cursorIndexOfLastModified = CursorUtil.getColumnIndexOrThrow(_cursor, "lastModified");
+          final int _cursorIndexOfPeopleCounterCount = CursorUtil.getColumnIndexOrThrow(_cursor, "peopleCounterCount");
+          final int _cursorIndexOfPeopleCounterWriterDeviceId = CursorUtil.getColumnIndexOrThrow(_cursor, "peopleCounterWriterDeviceId");
+          final int _cursorIndexOfPeopleCounterLastModified = CursorUtil.getColumnIndexOrThrow(_cursor, "peopleCounterLastModified");
           final VenueEntity _result;
           if (_cursor.moveToFirst()) {
             final long _tmpId;
@@ -521,7 +557,13 @@ public final class VenueDao_Impl implements VenueDao {
             _tmpIsActive = _tmp != 0;
             final long _tmpLastModified;
             _tmpLastModified = _cursor.getLong(_cursorIndexOfLastModified);
-            _result = new VenueEntity(_tmpId,_tmpSheetsId,_tmpName,_tmpDescription,_tmpIsActive,_tmpLastModified);
+            final int _tmpPeopleCounterCount;
+            _tmpPeopleCounterCount = _cursor.getInt(_cursorIndexOfPeopleCounterCount);
+            final String _tmpPeopleCounterWriterDeviceId;
+            _tmpPeopleCounterWriterDeviceId = _cursor.getString(_cursorIndexOfPeopleCounterWriterDeviceId);
+            final long _tmpPeopleCounterLastModified;
+            _tmpPeopleCounterLastModified = _cursor.getLong(_cursorIndexOfPeopleCounterLastModified);
+            _result = new VenueEntity(_tmpId,_tmpSheetsId,_tmpName,_tmpDescription,_tmpIsActive,_tmpLastModified,_tmpPeopleCounterCount,_tmpPeopleCounterWriterDeviceId,_tmpPeopleCounterLastModified);
           } else {
             _result = null;
           }

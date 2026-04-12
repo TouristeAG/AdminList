@@ -85,6 +85,24 @@ class EventManagerViewModel(
     private val _venues = MutableStateFlow<List<VenueEntity>>(emptyList())
     val venues: StateFlow<List<VenueEntity>> = _venues
 
+    private val _peopleCounterSelectedVenueId = MutableStateFlow(0L)
+    val peopleCounterSelectedVenueId: StateFlow<Long> = _peopleCounterSelectedVenueId.asStateFlow()
+
+    private val _peopleCounterPriority = MutableStateFlow(false)
+    val peopleCounterPriority: StateFlow<Boolean> = _peopleCounterPriority.asStateFlow()
+
+    private val _peopleCounterUiHint = MutableStateFlow<String?>(null)
+    val peopleCounterUiHint: StateFlow<String?> = _peopleCounterUiHint.asStateFlow()
+
+    private val peopleCounterUploadMutex = Mutex()
+
+    private data class PeopleCounterThrottle(
+        var lastUploadAtMs: Long = 0L,
+        var countAtLastUpload: Int? = null
+    )
+
+    private val peopleCounterThrottleByVenue = mutableMapOf<Long, PeopleCounterThrottle>()
+
     // State for sync status
     private val _isSyncing = MutableStateFlow(false)
     val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
@@ -142,6 +160,14 @@ class EventManagerViewModel(
         viewModelScope.launch {
             delay(800) // Small delay to ensure all data is loaded
             updateVolunteerActivityFromCurrentJobs()
+        }
+        context?.let { ctx ->
+            val sm = SettingsManager(ctx)
+            val savedVenue = sm.getPeopleCounterSelectedVenueId()
+            if (savedVenue > 0L) {
+                _peopleCounterSelectedVenueId.value = savedVenue
+            }
+            _peopleCounterPriority.value = sm.isPeopleCounterPriority(_peopleCounterSelectedVenueId.value)
         }
     }
 
@@ -1648,6 +1674,8 @@ class EventManagerViewModel(
         }
         
         // Merge Venues
+        val smVenue = context?.let { SettingsManager(it) }
+        val myDeviceIdVenue = smVenue?.getOrCreatePersistentDeviceId()
         var venuesAdded = 0
         var venuesUpdated = 0
         for (remoteVenue in remoteVenues) {
@@ -1671,14 +1699,43 @@ class EventManagerViewModel(
                 } catch (e: Exception) {
                     println("Failed to add venue: ${remoteVenue.name} - ${e.message}")
                 }
-            } else if (remoteVenue.lastModified > localVenue.lastModified) {
-                // Remote version is newer
-                try {
-                    repository.updateVenue(remoteVenue.copy(id = localVenue.id))
-                    venuesUpdated++
-                    println("Updated venue: ${remoteVenue.name}")
-                } catch (e: Exception) {
-                    println("Failed to update venue: ${remoteVenue.name} - ${e.message}")
+            } else {
+                val keepLocalPeopleCounter = smVenue != null && myDeviceIdVenue != null &&
+                    shouldKeepLocalPeopleCounterWhenPullingFromSheet(smVenue, myDeviceIdVenue, localVenue)
+                val remoteVenueMetaNewer = remoteVenue.lastModified > localVenue.lastModified
+                val remoteCounterNewer = remoteVenue.peopleCounterLastModified > localVenue.peopleCounterLastModified
+                if (remoteVenueMetaNewer) {
+                    try {
+                        val merged = if (keepLocalPeopleCounter) {
+                            remoteVenue.copy(
+                                id = localVenue.id,
+                                peopleCounterCount = localVenue.peopleCounterCount,
+                                peopleCounterWriterDeviceId = localVenue.peopleCounterWriterDeviceId,
+                                peopleCounterLastModified = localVenue.peopleCounterLastModified
+                            )
+                        } else {
+                            remoteVenue.copy(id = localVenue.id)
+                        }
+                        repository.updateVenue(merged)
+                        venuesUpdated++
+                        println("Updated venue: ${remoteVenue.name}")
+                    } catch (e: Exception) {
+                        println("Failed to update venue: ${remoteVenue.name} - ${e.message}")
+                    }
+                } else if (remoteCounterNewer && !keepLocalPeopleCounter) {
+                    try {
+                        repository.updateVenue(
+                            localVenue.copy(
+                                peopleCounterCount = remoteVenue.peopleCounterCount,
+                                peopleCounterWriterDeviceId = remoteVenue.peopleCounterWriterDeviceId,
+                                peopleCounterLastModified = remoteVenue.peopleCounterLastModified
+                            )
+                        )
+                        venuesUpdated++
+                        println("Updated venue counter from sheets: ${remoteVenue.name}")
+                    } catch (e: Exception) {
+                        println("Failed to update venue counter: ${remoteVenue.name} - ${e.message}")
+                    }
                 }
             }
         }
@@ -4406,6 +4463,7 @@ class EventManagerViewModel(
                     
                     // Apply targeted UI updates instead of full refresh
                     applyVenueUIUpdates(changes)
+                    reconcilePeopleCounterAfterVenuesChangedInternal()
                     
                     // Update sync time
                     updateSyncTime()
@@ -4579,6 +4637,303 @@ class EventManagerViewModel(
         } catch (e: Exception) {
             println("❌ Failed to recalc volunteer benefits: ${e.message}")
             e.printStackTrace()
+        }
+    }
+
+    fun clearPeopleCounterUiHint() {
+        _peopleCounterUiHint.value = null
+    }
+
+    fun refreshVenuesForPeopleCounterQuietly() {
+        viewModelScope.launch {
+            try {
+                pullVenuesDifferentialQuiet()
+            } catch (e: Exception) {
+                println("Quiet venue refresh failed: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Tap on the counter "last updated" line: with priority for this venue, push local count to Sheets;
+     * without priority, pull venue rows so the counter reflects the sheet.
+     */
+    fun resyncPeopleCounterLastUpdatedLine() {
+        val ctx = context ?: return
+        viewModelScope.launch {
+            if (!isGoogleSheetsConfigured()) return@launch
+            val sm = SettingsManager(ctx)
+            val vid = _peopleCounterSelectedVenueId.value
+            if (vid <= 0L) return@launch
+            if (sm.isPeopleCounterPriority(vid)) {
+                val venue = repository.getVenueById(vid) ?: return@launch
+                val row = venue.sheetsId?.toIntOrNull() ?: return@launch
+                val myId = sm.getOrCreatePersistentDeviceId()
+                val now = System.currentTimeMillis()
+                val count = venue.peopleCounterCount
+                peopleCounterUploadMutex.withLock {
+                    twoWaySyncService?.updateVenuePeopleCounterOnSheets(row, count, myId, now)
+                    val fresh = repository.getVenueById(vid) ?: return@withLock
+                    repository.updateVenue(
+                        fresh.copy(peopleCounterWriterDeviceId = myId, peopleCounterLastModified = now)
+                    )
+                    val t = peopleCounterThrottleByVenue.getOrPut(vid) { PeopleCounterThrottle() }
+                    t.lastUploadAtMs = now
+                    t.countAtLastUpload = count
+                }
+            } else {
+                pullVenuesDifferentialQuiet()
+            }
+        }
+    }
+
+    fun setPeopleCounterSelectedVenueId(venueId: Long) {
+        val ctx = context ?: return
+        val sm = SettingsManager(ctx)
+        sm.setPeopleCounterSelectedVenueId(venueId)
+        _peopleCounterSelectedVenueId.value = venueId
+        _peopleCounterPriority.value = sm.isPeopleCounterPriority(venueId)
+        viewModelScope.launch {
+            try {
+                pullVenuesDifferentialQuiet()
+            } catch (e: Exception) {
+                println("Venue switch pull failed: ${e.message}")
+            }
+            _peopleCounterPriority.value = sm.isPeopleCounterPriority(venueId)
+        }
+    }
+
+    fun setPeopleCounterPriority(enabled: Boolean) {
+        val ctx = context ?: return
+        val venueId = _peopleCounterSelectedVenueId.value
+        if (venueId <= 0L) return
+        viewModelScope.launch {
+            val sm = SettingsManager(ctx)
+            if (!enabled) {
+                sm.setPeopleCounterPriority(venueId, false)
+                _peopleCounterPriority.value = false
+                releasePeopleCounterWriterForCurrentVenue()
+            } else {
+                claimPeopleCounterWriterForCurrentSelection(ctx, forceStealFromOtherDevice = false)
+            }
+        }
+    }
+
+    /**
+     * After a 3-second long-press on the Priority switch, claim counter writer on Sheets for this device
+     * even if another device currently holds it. The count on Sheets is read first so it is not reset locally.
+     */
+    fun forceTakePeopleCounterPriority() {
+        val ctx = context ?: return
+        viewModelScope.launch {
+            claimPeopleCounterWriterForCurrentSelection(ctx, forceStealFromOtherDevice = true)
+        }
+    }
+
+    private suspend fun claimPeopleCounterWriterForCurrentSelection(
+        ctx: Context,
+        forceStealFromOtherDevice: Boolean
+    ) {
+        val sm = SettingsManager(ctx)
+        if (!isGoogleSheetsConfigured()) {
+            _peopleCounterUiHint.value = ctx.getString(com.eventmanager.app.R.string.people_counter_need_sheets)
+            return
+        }
+        pullVenuesDifferentialQuiet()
+        val vid = _peopleCounterSelectedVenueId.value
+        val venue = repository.getVenueById(vid)
+        if (venue == null) {
+            _peopleCounterUiHint.value = ctx.getString(com.eventmanager.app.R.string.people_counter_select_venue)
+            return
+        }
+        val row = venue.sheetsId?.toIntOrNull()
+        if (row == null) {
+            _peopleCounterUiHint.value = ctx.getString(com.eventmanager.app.R.string.people_counter_no_sheet_row)
+            return
+        }
+        val myId = sm.getOrCreatePersistentDeviceId()
+        val w = venue.peopleCounterWriterDeviceId.trim()
+        if (!forceStealFromOtherDevice && w.isNotEmpty() && w != myId) {
+            _peopleCounterUiHint.value = ctx.getString(com.eventmanager.app.R.string.people_counter_another_device)
+            return
+        }
+        val countForSheetAndDb = if (forceStealFromOtherDevice) {
+            twoWaySyncService?.readVenuePeopleCounterFromSheet(row)?.first ?: venue.peopleCounterCount
+        } else {
+            venue.peopleCounterCount
+        }
+        val now = System.currentTimeMillis()
+        twoWaySyncService?.updateVenuePeopleCounterOnSheets(
+            row,
+            countForSheetAndDb,
+            myId,
+            now
+        )
+        repository.updateVenue(
+            venue.copy(
+                peopleCounterCount = countForSheetAndDb,
+                peopleCounterWriterDeviceId = myId,
+                peopleCounterLastModified = now
+            )
+        )
+        sm.setPeopleCounterPriority(venue.id, true)
+        if (venue.id == _peopleCounterSelectedVenueId.value) {
+            _peopleCounterPriority.value = true
+        }
+        _peopleCounterUiHint.value = null
+        val t = peopleCounterThrottleByVenue.getOrPut(venue.id) { PeopleCounterThrottle() }
+        t.lastUploadAtMs = now
+        t.countAtLastUpload = countForSheetAndDb
+    }
+
+    fun reconcilePeopleCounterAfterVenuesChanged() {
+        viewModelScope.launch {
+            reconcilePeopleCounterAfterVenuesChangedInternal()
+        }
+    }
+
+    private suspend fun reconcilePeopleCounterAfterVenuesChangedInternal() {
+        val ctx = context ?: return
+        val sm = SettingsManager(ctx)
+        val active = _venues.value.filter { it.isActive }.sortedBy { it.name }
+        if (active.isEmpty()) {
+            if (_peopleCounterSelectedVenueId.value != 0L) {
+                _peopleCounterSelectedVenueId.value = 0L
+                sm.setPeopleCounterSelectedVenueId(0L)
+            }
+            return
+        }
+        var sel = _peopleCounterSelectedVenueId.value
+        if (sel == 0L || active.none { it.id == sel }) {
+            sel = active.first().id
+            _peopleCounterSelectedVenueId.value = sel
+            sm.setPeopleCounterSelectedVenueId(sel)
+        }
+        val current = active.find { it.id == sel } ?: _venues.value.find { it.id == sel }
+        enforcePeopleCounterWriterArbitration(current)
+    }
+
+    private fun enforcePeopleCounterWriterArbitration(venue: VenueEntity?) {
+        val ctx = context ?: return
+        val v = venue ?: return
+        val sm = SettingsManager(ctx)
+        val myId = sm.getOrCreatePersistentDeviceId()
+        val w = v.peopleCounterWriterDeviceId.trim()
+        if (sm.isPeopleCounterPriority(v.id) && w.isNotEmpty() && w != myId) {
+            sm.setPeopleCounterPriority(v.id, false)
+            if (v.id == _peopleCounterSelectedVenueId.value) {
+                _peopleCounterPriority.value = false
+            }
+            _peopleCounterUiHint.value = ctx.getString(com.eventmanager.app.R.string.people_counter_priority_lost)
+        }
+    }
+
+    private suspend fun pullVenuesDifferentialQuiet() {
+        if (!isGoogleSheetsConfigured()) return
+        googleSheetsService.initializeSheetsService()
+        val result = syncManager?.performVenueDifferentialSync()
+        if (result is VenueSyncResult.Success) {
+            applyVenueUIUpdates(result.changes)
+        }
+        reconcilePeopleCounterAfterVenuesChangedInternal()
+    }
+
+    private suspend fun releasePeopleCounterWriterForCurrentVenue() {
+        val ctx = context ?: return
+        val sm = SettingsManager(ctx)
+        val myId = sm.getOrCreatePersistentDeviceId()
+        val vid = _peopleCounterSelectedVenueId.value
+        val venue = repository.getVenueById(vid) ?: return
+        val row = venue.sheetsId?.toIntOrNull() ?: return
+        if (venue.peopleCounterWriterDeviceId.trim() != myId) return
+        val now = System.currentTimeMillis()
+        twoWaySyncService?.updateVenuePeopleCounterOnSheets(
+            row,
+            venue.peopleCounterCount,
+            "",
+            now
+        )
+        repository.updateVenue(
+            venue.copy(peopleCounterWriterDeviceId = "", peopleCounterLastModified = now)
+        )
+    }
+
+    fun adjustPeopleCounterCount(venueId: Long, delta: Int) {
+        viewModelScope.launch {
+            if (!canEditPeopleCounter(venueId)) return@launch
+            val venue = repository.getVenueById(venueId) ?: return@launch
+            val before = venue.peopleCounterCount
+            val next = (before + delta).coerceAtLeast(0)
+            if (next == before) return@launch
+            repository.updateVenue(venue.copy(peopleCounterCount = next))
+            maybeUploadVenueCounterAfterLocalEdit(venueId, next)
+        }
+    }
+
+    fun resetPeopleCounterForVenue(venueId: Long) {
+        viewModelScope.launch {
+            if (!canEditPeopleCounter(venueId)) return@launch
+            val venue = repository.getVenueById(venueId) ?: return@launch
+            val prev = venue.peopleCounterCount
+            if (prev == 0) return@launch
+            repository.updateVenue(venue.copy(peopleCounterCount = 0))
+            maybeUploadVenueCounterAfterLocalEdit(venueId, 0)
+        }
+    }
+
+    /**
+     * When this device has people-counter priority for a venue and is the writer (or not yet assigned),
+     * sheet pulls must not overwrite an in-progress local count with stale E–G from Sheets.
+     */
+    private fun shouldKeepLocalPeopleCounterWhenPullingFromSheet(
+        sm: SettingsManager,
+        myId: String,
+        localVenue: VenueEntity
+    ): Boolean {
+        if (!sm.isPeopleCounterPriority(localVenue.id)) return false
+        val w = localVenue.peopleCounterWriterDeviceId.trim()
+        return w.isEmpty() || w == myId
+    }
+
+    private suspend fun canEditPeopleCounter(venueId: Long): Boolean {
+        val ctx = context ?: return false
+        val sm = SettingsManager(ctx)
+        if (!sm.isPeopleCounterPriority(venueId)) return false
+        val venue = repository.getVenueById(venueId) ?: return false
+        val w = venue.peopleCounterWriterDeviceId.trim()
+        val myId = sm.getOrCreatePersistentDeviceId()
+        return w.isEmpty() || w == myId
+    }
+
+    private suspend fun maybeUploadVenueCounterAfterLocalEdit(venueId: Long, @Suppress("UNUSED_PARAMETER") newCount: Int) {
+        val ctx = context ?: return
+        val sm = SettingsManager(ctx)
+        if (!sm.isPeopleCounterPriority(venueId)) return
+        val venue = repository.getVenueById(venueId) ?: return
+        val w = venue.peopleCounterWriterDeviceId.trim()
+        val myId = sm.getOrCreatePersistentDeviceId()
+        if (w.isEmpty() || w != myId) return
+        val row = venue.sheetsId?.toIntOrNull() ?: return
+
+        peopleCounterUploadMutex.withLock {
+            val fresh = repository.getVenueById(venueId) ?: return@withLock
+            val count = fresh.peopleCounterCount
+            val t = peopleCounterThrottleByVenue.getOrPut(venueId) { PeopleCounterThrottle() }
+            val now = System.currentTimeMillis()
+            val lastUp = t.countAtLastUpload
+            val hitTenBoundary = count % 10 == 0 && count != lastUp
+            val idleOneMinuteSinceLastUpload =
+                t.lastUploadAtMs > 0L &&
+                    now - t.lastUploadAtMs >= 60_000L &&
+                    count != lastUp
+            if (!hitTenBoundary && !idleOneMinuteSinceLastUpload) return@withLock
+
+            twoWaySyncService?.updateVenuePeopleCounterOnSheets(row, count, myId, now)
+            repository.updateVenue(
+                fresh.copy(peopleCounterWriterDeviceId = myId, peopleCounterLastModified = now)
+            )
+            t.lastUploadAtMs = now
+            t.countAtLastUpload = count
         }
     }
 }
