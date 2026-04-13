@@ -600,7 +600,17 @@ private fun getErrorAdviceResId(errorMessage: String): Int {
  */
 fun isDeviceTimeError(errorMessage: String?): Boolean {
     if (errorMessage == null) return false
-    
+
+    // OAuth returns invalid_grant for many non-clock reasons; don't mislabel those as device time.
+    val nonTimeGrantPatterns = listOf(
+        "account not found",
+        "invalid_client",
+        "redirect_uri",
+    )
+    if (nonTimeGrantPatterns.any { errorMessage.contains(it, ignoreCase = true) }) {
+        return false
+    }
+
     val timeErrorPatterns = listOf(
         "invalid token",
         "token expired",

@@ -829,7 +829,7 @@
     <!-- Additional Volunteer Panel Strings -->
     <string name="expired">Expired</string>
     <string name="benefit_details">Benefit Details</string>
-    <string name="more_shifts">... and %d more shifts</string>
+    <string name="more_shifts">… and %d more shifts</string>
     <string name="years_old">%d years old</string>
     
     <!-- Date & Time Format Settings -->
@@ -837,7 +837,7 @@
     <string name="date_time_format_description">Choose how dates and times are displayed throughout the app</string>
     <string name="date_format_dd_mm_yyyy">25/12/2025 (dd/MM/yyyy)</string>
     <string name="date_format_mm_dd_yyyy">12/25/2025 (MM/dd/yyyy)</string>
-    <string name="date_format_yyyy_mm_dd">2025-12-25 (yyyy-MM-dd)</string>
+    <string name="date_format_yyyy_mm_dd">2025–12–25 (yyyy–MM–dd)</string>
     <string name="time_format_hh_mm">14:30 (HH:mm)</string>
     <string name="time_format_hh_mm_ss">14:30:45 (HH:mm:ss)</string>
     <string name="time_format_hh_mm_ss_sss">14:30:45.123 (HH:mm:ss.SSS)</string>
@@ -905,10 +905,10 @@
     <string name="age_distribution_description">Distribution of ages among active volunteers</string>
     <string name="age_distribution_title">Age Distribution</string>
     <string name="age_under_18">Under 18 years old</string>
-    <string name="age_18_20">18-20 years old</string>
-    <string name="age_21_23">21-23 years old</string>
-    <string name="age_24_26">24-26 years old</string>
-    <string name="age_27_30">27-30 years old</string>
+    <string name="age_18_20">18–20 years old</string>
+    <string name="age_21_23">21–23 years old</string>
+    <string name="age_24_26">24–26 years old</string>
+    <string name="age_27_30">27–30 years old</string>
     <string name="age_over_31">Over 31 years old</string>
     <string name="age_unknown">Unknown age</string>
     <string name="no_age_data">No age data available for active volunteers</string>
@@ -928,7 +928,7 @@
     <!-- Device Time/Date Error -->
     <string name="sync_error_device_time_title">⏰ Device Time/Date Incorrect</string>
     <string name="sync_error_device_time_message">Your device\'s time or date is incorrect. Google Sheets API requires accurate time synchronization to work properly.</string>
-    <string name="sync_error_device_time_solution">How to fix:\n\n1. Go to Settings\n2. Look for \"Date &amp; Time\" or \"System\"\n3. Enable \"Automatic date &amp; time\" or \"Set time automatically\"\n4. If not available, manually set the correct date and time\n5. Restart the app and try syncing again\n\nCommon on older tablets - please check your device settings!</string>
+    <string name="sync_error_device_time_solution">How to fix:\n\n1. Go to Settings\n2. Look for \"Date &amp; Time\" or \"System\"\n3. Enable \"Automatic date &amp; time\" or \"Set time automatically\"\n4. If not available, manually set the correct date and time\n5. Restart the app and try syncing again\n\nCommon on older tablets – please check your device settings!</string>
     <string name="sync_error_device_time_open_settings">Open Settings</string>
     
     <!-- Sleep/Resume Sync Warning -->
@@ -937,7 +937,7 @@
     <string name="sync_error_sleep_resume_detail">📱 Your device was sleeping, so a new sync is needed. Press the resync button at the bottom of the page.</string>
     
     <!-- Specific Sync Error Types -->
-    <string name="sync_error_rate_limit">Rate limit exceeded. Please wait 1-2 minutes before trying again.</string>
+    <string name="sync_error_rate_limit">Rate limit exceeded. Please wait 1–2 minutes before trying again.</string>
     <string name="sync_error_authentication">Authentication failed. Please check your Google Sheets configuration.</string>
     <string name="sync_error_permission">Permission denied. Make sure your service account has editor access to the spreadsheet.</string>
     <string name="sync_error_network">Network error. Please check your internet connection.</string>
@@ -1025,7 +1025,7 @@
     <string name="app_icon_restart_later">Later</string>
     
     <!-- Graph Export -->
-    <string name="exporting">Exporting...</string>
+    <string name="exporting">Exporting…</string>
     <string name="export_graph">Export Graph</string>
     <string name="choose_export_format">Choose export format:</string>
     <string name="export_as_xlsx">Export as XLSX</string>
@@ -1097,4 +1097,41 @@
     <string name="billeterie_scanner_ready">Ready to scan…</string>
     <string name="billeterie_scanner_with_invites">+%d invitation(s)</string>
     <string name="billeterie_scanner_error">Error</string>
+
+    <!-- Admin Setup (first admin creation) -->
+    <string name="admin_setup_title">Create First Admin</string>
+    <string name="admin_setup_description">No admin exists yet. Create a first admin to manage the app.</string>
+    <string name="admin_setup_type_title">Admin Type</string>
+    <string name="admin_setup_type_description">Would you like to add the first admin as a permanent guest or as a volunteer?</string>
+    <string name="admin_setup_type_guest">Permanent Guest</string>
+    <string name="admin_setup_type_guest_desc">Add a guest with admin privileges</string>
+    <string name="admin_setup_type_volunteer">Volunteer</string>
+    <string name="admin_setup_type_volunteer_desc">Add a volunteer with admin privileges</string>
+    <string name="admin_setup_create_guest_title">Create Admin Guest</string>
+    <string name="admin_setup_create_guest_desc">Fill in the details for the new admin guest</string>
+    <string name="admin_setup_create_volunteer_title">Create Admin Volunteer</string>
+    <string name="admin_setup_create_volunteer_desc">Fill in the details for the new admin volunteer</string>
+    <string name="admin_setup_access_title">How will you sign in?</string>
+    <string name="admin_setup_access_desc">How would you like to log in as the first admin?</string>
+    <string name="admin_setup_access_explained">Pick one option below.\n\n• QR code — shows a code you scan from the welcome screen. Good for sharing with another organizer or phone.\n\n• NFC card — links a card or tag you tap on this device for quick admin access.</string>
+    <string name="admin_setup_created_line">%1$s was added as an administrator.</string>
+    <string name="admin_setup_done_title">You\'re all set</string>
+    <string name="admin_setup_done_message">%1$s can open admin mode from the welcome screen using the option you chose. You can add or change methods later in the app.</string>
+    <string name="admin_setup_btn_skip">Skip</string>
+    <string name="admin_setup_btn_qr">QR code</string>
+    <string name="admin_setup_btn_nfc">NFC card</string>
+    <string name="admin_setup_nfc_linked_title">NFC linked</string>
+    <string name="admin_setup_use_qr">Use QR Code</string>
+    <string name="admin_setup_use_qr_desc">Generate and share a QR code for admin login</string>
+    <string name="admin_setup_use_nfc">Add NFC Card</string>
+    <string name="admin_setup_use_nfc_desc">Assign an NFC card for admin login</string>
+    <string name="admin_setup_creating">Creating admin…</string>
+    <string name="admin_setup_success">Admin created successfully!</string>
+    <string name="admin_setup_error">Failed to create admin: %s</string>
+    <string name="admin_setup_qr_title">Admin QR Code</string>
+    <string name="admin_setup_qr_description">Share this QR code to use for admin login. You can share it via the button below or enter the email manually.</string>
+    <string name="admin_setup_nfc_assigned">NFC card assigned! You can now use this card for admin login.</string>
+    <string name="admin_setup_done">Done</string>
+    <string name="admin_setup_skip">Skip for Now</string>
+    <string name="admin_setup_no_admin_warning">Warning: Without an admin, you won\'t be able to access admin mode.</string>
 </resources>

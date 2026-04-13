@@ -652,6 +652,84 @@ class EventManagerViewModel(
         }
     }
 
+    /**
+     * Returns true if any guest or volunteer in the local DB has isAdmin == true.
+     */
+    suspend fun hasAnyAdmin(): Boolean {
+        val guests = repository.getAllGuests().first()
+        val volunteers = repository.getAllVolunteers().first()
+        return guests.any { it.isAdmin } || volunteers.any { it.isAdmin }
+    }
+
+    /**
+     * Creates a guest with isAdmin = true, persists it, and syncs to Sheets.
+     * Calls [onResult] with (success, errorMessage?).
+     */
+    fun createAdminGuest(guest: Guest, onResult: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val adminGuest = guest.copy(isAdmin = true)
+                repository.insertGuest(adminGuest)
+                twoWaySyncService?.backupGuestsToSheets()
+                recalcAndUploadVolunteerGuestList()
+                onResult(true, null)
+            } catch (e: Exception) {
+                println("Failed to create admin guest: ${e.message}")
+                _syncError.value = "Failed to create admin guest: ${e.message}"
+                onResult(false, e.message)
+            }
+        }
+    }
+
+    /**
+     * Creates a volunteer with isAdmin = true, persists it, and syncs to Sheets.
+     * Calls [onResult] with (success, errorMessage?).
+     */
+    fun createAdminVolunteer(volunteer: Volunteer, onResult: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val adminVolunteer = volunteer.copy(isAdmin = true)
+                repository.insertVolunteer(adminVolunteer)
+                twoWaySyncService?.backupVolunteersToSheets()
+                recalcAndUploadVolunteerGuestList()
+                onResult(true, null)
+            } catch (e: Exception) {
+                println("Failed to create admin volunteer: ${e.message}")
+                _syncError.value = "Failed to create admin volunteer: ${e.message}"
+                onResult(false, e.message)
+            }
+        }
+    }
+
+    /**
+     * Assigns an NFC UID to the admin guest (identified by nanoId) or admin volunteer (identified by id).
+     */
+    fun assignNfcUidToAdmin(isGuest: Boolean, entityId: String, uid: String) {
+        viewModelScope.launch {
+            try {
+                if (isGuest) {
+                    val guests = repository.getAllGuests().first()
+                    val guest = guests.find { it.nanoId == entityId }
+                    if (guest != null) {
+                        val updated = guest.copy(nfcCardUid = uid, lastModified = System.currentTimeMillis())
+                        repository.updateGuest(updated)
+                        twoWaySyncService?.backupGuestsToSheets()
+                    }
+                } else {
+                    val volunteer = repository.getVolunteerById(entityId)
+                    if (volunteer != null) {
+                        val updated = volunteer.copy(nfcCardUid = uid, lastModified = System.currentTimeMillis())
+                        repository.updateVolunteer(updated)
+                        twoWaySyncService?.backupVolunteersToSheets()
+                    }
+                }
+            } catch (e: Exception) {
+                println("Failed to assign NFC UID to admin: ${e.message}")
+                _syncError.value = "Failed to assign NFC UID: ${e.message}"
+            }
+        }
+    }
+
     private fun applyInitialBenefitFutureEntries(
         job: Job,
         configs: List<JobTypeConfig>,
@@ -706,17 +784,9 @@ class EventManagerViewModel(
                 
                 // Add individual job to Google Sheets and get sheetsId
                 val sheetsId = googleSheetsService.addJobToSheets(jobWithId, _venues.value)
-                
-                // Update the job with the sheetsId
-                if (sheetsId != null) {
-                    val jobWithSheetsId = jobWithId.copy(sheetsId = sheetsId)
-                    repository.updateJob(jobWithSheetsId)
-                    println("Successfully added job to Google Sheets with sheetsId: $sheetsId")
-                } else {
-                    // Fallback to backup mode if individual add fails
-                    println("Individual job add failed, falling back to backup mode")
-                    twoWaySyncService?.backupJobsToSheets()
-                }
+                val jobWithSheetsId = jobWithId.copy(sheetsId = sheetsId)
+                repository.updateJob(jobWithSheetsId)
+                println("Successfully added job to Google Sheets with sheetsId: $sheetsId")
                 
                 println("Successfully added job: ${job.jobTypeName}")
                 recalcAndUploadVolunteerGuestList()

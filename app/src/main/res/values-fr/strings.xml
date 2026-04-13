@@ -791,6 +791,7 @@
     <string name="email_no_email_message">Ce·tte bénévole n\'a pas d\'adresse email. Veuillez en ajouter une d\'abord.</string>
     <string name="email_no_email_guest_staff_message">Cet·te invité·e n\'a pas d\'adresse e-mail enregistrée. Un·e administrateur·rice doit en ajouter une avant l\'envoi du QR depuis cet écran.</string>
     <string name="email_send">Envoyer</string>
+    <string name="email_sending">Envoi en cours…</string>
     <string name="email_error_title">Erreur Email</string>
     <string name="email_error_message">Impossible d\'ouvrir l\'application email : %s</string>
     <string name="email_api_error_message">Échec de l\'envoi de l\'email via Gmail API : %s</string>
@@ -968,6 +969,10 @@
     <string name="sync_error_retry">Réessayer la synchronisation</string>
     <string name="sync_error_dismiss">Ignorer</string>
     <string name="sync_error_dont_tell_today">Ne plus me le dire aujourd\'hui</string>
+    
+    <!-- Sleep/Resume Sync Warning -->
+    <string name="sync_warning_sleep_resume_title">⚠️ Application non synchronisée</string>
+    <string name="sync_warning_sleep_resume_message">L\'application n\'est plus synchronisée. Veuillez la synchroniser en appuyant sur le bouton de resynchronisation en bas.</string>
     <string name="sync_error_sleep_resume_detail">📱 Votre appareil était en veille, donc une nouvelle synchronisation est nécessaire. Appuyez sur le bouton de resynchronisation en bas de la page.</string>
     
     <!-- Device Time/Date Error -->
@@ -1095,4 +1100,41 @@
     <string name="billeterie_scanner_ready">Prêt à scanner…</string>
     <string name="billeterie_scanner_with_invites">+%d invitation(s)</string>
     <string name="billeterie_scanner_error">Erreur</string>
+
+    <!-- Admin Setup (first admin creation) -->
+    <string name="admin_setup_title">Créer le Premier Admin</string>
+    <string name="admin_setup_description">Aucun admin n\'existe encore. Créez un premier admin pour gérer l\'application.</string>
+    <string name="admin_setup_type_title">Type d\'Admin</string>
+    <string name="admin_setup_type_description">Souhaitez-vous ajouter le premier admin en tant qu\'invité permanent ou en tant que bénévole ?</string>
+    <string name="admin_setup_type_guest">Invité Permanent</string>
+    <string name="admin_setup_type_guest_desc">Ajouter un invité avec des privilèges admin</string>
+    <string name="admin_setup_type_volunteer">Bénévole</string>
+    <string name="admin_setup_type_volunteer_desc">Ajouter un bénévole avec des privilèges admin</string>
+    <string name="admin_setup_create_guest_title">Créer un Invité Admin</string>
+    <string name="admin_setup_create_guest_desc">Remplissez les informations du nouvel invité admin</string>
+    <string name="admin_setup_create_volunteer_title">Créer un Bénévole Admin</string>
+    <string name="admin_setup_create_volunteer_desc">Remplissez les informations du nouveau bénévole admin</string>
+    <string name="admin_setup_access_title">Comment vous connecter ?</string>
+    <string name="admin_setup_access_desc">Comment souhaitez-vous vous connecter en tant que premier admin ?</string>
+    <string name="admin_setup_access_explained">Choisissez une option ci-dessous.\n\n• Code QR — affiche un code à scanner depuis l\'écran d\'accueil. Pratique pour le partager avec une autre personne ou un autre téléphone.\n\n• Carte NFC — associe une carte ou un badge que vous approchez de l\'appareil pour un accès admin rapide.</string>
+    <string name="admin_setup_created_line">%1$s a été ajouté comme administrateur.</string>
+    <string name="admin_setup_done_title">C\'est prêt</string>
+    <string name="admin_setup_done_message">%1$s pourra ouvrir le mode admin depuis l\'écran d\'accueil avec l\'option choisie. Vous pourrez ajouter ou modifier des méthodes plus tard dans l\'application.</string>
+    <string name="admin_setup_btn_skip">Passer</string>
+    <string name="admin_setup_btn_qr">Code QR</string>
+    <string name="admin_setup_btn_nfc">Carte NFC</string>
+    <string name="admin_setup_nfc_linked_title">NFC associé</string>
+    <string name="admin_setup_use_qr">Utiliser un QR Code</string>
+    <string name="admin_setup_use_qr_desc">Générer et partager un QR code pour la connexion admin</string>
+    <string name="admin_setup_use_nfc">Ajouter une Carte NFC</string>
+    <string name="admin_setup_use_nfc_desc">Assigner une carte NFC pour la connexion admin</string>
+    <string name="admin_setup_creating">Création de l\'admin…</string>
+    <string name="admin_setup_success">Admin créé avec succès !</string>
+    <string name="admin_setup_error">Échec de la création de l\'admin : %s</string>
+    <string name="admin_setup_qr_title">QR Code Admin</string>
+    <string name="admin_setup_qr_description">Partagez ce QR code pour la connexion admin. Vous pouvez le partager via le bouton ci-dessous ou entrer l\'email manuellement.</string>
+    <string name="admin_setup_nfc_assigned">Carte NFC assignée ! Vous pouvez maintenant utiliser cette carte pour la connexion admin.</string>
+    <string name="admin_setup_done">Terminé</string>
+    <string name="admin_setup_skip">Passer pour l\'instant</string>
+    <string name="admin_setup_no_admin_warning">Attention : Sans admin, vous ne pourrez pas accéder au mode administrateur.</string>
 </resources>
