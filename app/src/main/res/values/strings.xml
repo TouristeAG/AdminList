@@ -483,6 +483,29 @@
     <string name="admin_auth_denied">%s does not have admin access</string>
     <string name="admin_auth_not_found">No matching profile found</string>
     <string name="admin_auth_try_again">Try Again</string>
+    <string name="admin_auth_use_fingerprint">Use Fingerprint</string>
+    <string name="admin_auth_fingerprint_description">Authenticate with your fingerprint to access admin mode</string>
+    <string name="admin_auth_biometric_prompt_title">Admin Authentication</string>
+    <string name="admin_auth_biometric_prompt_subtitle">Verify your identity with biometrics</string>
+    <string name="admin_auth_biometric_cancel">Use QR / NFC instead</string>
+    <string name="admin_auth_biometric_error">Biometric authentication failed: %s</string>
+
+    <!-- Biometric Admin Login Settings -->
+    <string name="biometric_admin_login_title">Fingerprint Admin Login</string>
+    <string name="biometric_admin_login_description">Allow using this device\'s fingerprint sensor to access admin mode</string>
+    <string name="biometric_admin_login_not_available">Biometric authentication is not available on this device</string>
+    <string name="biometric_admin_login_none_enrolled">No fingerprints are enrolled on this device. Please add a fingerprint in your device settings first.</string>
+    <string name="biometric_admin_login_enabled">Fingerprint admin login enabled</string>
+    <string name="biometric_admin_login_disabled">Fingerprint admin login disabled</string>
+    <string name="biometric_warning_title">Security Warning</string>
+    <string name="biometric_warning_message">Anyone with the passcode of this device can add a fingerprint and therefore gain access to the Admin page.\n\nThis is strictly prohibited for devices accessible to the public or to people who should not have access to this private information.\n\nThis feature is ONLY for users who understand and accept the associated risks.\n\nTo proceed, your admin identity will first be verified via QR code or NFC badge.</string>
+    <string name="biometric_warning_accept">I understand the risks</string>
+    <string name="biometric_warning_cancel">Cancel</string>
+    <string name="biometric_enrollment_verify_title">Verify Admin Access</string>
+    <string name="biometric_enrollment_verify_description">Scan your admin badge or QR code to confirm your identity before enabling biometric login</string>
+    <string name="biometric_enrollment_success">Fingerprint login has been enabled for admin access</string>
+    <string name="biometric_enrollment_prompt_title">Register Biometrics</string>
+    <string name="biometric_enrollment_prompt_subtitle">Confirm your fingerprint to enable admin login</string>
 
     <!-- Ticketing (Billeterie) hub -->
     <string name="ticket_check_title">Ticketing</string>

@@ -8,8 +8,8 @@ import android.os.Vibrator
 import android.os.VibrationEffect
 import android.os.Build
 import androidx.core.content.ContextCompat
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.BackHandler
 import java.util.*
 import androidx.compose.foundation.background
@@ -166,7 +166,7 @@ import java.util.concurrent.atomic.AtomicLong
 /** Admin main UI only (not billeterie, not welcome, not NFC gate). */
 private const val ADMIN_SESSION_IDLE_TIMEOUT_MS = 5 * 60 * 1000L
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
 
     /**
      * Tracks touches while the admin surface is visible and records [ACTION_SCREEN_OFF] for
@@ -762,6 +762,7 @@ fun EventManagerApp(
         
         if (showAdminAuth) {
             AdminAuthScreen(
+                viewModel = viewModel,
                 volunteers = volunteers,
                 guests = guests,
                 isSyncing = isSyncing,

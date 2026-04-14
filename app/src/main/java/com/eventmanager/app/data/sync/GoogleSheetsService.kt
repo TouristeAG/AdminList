@@ -15,6 +15,42 @@ import java.io.IOException
 import java.security.GeneralSecurityException
 import java.net.UnknownHostException
 
+/** Formats 1-based sheet row numbers for logs, e.g. "3", "10-15", "3, 10-15". */
+private fun formatSheetRowNumberRanges(rowNumbers: Collection<Int>): String {
+    val sorted = rowNumbers.distinct().sorted()
+    if (sorted.isEmpty()) return ""
+    val parts = mutableListOf<String>()
+    var start = sorted[0]
+    var end = sorted[0]
+    for (i in 1 until sorted.size) {
+        val v = sorted[i]
+        if (v == end + 1) {
+            end = v
+        } else {
+            parts.add(if (start == end) "$start" else "$start-$end")
+            start = v
+            end = v
+        }
+    }
+    parts.add(if (start == end) "$start" else "$start-$end")
+    return parts.joinToString(", ")
+}
+
+/** One log line for many skipped rows: (sheet row, column count) pairs. */
+private fun logSkippedSheetRows(entityLabel: String, skips: List<Pair<Int, Int>>) {
+    if (skips.isEmpty()) return
+    val rowNums = skips.map { it.first }
+    val colCounts = skips.map { it.second }.distinct().sorted()
+    val colPart = if (colCounts.size == 1) {
+        "insufficient columns: ${colCounts.first()}"
+    } else {
+        "insufficient columns (column counts: ${colCounts.joinToString()})"
+    }
+    println(
+        "Skipping ${skips.size} $entityLabel rows (rows ${formatSheetRowNumberRanges(rowNums)}) — $colPart"
+    )
+}
+
 class GoogleSheetsService(private val context: Context) {
     
     /**
@@ -340,6 +376,7 @@ class GoogleSheetsService(private val context: Context) {
                 
                 val guests = mutableListOf<Guest>()
                 val guestsToFixInSheets = mutableListOf<Pair<Int, String>>() // (rowNumber, newNanoId)
+                val skippedGuestRows = mutableListOf<Pair<Int, Int>>()
 
                 values.forEachIndexed { index, row ->
                     val rowNumber = index + 2 // +2 because we start from row 2 (after header)
@@ -438,9 +475,10 @@ class GoogleSheetsService(private val context: Context) {
                             println("Failed to parse guest row $rowNumber (old format): ${e.message}")
                         }
                     } else {
-                        println("Skipping guest row $rowNumber - insufficient columns: ${row.size}")
+                        skippedGuestRows.add(rowNumber to row.size)
                     }
                 }
+                logSkippedSheetRows("guest", skippedGuestRows)
 
                 // Write back any missing or invalid NanoIDs to Google Sheets (column J)
                 if (guestsToFixInSheets.isNotEmpty()) {
@@ -681,7 +719,8 @@ class GoogleSheetsService(private val context: Context) {
                 
                 val volunteers = mutableListOf<Volunteer>()
                 val volunteersToFixInSheets = mutableListOf<Pair<Int, String>>() // (rowNumber, newId)
-                
+                val skippedVolunteerRows = mutableListOf<Pair<Int, Int>>()
+
                 values.forEachIndexed { index, row ->
                     if (row.size >= 11) {
                         try {
@@ -800,11 +839,11 @@ class GoogleSheetsService(private val context: Context) {
                             println("Failed to parse volunteer row ${index + 2} (no NFC UID format): ${e.message}")
                         }
                     } else {
-                        println("Skipping volunteer row ${index + 2} - insufficient columns: ${row.size} (expected 11)")
-                        println("Row data: ${row.joinToString(", ")}")
+                        skippedVolunteerRows.add((index + 2) to row.size)
                     }
                 }
-                
+                logSkippedSheetRows("volunteer", skippedVolunteerRows)
+
                 // Update Google Sheets with fixed IDs immediately
                 if (volunteersToFixInSheets.isNotEmpty()) {
                     println("📝 Updating ${volunteersToFixInSheets.size} volunteer(s) with fixed NanoIDs in Google Sheets...")
@@ -1030,7 +1069,8 @@ class GoogleSheetsService(private val context: Context) {
                 } catch (e: Exception) {
                     println("⚠️ Entries left (Used/Yes/No) migration in sheets skipped: ${e.message}")
                 }
-                
+
+                val skippedJobRows = mutableListOf<Pair<Int, Int>>()
                 val jobs = values.mapIndexedNotNull { index, row ->
                     if (row.size >= 7) {
                         try {
@@ -1067,11 +1107,12 @@ class GoogleSheetsService(private val context: Context) {
                             null
                         }
                     } else {
-                        println("Skipping job row ${index + 2} - insufficient columns: ${row.size}")
+                        skippedJobRows.add((index + 2) to row.size)
                         null
                     }
                 }
-                
+                logSkippedSheetRows("job", skippedJobRows)
+
                 println("Successfully parsed ${jobs.size} jobs")
                 jobs
                 },
@@ -1244,7 +1285,8 @@ class GoogleSheetsService(private val context: Context) {
                 
                 val values = response.getValues() ?: emptyList()
                 println("Retrieved ${values.size} job type config rows from sheets")
-                
+
+                val skippedJobTypeConfigRows = mutableListOf<Pair<Int, Int>>()
                 val configs = values.mapIndexedNotNull { index, row ->
                     if (row.size >= 9) {
                         try {
@@ -1338,11 +1380,12 @@ class GoogleSheetsService(private val context: Context) {
                             null
                         }
                     } else {
-                        println("Skipping job type config row ${index + 2} - insufficient columns: ${row.size}")
+                        skippedJobTypeConfigRows.add((index + 2) to row.size)
                         null
                     }
                 }
-                
+                logSkippedSheetRows("job type config", skippedJobTypeConfigRows)
+
                 println("Successfully parsed ${configs.size} job type configs")
                 configs
                 },
@@ -1445,7 +1488,8 @@ class GoogleSheetsService(private val context: Context) {
                 
                 val values = response.getValues() ?: emptyList()
                 println("Retrieved ${values.size} venue rows from sheets")
-                
+
+                val skippedVenueRows = mutableListOf<Pair<Int, Int>>()
                 val venues = values.mapIndexedNotNull { index, row ->
                     if (row.size >= 4) {
                         try {
@@ -1466,11 +1510,12 @@ class GoogleSheetsService(private val context: Context) {
                             null
                         }
                     } else {
-                        println("Skipping venue row ${index + 2} - insufficient columns: ${row.size}")
+                        skippedVenueRows.add((index + 2) to row.size)
                         null
                     }
                 }
-                
+                logSkippedSheetRows("venue", skippedVenueRows)
+
                 println("Successfully parsed ${venues.size} venues")
                 venues
                 },
@@ -1725,6 +1770,7 @@ class GoogleSheetsService(private val context: Context) {
 
                     val formatter = java.time.format.DateTimeFormatter.ISO_LOCAL_DATE
                     val tempGuestsToFixInSheets = mutableListOf<Pair<Int, String>>()
+                    val skippedTempGuestRows = mutableListOf<Pair<Int, Int>>()
 
                     val result = values.mapIndexedNotNull { index, row ->
                         if (row.size >= 5) {
@@ -1757,10 +1803,11 @@ class GoogleSheetsService(private val context: Context) {
                                 null
                             }
                         } else {
-                            println("Skipping temp guest row ${index + 2} - insufficient columns: ${row.size}")
+                            skippedTempGuestRows.add((index + 2) to row.size)
                             null
                         }
                     }
+                    logSkippedSheetRows("temp guest", skippedTempGuestRows)
 
                     // Write back missing or invalid NanoIDs to column G
                     if (tempGuestsToFixInSheets.isNotEmpty()) {

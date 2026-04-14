@@ -29,6 +29,7 @@ import com.eventmanager.app.data.update.UpdateChecker
 import com.eventmanager.app.data.update.UpdateCheckResult
 import com.eventmanager.app.data.update.UpdateDownloader
 import com.eventmanager.app.data.update.DownloadState
+import com.eventmanager.app.ui.components.ScannerMatch
 import java.io.File
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -726,6 +727,23 @@ class EventManagerViewModel(
             } catch (e: Exception) {
                 println("Failed to assign NFC UID to admin: ${e.message}")
                 _syncError.value = "Failed to assign NFC UID: ${e.message}"
+            }
+        }
+    }
+
+    /**
+     * Re-loads the volunteer or guest from the local database before admin checks.
+     * Avoids flaky denies when the UI list is briefly stale after sync while Room already has the latest flags.
+     */
+    suspend fun resolveFreshAdminScanMatch(match: ScannerMatch): ScannerMatch = withContext(Dispatchers.IO) {
+        when (match) {
+            is ScannerMatch.VolunteerMatch -> {
+                val fresh = repository.getVolunteerById(match.volunteer.id)
+                if (fresh != null) ScannerMatch.VolunteerMatch(fresh) else match
+            }
+            is ScannerMatch.GuestMatch -> {
+                val fresh = repository.getGuestByNanoId(match.guest.nanoId)
+                if (fresh != null) ScannerMatch.GuestMatch(fresh) else match
             }
         }
     }

@@ -269,6 +269,29 @@
     <string name="admin_auth_denied">%s n\'a pas l\'accès admin</string>
     <string name="admin_auth_not_found">Aucun profil correspondant trouvé</string>
     <string name="admin_auth_try_again">Réessayer</string>
+    <string name="admin_auth_use_fingerprint">Utiliser l\'empreinte digitale</string>
+    <string name="admin_auth_fingerprint_description">Authentifiez-vous avec votre empreinte digitale pour accéder au mode admin</string>
+    <string name="admin_auth_biometric_prompt_title">Authentification Admin</string>
+    <string name="admin_auth_biometric_prompt_subtitle">Vérifiez votre identité avec la biométrie</string>
+    <string name="admin_auth_biometric_cancel">Utiliser QR / NFC à la place</string>
+    <string name="admin_auth_biometric_error">Échec de l\'authentification biométrique : %s</string>
+
+    <!-- Paramètres de connexion biométrique admin -->
+    <string name="biometric_admin_login_title">Connexion admin par empreinte</string>
+    <string name="biometric_admin_login_description">Permettre l\'utilisation du capteur d\'empreinte de cet appareil pour accéder au mode admin</string>
+    <string name="biometric_admin_login_not_available">L\'authentification biométrique n\'est pas disponible sur cet appareil</string>
+    <string name="biometric_admin_login_none_enrolled">Aucune empreinte n\'est enregistrée sur cet appareil. Veuillez d\'abord ajouter une empreinte dans les paramètres de l\'appareil.</string>
+    <string name="biometric_admin_login_enabled">Connexion admin par empreinte activée</string>
+    <string name="biometric_admin_login_disabled">Connexion admin par empreinte désactivée</string>
+    <string name="biometric_warning_title">Avertissement de Sécurité</string>
+    <string name="biometric_warning_message">Toute personne possédant le code de déverrouillage de cet appareil peut ajouter une empreinte digitale et ainsi accéder à la page Admin.\n\nCela est strictement interdit pour les appareils accessibles au public ou à des personnes qui ne devraient pas avoir accès à ces informations privées.\n\nCette fonctionnalité est UNIQUEMENT destinée aux utilisateurs qui comprennent et acceptent les risques associés.\n\nPour continuer, votre identité admin sera d\'abord vérifiée via un code QR ou un badge NFC.</string>
+    <string name="biometric_warning_accept">Je comprends les risques</string>
+    <string name="biometric_warning_cancel">Annuler</string>
+    <string name="biometric_enrollment_verify_title">Vérifier l\'accès Admin</string>
+    <string name="biometric_enrollment_verify_description">Scannez votre badge admin ou code QR pour confirmer votre identité avant d\'activer la connexion biométrique</string>
+    <string name="biometric_enrollment_success">La connexion par empreinte a été activée pour l\'accès admin</string>
+    <string name="biometric_enrollment_prompt_title">Enregistrer la biométrie</string>
+    <string name="biometric_enrollment_prompt_subtitle">Confirmez votre empreinte pour activer la connexion admin</string>
 
     <!-- Billeterie -->
     <string name="ticket_check_title">Billeterie</string>

@@ -70,12 +70,15 @@ import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.data.sync.DateFormatUtils
 import com.eventmanager.app.data.utils.VolunteerActivityManager
 import com.eventmanager.app.data.utils.AppIconManager
+import com.eventmanager.app.data.models.Guest
 import com.eventmanager.app.data.models.Volunteer
 import com.eventmanager.app.ui.viewmodel.EventManagerViewModel
 import com.eventmanager.app.ui.components.CleanupInactiveVolunteersDialog
 import com.eventmanager.app.ui.components.SyncStatusDialog
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.collectAsState
 import com.eventmanager.app.R
@@ -90,6 +93,11 @@ import com.eventmanager.app.ui.components.ScrollGameDialog
 import com.eventmanager.app.utils.ImageUtils
 import androidx.core.content.ContextCompat
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
+import androidx.fragment.app.FragmentActivity
+import com.eventmanager.app.ui.components.ScannerMatch
+import com.eventmanager.app.ui.components.QRScannerDialog
 
 /** Full admin settings vs. Billeterie subset (appearance, localization, animations, app info). */
 enum class SettingsScreenVariant {
@@ -3185,6 +3193,125 @@ fun SettingsScreen(
                 
                 Spacer(modifier = Modifier.height(16.dp))
             }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+            // Biometric Admin Login Toggle
+            val biometricManager = remember { BiometricManager.from(context) }
+            val canAuthenticate = remember {
+                biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+            }
+            var biometricEnabled by remember { mutableStateOf(settingsManager.isBiometricAdminLoginEnabled()) }
+            var showBiometricWarningDialog by remember { mutableStateOf(false) }
+            var showBiometricAdminVerifyDialog by remember { mutableStateOf(false) }
+            var biometricAdminVerified by remember { mutableStateOf(false) }
+
+            val biometricAvailable = canAuthenticate == BiometricManager.BIOMETRIC_SUCCESS
+            val noneEnrolled = canAuthenticate == BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Start,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = context.getString(R.string.biometric_admin_login_title),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = when {
+                            noneEnrolled -> context.getString(R.string.biometric_admin_login_none_enrolled)
+                            !biometricAvailable -> context.getString(R.string.biometric_admin_login_not_available)
+                            else -> context.getString(R.string.biometric_admin_login_description)
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (!biometricAvailable) MaterialTheme.colorScheme.error
+                                else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = biometricEnabled,
+                    onCheckedChange = { wantsEnabled ->
+                        if (wantsEnabled) {
+                            showBiometricWarningDialog = true
+                        } else {
+                            biometricEnabled = false
+                            settingsManager.setBiometricAdminLoginEnabled(false)
+                            Toast.makeText(context, context.getString(R.string.biometric_admin_login_disabled), Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    enabled = biometricAvailable
+                )
+            }
+
+            // Warning dialog
+            if (showBiometricWarningDialog) {
+                AlertDialog(
+                    onDismissRequest = { showBiometricWarningDialog = false },
+                    icon = { Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                    title = { Text(context.getString(R.string.biometric_warning_title), fontWeight = FontWeight.Bold) },
+                    text = { Text(context.getString(R.string.biometric_warning_message)) },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                showBiometricWarningDialog = false
+                                showBiometricAdminVerifyDialog = true
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                        ) {
+                            Text(context.getString(R.string.biometric_warning_accept))
+                        }
+                    },
+                    dismissButton = {
+                        OutlinedButton(onClick = { showBiometricWarningDialog = false }) {
+                            Text(context.getString(R.string.biometric_warning_cancel))
+                        }
+                    }
+                )
+            }
+
+            // Admin verification dialog (QR / NFC) before enrolling biometrics
+            if (showBiometricAdminVerifyDialog) {
+                BiometricAdminVerificationDialog(
+                    viewModel = viewModel,
+                    onVerified = {
+                        showBiometricAdminVerifyDialog = false
+                        biometricAdminVerified = true
+                    },
+                    onDismiss = { showBiometricAdminVerifyDialog = false }
+                )
+            }
+
+            // Once admin is verified via QR/NFC, prompt for biometric enrollment
+            LaunchedEffect(biometricAdminVerified) {
+                if (biometricAdminVerified) {
+                    biometricAdminVerified = false
+                    val fragmentActivity = context as? FragmentActivity ?: return@LaunchedEffect
+                    val promptInfo = BiometricPrompt.PromptInfo.Builder()
+                        .setTitle(context.getString(R.string.biometric_enrollment_prompt_title))
+                        .setSubtitle(context.getString(R.string.biometric_enrollment_prompt_subtitle))
+                        .setNegativeButtonText(context.getString(R.string.biometric_warning_cancel))
+                        .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+                        .build()
+                    val biometricPrompt = BiometricPrompt(
+                        fragmentActivity,
+                        object : BiometricPrompt.AuthenticationCallback() {
+                            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                                settingsManager.setBiometricAdminLoginEnabled(true)
+                                biometricEnabled = true
+                                Toast.makeText(context, context.getString(R.string.biometric_enrollment_success), Toast.LENGTH_LONG).show()
+                            }
+                            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                                if (errorCode != BiometricPrompt.ERROR_USER_CANCELED && errorCode != BiometricPrompt.ERROR_NEGATIVE_BUTTON) {
+                                    Toast.makeText(context, context.getString(R.string.admin_auth_biometric_error, errString), Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    )
+                    biometricPrompt.authenticate(promptInfo)
+                }
+            }
         }
         
         Spacer(modifier = Modifier.height(24.dp))
@@ -4224,4 +4351,210 @@ fun UpdateSourcesDialog(
             }
         }
     )
+}
+
+@Composable
+private fun BiometricAdminVerificationDialog(
+    viewModel: EventManagerViewModel,
+    onVerified: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    val verifyScope = rememberCoroutineScope()
+    val guests by viewModel.guests.collectAsState()
+    val volunteers by viewModel.volunteers.collectAsState()
+    var showQRScanner by remember { mutableStateOf(false) }
+    var verificationMessage by remember { mutableStateOf<String?>(null) }
+    var verificationSuccess by remember { mutableStateOf(false) }
+
+    val permanentGuests = remember(guests) { guests.filter { !it.isVolunteerBenefit && !it.isTemporaryGuest } }
+    val volunteersByNfcUid = remember(volunteers) {
+        volunteers.filter { it.nfcCardUid.isNotBlank() }
+            .groupBy { it.nfcCardUid.trim().replace(" ", "").replace(":", "").uppercase() }
+    }
+    val guestsByNfcUid = remember(permanentGuests) {
+        permanentGuests.filter { it.nfcCardUid.isNotBlank() }
+            .groupBy { it.nfcCardUid.trim().replace(" ", "").replace(":", "").uppercase() }
+    }
+
+    fun applyVerifiedAdminFromCandidates(candidates: List<ScannerMatch>) {
+        if (candidates.isEmpty()) {
+            verificationMessage = context.getString(R.string.admin_auth_not_found)
+            return
+        }
+        verifyScope.launch {
+            var granted = false
+            for (m in candidates) {
+                val fresh = try {
+                    viewModel.resolveFreshAdminScanMatch(m)
+                } catch (_: Exception) {
+                    m
+                }
+                when (fresh) {
+                    is ScannerMatch.VolunteerMatch -> if (fresh.volunteer.isAdmin) {
+                        granted = true
+                        break
+                    }
+                    is ScannerMatch.GuestMatch -> if (fresh.guest.isAdmin) {
+                        granted = true
+                        break
+                    }
+                }
+            }
+            withContext(Dispatchers.Main) {
+                if (granted) {
+                    verificationSuccess = true
+                } else {
+                    val name = when (val m = candidates.first()) {
+                        is ScannerMatch.VolunteerMatch -> m.volunteer.name
+                        is ScannerMatch.GuestMatch -> m.guest.name
+                    }
+                    verificationMessage = context.getString(R.string.admin_auth_denied, name)
+                }
+            }
+        }
+    }
+
+    fun resolveUidMatch(rawUid: String) {
+        val uid = rawUid.trim().replace(" ", "").replace(":", "").uppercase()
+        if (uid.isBlank()) return
+        val volunteerMatches = volunteersByNfcUid[uid].orEmpty()
+        val guestMatches = guestsByNfcUid[uid].orEmpty()
+        val allMatches: List<ScannerMatch> =
+            volunteerMatches.map { ScannerMatch.VolunteerMatch(it) } +
+                guestMatches.map { ScannerMatch.GuestMatch(it) }
+        // Try every profile sharing this UID with a DB refresh (UI list can be stale right after sync).
+        applyVerifiedAdminFromCandidates(allMatches)
+    }
+
+    LaunchedEffect(verificationSuccess) {
+        if (verificationSuccess) {
+            kotlinx.coroutines.delay(300)
+            onVerified()
+        }
+    }
+
+    val activity = remember(context) {
+        var ctx = context
+        while (ctx is android.content.ContextWrapper && ctx !is android.app.Activity) ctx = ctx.baseContext
+        ctx as? android.app.Activity
+    }
+    val nfcAdapter = remember(context) { android.nfc.NfcAdapter.getDefaultAdapter(context) }
+    val mainHandler = remember { android.os.Handler(android.os.Looper.getMainLooper()) }
+
+    DisposableEffect(activity, nfcAdapter) {
+        if (activity == null || nfcAdapter == null || !nfcAdapter.isEnabled) {
+            onDispose { }
+        } else {
+            val callback = android.nfc.NfcAdapter.ReaderCallback { tag ->
+                val uid = tag.id?.joinToString(separator = "") { "%02X".format(it) }.orEmpty()
+                mainHandler.post { resolveUidMatch(uid) }
+            }
+            try {
+                nfcAdapter.enableReaderMode(
+                    activity, callback,
+                    android.nfc.NfcAdapter.FLAG_READER_NFC_A or android.nfc.NfcAdapter.FLAG_READER_NFC_B or
+                        android.nfc.NfcAdapter.FLAG_READER_NFC_F or android.nfc.NfcAdapter.FLAG_READER_NFC_V or
+                        android.nfc.NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK,
+                    null
+                )
+            } catch (_: Exception) { }
+            onDispose {
+                try { nfcAdapter.disableReaderMode(activity) } catch (_: Exception) { }
+            }
+        }
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth(0.9f)
+                .padding(16.dp),
+            shape = RoundedCornerShape(24.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Icon(
+                    Icons.Default.Fingerprint,
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+
+                Text(
+                    text = context.getString(R.string.biometric_enrollment_verify_title),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+
+                Text(
+                    text = context.getString(R.string.biometric_enrollment_verify_description),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+
+                HorizontalDivider()
+
+                Icon(
+                    Icons.Default.Nfc,
+                    contentDescription = null,
+                    modifier = Modifier.size(40.dp),
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                )
+
+                Text(
+                    text = context.getString(R.string.admin_auth_ready),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+
+                if (verificationMessage != null) {
+                    Text(
+                        text = verificationMessage!!,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                OutlinedButton(
+                    onClick = { showQRScanner = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Icon(Icons.Default.QrCodeScanner, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(context.getString(R.string.admin_auth_scan_qr), fontWeight = FontWeight.SemiBold)
+                }
+
+                TextButton(onClick = onDismiss) {
+                    Text(context.getString(R.string.biometric_warning_cancel))
+                }
+            }
+        }
+    }
+
+    if (showQRScanner) {
+        QRScannerDialog(
+            onDismiss = { showQRScanner = false },
+            onMatchFound = { match ->
+                showQRScanner = false
+                applyVerifiedAdminFromCandidates(listOf(match))
+            },
+            volunteers = volunteers,
+            guests = guests
+        )
+    }
 }
