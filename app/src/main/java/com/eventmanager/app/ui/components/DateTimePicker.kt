@@ -1,6 +1,5 @@
 package com.eventmanager.app.ui.components
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
@@ -16,7 +15,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import com.eventmanager.app.data.utils.DateTimeUtils
 import java.util.*
-import java.util.Date
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -111,13 +109,12 @@ fun DateTimePicker(
                     onClick = {
                         datePickerState.selectedDateMillis?.let { dateMillis ->
                             // Combine selected date with current time
-                            val newCalendar = Calendar.getInstance(TimeZone.getTimeZone("Europe/Zurich")).apply {
-                                timeInMillis = dateMillis
-                                set(Calendar.HOUR_OF_DAY, calendar.get(Calendar.HOUR_OF_DAY))
-                                set(Calendar.MINUTE, calendar.get(Calendar.MINUTE))
-                                set(Calendar.SECOND, 0)
-                                set(Calendar.MILLISECOND, 0)
-                            }
+                            val newCalendar = Calendar.getInstance(TimeZone.getTimeZone("Europe/Zurich"))
+                            newCalendar.timeInMillis = dateMillis
+                            newCalendar.set(Calendar.HOUR_OF_DAY, calendar.get(Calendar.HOUR_OF_DAY))
+                            newCalendar.set(Calendar.MINUTE, calendar.get(Calendar.MINUTE))
+                            newCalendar.set(Calendar.SECOND, 0)
+                            newCalendar.set(Calendar.MILLISECOND, 0)
                             onTimestampChanged(newCalendar.timeInMillis)
                         }
                         showDatePicker = false
@@ -150,13 +147,12 @@ fun DateTimePicker(
                 TextButton(
                     onClick = {
                         // Combine current date with selected time
-                        val newCalendar = Calendar.getInstance(TimeZone.getTimeZone("Europe/Zurich")).apply {
-                            timeInMillis = selectedTimestamp
-                            set(Calendar.HOUR_OF_DAY, timePickerState.hour)
-                            set(Calendar.MINUTE, timePickerState.minute)
-                            set(Calendar.SECOND, 0)
-                            set(Calendar.MILLISECOND, 0)
-                        }
+                        val newCalendar = Calendar.getInstance(TimeZone.getTimeZone("Europe/Zurich"))
+                        newCalendar.timeInMillis = selectedTimestamp
+                        newCalendar.set(Calendar.HOUR_OF_DAY, timePickerState.hour)
+                        newCalendar.set(Calendar.MINUTE, timePickerState.minute)
+                        newCalendar.set(Calendar.SECOND, 0)
+                        newCalendar.set(Calendar.MILLISECOND, 0)
                         onTimestampChanged(newCalendar.timeInMillis)
                         showTimePicker = false
                     }
@@ -263,16 +259,16 @@ fun BirthdayDatePicker(
                     try {
                         val parsedDate = storageFormat.parse(dateString)
                         parsedDate?.let { displayFormat.format(it) } ?: dateString
-                    } catch (e: Exception) {
+                    } catch (_: Exception) {
                         dateString
                     }
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // If display format parsing fails, try storage format
                 try {
                     val parsedDate = storageFormat.parse(dateString)
                     parsedDate?.let { displayFormat.format(it) } ?: dateString
-                } catch (e2: Exception) {
+                } catch (_: Exception) {
                     // If both fail, return original string
                     dateString
                 }
@@ -333,7 +329,7 @@ fun BirthdayDatePicker(
                 Calendar.getInstance().apply {
                     add(Calendar.YEAR, -20)
                 }.timeInMillis
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // If any parsing error occurs, use safe default
                 Calendar.getInstance().apply {
                     add(Calendar.YEAR, -20)
@@ -421,9 +417,8 @@ fun BirthdayDatePicker(
                             val now = Calendar.getInstance().timeInMillis
                             if (dateMillis <= now) {
                                 // Convert to dd.MM.yyyy format
-                                val calendar = Calendar.getInstance().apply {
-                                    timeInMillis = dateMillis
-                                }
+                                val calendar = Calendar.getInstance()
+                                calendar.timeInMillis = dateMillis
                                 val formattedDate = String.format(
                                     Locale.getDefault(),
                                     "%02d.%02d.%04d",

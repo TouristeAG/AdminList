@@ -208,6 +208,9 @@ dependencies {
     // NanoID for globally unique ID generation
     implementation 'com.aventrix.jnanoid:jnanoid:2.0.0'
     
+    // Biometric authentication (fingerprint / face unlock)
+    implementation 'androidx.biometric:biometric:1.1.0'
+    
     // Vico Compose Charts
     implementation 'com.patrykandpatrick.vico:compose:2.0.0-alpha.20'
     implementation 'com.patrykandpatrick.vico:compose-m3:2.0.0-alpha.20'

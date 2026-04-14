@@ -61,6 +61,7 @@ class SettingsManager(context: Context) {
         private const val KEY_CATEGORY_DEVELOPER_EXPANDED = "category_developer_expanded"
         private const val KEY_CATEGORY_MAINTENANCE_EXPANDED = "category_maintenance_expanded"
         private const val KEY_SETUP_WIZARD_COMPLETED = "setup_wizard_completed"
+        private const val KEY_BIOMETRIC_ADMIN_LOGIN = "biometric_admin_login"
         
         // Email Settings Keys
         private const val KEY_EMAIL_SUBJECT = "email_qr_subject"
@@ -618,6 +619,15 @@ class SettingsManager(context: Context) {
     
     fun saveGuestEmailSignature(signature: String) {
         prefs.edit().putString(KEY_GUEST_EMAIL_SIGNATURE, signature).apply()
+    }
+    
+    // Biometric Admin Login Configuration
+    fun isBiometricAdminLoginEnabled(): Boolean {
+        return prefs.getBoolean(KEY_BIOMETRIC_ADMIN_LOGIN, false)
+    }
+    
+    fun setBiometricAdminLoginEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_BIOMETRIC_ADMIN_LOGIN, enabled).apply()
     }
     
     // Clear all settings

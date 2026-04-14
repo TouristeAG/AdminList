@@ -1,23 +1,55 @@
-    package com.eventmanager.app.data.sync
+package com.eventmanager.app.data.sync
 
 import android.content.Context
-import com.google.auth.oauth2.ServiceAccountCredentials
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
 import com.google.api.client.json.gson.GsonFactory
 import com.google.api.services.sheets.v4.Sheets
-import com.google.api.services.sheets.v4.SheetsScopes
 import com.google.api.services.sheets.v4.model.*
+import com.google.auth.http.HttpCredentialsAdapter
 import com.google.auth.oauth2.GoogleCredentials
 import com.eventmanager.app.data.models.*
-import com.eventmanager.app.data.models.BenefitSystemType
-import com.eventmanager.app.data.models.ManualRewards
-import com.eventmanager.app.data.sync.GoogleSheetsConfig
 import com.eventmanager.app.data.utils.NanoIdGenerator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.security.GeneralSecurityException
 import java.net.UnknownHostException
+
+/** Formats 1-based sheet row numbers for logs, e.g. "3", "10-15", "3, 10-15". */
+private fun formatSheetRowNumberRanges(rowNumbers: Collection<Int>): String {
+    val sorted = rowNumbers.distinct().sorted()
+    if (sorted.isEmpty()) return ""
+    val parts = mutableListOf<String>()
+    var start = sorted[0]
+    var end = sorted[0]
+    for (i in 1 until sorted.size) {
+        val v = sorted[i]
+        if (v == end + 1) {
+            end = v
+        } else {
+            parts.add(if (start == end) "$start" else "$start-$end")
+            start = v
+            end = v
+        }
+    }
+    parts.add(if (start == end) "$start" else "$start-$end")
+    return parts.joinToString(", ")
+}
+
+/** One log line for many skipped rows: (sheet row, column count) pairs. */
+private fun logSkippedSheetRows(entityLabel: String, skips: List<Pair<Int, Int>>) {
+    if (skips.isEmpty()) return
+    val rowNums = skips.map { it.first }
+    val colCounts = skips.map { it.second }.distinct().sorted()
+    val colPart = if (colCounts.size == 1) {
+        "insufficient columns: ${colCounts.first()}"
+    } else {
+        "insufficient columns (column counts: ${colCounts.joinToString()})"
+    }
+    println(
+        "Skipping ${skips.size} $entityLabel rows (rows ${formatSheetRowNumberRanges(rowNums)}) — $colPart"
+    )
+}
 
 class GoogleSheetsService(private val context: Context) {
     
@@ -59,13 +91,11 @@ class GoogleSheetsService(private val context: Context) {
                 throw IOException("Service account key file not found. Please upload it in Settings.")
             }
             
-            // Use the modern GoogleCredentials approach
             println("Initializing Google Sheets service with service account...")
             
-            // Convert ServiceAccountCredentials to HttpRequestInitializer
-            val requestInitializer = com.google.api.client.googleapis.auth.oauth2.GoogleCredential.fromStream(
-                java.io.FileInputStream(keyFilePath)
-            ).createScoped(listOf(GoogleSheetsConfig.SCOPES))
+            val credentials = GoogleCredentials.fromStream(java.io.FileInputStream(keyFilePath))
+                .createScoped(listOf(GoogleSheetsConfig.SCOPES))
+            val requestInitializer = HttpCredentialsAdapter(credentials)
             
             sheetsService = Sheets.Builder(httpTransport, jsonFactory, requestInitializer)
                 .setApplicationName("Event Manager App")
@@ -80,7 +110,7 @@ class GoogleSheetsService(private val context: Context) {
     }
 
     // Single Guest Operations (App Priority)
-    suspend fun addGuestToSheets(guest: Guest, venues: List<VenueEntity>) = withContext(Dispatchers.IO) {
+    suspend fun addGuestToSheets(guest: Guest, _venues: List<VenueEntity>) = withContext(Dispatchers.IO) {
         try {
             if (guest.isTemporaryGuest) {
                 println("Skipping addGuestToSheets for temporary guest: ${guest.name}")
@@ -156,40 +186,7 @@ class GoogleSheetsService(private val context: Context) {
         }
     }
 
-    /**
-     * Maps a Venue enum to the appropriate venue name for Google Sheets
-     * @param venue The Venue enum value
-     * @param venues List of active venues from database
-     * @return The venue name to store in sheets
-     */
-    private fun mapVenueEnumToName(venue: Venue, venues: List<VenueEntity>): String {
-        val activeVenues = venues.filter { it.isActive }
-        
-        return when (venue) {
-            Venue.BOTH -> {
-                if (activeVenues.size <= 2) "Both" else "All"
-            }
-            else -> {
-                // Find the venue entity that maps to this enum
-                val venueEntity = activeVenues.find { entity ->
-                    when (venue) {
-                        Venue.GROOVE -> entity.name.uppercase() == "GROOVE"
-                        Venue.LE_TERREAU -> entity.name.uppercase() == "LE_TERREAU"
-                        Venue.BOTH -> false // Already handled above
-                    }
-                }
-                
-                // If no exact match, find venues that map to this enum using the same logic as UI
-                val mappedEntity = venueEntity ?: activeVenues.find { entity ->
-                    mapVenueNameToEnum(entity.name) == venue
-                }
-                
-                mappedEntity?.name ?: venue.name.replace("_", " ")
-            }
-        }
-    }
-
-    suspend fun updateGuestInSheets(guest: Guest, venues: List<VenueEntity>) = withContext(Dispatchers.IO) {
+    suspend fun updateGuestInSheets(guest: Guest, _venues: List<VenueEntity>) = withContext(Dispatchers.IO) {
         try {
             if (guest.isTemporaryGuest) {
                 println("Skipping updateGuestInSheets for temporary guest: ${guest.name}")
@@ -243,7 +240,7 @@ class GoogleSheetsService(private val context: Context) {
     }
 
     // Guest List Operations
-    suspend fun syncGuestsToSheets(guests: List<Guest>, venues: List<VenueEntity>) = withContext(Dispatchers.IO) {
+    suspend fun syncGuestsToSheets(guests: List<Guest>, _venues: List<VenueEntity>) = withContext(Dispatchers.IO) {
         try {
             if (sheetsService == null) {
                 initializeSheetsService()
@@ -304,7 +301,7 @@ class GoogleSheetsService(private val context: Context) {
      * Upload-only sync for the Volunteer Guest List sheet.
      * This writes the computed volunteer benefit entries to a dedicated tab.
      */
-    suspend fun syncVolunteerGuestListToSheets(volunteerGuests: List<Guest>, venues: List<VenueEntity>) = withContext(Dispatchers.IO) {
+    suspend fun syncVolunteerGuestListToSheets(volunteerGuests: List<Guest>, _venues: List<VenueEntity>) = withContext(Dispatchers.IO) {
         try {
             if (sheetsService == null) {
                 initializeSheetsService()
@@ -379,6 +376,7 @@ class GoogleSheetsService(private val context: Context) {
                 
                 val guests = mutableListOf<Guest>()
                 val guestsToFixInSheets = mutableListOf<Pair<Int, String>>() // (rowNumber, newNanoId)
+                val skippedGuestRows = mutableListOf<Pair<Int, Int>>()
 
                 values.forEachIndexed { index, row ->
                     val rowNumber = index + 2 // +2 because we start from row 2 (after header)
@@ -477,9 +475,10 @@ class GoogleSheetsService(private val context: Context) {
                             println("Failed to parse guest row $rowNumber (old format): ${e.message}")
                         }
                     } else {
-                        println("Skipping guest row $rowNumber - insufficient columns: ${row.size}")
+                        skippedGuestRows.add(rowNumber to row.size)
                     }
                 }
+                logSkippedSheetRows("guest", skippedGuestRows)
 
                 // Write back any missing or invalid NanoIDs to Google Sheets (column J)
                 if (guestsToFixInSheets.isNotEmpty()) {
@@ -720,7 +719,8 @@ class GoogleSheetsService(private val context: Context) {
                 
                 val volunteers = mutableListOf<Volunteer>()
                 val volunteersToFixInSheets = mutableListOf<Pair<Int, String>>() // (rowNumber, newId)
-                
+                val skippedVolunteerRows = mutableListOf<Pair<Int, Int>>()
+
                 values.forEachIndexed { index, row ->
                     if (row.size >= 11) {
                         try {
@@ -762,7 +762,7 @@ class GoogleSheetsService(private val context: Context) {
                                             else -> null
                                         }
                                     }
-                                } catch (e: Exception) {
+                                } catch (_: Exception) {
                                     println("Failed to parse volunteer gender '${row[6]}' for volunteer '${row[1]}', setting to null")
                                     null
                                 },
@@ -773,19 +773,19 @@ class GoogleSheetsService(private val context: Context) {
                                     } else {
                                         VolunteerRank.valueOf(rankString)
                                     }
-                                } catch (e: Exception) {
+                                } catch (_: Exception) {
                                     println("Failed to parse volunteer rank '${row[7]}' for volunteer '${row[1]}', setting to null")
                                     null
                                 },
                                 isActive = try {
                                     row[8].toString().equals("Yes", ignoreCase = true)
-                                } catch (e: Exception) {
+                                } catch (_: Exception) {
                                     println("Failed to parse volunteer active status for volunteer '${row[1]}', setting to true")
                                     true
                                 },
                                 lastModified = try {
                                     row[9].toString().toLongOrNull() ?: System.currentTimeMillis()
-                                } catch (e: Exception) {
+                                } catch (_: Exception) {
                                     println("Failed to parse volunteer last modified for volunteer '${row[1]}', setting to current time")
                                     System.currentTimeMillis()
                                 },
@@ -839,11 +839,11 @@ class GoogleSheetsService(private val context: Context) {
                             println("Failed to parse volunteer row ${index + 2} (no NFC UID format): ${e.message}")
                         }
                     } else {
-                        println("Skipping volunteer row ${index + 2} - insufficient columns: ${row.size} (expected 11)")
-                        println("Row data: ${row.joinToString(", ")}")
+                        skippedVolunteerRows.add((index + 2) to row.size)
                     }
                 }
-                
+                logSkippedSheetRows("volunteer", skippedVolunteerRows)
+
                 // Update Google Sheets with fixed IDs immediately
                 if (volunteersToFixInSheets.isNotEmpty()) {
                     println("📝 Updating ${volunteersToFixInSheets.size} volunteer(s) with fixed NanoIDs in Google Sheets...")
@@ -885,7 +885,7 @@ class GoogleSheetsService(private val context: Context) {
     }
 
     // Single Job Operations (App Priority)
-    suspend fun addJobToSheets(job: Job, venues: List<VenueEntity>): String? = withContext(Dispatchers.IO) {
+    suspend fun addJobToSheets(job: Job, _venues: List<VenueEntity>): String = withContext(Dispatchers.IO) {
         try {
             if (sheetsService == null) {
                 initializeSheetsService()
@@ -935,7 +935,7 @@ class GoogleSheetsService(private val context: Context) {
         }
     }
     
-    suspend fun updateJobInSheets(job: Job, venues: List<VenueEntity>) = withContext(Dispatchers.IO) {
+    suspend fun updateJobInSheets(job: Job, _venues: List<VenueEntity>) = withContext(Dispatchers.IO) {
         try {
             if (sheetsService == null) {
                 initializeSheetsService()
@@ -982,7 +982,7 @@ class GoogleSheetsService(private val context: Context) {
     }
 
     // Job Operations
-    suspend fun syncJobsToSheets(jobs: List<Job>, venues: List<VenueEntity>) = withContext(Dispatchers.IO) {
+    suspend fun syncJobsToSheets(jobs: List<Job>, _venues: List<VenueEntity>) = withContext(Dispatchers.IO) {
         try {
             if (sheetsService == null) {
                 initializeSheetsService()
@@ -1038,7 +1038,7 @@ class GoogleSheetsService(private val context: Context) {
         }
     }
 
-    suspend fun syncJobsFromSheets(_jobTypeConfigs: List<JobTypeConfig> = emptyList()): List<Job> = withContext(Dispatchers.IO) {
+    suspend fun syncJobsFromSheets(_jobTypeConfigs: List<JobTypeConfig>): List<Job> = withContext(Dispatchers.IO) {
         try {
             if (sheetsService == null) {
                 initializeSheetsService()
@@ -1069,7 +1069,8 @@ class GoogleSheetsService(private val context: Context) {
                 } catch (e: Exception) {
                     println("⚠️ Entries left (Used/Yes/No) migration in sheets skipped: ${e.message}")
                 }
-                
+
+                val skippedJobRows = mutableListOf<Pair<Int, Int>>()
                 val jobs = values.mapIndexedNotNull { index, row ->
                     if (row.size >= 7) {
                         try {
@@ -1106,11 +1107,12 @@ class GoogleSheetsService(private val context: Context) {
                             null
                         }
                     } else {
-                        println("Skipping job row ${index + 2} - insufficient columns: ${row.size}")
+                        skippedJobRows.add((index + 2) to row.size)
                         null
                     }
                 }
-                
+                logSkippedSheetRows("job", skippedJobRows)
+
                 println("Successfully parsed ${jobs.size} jobs")
                 jobs
                 },
@@ -1283,14 +1285,15 @@ class GoogleSheetsService(private val context: Context) {
                 
                 val values = response.getValues() ?: emptyList()
                 println("Retrieved ${values.size} job type config rows from sheets")
-                
+
+                val skippedJobTypeConfigRows = mutableListOf<Pair<Int, Int>>()
                 val configs = values.mapIndexedNotNull { index, row ->
                     if (row.size >= 9) {
                         try {
                             // Parse benefit system type
                             val benefitSystemType = try {
                                 BenefitSystemType.valueOf(row[5].toString())
-                            } catch (e: Exception) {
+                            } catch (_: Exception) {
                                 BenefitSystemType.STELLAR // Default to STELLAR for backward compatibility
                             }
                             
@@ -1377,11 +1380,12 @@ class GoogleSheetsService(private val context: Context) {
                             null
                         }
                     } else {
-                        println("Skipping job type config row ${index + 2} - insufficient columns: ${row.size}")
+                        skippedJobTypeConfigRows.add((index + 2) to row.size)
                         null
                     }
                 }
-                
+                logSkippedSheetRows("job type config", skippedJobTypeConfigRows)
+
                 println("Successfully parsed ${configs.size} job type configs")
                 configs
                 },
@@ -1484,7 +1488,8 @@ class GoogleSheetsService(private val context: Context) {
                 
                 val values = response.getValues() ?: emptyList()
                 println("Retrieved ${values.size} venue rows from sheets")
-                
+
+                val skippedVenueRows = mutableListOf<Pair<Int, Int>>()
                 val venues = values.mapIndexedNotNull { index, row ->
                     if (row.size >= 4) {
                         try {
@@ -1505,11 +1510,12 @@ class GoogleSheetsService(private val context: Context) {
                             null
                         }
                     } else {
-                        println("Skipping venue row ${index + 2} - insufficient columns: ${row.size}")
+                        skippedVenueRows.add((index + 2) to row.size)
                         null
                     }
                 }
-                
+                logSkippedSheetRows("venue", skippedVenueRows)
+
                 println("Successfully parsed ${venues.size} venues")
                 venues
                 },
@@ -1597,14 +1603,6 @@ class GoogleSheetsService(private val context: Context) {
         }
     }
 
-    suspend fun syncAllFromSheetsWithJobTypes(): Triple<List<Guest>, List<Volunteer>, List<Job>> {
-        val guests = syncGuestsFromSheets()
-        val volunteers = syncVolunteersFromSheets()
-        val jobTypeConfigs = syncJobTypeConfigsFromSheets()
-        val jobs = syncJobsFromSheets(jobTypeConfigs)
-        return Triple(guests, volunteers, jobs)
-    }
-    
     suspend fun syncAllFromSheetsWithJobTypes(jobTypeConfigs: List<JobTypeConfig>): Triple<List<Guest>, List<Volunteer>, List<Job>> {
         val guests = syncGuestsFromSheets()
         val volunteers = syncVolunteersFromSheets()
@@ -1614,114 +1612,9 @@ class GoogleSheetsService(private val context: Context) {
     
     // Public access methods for validators
     fun getSheetsService() = sheetsService
-    fun getContext() = context
-    
-    // Test method to verify API connection
-    suspend fun testConnection(): Boolean = withContext(Dispatchers.IO) {
-        try {
-            println("=== TESTING GOOGLE SHEETS CONNECTION ===")
-            
-            if (sheetsService == null) {
-                println("Sheets service is null, initializing...")
-                initializeSheetsService()
-            }
-            
-            val spreadsheetId = settingsManager.getSpreadsheetId()
-            println("Spreadsheet ID: $spreadsheetId")
-            
-            if (spreadsheetId.isBlank() || spreadsheetId == "YOUR_SPREADSHEET_ID_HERE") {
-                throw IOException("Spreadsheet ID is not configured properly. Please set it in Settings.")
-            }
-            
-            // Try to get spreadsheet metadata
-            println("Attempting to connect to spreadsheet...")
-            val spreadsheet = sheetsService?.spreadsheets()?.get(spreadsheetId)?.execute()
-            if (spreadsheet != null) {
-                println("✅ Successfully connected to spreadsheet: ${spreadsheet.properties?.title}")
-                
-                // Test reading from each sheet
-                val guestSheetName = settingsManager.getGuestListSheet()
-                val volunteerSheetName = settingsManager.getVolunteerSheet()
-                val jobsSheetName = settingsManager.getJobsSheet()
-                
-                println("Testing sheet access...")
-                println("- Guest sheet: $guestSheetName")
-                println("- Volunteer sheet: $volunteerSheetName")
-                println("- Jobs sheet: $jobsSheetName")
-                
-                // Test guest sheet access
-                try {
-                    val guestResponse = sheetsService?.spreadsheets()?.values()?.get(
-                        spreadsheetId, "${guestSheetName}!A1:I1"
-                    )?.execute()
-                    println("✅ Guest sheet accessible, headers: ${guestResponse?.getValues()?.firstOrNull()}")
-                } catch (e: Exception) {
-                    println("❌ Guest sheet error: ${e.message}")
-                }
-                
-                // Test volunteer sheet access
-                try {
-                    val volunteerResponse = sheetsService?.spreadsheets()?.values()?.get(
-                        spreadsheetId, "${volunteerSheetName}!A1:K1"
-                    )?.execute()
-                    println("✅ Volunteer sheet accessible, headers: ${volunteerResponse?.getValues()?.firstOrNull()}")
-                } catch (e: Exception) {
-                    println("❌ Volunteer sheet error: ${e.message}")
-                }
-                
-                // Test jobs sheet access
-                try {
-                    val jobsResponse = sheetsService?.spreadsheets()?.values()?.get(
-                        spreadsheetId, "${jobsSheetName}!A1:H1"
-                    )?.execute()
-                    println("✅ Jobs sheet accessible, headers: ${jobsResponse?.getValues()?.firstOrNull()}")
-                } catch (e: Exception) {
-                    println("❌ Jobs sheet error: ${e.message}")
-                }
-                
-                // Test JobTypes sheet access
-                try {
-                    val jobTypesResponse = sheetsService?.spreadsheets()?.values()?.get(
-                        spreadsheetId, "JobTypes!A1:I1"
-                    )?.execute()
-                    println("✅ JobTypes sheet accessible, headers: ${jobTypesResponse?.getValues()?.firstOrNull()}")
-                } catch (e: Exception) {
-                    println("❌ JobTypes sheet error: ${e.message}")
-                }
-                
-                return@withContext true
-            } else {
-                throw IOException("Failed to retrieve spreadsheet")
-            }
-        } catch (e: Exception) {
-            println("❌ Connection test failed: ${e.message}")
-            e.printStackTrace()
-            
-            // Provide specific error messages for common issues
-            when {
-                e.message?.contains("403") == true -> {
-                    println("❌ Permission denied. Check if the service account has access to the spreadsheet.")
-                }
-                e.message?.contains("404") == true -> {
-                    println("❌ Spreadsheet not found. Check if the spreadsheet ID is correct.")
-                }
-                e.message?.contains("400") == true -> {
-                    println("❌ Bad request. Check if the spreadsheet ID format is correct.")
-                }
-                e.message?.contains("Service account key file not found") == true -> {
-                    println("❌ Service account key file missing. Please upload it in Settings.")
-                }
-                e.message?.contains("Failed to initialize") == true -> {
-                    println("❌ Authentication failed. Check if the service account key is valid.")
-                }
-            }
-            
-            return@withContext false
-        }
-    }
     
     // Deletion methods for Google Sheets
-    suspend fun deleteJobFromSheets(jobId: String, sheetsId: String?) = withContext(Dispatchers.IO) {
+    suspend fun deleteJobFromSheets(_jobId: String, sheetsId: String?) = withContext(Dispatchers.IO) {
         try {
             if (sheetsId == null) {
                 println("Cannot delete job from sheets - no sheetsId provided")
@@ -1877,6 +1770,7 @@ class GoogleSheetsService(private val context: Context) {
 
                     val formatter = java.time.format.DateTimeFormatter.ISO_LOCAL_DATE
                     val tempGuestsToFixInSheets = mutableListOf<Pair<Int, String>>()
+                    val skippedTempGuestRows = mutableListOf<Pair<Int, Int>>()
 
                     val result = values.mapIndexedNotNull { index, row ->
                         if (row.size >= 5) {
@@ -1909,10 +1803,11 @@ class GoogleSheetsService(private val context: Context) {
                                 null
                             }
                         } else {
-                            println("Skipping temp guest row ${index + 2} - insufficient columns: ${row.size}")
+                            skippedTempGuestRows.add((index + 2) to row.size)
                             null
                         }
                     }
+                    logSkippedSheetRows("temp guest", skippedTempGuestRows)
 
                     // Write back missing or invalid NanoIDs to column G
                     if (tempGuestsToFixInSheets.isNotEmpty()) {

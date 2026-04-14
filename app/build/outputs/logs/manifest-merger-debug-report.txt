@@ -15,6 +15,11 @@ ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.x
 INJECTED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:2:1-252:12
 INJECTED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:2:1-252:12
 INJECTED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:2:1-252:12
+MERGED from [androidx.room:room-runtime:2.6.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/39fa44b0eb24b162b5ff6063b95744a0/transformed/room-runtime-2.6.1/AndroidManifest.xml:17:1-31:12
+MERGED from [androidx.work:work-runtime-ktx:2.9.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/beefed8b60bca9f368b3b6f06fc4dc73/transformed/work-runtime-ktx-2.9.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/62e563c4c37724492f68d1d12e620a4a/transformed/work-runtime-2.9.0/AndroidManifest.xml:17:1-145:12
+MERGED from [androidx.room:room-ktx:2.6.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/efeed3407b2908a719cc4339b0513188/transformed/room-ktx-2.6.1/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.biometric:biometric:1.1.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/4d22f10caf826080989b597166892542/transformed/biometric-1.1.0/AndroidManifest.xml:17:1-29:12
 MERGED from [com.patrykandpatrick.vico:compose-m3:2.0.0-alpha.20] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/03df099ab86c2568ac084b86724ed9ae/transformed/compose-m3-2.0.0-alpha.20/AndroidManifest.xml:2:1-7:12
 MERGED from [com.patrykandpatrick.vico:compose:2.0.0-alpha.20] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/bb474ea35e668f8afbd38b77e02a1aa6/transformed/compose-2.0.0-alpha.20/AndroidManifest.xml:2:1-7:12
 MERGED from [io.coil-kt:coil-compose:2.5.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/f367cb147927cae830ff2c05648e2ed9/transformed/coil-compose-2.5.0/AndroidManifest.xml:2:1-7:12
@@ -23,6 +28,11 @@ MERGED from [io.coil-kt:coil:2.5.0] /Users/leonardomondada/.gradle/caches/8.10.2
 MERGED from [io.coil-kt:coil-base:2.5.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/65b5c75fc37562a29a040abc4da2fb8b/transformed/coil-base-2.5.0/AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.appcompat:appcompat-resources:1.6.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/4a7b3520b3eb04cbd3cc44c90432cb13/transformed/appcompat-resources-1.6.1/AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.appcompat:appcompat:1.6.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/3d9316f912b7fcf0569d506b7204e640/transformed/appcompat-1.6.1/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.navigation:navigation-common:2.7.5] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/2c2abe36a5f8cebdd8cc985bc16b7481/transformed/navigation-common-2.7.5/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.navigation:navigation-runtime:2.7.5] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/301a6ae5ef9ce03496a7bea2cfafe581/transformed/navigation-runtime-2.7.5/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.navigation:navigation-common-ktx:2.7.5] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/e70f3db9622a50e30531ec991fa51b9c/transformed/navigation-common-ktx-2.7.5/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.navigation:navigation-runtime-ktx:2.7.5] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/c16417e31946b5c7a29f31410c3592d2/transformed/navigation-runtime-ktx-2.7.5/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.navigation:navigation-compose:2.7.5] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/88d41b9fb3a8f153dbffaa3a6e292dc3/transformed/navigation-compose-2.7.5/AndroidManifest.xml:2:1-7:12
 MERGED from [com.google.android.gms:play-services-auth:20.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/48ce7a1834ad8c3079042595f9a975e4/transformed/play-services-auth-20.7.0/AndroidManifest.xml:17:1-40:12
 MERGED from [com.google.android.gms:play-services-auth-api-phone:18.0.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/d7c24819283d0aeed92ff9e8d29b6f7a/transformed/play-services-auth-api-phone-18.0.1/AndroidManifest.xml:2:1-7:12
 MERGED from [com.google.android.gms:play-services-auth-base:18.0.4] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/22b08f0e9163cce8d53d08e6eb3fd8ef/transformed/play-services-auth-base-18.0.4/AndroidManifest.xml:2:1-7:12
@@ -31,11 +41,7 @@ MERGED from [com.google.android.gms:play-services-base:18.0.1] /Users/leonardomo
 MERGED from [com.google.android.gms:play-services-tasks:18.0.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/1a48905d34f6f3a5b509f12cf32d6f78/transformed/play-services-tasks-18.0.1/AndroidManifest.xml:2:1-6:12
 MERGED from [com.google.android.gms:play-services-basement:18.2.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/49b92cecc2d5d10fbdcbe4383c53d55e/transformed/play-services-basement-18.2.0/AndroidManifest.xml:16:1-26:12
 MERGED from [androidx.fragment:fragment:1.3.6] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/6037c76457e112c93fc6a6aad7765d50/transformed/fragment-1.3.6/AndroidManifest.xml:17:1-24:12
-MERGED from [androidx.navigation:navigation-common:2.7.5] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/2c2abe36a5f8cebdd8cc985bc16b7481/transformed/navigation-common-2.7.5/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.navigation:navigation-runtime:2.7.5] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/301a6ae5ef9ce03496a7bea2cfafe581/transformed/navigation-runtime-2.7.5/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.navigation:navigation-common-ktx:2.7.5] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/e70f3db9622a50e30531ec991fa51b9c/transformed/navigation-common-ktx-2.7.5/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.navigation:navigation-runtime-ktx:2.7.5] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/c16417e31946b5c7a29f31410c3592d2/transformed/navigation-runtime-ktx-2.7.5/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.navigation:navigation-compose:2.7.5] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/88d41b9fb3a8f153dbffaa3a6e292dc3/transformed/navigation-compose-2.7.5/AndroidManifest.xml:2:1-7:12
+MERGED from [com.google.accompanist:accompanist-drawablepainter:0.32.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/b37d7f81151ab8d1c2fcd05b63b21404/transformed/accompanist-drawablepainter-0.32.0/AndroidManifest.xml:17:1-23:12
 MERGED from [androidx.compose.material3:material3-android:1.2.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/6272aaff53f24f4cba2cff7e312515f5/transformed/material3-release/AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.compose.material:material-android:1.6.7] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/eaf1fe75033f6de6156ece22a6ad4ba6/transformed/material-release/AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.compose.material:material-icons-core-android:1.6.7] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/9b202acfffe0ae869bab6c44333a35c7/transformed/material-icons-core-release/AndroidManifest.xml:2:1-7:12
@@ -53,23 +59,24 @@ MERGED from [androidx.compose.ui:ui-text-android:1.6.7] /Users/leonardomondada/.
 MERGED from [androidx.compose.ui:ui-tooling-preview-android:1.6.7] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/bb52622750233e7cd26e34bd53e494d8/transformed/ui-tooling-preview-release/AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.compose.ui:ui-tooling-android:1.6.7] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/79ade911a6cf5324b49a668463411c3b/transformed/ui-tooling-release/AndroidManifest.xml:17:1-28:12
 MERGED from [androidx.compose.ui:ui-graphics-android:1.6.7] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/c0688f4d04f4f464ee409795d2a1253f/transformed/ui-graphics-release/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.compose.ui:ui-test-manifest:1.6.7] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/69d2cb461523304f6f44aa95f985ba76/transformed/ui-test-manifest-1.6.7/AndroidManifest.xml:17:1-28:12
-MERGED from [com.google.accompanist:accompanist-drawablepainter:0.32.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/b37d7f81151ab8d1c2fcd05b63b21404/transformed/accompanist-drawablepainter-0.32.0/AndroidManifest.xml:17:1-23:12
 MERGED from [androidx.compose.ui:ui-android:1.6.7] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/4beafa716d683323128faf0a7d71f0b1/transformed/ui-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-test-manifest:1.6.7] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/69d2cb461523304f6f44aa95f985ba76/transformed/ui-test-manifest-1.6.7/AndroidManifest.xml:17:1-28:12
 MERGED from [androidx.activity:activity-ktx:1.8.2] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/962fe49ccd3708d2b114192fc8cb8099/transformed/activity-ktx-1.8.2/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.activity:activity-compose:1.8.2] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/c52b2608e9505dee87bd85dc41454121/transformed/activity-compose-1.8.2/AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.activity:activity:1.8.2] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/c0a380e727eaba7adf8908953eb250b9/transformed/activity-1.8.2/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/9cfe940d95c2b66b147e24d5fbce0c0a/transformed/savedstate-ktx-1.2.1/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.savedstate:savedstate:1.2.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/dbb97075fd8e3b3067eaaaed03d01d11/transformed/savedstate-1.2.1/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.activity:activity-compose:1.8.2] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/c52b2608e9505dee87bd85dc41454121/transformed/activity-compose-1.8.2/AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.loader:loader:1.0.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/4b83e45fb4040050fbd280ac3a54f60d/transformed/loader-1.0.0/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.work:work-runtime-ktx:2.9.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/beefed8b60bca9f368b3b6f06fc4dc73/transformed/work-runtime-ktx-2.9.0/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/62e563c4c37724492f68d1d12e620a4a/transformed/work-runtime-2.9.0/AndroidManifest.xml:17:1-145:12
 MERGED from [androidx.emoji2:emoji2-views-helper:1.3.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/6139fa16ac5de858f8e4475399fcf4ca/transformed/emoji2-views-helper-1.3.0/AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.emoji2:emoji2:1.3.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/57d5ccb715ba87c5e96d4495606f79a9/transformed/emoji2-1.3.0/AndroidManifest.xml:17:1-35:12
 MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/08f6b9d44a1c6ad5c762fccfeececae7/transformed/lifecycle-process-2.7.0/AndroidManifest.xml:17:1-35:12
 MERGED from [androidx.lifecycle:lifecycle-service:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/3f1eec5c1230890aaf80b11101b6a935/transformed/lifecycle-service-2.7.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/9cfe940d95c2b66b147e24d5fbce0c0a/transformed/savedstate-ktx-1.2.1/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.savedstate:savedstate:1.2.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/dbb97075fd8e3b3067eaaaed03d01d11/transformed/savedstate-1.2.1/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/903bc4fc5b42ec5d5770629201bba68b/transformed/lifecycle-viewmodel-savedstate-2.7.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/5ce28a463af1a43da7fbe123cf1ae868/transformed/lifecycle-viewmodel-ktx-2.7.0/AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.lifecycle:lifecycle-livedata-core-ktx:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/75f438b5ba29701fa0c7e695ceaaa14e/transformed/lifecycle-livedata-core-ktx-2.7.0/AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.lifecycle:lifecycle-livedata:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/673439745d435e9425307a5008680cc2/transformed/lifecycle-livedata-2.7.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/f2d36c794d4785599b73adc607d743d9/transformed/lifecycle-livedata-core-2.7.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/89be789748b9d3170350473f4ce5aa9c/transformed/lifecycle-viewmodel-2.7.0/AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.drawerlayout:drawerlayout:1.0.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/f44f0b813fc6edb6955021f5f02d8b73/transformed/drawerlayout-1.0.0/AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/a5d22a0fa46e883920e12ffeab0131f5/transformed/customview-poolingcontainer-1.0.0/AndroidManifest.xml:17:1-23:12
 MERGED from [androidx.core:core-ktx:1.13.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/cd2448cf6d15059bc04fcba834c7d53c/transformed/core-ktx-1.13.1/AndroidManifest.xml:2:1-7:12
@@ -80,15 +87,9 @@ MERGED from [androidx.customview:customview:1.0.0] /Users/leonardomondada/.gradl
 MERGED from [androidx.autofill:autofill:1.0.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/80b84b537c7deddfd2d04079fa46b54c/transformed/autofill-1.0.0/AndroidManifest.xml:17:1-24:12
 MERGED from [androidx.core:core:1.13.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/13d237f74574e32c3c807983da402f79/transformed/core-1.13.1/AndroidManifest.xml:17:1-30:12
 MERGED from [androidx.lifecycle:lifecycle-runtime:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/98f1cdbc2010e13e2545768ef9e061f0/transformed/lifecycle-runtime-2.7.0/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.lifecycle:lifecycle-runtime-ktx:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/4ee8cc8e3dcc517b1d0c4e1bd02b9d2c/transformed/lifecycle-runtime-ktx-2.7.0/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.lifecycle:lifecycle-livedata-ktx:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/1a31487a27fe554337a08c4986bef204/transformed/lifecycle-livedata-ktx-2.7.0/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/903bc4fc5b42ec5d5770629201bba68b/transformed/lifecycle-viewmodel-savedstate-2.7.0/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/f2d36c794d4785599b73adc607d743d9/transformed/lifecycle-livedata-core-2.7.0/AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/466a25dc6ce6035f6bc0ff59512f54c2/transformed/lifecycle-viewmodel-compose-2.7.0/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/5ce28a463af1a43da7fbe123cf1ae868/transformed/lifecycle-viewmodel-ktx-2.7.0/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/89be789748b9d3170350473f4ce5aa9c/transformed/lifecycle-viewmodel-2.7.0/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.room:room-runtime:2.6.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/39fa44b0eb24b162b5ff6063b95744a0/transformed/room-runtime-2.6.1/AndroidManifest.xml:17:1-31:12
-MERGED from [androidx.room:room-ktx:2.6.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/efeed3407b2908a719cc4339b0513188/transformed/room-ktx-2.6.1/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-livedata-ktx:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/1a31487a27fe554337a08c4986bef204/transformed/lifecycle-livedata-ktx-2.7.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-runtime-ktx:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/4ee8cc8e3dcc517b1d0c4e1bd02b9d2c/transformed/lifecycle-runtime-ktx-2.7.0/AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.sqlite:sqlite-framework:2.4.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/4b6250cdfda096e3ec9c087ac39919a7/transformed/sqlite-framework-2.4.0/AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.sqlite:sqlite:2.4.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/ce43e2c51319fefa7c3018c1c14f072e/transformed/sqlite-2.4.0/AndroidManifest.xml:17:1-22:12
 MERGED from [com.patrykandpatrick.vico:core:2.0.0-alpha.20] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/2438266150e71854edbf3ae9be3ab90b/transformed/core-2.0.0-alpha.20/AndroidManifest.xml:2:1-7:12
@@ -99,8 +100,8 @@ MERGED from [androidx.arch.core:core-runtime:2.2.0] /Users/leonardomondada/.grad
 MERGED from [androidx.cursoradapter:cursoradapter:1.0.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/a1b44f34ab01813f42232a1188dfb55e/transformed/cursoradapter-1.0.0/AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/e8a0dfe25064e7bc1fcdabfc89b77ee0/transformed/profileinstaller-1.3.1/AndroidManifest.xml:17:1-55:12
 MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/39b77221e6d3f9d454d0c9fe968fc49f/transformed/startup-runtime-1.1.1/AndroidManifest.xml:17:1-33:12
-MERGED from [androidx.tracing:tracing:1.0.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/eed493741eb69b8a361cf49581f0cb15/transformed/tracing-1.0.0/AndroidManifest.xml:17:1-24:12
 MERGED from [androidx.interpolator:interpolator:1.0.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/f766641353199567902ed27b506aa016/transformed/interpolator-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.tracing:tracing:1.0.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/eed493741eb69b8a361cf49581f0cb15/transformed/tracing-1.0.0/AndroidManifest.xml:17:1-24:12
 MERGED from [androidx.exifinterface:exifinterface:1.3.6] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/70706537bc2e72f2ef765ff51bbf5e80/transformed/exifinterface-1.3.6/AndroidManifest.xml:17:1-24:12
 MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/262a1684279db46bf20358400b34c75d/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:17:1-27:12
 MERGED from [com.journeyapps:zxing-android-embedded:4.3.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/65f92f065221e07682e2b3f906d89ff2/transformed/zxing-android-embedded-4.3.0/AndroidManifest.xml:17:1-56:12
@@ -181,6 +182,10 @@ ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.x
 application
 ADDED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:29:5-250:19
 INJECTED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml:29:5-250:19
+MERGED from [androidx.room:room-runtime:2.6.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/39fa44b0eb24b162b5ff6063b95744a0/transformed/room-runtime-2.6.1/AndroidManifest.xml:23:5-29:19
+MERGED from [androidx.room:room-runtime:2.6.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/39fa44b0eb24b162b5ff6063b95744a0/transformed/room-runtime-2.6.1/AndroidManifest.xml:23:5-29:19
+MERGED from [androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/62e563c4c37724492f68d1d12e620a4a/transformed/work-runtime-2.9.0/AndroidManifest.xml:28:5-143:19
+MERGED from [androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/62e563c4c37724492f68d1d12e620a4a/transformed/work-runtime-2.9.0/AndroidManifest.xml:28:5-143:19
 MERGED from [com.google.android.gms:play-services-auth:20.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/48ce7a1834ad8c3079042595f9a975e4/transformed/play-services-auth-20.7.0/AndroidManifest.xml:22:5-38:19
 MERGED from [com.google.android.gms:play-services-auth:20.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/48ce7a1834ad8c3079042595f9a975e4/transformed/play-services-auth-20.7.0/AndroidManifest.xml:22:5-38:19
 MERGED from [com.google.android.gms:play-services-fido:20.0.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/9d1d9fddce0234b8e40b45defb74200f/transformed/play-services-fido-20.0.1/AndroidManifest.xml:7:5-8:19
@@ -195,16 +200,12 @@ MERGED from [androidx.compose.ui:ui-tooling-android:1.6.7] /Users/leonardomondad
 MERGED from [androidx.compose.ui:ui-tooling-android:1.6.7] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/79ade911a6cf5324b49a668463411c3b/transformed/ui-tooling-release/AndroidManifest.xml:22:5-26:19
 MERGED from [androidx.compose.ui:ui-test-manifest:1.6.7] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/69d2cb461523304f6f44aa95f985ba76/transformed/ui-test-manifest-1.6.7/AndroidManifest.xml:22:5-26:19
 MERGED from [androidx.compose.ui:ui-test-manifest:1.6.7] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/69d2cb461523304f6f44aa95f985ba76/transformed/ui-test-manifest-1.6.7/AndroidManifest.xml:22:5-26:19
-MERGED from [androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/62e563c4c37724492f68d1d12e620a4a/transformed/work-runtime-2.9.0/AndroidManifest.xml:28:5-143:19
-MERGED from [androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/62e563c4c37724492f68d1d12e620a4a/transformed/work-runtime-2.9.0/AndroidManifest.xml:28:5-143:19
 MERGED from [androidx.emoji2:emoji2:1.3.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/57d5ccb715ba87c5e96d4495606f79a9/transformed/emoji2-1.3.0/AndroidManifest.xml:23:5-33:19
 MERGED from [androidx.emoji2:emoji2:1.3.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/57d5ccb715ba87c5e96d4495606f79a9/transformed/emoji2-1.3.0/AndroidManifest.xml:23:5-33:19
 MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/08f6b9d44a1c6ad5c762fccfeececae7/transformed/lifecycle-process-2.7.0/AndroidManifest.xml:23:5-33:19
 MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/08f6b9d44a1c6ad5c762fccfeececae7/transformed/lifecycle-process-2.7.0/AndroidManifest.xml:23:5-33:19
 MERGED from [androidx.core:core:1.13.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/13d237f74574e32c3c807983da402f79/transformed/core-1.13.1/AndroidManifest.xml:28:5-89
 MERGED from [androidx.core:core:1.13.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/13d237f74574e32c3c807983da402f79/transformed/core-1.13.1/AndroidManifest.xml:28:5-89
-MERGED from [androidx.room:room-runtime:2.6.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/39fa44b0eb24b162b5ff6063b95744a0/transformed/room-runtime-2.6.1/AndroidManifest.xml:23:5-29:19
-MERGED from [androidx.room:room-runtime:2.6.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/39fa44b0eb24b162b5ff6063b95744a0/transformed/room-runtime-2.6.1/AndroidManifest.xml:23:5-29:19
 MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/e8a0dfe25064e7bc1fcdabfc89b77ee0/transformed/profileinstaller-1.3.1/AndroidManifest.xml:23:5-53:19
 MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/e8a0dfe25064e7bc1fcdabfc89b77ee0/transformed/profileinstaller-1.3.1/AndroidManifest.xml:23:5-53:19
 MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/39b77221e6d3f9d454d0c9fe968fc49f/transformed/startup-runtime-1.1.1/AndroidManifest.xml:25:5-31:19
@@ -485,6 +486,16 @@ uses-sdk
 INJECTED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml
 INJECTED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml
+MERGED from [androidx.room:room-runtime:2.6.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/39fa44b0eb24b162b5ff6063b95744a0/transformed/room-runtime-2.6.1/AndroidManifest.xml:21:5-44
+MERGED from [androidx.room:room-runtime:2.6.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/39fa44b0eb24b162b5ff6063b95744a0/transformed/room-runtime-2.6.1/AndroidManifest.xml:21:5-44
+MERGED from [androidx.work:work-runtime-ktx:2.9.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/beefed8b60bca9f368b3b6f06fc4dc73/transformed/work-runtime-ktx-2.9.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.work:work-runtime-ktx:2.9.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/beefed8b60bca9f368b3b6f06fc4dc73/transformed/work-runtime-ktx-2.9.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/62e563c4c37724492f68d1d12e620a4a/transformed/work-runtime-2.9.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/62e563c4c37724492f68d1d12e620a4a/transformed/work-runtime-2.9.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.room:room-ktx:2.6.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/efeed3407b2908a719cc4339b0513188/transformed/room-ktx-2.6.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.room:room-ktx:2.6.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/efeed3407b2908a719cc4339b0513188/transformed/room-ktx-2.6.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.biometric:biometric:1.1.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/4d22f10caf826080989b597166892542/transformed/biometric-1.1.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.biometric:biometric:1.1.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/4d22f10caf826080989b597166892542/transformed/biometric-1.1.0/AndroidManifest.xml:20:5-22:41
 MERGED from [com.patrykandpatrick.vico:compose-m3:2.0.0-alpha.20] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/03df099ab86c2568ac084b86724ed9ae/transformed/compose-m3-2.0.0-alpha.20/AndroidManifest.xml:5:5-44
 MERGED from [com.patrykandpatrick.vico:compose-m3:2.0.0-alpha.20] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/03df099ab86c2568ac084b86724ed9ae/transformed/compose-m3-2.0.0-alpha.20/AndroidManifest.xml:5:5-44
 MERGED from [com.patrykandpatrick.vico:compose:2.0.0-alpha.20] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/bb474ea35e668f8afbd38b77e02a1aa6/transformed/compose-2.0.0-alpha.20/AndroidManifest.xml:5:5-44
@@ -501,6 +512,16 @@ MERGED from [androidx.appcompat:appcompat-resources:1.6.1] /Users/leonardomondad
 MERGED from [androidx.appcompat:appcompat-resources:1.6.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/4a7b3520b3eb04cbd3cc44c90432cb13/transformed/appcompat-resources-1.6.1/AndroidManifest.xml:20:5-44
 MERGED from [androidx.appcompat:appcompat:1.6.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/3d9316f912b7fcf0569d506b7204e640/transformed/appcompat-1.6.1/AndroidManifest.xml:20:5-44
 MERGED from [androidx.appcompat:appcompat:1.6.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/3d9316f912b7fcf0569d506b7204e640/transformed/appcompat-1.6.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.navigation:navigation-common:2.7.5] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/2c2abe36a5f8cebdd8cc985bc16b7481/transformed/navigation-common-2.7.5/AndroidManifest.xml:20:5-44
+MERGED from [androidx.navigation:navigation-common:2.7.5] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/2c2abe36a5f8cebdd8cc985bc16b7481/transformed/navigation-common-2.7.5/AndroidManifest.xml:20:5-44
+MERGED from [androidx.navigation:navigation-runtime:2.7.5] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/301a6ae5ef9ce03496a7bea2cfafe581/transformed/navigation-runtime-2.7.5/AndroidManifest.xml:20:5-44
+MERGED from [androidx.navigation:navigation-runtime:2.7.5] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/301a6ae5ef9ce03496a7bea2cfafe581/transformed/navigation-runtime-2.7.5/AndroidManifest.xml:20:5-44
+MERGED from [androidx.navigation:navigation-common-ktx:2.7.5] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/e70f3db9622a50e30531ec991fa51b9c/transformed/navigation-common-ktx-2.7.5/AndroidManifest.xml:5:5-44
+MERGED from [androidx.navigation:navigation-common-ktx:2.7.5] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/e70f3db9622a50e30531ec991fa51b9c/transformed/navigation-common-ktx-2.7.5/AndroidManifest.xml:5:5-44
+MERGED from [androidx.navigation:navigation-runtime-ktx:2.7.5] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/c16417e31946b5c7a29f31410c3592d2/transformed/navigation-runtime-ktx-2.7.5/AndroidManifest.xml:5:5-44
+MERGED from [androidx.navigation:navigation-runtime-ktx:2.7.5] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/c16417e31946b5c7a29f31410c3592d2/transformed/navigation-runtime-ktx-2.7.5/AndroidManifest.xml:5:5-44
+MERGED from [androidx.navigation:navigation-compose:2.7.5] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/88d41b9fb3a8f153dbffaa3a6e292dc3/transformed/navigation-compose-2.7.5/AndroidManifest.xml:5:5-44
+MERGED from [androidx.navigation:navigation-compose:2.7.5] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/88d41b9fb3a8f153dbffaa3a6e292dc3/transformed/navigation-compose-2.7.5/AndroidManifest.xml:5:5-44
 MERGED from [com.google.android.gms:play-services-auth:20.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/48ce7a1834ad8c3079042595f9a975e4/transformed/play-services-auth-20.7.0/AndroidManifest.xml:20:5-44
 MERGED from [com.google.android.gms:play-services-auth:20.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/48ce7a1834ad8c3079042595f9a975e4/transformed/play-services-auth-20.7.0/AndroidManifest.xml:20:5-44
 MERGED from [com.google.android.gms:play-services-auth-api-phone:18.0.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/d7c24819283d0aeed92ff9e8d29b6f7a/transformed/play-services-auth-api-phone-18.0.1/AndroidManifest.xml:5:5-44
@@ -517,16 +538,8 @@ MERGED from [com.google.android.gms:play-services-basement:18.2.0] /Users/leonar
 MERGED from [com.google.android.gms:play-services-basement:18.2.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/49b92cecc2d5d10fbdcbe4383c53d55e/transformed/play-services-basement-18.2.0/AndroidManifest.xml:18:5-43
 MERGED from [androidx.fragment:fragment:1.3.6] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/6037c76457e112c93fc6a6aad7765d50/transformed/fragment-1.3.6/AndroidManifest.xml:20:5-22:41
 MERGED from [androidx.fragment:fragment:1.3.6] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/6037c76457e112c93fc6a6aad7765d50/transformed/fragment-1.3.6/AndroidManifest.xml:20:5-22:41
-MERGED from [androidx.navigation:navigation-common:2.7.5] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/2c2abe36a5f8cebdd8cc985bc16b7481/transformed/navigation-common-2.7.5/AndroidManifest.xml:20:5-44
-MERGED from [androidx.navigation:navigation-common:2.7.5] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/2c2abe36a5f8cebdd8cc985bc16b7481/transformed/navigation-common-2.7.5/AndroidManifest.xml:20:5-44
-MERGED from [androidx.navigation:navigation-runtime:2.7.5] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/301a6ae5ef9ce03496a7bea2cfafe581/transformed/navigation-runtime-2.7.5/AndroidManifest.xml:20:5-44
-MERGED from [androidx.navigation:navigation-runtime:2.7.5] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/301a6ae5ef9ce03496a7bea2cfafe581/transformed/navigation-runtime-2.7.5/AndroidManifest.xml:20:5-44
-MERGED from [androidx.navigation:navigation-common-ktx:2.7.5] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/e70f3db9622a50e30531ec991fa51b9c/transformed/navigation-common-ktx-2.7.5/AndroidManifest.xml:5:5-44
-MERGED from [androidx.navigation:navigation-common-ktx:2.7.5] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/e70f3db9622a50e30531ec991fa51b9c/transformed/navigation-common-ktx-2.7.5/AndroidManifest.xml:5:5-44
-MERGED from [androidx.navigation:navigation-runtime-ktx:2.7.5] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/c16417e31946b5c7a29f31410c3592d2/transformed/navigation-runtime-ktx-2.7.5/AndroidManifest.xml:5:5-44
-MERGED from [androidx.navigation:navigation-runtime-ktx:2.7.5] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/c16417e31946b5c7a29f31410c3592d2/transformed/navigation-runtime-ktx-2.7.5/AndroidManifest.xml:5:5-44
-MERGED from [androidx.navigation:navigation-compose:2.7.5] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/88d41b9fb3a8f153dbffaa3a6e292dc3/transformed/navigation-compose-2.7.5/AndroidManifest.xml:5:5-44
-MERGED from [androidx.navigation:navigation-compose:2.7.5] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/88d41b9fb3a8f153dbffaa3a6e292dc3/transformed/navigation-compose-2.7.5/AndroidManifest.xml:5:5-44
+MERGED from [com.google.accompanist:accompanist-drawablepainter:0.32.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/b37d7f81151ab8d1c2fcd05b63b21404/transformed/accompanist-drawablepainter-0.32.0/AndroidManifest.xml:21:5-44
+MERGED from [com.google.accompanist:accompanist-drawablepainter:0.32.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/b37d7f81151ab8d1c2fcd05b63b21404/transformed/accompanist-drawablepainter-0.32.0/AndroidManifest.xml:21:5-44
 MERGED from [androidx.compose.material3:material3-android:1.2.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/6272aaff53f24f4cba2cff7e312515f5/transformed/material3-release/AndroidManifest.xml:20:5-44
 MERGED from [androidx.compose.material3:material3-android:1.2.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/6272aaff53f24f4cba2cff7e312515f5/transformed/material3-release/AndroidManifest.xml:20:5-44
 MERGED from [androidx.compose.material:material-android:1.6.7] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/eaf1fe75033f6de6156ece22a6ad4ba6/transformed/material-release/AndroidManifest.xml:5:5-44
@@ -561,28 +574,18 @@ MERGED from [androidx.compose.ui:ui-tooling-android:1.6.7] /Users/leonardomondad
 MERGED from [androidx.compose.ui:ui-tooling-android:1.6.7] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/79ade911a6cf5324b49a668463411c3b/transformed/ui-tooling-release/AndroidManifest.xml:20:5-44
 MERGED from [androidx.compose.ui:ui-graphics-android:1.6.7] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/c0688f4d04f4f464ee409795d2a1253f/transformed/ui-graphics-release/AndroidManifest.xml:5:5-44
 MERGED from [androidx.compose.ui:ui-graphics-android:1.6.7] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/c0688f4d04f4f464ee409795d2a1253f/transformed/ui-graphics-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.ui:ui-test-manifest:1.6.7] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/69d2cb461523304f6f44aa95f985ba76/transformed/ui-test-manifest-1.6.7/AndroidManifest.xml:20:5-44
-MERGED from [androidx.compose.ui:ui-test-manifest:1.6.7] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/69d2cb461523304f6f44aa95f985ba76/transformed/ui-test-manifest-1.6.7/AndroidManifest.xml:20:5-44
-MERGED from [com.google.accompanist:accompanist-drawablepainter:0.32.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/b37d7f81151ab8d1c2fcd05b63b21404/transformed/accompanist-drawablepainter-0.32.0/AndroidManifest.xml:21:5-44
-MERGED from [com.google.accompanist:accompanist-drawablepainter:0.32.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/b37d7f81151ab8d1c2fcd05b63b21404/transformed/accompanist-drawablepainter-0.32.0/AndroidManifest.xml:21:5-44
 MERGED from [androidx.compose.ui:ui-android:1.6.7] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/4beafa716d683323128faf0a7d71f0b1/transformed/ui-release/AndroidManifest.xml:5:5-44
 MERGED from [androidx.compose.ui:ui-android:1.6.7] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/4beafa716d683323128faf0a7d71f0b1/transformed/ui-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-test-manifest:1.6.7] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/69d2cb461523304f6f44aa95f985ba76/transformed/ui-test-manifest-1.6.7/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.ui:ui-test-manifest:1.6.7] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/69d2cb461523304f6f44aa95f985ba76/transformed/ui-test-manifest-1.6.7/AndroidManifest.xml:20:5-44
 MERGED from [androidx.activity:activity-ktx:1.8.2] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/962fe49ccd3708d2b114192fc8cb8099/transformed/activity-ktx-1.8.2/AndroidManifest.xml:5:5-44
 MERGED from [androidx.activity:activity-ktx:1.8.2] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/962fe49ccd3708d2b114192fc8cb8099/transformed/activity-ktx-1.8.2/AndroidManifest.xml:5:5-44
-MERGED from [androidx.activity:activity-compose:1.8.2] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/c52b2608e9505dee87bd85dc41454121/transformed/activity-compose-1.8.2/AndroidManifest.xml:5:5-44
-MERGED from [androidx.activity:activity-compose:1.8.2] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/c52b2608e9505dee87bd85dc41454121/transformed/activity-compose-1.8.2/AndroidManifest.xml:5:5-44
 MERGED from [androidx.activity:activity:1.8.2] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/c0a380e727eaba7adf8908953eb250b9/transformed/activity-1.8.2/AndroidManifest.xml:20:5-44
 MERGED from [androidx.activity:activity:1.8.2] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/c0a380e727eaba7adf8908953eb250b9/transformed/activity-1.8.2/AndroidManifest.xml:20:5-44
-MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/9cfe940d95c2b66b147e24d5fbce0c0a/transformed/savedstate-ktx-1.2.1/AndroidManifest.xml:20:5-44
-MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/9cfe940d95c2b66b147e24d5fbce0c0a/transformed/savedstate-ktx-1.2.1/AndroidManifest.xml:20:5-44
-MERGED from [androidx.savedstate:savedstate:1.2.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/dbb97075fd8e3b3067eaaaed03d01d11/transformed/savedstate-1.2.1/AndroidManifest.xml:20:5-44
-MERGED from [androidx.savedstate:savedstate:1.2.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/dbb97075fd8e3b3067eaaaed03d01d11/transformed/savedstate-1.2.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.activity:activity-compose:1.8.2] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/c52b2608e9505dee87bd85dc41454121/transformed/activity-compose-1.8.2/AndroidManifest.xml:5:5-44
+MERGED from [androidx.activity:activity-compose:1.8.2] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/c52b2608e9505dee87bd85dc41454121/transformed/activity-compose-1.8.2/AndroidManifest.xml:5:5-44
 MERGED from [androidx.loader:loader:1.0.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/4b83e45fb4040050fbd280ac3a54f60d/transformed/loader-1.0.0/AndroidManifest.xml:20:5-44
 MERGED from [androidx.loader:loader:1.0.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/4b83e45fb4040050fbd280ac3a54f60d/transformed/loader-1.0.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.work:work-runtime-ktx:2.9.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/beefed8b60bca9f368b3b6f06fc4dc73/transformed/work-runtime-ktx-2.9.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.work:work-runtime-ktx:2.9.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/beefed8b60bca9f368b3b6f06fc4dc73/transformed/work-runtime-ktx-2.9.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/62e563c4c37724492f68d1d12e620a4a/transformed/work-runtime-2.9.0/AndroidManifest.xml:21:5-44
-MERGED from [androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/62e563c4c37724492f68d1d12e620a4a/transformed/work-runtime-2.9.0/AndroidManifest.xml:21:5-44
 MERGED from [androidx.emoji2:emoji2-views-helper:1.3.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/6139fa16ac5de858f8e4475399fcf4ca/transformed/emoji2-views-helper-1.3.0/AndroidManifest.xml:5:5-44
 MERGED from [androidx.emoji2:emoji2-views-helper:1.3.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/6139fa16ac5de858f8e4475399fcf4ca/transformed/emoji2-views-helper-1.3.0/AndroidManifest.xml:5:5-44
 MERGED from [androidx.emoji2:emoji2:1.3.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/57d5ccb715ba87c5e96d4495606f79a9/transformed/emoji2-1.3.0/AndroidManifest.xml:21:5-44
@@ -591,10 +594,22 @@ MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] /Users/leonardomondada/
 MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/08f6b9d44a1c6ad5c762fccfeececae7/transformed/lifecycle-process-2.7.0/AndroidManifest.xml:21:5-44
 MERGED from [androidx.lifecycle:lifecycle-service:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/3f1eec5c1230890aaf80b11101b6a935/transformed/lifecycle-service-2.7.0/AndroidManifest.xml:5:5-44
 MERGED from [androidx.lifecycle:lifecycle-service:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/3f1eec5c1230890aaf80b11101b6a935/transformed/lifecycle-service-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/9cfe940d95c2b66b147e24d5fbce0c0a/transformed/savedstate-ktx-1.2.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/9cfe940d95c2b66b147e24d5fbce0c0a/transformed/savedstate-ktx-1.2.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate:1.2.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/dbb97075fd8e3b3067eaaaed03d01d11/transformed/savedstate-1.2.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate:1.2.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/dbb97075fd8e3b3067eaaaed03d01d11/transformed/savedstate-1.2.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/903bc4fc5b42ec5d5770629201bba68b/transformed/lifecycle-viewmodel-savedstate-2.7.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/903bc4fc5b42ec5d5770629201bba68b/transformed/lifecycle-viewmodel-savedstate-2.7.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/5ce28a463af1a43da7fbe123cf1ae868/transformed/lifecycle-viewmodel-ktx-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/5ce28a463af1a43da7fbe123cf1ae868/transformed/lifecycle-viewmodel-ktx-2.7.0/AndroidManifest.xml:5:5-44
 MERGED from [androidx.lifecycle:lifecycle-livedata-core-ktx:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/75f438b5ba29701fa0c7e695ceaaa14e/transformed/lifecycle-livedata-core-ktx-2.7.0/AndroidManifest.xml:5:5-44
 MERGED from [androidx.lifecycle:lifecycle-livedata-core-ktx:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/75f438b5ba29701fa0c7e695ceaaa14e/transformed/lifecycle-livedata-core-ktx-2.7.0/AndroidManifest.xml:5:5-44
 MERGED from [androidx.lifecycle:lifecycle-livedata:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/673439745d435e9425307a5008680cc2/transformed/lifecycle-livedata-2.7.0/AndroidManifest.xml:20:5-44
 MERGED from [androidx.lifecycle:lifecycle-livedata:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/673439745d435e9425307a5008680cc2/transformed/lifecycle-livedata-2.7.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/f2d36c794d4785599b73adc607d743d9/transformed/lifecycle-livedata-core-2.7.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/f2d36c794d4785599b73adc607d743d9/transformed/lifecycle-livedata-core-2.7.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/89be789748b9d3170350473f4ce5aa9c/transformed/lifecycle-viewmodel-2.7.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/89be789748b9d3170350473f4ce5aa9c/transformed/lifecycle-viewmodel-2.7.0/AndroidManifest.xml:20:5-44
 MERGED from [androidx.drawerlayout:drawerlayout:1.0.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/f44f0b813fc6edb6955021f5f02d8b73/transformed/drawerlayout-1.0.0/AndroidManifest.xml:20:5-44
 MERGED from [androidx.drawerlayout:drawerlayout:1.0.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/f44f0b813fc6edb6955021f5f02d8b73/transformed/drawerlayout-1.0.0/AndroidManifest.xml:20:5-44
 MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/a5d22a0fa46e883920e12ffeab0131f5/transformed/customview-poolingcontainer-1.0.0/AndroidManifest.xml:20:5-21:38
@@ -615,24 +630,12 @@ MERGED from [androidx.core:core:1.13.1] /Users/leonardomondada/.gradle/caches/8.
 MERGED from [androidx.core:core:1.13.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/13d237f74574e32c3c807983da402f79/transformed/core-1.13.1/AndroidManifest.xml:20:5-44
 MERGED from [androidx.lifecycle:lifecycle-runtime:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/98f1cdbc2010e13e2545768ef9e061f0/transformed/lifecycle-runtime-2.7.0/AndroidManifest.xml:5:5-44
 MERGED from [androidx.lifecycle:lifecycle-runtime:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/98f1cdbc2010e13e2545768ef9e061f0/transformed/lifecycle-runtime-2.7.0/AndroidManifest.xml:5:5-44
-MERGED from [androidx.lifecycle:lifecycle-runtime-ktx:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/4ee8cc8e3dcc517b1d0c4e1bd02b9d2c/transformed/lifecycle-runtime-ktx-2.7.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.lifecycle:lifecycle-runtime-ktx:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/4ee8cc8e3dcc517b1d0c4e1bd02b9d2c/transformed/lifecycle-runtime-ktx-2.7.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.lifecycle:lifecycle-livedata-ktx:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/1a31487a27fe554337a08c4986bef204/transformed/lifecycle-livedata-ktx-2.7.0/AndroidManifest.xml:5:5-44
-MERGED from [androidx.lifecycle:lifecycle-livedata-ktx:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/1a31487a27fe554337a08c4986bef204/transformed/lifecycle-livedata-ktx-2.7.0/AndroidManifest.xml:5:5-44
-MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/903bc4fc5b42ec5d5770629201bba68b/transformed/lifecycle-viewmodel-savedstate-2.7.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/903bc4fc5b42ec5d5770629201bba68b/transformed/lifecycle-viewmodel-savedstate-2.7.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/f2d36c794d4785599b73adc607d743d9/transformed/lifecycle-livedata-core-2.7.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/f2d36c794d4785599b73adc607d743d9/transformed/lifecycle-livedata-core-2.7.0/AndroidManifest.xml:20:5-44
 MERGED from [androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/466a25dc6ce6035f6bc0ff59512f54c2/transformed/lifecycle-viewmodel-compose-2.7.0/AndroidManifest.xml:5:5-44
 MERGED from [androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/466a25dc6ce6035f6bc0ff59512f54c2/transformed/lifecycle-viewmodel-compose-2.7.0/AndroidManifest.xml:5:5-44
-MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/5ce28a463af1a43da7fbe123cf1ae868/transformed/lifecycle-viewmodel-ktx-2.7.0/AndroidManifest.xml:5:5-44
-MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/5ce28a463af1a43da7fbe123cf1ae868/transformed/lifecycle-viewmodel-ktx-2.7.0/AndroidManifest.xml:5:5-44
-MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/89be789748b9d3170350473f4ce5aa9c/transformed/lifecycle-viewmodel-2.7.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/89be789748b9d3170350473f4ce5aa9c/transformed/lifecycle-viewmodel-2.7.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.room:room-runtime:2.6.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/39fa44b0eb24b162b5ff6063b95744a0/transformed/room-runtime-2.6.1/AndroidManifest.xml:21:5-44
-MERGED from [androidx.room:room-runtime:2.6.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/39fa44b0eb24b162b5ff6063b95744a0/transformed/room-runtime-2.6.1/AndroidManifest.xml:21:5-44
-MERGED from [androidx.room:room-ktx:2.6.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/efeed3407b2908a719cc4339b0513188/transformed/room-ktx-2.6.1/AndroidManifest.xml:20:5-44
-MERGED from [androidx.room:room-ktx:2.6.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/efeed3407b2908a719cc4339b0513188/transformed/room-ktx-2.6.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-ktx:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/1a31487a27fe554337a08c4986bef204/transformed/lifecycle-livedata-ktx-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-ktx:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/1a31487a27fe554337a08c4986bef204/transformed/lifecycle-livedata-ktx-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-ktx:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/4ee8cc8e3dcc517b1d0c4e1bd02b9d2c/transformed/lifecycle-runtime-ktx-2.7.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-ktx:2.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/4ee8cc8e3dcc517b1d0c4e1bd02b9d2c/transformed/lifecycle-runtime-ktx-2.7.0/AndroidManifest.xml:20:5-44
 MERGED from [androidx.sqlite:sqlite-framework:2.4.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/4b6250cdfda096e3ec9c087ac39919a7/transformed/sqlite-framework-2.4.0/AndroidManifest.xml:20:5-44
 MERGED from [androidx.sqlite:sqlite-framework:2.4.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/4b6250cdfda096e3ec9c087ac39919a7/transformed/sqlite-framework-2.4.0/AndroidManifest.xml:20:5-44
 MERGED from [androidx.sqlite:sqlite:2.4.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/ce43e2c51319fefa7c3018c1c14f072e/transformed/sqlite-2.4.0/AndroidManifest.xml:20:5-44
@@ -653,10 +656,10 @@ MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] /Users/leonardomo
 MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/e8a0dfe25064e7bc1fcdabfc89b77ee0/transformed/profileinstaller-1.3.1/AndroidManifest.xml:21:5-44
 MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/39b77221e6d3f9d454d0c9fe968fc49f/transformed/startup-runtime-1.1.1/AndroidManifest.xml:21:5-23:41
 MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/39b77221e6d3f9d454d0c9fe968fc49f/transformed/startup-runtime-1.1.1/AndroidManifest.xml:21:5-23:41
-MERGED from [androidx.tracing:tracing:1.0.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/eed493741eb69b8a361cf49581f0cb15/transformed/tracing-1.0.0/AndroidManifest.xml:20:5-22:41
-MERGED from [androidx.tracing:tracing:1.0.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/eed493741eb69b8a361cf49581f0cb15/transformed/tracing-1.0.0/AndroidManifest.xml:20:5-22:41
 MERGED from [androidx.interpolator:interpolator:1.0.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/f766641353199567902ed27b506aa016/transformed/interpolator-1.0.0/AndroidManifest.xml:20:5-44
 MERGED from [androidx.interpolator:interpolator:1.0.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/f766641353199567902ed27b506aa016/transformed/interpolator-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.tracing:tracing:1.0.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/eed493741eb69b8a361cf49581f0cb15/transformed/tracing-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.tracing:tracing:1.0.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/eed493741eb69b8a361cf49581f0cb15/transformed/tracing-1.0.0/AndroidManifest.xml:20:5-22:41
 MERGED from [androidx.exifinterface:exifinterface:1.3.6] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/70706537bc2e72f2ef765ff51bbf5e80/transformed/exifinterface-1.3.6/AndroidManifest.xml:20:5-22:41
 MERGED from [androidx.exifinterface:exifinterface:1.3.6] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/70706537bc2e72f2ef765ff51bbf5e80/transformed/exifinterface-1.3.6/AndroidManifest.xml:20:5-22:41
 MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/262a1684279db46bf20358400b34c75d/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:20:5-22:41
@@ -667,52 +670,16 @@ MERGED from [com.journeyapps:zxing-android-embedded:4.3.0] /Users/leonardomondad
 		INJECTED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml
 	android:minSdkVersion
 		INJECTED from /Users/leonardomondada/EventManagerApp/app/src/main/AndroidManifest.xml
-activity#com.google.android.gms.auth.api.signin.internal.SignInHubActivity
-ADDED from [com.google.android.gms:play-services-auth:20.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/48ce7a1834ad8c3079042595f9a975e4/transformed/play-services-auth-20.7.0/AndroidManifest.xml:23:9-27:75
-	android:excludeFromRecents
-		ADDED from [com.google.android.gms:play-services-auth:20.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/48ce7a1834ad8c3079042595f9a975e4/transformed/play-services-auth-20.7.0/AndroidManifest.xml:25:13-46
+service#androidx.room.MultiInstanceInvalidationService
+ADDED from [androidx.room:room-runtime:2.6.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/39fa44b0eb24b162b5ff6063b95744a0/transformed/room-runtime-2.6.1/AndroidManifest.xml:24:9-28:63
 	android:exported
-		ADDED from [com.google.android.gms:play-services-auth:20.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/48ce7a1834ad8c3079042595f9a975e4/transformed/play-services-auth-20.7.0/AndroidManifest.xml:26:13-37
-	android:theme
-		ADDED from [com.google.android.gms:play-services-auth:20.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/48ce7a1834ad8c3079042595f9a975e4/transformed/play-services-auth-20.7.0/AndroidManifest.xml:27:13-72
+		ADDED from [androidx.room:room-runtime:2.6.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/39fa44b0eb24b162b5ff6063b95744a0/transformed/room-runtime-2.6.1/AndroidManifest.xml:27:13-37
+	tools:ignore
+		ADDED from [androidx.room:room-runtime:2.6.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/39fa44b0eb24b162b5ff6063b95744a0/transformed/room-runtime-2.6.1/AndroidManifest.xml:28:13-60
+	android:directBootAware
+		ADDED from [androidx.room:room-runtime:2.6.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/39fa44b0eb24b162b5ff6063b95744a0/transformed/room-runtime-2.6.1/AndroidManifest.xml:26:13-43
 	android:name
-		ADDED from [com.google.android.gms:play-services-auth:20.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/48ce7a1834ad8c3079042595f9a975e4/transformed/play-services-auth-20.7.0/AndroidManifest.xml:24:13-93
-service#com.google.android.gms.auth.api.signin.RevocationBoundService
-ADDED from [com.google.android.gms:play-services-auth:20.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/48ce7a1834ad8c3079042595f9a975e4/transformed/play-services-auth-20.7.0/AndroidManifest.xml:33:9-37:51
-	android:exported
-		ADDED from [com.google.android.gms:play-services-auth:20.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/48ce7a1834ad8c3079042595f9a975e4/transformed/play-services-auth-20.7.0/AndroidManifest.xml:35:13-36
-	android:visibleToInstantApps
-		ADDED from [com.google.android.gms:play-services-auth:20.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/48ce7a1834ad8c3079042595f9a975e4/transformed/play-services-auth-20.7.0/AndroidManifest.xml:37:13-48
-	android:permission
-		ADDED from [com.google.android.gms:play-services-auth:20.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/48ce7a1834ad8c3079042595f9a975e4/transformed/play-services-auth-20.7.0/AndroidManifest.xml:36:13-107
-	android:name
-		ADDED from [com.google.android.gms:play-services-auth:20.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/48ce7a1834ad8c3079042595f9a975e4/transformed/play-services-auth-20.7.0/AndroidManifest.xml:34:13-89
-activity#com.google.android.gms.common.api.GoogleApiActivity
-ADDED from [com.google.android.gms:play-services-base:18.0.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/7e7bdbc780de5e240781ccd20a392f21/transformed/play-services-base-18.0.1/AndroidManifest.xml:20:9-22:45
-	android:exported
-		ADDED from [com.google.android.gms:play-services-base:18.0.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/7e7bdbc780de5e240781ccd20a392f21/transformed/play-services-base-18.0.1/AndroidManifest.xml:22:19-43
-	android:theme
-		ADDED from [com.google.android.gms:play-services-base:18.0.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/7e7bdbc780de5e240781ccd20a392f21/transformed/play-services-base-18.0.1/AndroidManifest.xml:21:19-78
-	android:name
-		ADDED from [com.google.android.gms:play-services-base:18.0.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/7e7bdbc780de5e240781ccd20a392f21/transformed/play-services-base-18.0.1/AndroidManifest.xml:20:19-85
-meta-data#com.google.android.gms.version
-ADDED from [com.google.android.gms:play-services-basement:18.2.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/49b92cecc2d5d10fbdcbe4383c53d55e/transformed/play-services-basement-18.2.0/AndroidManifest.xml:21:9-23:69
-	android:value
-		ADDED from [com.google.android.gms:play-services-basement:18.2.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/49b92cecc2d5d10fbdcbe4383c53d55e/transformed/play-services-basement-18.2.0/AndroidManifest.xml:23:13-66
-	android:name
-		ADDED from [com.google.android.gms:play-services-basement:18.2.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/49b92cecc2d5d10fbdcbe4383c53d55e/transformed/play-services-basement-18.2.0/AndroidManifest.xml:22:13-58
-activity#androidx.compose.ui.tooling.PreviewActivity
-ADDED from [androidx.compose.ui:ui-tooling-android:1.6.7] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/79ade911a6cf5324b49a668463411c3b/transformed/ui-tooling-release/AndroidManifest.xml:23:9-25:39
-	android:exported
-		ADDED from [androidx.compose.ui:ui-tooling-android:1.6.7] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/79ade911a6cf5324b49a668463411c3b/transformed/ui-tooling-release/AndroidManifest.xml:25:13-36
-	android:name
-		ADDED from [androidx.compose.ui:ui-tooling-android:1.6.7] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/79ade911a6cf5324b49a668463411c3b/transformed/ui-tooling-release/AndroidManifest.xml:24:13-71
-activity#androidx.activity.ComponentActivity
-ADDED from [androidx.compose.ui:ui-test-manifest:1.6.7] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/69d2cb461523304f6f44aa95f985ba76/transformed/ui-test-manifest-1.6.7/AndroidManifest.xml:23:9-25:39
-	android:exported
-		ADDED from [androidx.compose.ui:ui-test-manifest:1.6.7] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/69d2cb461523304f6f44aa95f985ba76/transformed/ui-test-manifest-1.6.7/AndroidManifest.xml:25:13-36
-	android:name
-		ADDED from [androidx.compose.ui:ui-test-manifest:1.6.7] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/69d2cb461523304f6f44aa95f985ba76/transformed/ui-test-manifest-1.6.7/AndroidManifest.xml:24:13-63
+		ADDED from [androidx.room:room-runtime:2.6.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/39fa44b0eb24b162b5ff6063b95744a0/transformed/room-runtime-2.6.1/AndroidManifest.xml:25:13-74
 uses-permission#android.permission.WAKE_LOCK
 ADDED from [androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/62e563c4c37724492f68d1d12e620a4a/transformed/work-runtime-2.9.0/AndroidManifest.xml:23:5-68
 	android:name
@@ -951,6 +918,60 @@ action#androidx.work.diagnostics.REQUEST_DIAGNOSTICS
 ADDED from [androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/62e563c4c37724492f68d1d12e620a4a/transformed/work-runtime-2.9.0/AndroidManifest.xml:140:17-88
 	android:name
 		ADDED from [androidx.work:work-runtime:2.9.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/62e563c4c37724492f68d1d12e620a4a/transformed/work-runtime-2.9.0/AndroidManifest.xml:140:25-85
+uses-permission#android.permission.USE_BIOMETRIC
+ADDED from [androidx.biometric:biometric:1.1.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/4d22f10caf826080989b597166892542/transformed/biometric-1.1.0/AndroidManifest.xml:24:5-72
+	android:name
+		ADDED from [androidx.biometric:biometric:1.1.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/4d22f10caf826080989b597166892542/transformed/biometric-1.1.0/AndroidManifest.xml:24:22-69
+uses-permission#android.permission.USE_FINGERPRINT
+ADDED from [androidx.biometric:biometric:1.1.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/4d22f10caf826080989b597166892542/transformed/biometric-1.1.0/AndroidManifest.xml:27:5-74
+	android:name
+		ADDED from [androidx.biometric:biometric:1.1.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/4d22f10caf826080989b597166892542/transformed/biometric-1.1.0/AndroidManifest.xml:27:22-71
+activity#com.google.android.gms.auth.api.signin.internal.SignInHubActivity
+ADDED from [com.google.android.gms:play-services-auth:20.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/48ce7a1834ad8c3079042595f9a975e4/transformed/play-services-auth-20.7.0/AndroidManifest.xml:23:9-27:75
+	android:excludeFromRecents
+		ADDED from [com.google.android.gms:play-services-auth:20.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/48ce7a1834ad8c3079042595f9a975e4/transformed/play-services-auth-20.7.0/AndroidManifest.xml:25:13-46
+	android:exported
+		ADDED from [com.google.android.gms:play-services-auth:20.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/48ce7a1834ad8c3079042595f9a975e4/transformed/play-services-auth-20.7.0/AndroidManifest.xml:26:13-37
+	android:theme
+		ADDED from [com.google.android.gms:play-services-auth:20.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/48ce7a1834ad8c3079042595f9a975e4/transformed/play-services-auth-20.7.0/AndroidManifest.xml:27:13-72
+	android:name
+		ADDED from [com.google.android.gms:play-services-auth:20.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/48ce7a1834ad8c3079042595f9a975e4/transformed/play-services-auth-20.7.0/AndroidManifest.xml:24:13-93
+service#com.google.android.gms.auth.api.signin.RevocationBoundService
+ADDED from [com.google.android.gms:play-services-auth:20.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/48ce7a1834ad8c3079042595f9a975e4/transformed/play-services-auth-20.7.0/AndroidManifest.xml:33:9-37:51
+	android:exported
+		ADDED from [com.google.android.gms:play-services-auth:20.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/48ce7a1834ad8c3079042595f9a975e4/transformed/play-services-auth-20.7.0/AndroidManifest.xml:35:13-36
+	android:visibleToInstantApps
+		ADDED from [com.google.android.gms:play-services-auth:20.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/48ce7a1834ad8c3079042595f9a975e4/transformed/play-services-auth-20.7.0/AndroidManifest.xml:37:13-48
+	android:permission
+		ADDED from [com.google.android.gms:play-services-auth:20.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/48ce7a1834ad8c3079042595f9a975e4/transformed/play-services-auth-20.7.0/AndroidManifest.xml:36:13-107
+	android:name
+		ADDED from [com.google.android.gms:play-services-auth:20.7.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/48ce7a1834ad8c3079042595f9a975e4/transformed/play-services-auth-20.7.0/AndroidManifest.xml:34:13-89
+activity#com.google.android.gms.common.api.GoogleApiActivity
+ADDED from [com.google.android.gms:play-services-base:18.0.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/7e7bdbc780de5e240781ccd20a392f21/transformed/play-services-base-18.0.1/AndroidManifest.xml:20:9-22:45
+	android:exported
+		ADDED from [com.google.android.gms:play-services-base:18.0.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/7e7bdbc780de5e240781ccd20a392f21/transformed/play-services-base-18.0.1/AndroidManifest.xml:22:19-43
+	android:theme
+		ADDED from [com.google.android.gms:play-services-base:18.0.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/7e7bdbc780de5e240781ccd20a392f21/transformed/play-services-base-18.0.1/AndroidManifest.xml:21:19-78
+	android:name
+		ADDED from [com.google.android.gms:play-services-base:18.0.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/7e7bdbc780de5e240781ccd20a392f21/transformed/play-services-base-18.0.1/AndroidManifest.xml:20:19-85
+meta-data#com.google.android.gms.version
+ADDED from [com.google.android.gms:play-services-basement:18.2.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/49b92cecc2d5d10fbdcbe4383c53d55e/transformed/play-services-basement-18.2.0/AndroidManifest.xml:21:9-23:69
+	android:value
+		ADDED from [com.google.android.gms:play-services-basement:18.2.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/49b92cecc2d5d10fbdcbe4383c53d55e/transformed/play-services-basement-18.2.0/AndroidManifest.xml:23:13-66
+	android:name
+		ADDED from [com.google.android.gms:play-services-basement:18.2.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/49b92cecc2d5d10fbdcbe4383c53d55e/transformed/play-services-basement-18.2.0/AndroidManifest.xml:22:13-58
+activity#androidx.compose.ui.tooling.PreviewActivity
+ADDED from [androidx.compose.ui:ui-tooling-android:1.6.7] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/79ade911a6cf5324b49a668463411c3b/transformed/ui-tooling-release/AndroidManifest.xml:23:9-25:39
+	android:exported
+		ADDED from [androidx.compose.ui:ui-tooling-android:1.6.7] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/79ade911a6cf5324b49a668463411c3b/transformed/ui-tooling-release/AndroidManifest.xml:25:13-36
+	android:name
+		ADDED from [androidx.compose.ui:ui-tooling-android:1.6.7] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/79ade911a6cf5324b49a668463411c3b/transformed/ui-tooling-release/AndroidManifest.xml:24:13-71
+activity#androidx.activity.ComponentActivity
+ADDED from [androidx.compose.ui:ui-test-manifest:1.6.7] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/69d2cb461523304f6f44aa95f985ba76/transformed/ui-test-manifest-1.6.7/AndroidManifest.xml:23:9-25:39
+	android:exported
+		ADDED from [androidx.compose.ui:ui-test-manifest:1.6.7] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/69d2cb461523304f6f44aa95f985ba76/transformed/ui-test-manifest-1.6.7/AndroidManifest.xml:25:13-36
+	android:name
+		ADDED from [androidx.compose.ui:ui-test-manifest:1.6.7] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/69d2cb461523304f6f44aa95f985ba76/transformed/ui-test-manifest-1.6.7/AndroidManifest.xml:24:13-63
 meta-data#androidx.emoji2.text.EmojiCompatInitializer
 ADDED from [androidx.emoji2:emoji2:1.3.0] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/57d5ccb715ba87c5e96d4495606f79a9/transformed/emoji2-1.3.0/AndroidManifest.xml:29:13-31:52
 	android:value
@@ -983,16 +1004,6 @@ uses-permission#com.eventmanager.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
 ADDED from [androidx.core:core:1.13.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/13d237f74574e32c3c807983da402f79/transformed/core-1.13.1/AndroidManifest.xml:26:5-97
 	android:name
 		ADDED from [androidx.core:core:1.13.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/13d237f74574e32c3c807983da402f79/transformed/core-1.13.1/AndroidManifest.xml:26:22-94
-service#androidx.room.MultiInstanceInvalidationService
-ADDED from [androidx.room:room-runtime:2.6.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/39fa44b0eb24b162b5ff6063b95744a0/transformed/room-runtime-2.6.1/AndroidManifest.xml:24:9-28:63
-	android:exported
-		ADDED from [androidx.room:room-runtime:2.6.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/39fa44b0eb24b162b5ff6063b95744a0/transformed/room-runtime-2.6.1/AndroidManifest.xml:27:13-37
-	tools:ignore
-		ADDED from [androidx.room:room-runtime:2.6.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/39fa44b0eb24b162b5ff6063b95744a0/transformed/room-runtime-2.6.1/AndroidManifest.xml:28:13-60
-	android:directBootAware
-		ADDED from [androidx.room:room-runtime:2.6.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/39fa44b0eb24b162b5ff6063b95744a0/transformed/room-runtime-2.6.1/AndroidManifest.xml:26:13-43
-	android:name
-		ADDED from [androidx.room:room-runtime:2.6.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/39fa44b0eb24b162b5ff6063b95744a0/transformed/room-runtime-2.6.1/AndroidManifest.xml:25:13-74
 meta-data#androidx.profileinstaller.ProfileInstallerInitializer
 ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /Users/leonardomondada/.gradle/caches/8.10.2/transforms/e8a0dfe25064e7bc1fcdabfc89b77ee0/transformed/profileinstaller-1.3.1/AndroidManifest.xml:29:13-31:52
 	android:value

@@ -76,6 +76,8 @@ class EventManagerRepository(
     // Volunteer-benefit guest helpers
     suspend fun getVolunteerBenefitGuests(): List<Guest> = guestDao.getVolunteerBenefitGuests()
 
+    suspend fun getGuestByNanoId(nanoId: String): Guest? = guestDao.getGuestByNanoId(nanoId)
+
     // Volunteer operations
     fun getAllActiveVolunteers(): Flow<List<Volunteer>> = volunteerDao.getAllActiveVolunteers()
     fun getAllVolunteers(): Flow<List<Volunteer>> = volunteerDao.getAllVolunteers()

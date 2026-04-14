@@ -1,8 +1,6 @@
 package com.eventmanager.app.data.sync
 
 import android.content.Context
-import com.eventmanager.app.data.models.*
-import com.google.api.services.sheets.v4.Sheets
 import com.google.api.services.sheets.v4.model.ValueRange
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -12,7 +10,7 @@ import kotlinx.coroutines.withContext
  * This validates that the sheets have the correct format as specified in the requirements
  */
 class DataStructureValidator(
-    private val context: Context,
+    context: Context,
     private val googleSheetsService: GoogleSheetsService
 ) {
     
@@ -129,7 +127,7 @@ class DataStructureValidator(
         
         val mismatches = mutableListOf<String>()
         expected.forEachIndexed { index, expectedHeader ->
-            val actualHeader = actual.getOrNull(index)?.toString() ?: ""
+            val actualHeader = actual.getOrNull(index) ?: ""
             if (expectedHeader != actualHeader) {
                 mismatches.add("Column ${index + 1}: expected '$expectedHeader', got '$actualHeader'")
             }
@@ -283,7 +281,6 @@ sealed class ValidationResult {
     data class Error(val message: String) : ValidationResult()
     
     val isSuccess: Boolean get() = this is Success
-    val isError: Boolean get() = this is Error
 }
 
 /**
@@ -305,7 +302,6 @@ sealed class SheetValidationResult {
     ) : SheetValidationResult()
     
     val isValid: Boolean get() = this is Success
-    val isError: Boolean get() = this is Error
 }
 
 /**
@@ -320,5 +316,4 @@ sealed class HeaderValidationResult {
     ) : HeaderValidationResult()
     
     val isValid: Boolean get() = this is Success
-    val isError: Boolean get() = this is Error
 }

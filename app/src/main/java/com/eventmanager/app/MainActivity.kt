@@ -8,8 +8,8 @@ import android.os.Vibrator
 import android.os.VibrationEffect
 import android.os.Build
 import androidx.core.content.ContextCompat
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.BackHandler
 import java.util.*
 import androidx.compose.foundation.background
@@ -117,6 +117,8 @@ import com.eventmanager.app.ui.screens.JobTypeManagementScreen
 import com.eventmanager.app.ui.screens.SettingsScreen
 import com.eventmanager.app.ui.screens.SetupWizardScreen
 import com.eventmanager.app.ui.screens.AdminAuthScreen
+import com.eventmanager.app.ui.screens.AdminSetupScreen
+import com.eventmanager.app.ui.screens.AdminType
 import com.eventmanager.app.ui.screens.BilleterieHomeScreen
 import com.eventmanager.app.ui.screens.BilleterieScannerScreen
 import com.eventmanager.app.ui.screens.BilleterieSettingsScreen
@@ -164,7 +166,7 @@ import java.util.concurrent.atomic.AtomicLong
 /** Admin main UI only (not billeterie, not welcome, not NFC gate). */
 private const val ADMIN_SESSION_IDLE_TIMEOUT_MS = 5 * 60 * 1000L
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
 
     /**
      * Tracks touches while the admin surface is visible and records [ACTION_SCREEN_OFF] for
@@ -512,18 +514,7 @@ fun EventManagerApp(
             }
         }
 
-        if (showWelcome) {
-            WelcomeScreen(
-                onAdminSelected = {
-                    showWelcome = false
-                    showAdminAuth = true
-                },
-                onTicketCheckSelected = {
-                    showWelcome = false
-                    showTicketCheck = true
-                }
-            )
-        } else if (database == null) {
+        if (database == null) {
             Surface(
                 modifier = Modifier.fillMaxSize(),
                 color = MaterialTheme.colorScheme.background
@@ -550,6 +541,78 @@ fun EventManagerApp(
             val viewModel: EventManagerViewModel = viewModel {
                 EventManagerViewModel(repository, googleSheetsService, appContext)
             }
+
+            // ── First-admin setup gate ──────────────────────────────────────
+            var showAdminSetup by rememberSaveable { mutableStateOf(false) }
+            var adminCheckDone by rememberSaveable { mutableStateOf(false) }
+
+            val adminCheckGuests by viewModel.guests.collectAsState()
+            val adminCheckVolunteers by viewModel.volunteers.collectAsState()
+
+            // Skip showing the first-admin wizard when an admin already exists locally (e.g. DB
+            // loaded before the 600ms gate). Do NOT dismiss while the wizard is visible: a full
+            // sync or creating the admin updates these lists and would otherwise close the flow
+            // after ~1–2s or right after the admin row is inserted.
+            LaunchedEffect(adminCheckGuests, adminCheckVolunteers) {
+                if (showAdminSetup) return@LaunchedEffect
+                if (adminCheckDone && !showAdminSetup) return@LaunchedEffect
+                val hasAdmin = adminCheckGuests.any { it.isAdmin } ||
+                               adminCheckVolunteers.any { it.isAdmin }
+                if (hasAdmin) {
+                    showAdminSetup = false
+                    adminCheckDone = true
+                }
+            }
+
+            // After a brief delay (data loaded from local Room), decide
+            LaunchedEffect(Unit) {
+                delay(600)
+                if (!adminCheckDone) {
+                    val hasAdmin = adminCheckGuests.any { it.isAdmin } ||
+                                   adminCheckVolunteers.any { it.isAdmin }
+                    if (!hasAdmin) {
+                        showAdminSetup = true
+                    }
+                    adminCheckDone = true
+                }
+            }
+
+            if (showAdminSetup) {
+                val adminSetupVenues by viewModel.venues.collectAsState()
+
+                LaunchedEffect(Unit) {
+                    delay(400)
+                    withContext(Dispatchers.IO) {
+                        try { viewModel.performFullSync() } catch (_: Exception) { }
+                    }
+                }
+
+                AdminSetupScreen(
+                    venues = adminSetupVenues,
+                    onCreateAdminGuest = { guest, cb -> viewModel.createAdminGuest(guest, cb) },
+                    onCreateAdminVolunteer = { vol, cb -> viewModel.createAdminVolunteer(vol, cb) },
+                    onAssignNfcUid = { adminType, entityId, uid ->
+                        viewModel.assignNfcUidToAdmin(
+                            isGuest = adminType == AdminType.GUEST,
+                            entityId = entityId,
+                            uid = uid
+                        )
+                    },
+                    onComplete = { showAdminSetup = false },
+                    onSkip = { showAdminSetup = false }
+                )
+            } else if (showWelcome) {
+                WelcomeScreen(
+                    onAdminSelected = {
+                        showWelcome = false
+                        showAdminAuth = true
+                    },
+                    onTicketCheckSelected = {
+                        showWelcome = false
+                        showTicketCheck = true
+                    }
+                )
+            } else {
 
         val updateCheckResult by viewModel.updateCheckState.collectAsState()
         val updateDownloadState by viewModel.updateDownloadState.collectAsState()
@@ -699,6 +762,7 @@ fun EventManagerApp(
         
         if (showAdminAuth) {
             AdminAuthScreen(
+                viewModel = viewModel,
                 volunteers = volunteers,
                 guests = guests,
                 isSyncing = isSyncing,
@@ -1614,6 +1678,7 @@ if (pageAnimationsEnabled) {
             }
         }
         }
+        }
     }
 }
 
@@ -1860,15 +1925,21 @@ fun DashboardScreen(
         Spacer(modifier = Modifier.height(if (isPhone) 16.dp else 24.dp))
 
         // Calculate statistics - memoized and grouped by data source for efficient single-pass computation
-        // Guest stats: single pass through guests list
-        val (allGuests, totalInvites) = remember(guests) {
-            var permanentCount = 0
-            var invitesSum = 0
+        // Guest stats: single pass — "permanent" matches GuestListScreen / billeterie (excludes temp & volunteer-benefit rows).
+        // +1 invites: sum of invitations on those permanent rows only (paired with the permanent card).
+        // totalInvitesAll: all rows, for "Total List" headcount (same as historical guests.size + invites + volunteers).
+        val (permanentGuestCount, plusOneInvitesPermanent, totalInvitesAll) = remember(guests) {
+            var permanent = 0
+            var plusOnePermanent = 0
+            var invitesAll = 0
             guests.forEach { guest ->
-                if (!guest.isVolunteerBenefit) permanentCount++
-                invitesSum += guest.invitations
+                invitesAll += guest.invitations
+                if (!guest.isVolunteerBenefit && !guest.isTemporaryGuest) {
+                    permanent++
+                    plusOnePermanent += guest.invitations
+                }
             }
-            permanentCount to invitesSum
+            Triple(permanent, plusOnePermanent, invitesAll)
         }
         
         // Volunteer stats: single pass through volunteers list
@@ -1881,8 +1952,8 @@ fun DashboardScreen(
             Triple(volunteers.size, active, inactive)
         }
         
-        // Derived calculation - no remember needed since operands are already memoized
-        val totalPeople = allGuests + totalInvites + activeVolunteersCount
+        // Total list: every guest row + every volunteer + all +1s (inactive volunteers still count toward roster size).
+        val totalPeople = guests.size + totalVolunteers + totalInvitesAll
         // Move expensive calculation to background if needed
         val totalFreeDrinks = remember(volunteers, jobs, jobTypeConfigs, dateChangeOffsetHours) {
             com.eventmanager.app.data.models.BenefitCalculator.calculateTotalFreeDrinks(
@@ -1904,7 +1975,7 @@ fun DashboardScreen(
             ) {
                 StatCardV2(
                     title = context.getString(R.string.permanent_guests),
-                    value = allGuests.toString(),
+                    value = permanentGuestCount.toString(),
                     icon = Icons.Default.Person,
                     modifier = Modifier.weight(1f),
                     isPhone = isPhone
@@ -1926,7 +1997,7 @@ fun DashboardScreen(
             ) {
                 StatCardV2(
                     title = context.getString(R.string.plus_one_invites),
-                    value = totalInvites.toString(),
+                    value = plusOneInvitesPermanent.toString(),
                     icon = Icons.Default.PlayArrow,
                     modifier = Modifier.weight(1f),
                     isPhone = isPhone

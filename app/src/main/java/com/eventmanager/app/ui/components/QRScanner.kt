@@ -79,6 +79,30 @@ sealed class ScannerMatch {
     data class GuestMatch(val guest: Guest) : ScannerMatch()
 }
 
+private fun ScannerMatch.hasAdminPrivileges(): Boolean = when (this) {
+    is ScannerMatch.VolunteerMatch -> volunteer.isAdmin
+    is ScannerMatch.GuestMatch -> guest.isAdmin
+}
+
+/**
+ * Resolves a plain NanoID QR against volunteers ([Volunteer.id]) and guests ([Guest.nanoId]).
+ * When both match (same string in both namespaces), prefers the profile with admin privileges
+ * so the first scan is not denied in favor of a non-admin volunteer.
+ */
+private fun resolveNanoidScannerMatch(
+    volunteers: List<Volunteer>,
+    permanentGuests: List<Guest>,
+    rawId: String
+): ScannerMatch? {
+    val trimmed = rawId.trim()
+    if (trimmed.isEmpty()) return null
+    val volMatches = volunteers.filter { it.id == trimmed }
+    val guestMatches = permanentGuests.filter { it.nanoId == trimmed }
+    val all = volMatches.map { ScannerMatch.VolunteerMatch(it) } + guestMatches.map { ScannerMatch.GuestMatch(it) }
+    if (all.isEmpty()) return null
+    return all.firstOrNull { it.hasAdminPrivileges() } ?: all.first()
+}
+
 data class NfcUidMatchOption(
     val match: ScannerMatch,
     val title: String,
@@ -472,20 +496,13 @@ fun QRScannerDialog(
                             try {
                                 when (qrData.type.lowercase()) {
                                     "nanoid" -> {
-                                        // New plain-text NanoID format — look up in both lists
-                                        val rawId = qrData.id
-                                        val volunteer = volunteers.find { it.id == rawId }
-                                        if (volunteer != null) {
-                                            onMatchFound(ScannerMatch.VolunteerMatch(volunteer))
+                                        // New plain-text NanoID format — look up in both lists; prefer admin if both match
+                                        val match = resolveNanoidScannerMatch(volunteers, permanentGuests, qrData.id)
+                                        if (match != null) {
+                                            onMatchFound(match)
                                             onDismiss()
                                         } else {
-                                            val guest = permanentGuests.find { it.nanoId == rawId }
-                                            if (guest != null) {
-                                                onMatchFound(ScannerMatch.GuestMatch(guest))
-                                                onDismiss()
-                                            } else {
-                                                errorMessage = context.getString(R.string.invalid_qr_or_nfc_data)
-                                            }
+                                            errorMessage = context.getString(R.string.invalid_qr_or_nfc_data)
                                         }
                                     }
 
