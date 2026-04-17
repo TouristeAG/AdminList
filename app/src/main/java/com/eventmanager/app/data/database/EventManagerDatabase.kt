@@ -21,7 +21,7 @@ import com.eventmanager.app.data.models.Volunteer
 
 @Database(
     entities = [Guest::class, Volunteer::class, Job::class, JobTypeConfig::class, VenueEntity::class],
-    version = 29,
+    version = 30,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -1071,6 +1071,26 @@ abstract class EventManagerDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * MIGRATION 29→30: Add announcement columns to venues table (Google Sheets H–K).
+         */
+        private val MIGRATION_29_30 = object : Migration(29, 30) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                try {
+                    println("Starting migration 29→30: Adding announcement columns to venues table")
+                    db.execSQL("ALTER TABLE venues ADD COLUMN announcementTitle TEXT NOT NULL DEFAULT ''")
+                    db.execSQL("ALTER TABLE venues ADD COLUMN announcementMessage TEXT NOT NULL DEFAULT ''")
+                    db.execSQL("ALTER TABLE venues ADD COLUMN announcementSentAt INTEGER NOT NULL DEFAULT 0")
+                    db.execSQL("ALTER TABLE venues ADD COLUMN announcementSenderDeviceId TEXT NOT NULL DEFAULT ''")
+                    println("Migration 29→30 completed successfully")
+                } catch (e: Exception) {
+                    println("Migration 29→30 failed: ${e.message}")
+                    e.printStackTrace()
+                    throw e
+                }
+            }
+        }
+
         fun getDatabase(context: Context): EventManagerDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -1106,7 +1126,8 @@ abstract class EventManagerDatabase : RoomDatabase() {
                     MIGRATION_25_26,
                     MIGRATION_26_27,
                     MIGRATION_27_28,
-                    MIGRATION_28_29
+                    MIGRATION_28_29,
+                    MIGRATION_29_30
                 )
                 .fallbackToDestructiveMigration()
                 .build()

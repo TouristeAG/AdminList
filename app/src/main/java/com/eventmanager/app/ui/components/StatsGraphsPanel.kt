@@ -3128,8 +3128,10 @@ private fun calculateVolunteerInvitesData(
             if (benefitStatus.benefits.isActive && 
                 benefitStatus.benefits.guestListAccess &&
                 (benefitStatus.benefits.validUntil == null || currentDate < benefitStatus.benefits.validUntil)) {
-                // Add their invite count
-                totalInvites += benefitStatus.benefits.inviteCount
+                // `inviteCount` can represent total guest-list spots (volunteer included).
+                // For this chart we only want +1 invitations, so exclude the volunteer slot.
+                val plusOneInvitesOnly = (benefitStatus.benefits.inviteCount - 1).coerceAtLeast(0)
+                totalInvites += plusOneInvitesOnly
             }
         }
         

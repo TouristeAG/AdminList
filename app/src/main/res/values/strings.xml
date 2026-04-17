@@ -52,6 +52,13 @@
     <string name="manual_sync_now">Manual Sync Now</string>
     <string name="view_active_volunteers">View Active Volunteers</string>
     <string name="cleanup_inactive_volunteers">Cleanup Inactive Volunteers</string>
+    <string name="cleanup_choose_duration">Choose how long volunteers must be inactive to be deleted:</string>
+    <string name="cleanup_inactive_for">Inactive for:</string>
+    <string name="cleanup_years_value">%d years</string>
+    <string name="cleanup_hide_preview">Hide Preview</string>
+    <string name="cleanup_preview_to_delete">Preview Volunteers to Delete (%d)</string>
+    <string name="cleanup_volunteers_to_be_deleted">Volunteers to be deleted:</string>
+    <string name="cleanup_no_volunteers_found">No volunteers found that have been inactive for %d years or more.</string>
     
     <!-- Advanced Settings -->
     <string name="advanced_settings_title">Advanced Settings</string>
@@ -472,11 +479,17 @@
     <string name="start_admin">Start Admin</string>
     <string name="admin_mode">Admin</string>
     <string name="ticket_check_mode">Ticketing</string>
+    <string name="welcome_background_sync_content_description">Syncing with Google Sheets to verify admin access</string>
 
     <!-- Admin Auth Screen -->
     <string name="admin_auth_title">Admin Authentication</string>
     <string name="admin_auth_description">Scan your badge or QR code to verify your admin access</string>
     <string name="admin_auth_syncing">Loading data from Google Sheets…</string>
+    <!-- Admin pre-check: repair sheet + sync before NFC/QR gate -->
+    <string name="admin_precheck_sync_loading">Preparing admin access: checking the sheet and syncing…</string>
+    <string name="admin_precheck_sync_failed_title">Could not prepare admin access</string>
+    <string name="admin_precheck_sync_failed_message">The sheet could not be repaired or synced. Check your connection and spreadsheet settings, then try again.</string>
+    <string name="admin_precheck_sync_retry">Retry</string>
     <string name="admin_auth_ready">Hold your NFC badge near the device or scan your QR code</string>
     <string name="admin_auth_scan_qr">Scan QR Code</string>
     <string name="admin_auth_granted">Welcome, %s! Admin access granted</string>
@@ -540,6 +553,10 @@
     <string name="setup_json_key_description">Upload the JSON key file for your Google service account to enable synchronization</string>
     <string name="setup_sheets_title">Sheet Names</string>
     <string name="setup_sheets_description">Configure the names of each sheet in your Google Spreadsheet — defaults are pre-filled</string>
+    <string name="setup_wizard_first_sync_title">First sync</string>
+    <string name="setup_wizard_first_sync_message">Downloading your event data from Google Sheets…</string>
+    <string name="setup_wizard_first_sync_error_title">First sync failed</string>
+    <string name="setup_wizard_first_sync_error_generic">Could not sync with Google Sheets. Check your spreadsheet ID, JSON key, and network, then try again.</string>
     
     <!-- Volunteer Screen -->
     <string name="volunteers_title">Volunteers</string>
@@ -1157,4 +1174,37 @@
     <string name="admin_setup_done">Done</string>
     <string name="admin_setup_skip">Skip for Now</string>
     <string name="admin_setup_no_admin_warning">Warning: Without an admin, you won\'t be able to access admin mode.</string>
+
+    <!-- Announcements -->
+    <string name="settings_category_announcements">Announcements</string>
+    <string name="announcements_reception_title">Enable reception</string>
+    <string name="announcements_reception_description">Show or hide incoming announcements</string>
+    <string name="announcements_tracked_venues_title">Tracked venues</string>
+    <string name="announcements_tracked_venues_description">Select which venues to receive announcements from</string>
+    <string name="announcements_tracked_venues_all">All venues</string>
+    <string name="announcements_validity_title">Validity duration</string>
+    <string name="announcements_validity_description">Messages older than this duration will not be displayed</string>
+    <string name="announcements_validity_15min">15 minutes</string>
+    <string name="announcements_validity_30min">30 minutes</string>
+    <string name="announcements_validity_1h">1 hour</string>
+    <string name="announcements_validity_2h">2 hours</string>
+    <string name="announcements_validity_4h">4 hours</string>
+    <string name="announcements_non_admin_send_title">Allow non-admin sending</string>
+    <string name="announcements_non_admin_send_description">Allow ticket check interfaces to send announcements</string>
+    <string name="announcement_button_label">Make an announcement</string>
+    <string name="announcement_send_title">Send announcement</string>
+    <string name="announcement_destination_label">Destination venue(s)</string>
+    <string name="announcement_all_venues">All venues</string>
+    <string name="announcement_title_label">Recipient / Title</string>
+    <string name="announcement_title_placeholder">Short subject…</string>
+    <string name="announcement_message_label">Message</string>
+    <string name="announcement_message_placeholder">Message content…</string>
+    <string name="announcement_send_button">Send</string>
+    <string name="announcement_cancel_button">Cancel</string>
+    <string name="announcement_sending">Sending…</string>
+    <string name="announcement_sent_success">Announcement sent!</string>
+    <string name="announcement_sent_error">Failed to send announcement</string>
+    <string name="announcement_popup_title">Announcement</string>
+    <string name="announcement_popup_close">Close</string>
+    <string name="announcement_popup_from">From: %s</string>
 </resources>

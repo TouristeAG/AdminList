@@ -123,6 +123,16 @@ class EventManagerViewModel(
     private val _showSyncStatusDialog = MutableStateFlow(false)
     val showSyncStatusDialog: StateFlow<Boolean> = _showSyncStatusDialog.asStateFlow()
     
+    // Announcements state
+    private val _pendingAnnouncements = MutableStateFlow<List<com.eventmanager.app.ui.components.AnnouncementDisplay>>(emptyList())
+    val pendingAnnouncements: StateFlow<List<com.eventmanager.app.ui.components.AnnouncementDisplay>> = _pendingAnnouncements.asStateFlow()
+
+    private val _showSendAnnouncementDialog = MutableStateFlow(false)
+    val showSendAnnouncementDialog: StateFlow<Boolean> = _showSendAnnouncementDialog.asStateFlow()
+
+    private val _isAnnouncementSending = MutableStateFlow(false)
+    val isAnnouncementSending: StateFlow<Boolean> = _isAnnouncementSending.asStateFlow()
+
     // Error manager for "do not tell me again today"
     private val syncErrorManager = context?.let { SyncErrorManager(it) }
 
@@ -538,8 +548,8 @@ class EventManagerViewModel(
                     refreshTemporaryGuestsFromSheets()
                     println("Successfully deleted temporary guest: ${guest.name}")
                 } else {
-                    // Track the deletion
-                    deletionTracker?.trackGuestDeletion(guest.id.toString(), guest.sheetsId)
+                    // Track the deletion (businessKey = nanoId for merge-safe upload)
+                    deletionTracker?.trackGuestDeletion(guest.id.toString(), guest.sheetsId, businessKey = guest.nanoId)
 
                     // Delete from local database
                     repository.deleteGuest(guest)
@@ -601,7 +611,7 @@ class EventManagerViewModel(
                     for (job in volunteerJobs) {
                         try {
                             // Track deletion first (same as deleteJob)
-                            deletionTracker?.trackJobDeletion(job.id.toString(), job.sheetsId)
+                            deletionTracker?.trackJobDeletion(job.id.toString(), job.sheetsId, businessKey = "${job.volunteerId}_${job.jobTypeName}_${job.date}_${job.venueName}_${job.shiftTime}")
                             
                             // Delete from local database
                             repository.deleteJob(job)
@@ -801,7 +811,7 @@ class EventManagerViewModel(
                 val jobWithId = jobWithBenefit.copy(id = jobId)
                 
                 // Add individual job to Google Sheets and get sheetsId
-                val sheetsId = googleSheetsService.addJobToSheets(jobWithId, _venues.value)
+                val sheetsId = googleSheetsService.addJobToSheets(jobWithId, _venues.value, _jobTypeConfigs.value)
                 val jobWithSheetsId = jobWithId.copy(sheetsId = sheetsId)
                 repository.updateJob(jobWithSheetsId)
                 println("Successfully added job to Google Sheets with sheetsId: $sheetsId")
@@ -824,7 +834,7 @@ class EventManagerViewModel(
                 // Update individual job in Google Sheets if sheetsId exists
                 if (job.sheetsId != null) {
                     try {
-                        googleSheetsService.updateJobInSheets(job, _venues.value)
+                        googleSheetsService.updateJobInSheets(job, _venues.value, _jobTypeConfigs.value)
                         println("Successfully updated job in Google Sheets: ${job.jobTypeName}")
                     } catch (e: Exception) {
                         println("Individual job update failed, falling back to backup mode: ${e.message}")
@@ -849,8 +859,8 @@ class EventManagerViewModel(
     fun deleteJob(job: Job) {
         viewModelScope.launch {
             try {
-                // Track the deletion
-                deletionTracker?.trackJobDeletion(job.id.toString(), job.sheetsId)
+                // Track the deletion (businessKey = composite key for merge-safe upload)
+                deletionTracker?.trackJobDeletion(job.id.toString(), job.sheetsId, businessKey = "${job.volunteerId}_${job.jobTypeName}_${job.date}_${job.venueName}_${job.shiftTime}")
                 
                 // Delete from local database first
                 repository.deleteJob(job)
@@ -944,7 +954,7 @@ class EventManagerViewModel(
                     // Sync to Google Sheets
                     if (updatedJob.sheetsId != null) {
                         try {
-                            googleSheetsService.updateJobInSheets(updatedJob, _venues.value)
+                            googleSheetsService.updateJobInSheets(updatedJob, _venues.value, _jobTypeConfigs.value)
                         } catch (e: Exception) {
                             twoWaySyncService?.backupJobsToSheets()
                         }
@@ -1006,8 +1016,8 @@ class EventManagerViewModel(
     fun deleteJobTypeConfig(config: JobTypeConfig) {
         viewModelScope.launch {
             try {
-                // Track the deletion
-                deletionTracker?.trackJobTypeDeletion(config.id.toString(), config.sheetsId)
+                // Track the deletion (businessKey = name for merge-safe upload)
+                deletionTracker?.trackJobTypeDeletion(config.id.toString(), config.sheetsId, businessKey = config.name)
                 
                 // Delete from local database
                 repository.deleteJobTypeConfig(config)
@@ -1064,8 +1074,8 @@ class EventManagerViewModel(
     fun deleteVenue(venue: VenueEntity) {
         viewModelScope.launch {
             try {
-                // Track the deletion
-                deletionTracker?.trackVenueDeletion(venue.id.toString(), venue.sheetsId)
+                // Track the deletion (businessKey = name for merge-safe upload)
+                deletionTracker?.trackVenueDeletion(venue.id.toString(), venue.sheetsId, businessKey = venue.name)
                 
                 // Delete from local database
                 repository.deleteVenue(venue)
@@ -1200,10 +1210,10 @@ class EventManagerViewModel(
             
             val sheetsId = if (job.sheetsId == null) {
                 // New job - add to sheets
-                googleSheetsService.addJobToSheets(job, _venues.value)
+                googleSheetsService.addJobToSheets(job, _venues.value, _jobTypeConfigs.value)
             } else {
                 // Existing job - update in sheets
-                googleSheetsService.updateJobInSheets(job, _venues.value)
+                googleSheetsService.updateJobInSheets(job, _venues.value, _jobTypeConfigs.value)
                 job.sheetsId
             }
             
@@ -1600,9 +1610,9 @@ class EventManagerViewModel(
                 
                 println("Local data - Guests: ${localGuests.size}, Volunteers: ${localVolunteers.size}, Jobs: ${localJobs.size}, JobTypes: ${localJobTypeConfigs.size}, Venues: ${localVenues.size}")
                 
-                // STEP 1: Upload local changes to Google Sheets first (App priority for local modifications)
-                println("Step 1: Uploading local changes to Google Sheets...")
-                uploadLocalChangesToSheets(localGuests, localVolunteers, localJobs, localJobTypeConfigs, localVenues)
+                // STEP 1: Upload local changes via merge-safe backup (reads remote first, preserves other devices' data)
+                println("Step 1: Uploading local changes to Google Sheets (merge-safe)...")
+                twoWaySyncService?.backupToGoogleSheets()
                 
                 // STEP 2: Download changes from Google Sheets (Sheets priority for remote modifications)
                 println("Step 2: Downloading changes from Google Sheets...")
@@ -1665,7 +1675,7 @@ class EventManagerViewModel(
             googleSheetsService.syncJobTypeConfigsToSheets(localJobTypeConfigs)
             googleSheetsService.syncGuestsToSheets(localGuests, localVenues)
             googleSheetsService.syncVolunteersToSheets(localVolunteers)
-            googleSheetsService.syncJobsToSheets(localJobs, localVenues)
+            googleSheetsService.syncJobsToSheets(localJobs, localVenues, localJobTypeConfigs)
             googleSheetsService.syncVenuesToSheets(localVenues)
             
             println("Step 1 completed: Local changes uploaded to Google Sheets")
@@ -1730,8 +1740,8 @@ class EventManagerViewModel(
         // Merge Job Type Configs
         for (remoteConfig in remoteJobTypeConfigs) {
             // Check if this item was deleted locally
-            val isDeleted = deletedJobTypes.any { 
-                it.sheetsId == remoteConfig.sheetsId || it.id == remoteConfig.id.toString() 
+            val isDeleted = deletedJobTypes.any {
+                it.businessKey == remoteConfig.name
             }
             
             if (isDeleted) {
@@ -1768,8 +1778,8 @@ class EventManagerViewModel(
         var venuesUpdated = 0
         for (remoteVenue in remoteVenues) {
             // Check if this item was deleted locally
-            val isDeleted = deletedVenues.any { 
-                it.sheetsId == remoteVenue.sheetsId || it.id == remoteVenue.id.toString() 
+            val isDeleted = deletedVenues.any {
+                it.businessKey == remoteVenue.name
             }
             
             if (isDeleted) {
@@ -1831,8 +1841,8 @@ class EventManagerViewModel(
         // Merge Guests
         for (remoteGuest in remoteGuests) {
             // Check if this item was deleted locally
-            val isDeleted = deletedGuests.any { 
-                it.sheetsId == remoteGuest.sheetsId || it.id == remoteGuest.id.toString() 
+            val isDeleted = deletedGuests.any {
+                it.businessKey == remoteGuest.nanoId
             }
             
             if (isDeleted) {
@@ -1865,8 +1875,8 @@ class EventManagerViewModel(
         // Merge Volunteers
         for (remoteVolunteer in remoteVolunteers) {
             // Check if this item was deleted locally
-            val isDeleted = deletedVolunteers.any { 
-                it.sheetsId == remoteVolunteer.sheetsId || it.id == remoteVolunteer.id 
+            val isDeleted = deletedVolunteers.any {
+                it.businessKey == remoteVolunteer.id
             }
             
             if (isDeleted) {
@@ -1874,7 +1884,10 @@ class EventManagerViewModel(
                 continue
             }
             
-            val localVolunteer = localVolunteers.find { it.sheetsId == remoteVolunteer.sheetsId || it.name == remoteVolunteer.name }
+            val localVolunteer = localVolunteers.find {
+                it.id == remoteVolunteer.id ||
+                (it.name == remoteVolunteer.name && it.lastNameAbbreviation == remoteVolunteer.lastNameAbbreviation)
+            }
             if (localVolunteer == null) {
                 // New volunteer from sheets
                 try {
@@ -1908,8 +1921,10 @@ class EventManagerViewModel(
         // Merge Jobs
         for (remoteJob in remoteJobs) {
             // Check if this item was deleted locally
-            val isDeleted = deletedJobs.any { 
-                it.sheetsId == remoteJob.sheetsId || it.id == remoteJob.id.toString() 
+            val remoteJobBusinessKey =
+                "${remoteJob.volunteerId}_${remoteJob.jobTypeName}_${remoteJob.date}_${remoteJob.venueName}_${remoteJob.shiftTime}"
+            val isDeleted = deletedJobs.any {
+                it.businessKey == remoteJobBusinessKey
             }
             
             if (isDeleted) {
@@ -1918,8 +1933,11 @@ class EventManagerViewModel(
             }
             
             val localJob = localJobs.find { 
-                it.sheetsId == remoteJob.sheetsId || 
-                (it.volunteerId == remoteJob.volunteerId && it.date == remoteJob.date && it.jobTypeName == remoteJob.jobTypeName)
+                it.volunteerId == remoteJob.volunteerId &&
+                it.jobTypeName == remoteJob.jobTypeName &&
+                it.date == remoteJob.date &&
+                it.venueName == remoteJob.venueName &&
+                it.shiftTime == remoteJob.shiftTime
             }
             if (localJob == null) {
                 // New job from sheets
@@ -1983,7 +2001,7 @@ class EventManagerViewModel(
     private suspend fun uploadJobsToSheets(jobs: List<Job>) {
         try {
             val venues = repository.getAllVenues().first()
-            googleSheetsService.syncJobsToSheets(jobs, venues)
+            googleSheetsService.syncJobsToSheets(jobs, venues, _jobTypeConfigs.value)
             println("Uploaded ${jobs.size} jobs to sheets")
         } catch (e: Exception) {
             println("Failed to upload jobs: ${e.message}")
@@ -2129,8 +2147,8 @@ class EventManagerViewModel(
         
         for (remoteGuest in remoteGuests) {
             // Check if this item was deleted locally
-            val isDeleted = deletedGuests.any { 
-                it.sheetsId == remoteGuest.sheetsId || it.id == remoteGuest.id.toString() 
+            val isDeleted = deletedGuests.any {
+                it.businessKey == remoteGuest.nanoId
             }
             
             if (isDeleted) {
@@ -2174,18 +2192,16 @@ class EventManagerViewModel(
         val jobsByVolunteerId = VolunteerActivityManager.groupJobsByVolunteerId(allJobs)
         
         // OPTIMIZED: Create lookup maps for O(1) access instead of O(n) find operations
-        val localVolunteersBySheetsId = localVolunteers.filter { it.sheetsId != null }.associateBy { it.sheetsId!! }
+        val localVolunteersById = localVolunteers.associateBy { it.id }
         // Use name + abbreviation as key to allow multiple volunteers with same first name
         val localVolunteersByFullName = localVolunteers.associateBy { "${it.name}_${it.lastNameAbbreviation}" }
         
         // OPTIMIZED: Create sets for O(1) deletion checks instead of O(n) any operations
-        val deletedSheetsIds = deletedVolunteers.mapNotNullTo(mutableSetOf()) { it.sheetsId }
-        val deletedIds = deletedVolunteers.mapNotNullTo(mutableSetOf()) { it.id }
+        val deletedVolunteerKeys = deletedVolunteers.mapNotNullTo(mutableSetOf()) { it.businessKey }
         
         for (remoteVolunteer in remoteVolunteers) {
             // OPTIMIZED: Use set lookup instead of any (O(1) vs O(n))
-            val isDeleted = (remoteVolunteer.sheetsId != null && remoteVolunteer.sheetsId in deletedSheetsIds) ||
-                            (remoteVolunteer.id in deletedIds)
+            val isDeleted = remoteVolunteer.id in deletedVolunteerKeys
             
             if (isDeleted) {
                 println("Skipping deleted volunteer: ${remoteVolunteer.name} ${remoteVolunteer.lastNameAbbreviation}")
@@ -2193,7 +2209,7 @@ class EventManagerViewModel(
             }
             
             // OPTIMIZED: Use map lookup instead of find (O(1) vs O(n))
-            val localVolunteer = remoteVolunteer.sheetsId?.let { localVolunteersBySheetsId[it] }
+            val localVolunteer = localVolunteersById[remoteVolunteer.id]
                 ?: localVolunteersByFullName["${remoteVolunteer.name}_${remoteVolunteer.lastNameAbbreviation}"]
             if (localVolunteer == null) {
                 // New volunteer from sheets
@@ -2255,8 +2271,8 @@ class EventManagerViewModel(
         
         for (remoteGuest in remoteGuests) {
             // Check if this item was deleted locally
-            val isDeleted = deletedGuests.any { 
-                it.sheetsId == remoteGuest.sheetsId || it.id == remoteGuest.id.toString() 
+            val isDeleted = deletedGuests.any {
+                it.businessKey == remoteGuest.nanoId
             }
             
             if (isDeleted) {
@@ -2300,18 +2316,16 @@ class EventManagerViewModel(
         val jobsByVolunteerId = VolunteerActivityManager.groupJobsByVolunteerId(allJobs)
 
         // OPTIMIZED: Create lookup maps for O(1) access instead of O(n) find operations
-        val localVolunteersBySheetsId = localVolunteers.filter { it.sheetsId != null }.associateBy { it.sheetsId!! }
+        val localVolunteersById = localVolunteers.associateBy { it.id }
         // Use name + abbreviation as key to allow multiple volunteers with same first name
         val localVolunteersByFullName = localVolunteers.associateBy { "${it.name}_${it.lastNameAbbreviation}" }
 
         // OPTIMIZED: Create sets for O(1) deletion checks instead of O(n) any operations
-        val deletedSheetsIds = deletedVolunteers.mapNotNullTo(mutableSetOf()) { it.sheetsId }
-        val deletedIds = deletedVolunteers.mapNotNullTo(mutableSetOf()) { it.id }
+        val deletedVolunteerKeys = deletedVolunteers.mapNotNullTo(mutableSetOf()) { it.businessKey }
 
         for (remoteVolunteer in remoteVolunteers) {
             // OPTIMIZED: Use set lookup instead of any (O(1) vs O(n))
-            val isDeleted = (remoteVolunteer.sheetsId != null && remoteVolunteer.sheetsId in deletedSheetsIds) ||
-                            (remoteVolunteer.id in deletedIds)
+            val isDeleted = remoteVolunteer.id in deletedVolunteerKeys
 
             if (isDeleted) {
                 println("Skipping deleted volunteer: ${remoteVolunteer.name} ${remoteVolunteer.lastNameAbbreviation}")
@@ -2319,7 +2333,7 @@ class EventManagerViewModel(
             }
 
             // OPTIMIZED: Use map lookup instead of find (O(1) vs O(n))
-            val localVolunteer = remoteVolunteer.sheetsId?.let { localVolunteersBySheetsId[it] }
+            val localVolunteer = localVolunteersById[remoteVolunteer.id]
                 ?: localVolunteersByFullName["${remoteVolunteer.name}_${remoteVolunteer.lastNameAbbreviation}"]
             if (localVolunteer == null) {
                 // New volunteer from sheets
@@ -2366,8 +2380,10 @@ class EventManagerViewModel(
 
         for (remoteJob in remoteJobs) {
             // Check if this item was deleted locally
+            val remoteJobBusinessKey =
+                "${remoteJob.volunteerId}_${remoteJob.jobTypeName}_${remoteJob.date}_${remoteJob.venueName}_${remoteJob.shiftTime}"
             val isDeleted = deletedJobs.any {
-                it.sheetsId == remoteJob.sheetsId || it.id == remoteJob.id.toString()
+                it.businessKey == remoteJobBusinessKey
             }
 
             if (isDeleted) {
@@ -2375,7 +2391,13 @@ class EventManagerViewModel(
                 continue
             }
 
-            val localJob = localJobs.find { it.sheetsId == remoteJob.sheetsId }
+            val localJob = localJobs.find {
+                it.volunteerId == remoteJob.volunteerId &&
+                it.jobTypeName == remoteJob.jobTypeName &&
+                it.date == remoteJob.date &&
+                it.venueName == remoteJob.venueName &&
+                it.shiftTime == remoteJob.shiftTime
+            }
             if (localJob == null) {
                 // New job from sheets
                 try {
@@ -2409,7 +2431,7 @@ class EventManagerViewModel(
         for (remoteJobType in remoteJobTypes) {
             // Check if this item was deleted locally
             val isDeleted = deletedJobTypes.any {
-                it.sheetsId == remoteJobType.sheetsId || it.id == remoteJobType.id.toString()
+                it.businessKey == remoteJobType.name
             }
 
             if (isDeleted) {
@@ -2417,7 +2439,7 @@ class EventManagerViewModel(
                 continue
             }
 
-            val localJobType = localJobTypes.find { it.sheetsId == remoteJobType.sheetsId || it.name == remoteJobType.name }
+            val localJobType = localJobTypes.find { it.name == remoteJobType.name }
             if (localJobType == null) {
                 // New job type from sheets
                 try {
@@ -2450,8 +2472,10 @@ class EventManagerViewModel(
         
         for (remoteJob in remoteJobs) {
             // Check if this item was deleted locally
-            val isDeleted = deletedJobs.any { 
-                it.sheetsId == remoteJob.sheetsId || it.id == remoteJob.id.toString() 
+            val remoteJobBusinessKey =
+                "${remoteJob.volunteerId}_${remoteJob.jobTypeName}_${remoteJob.date}_${remoteJob.venueName}_${remoteJob.shiftTime}"
+            val isDeleted = deletedJobs.any {
+                it.businessKey == remoteJobBusinessKey
             }
             
             if (isDeleted) {
@@ -2459,9 +2483,12 @@ class EventManagerViewModel(
                 continue
             }
             
-            val localJob = localJobs.find { 
-                it.sheetsId == remoteJob.sheetsId || 
-                (it.volunteerId == remoteJob.volunteerId && it.date == remoteJob.date && it.jobTypeName == remoteJob.jobTypeName)
+            val localJob = localJobs.find {
+                it.volunteerId == remoteJob.volunteerId &&
+                it.jobTypeName == remoteJob.jobTypeName &&
+                it.date == remoteJob.date &&
+                it.venueName == remoteJob.venueName &&
+                it.shiftTime == remoteJob.shiftTime
             }
             if (localJob == null) {
                 // New job from sheets
@@ -2495,8 +2522,8 @@ class EventManagerViewModel(
         
         for (remoteJobType in remoteJobTypes) {
             // Check if this item was deleted locally
-            val isDeleted = deletedJobTypes.any { 
-                it.sheetsId == remoteJobType.sheetsId || it.id == remoteJobType.id.toString() 
+            val isDeleted = deletedJobTypes.any {
+                it.businessKey == remoteJobType.name
             }
             
             if (isDeleted) {
@@ -2565,7 +2592,7 @@ class EventManagerViewModel(
         _lastSyncTime.value = currentTime
     }
 
-    // Sync app data to Google Sheets
+    // Sync app data to Google Sheets (merge-safe: reads remote data before overwriting)
     @Suppress("unused")
     private suspend fun syncToGoogleSheets() {
         try {
@@ -2573,47 +2600,18 @@ class EventManagerViewModel(
                 println("Google Sheets not configured, skipping sync")
                 return
             }
-            
-            // Initialize Google Sheets service
-            googleSheetsService.initializeSheetsService()
-            
-            // Get current data
-            val currentGuests = repository.getAllGuests().first()
-            val currentVolunteers = repository.getAllActiveVolunteers().first()
-            val currentJobs = repository.getAllJobs().first()
-            val currentJobTypeConfigs = repository.getAllJobTypeConfigs().first()
-            val currentVenues = repository.getAllVenues().first()
-            
-            // Safety check: Only upload if we have local data to prevent clearing existing sheets data
-            val hasLocalData = currentGuests.isNotEmpty() || currentVolunteers.isNotEmpty() || 
-                              currentJobs.isNotEmpty() || currentJobTypeConfigs.isNotEmpty()
-            
-            if (!hasLocalData) {
-                println("⚠️ No local data found - skipping upload to prevent clearing existing Google Sheets data")
-                println("This is likely a first-time setup. Will only download from Google Sheets.")
-                return
-            }
-            
-            println("📤 Local data found - syncing to Google Sheets...")
-            println("Local data - Guests: ${currentGuests.size}, Volunteers: ${currentVolunteers.size}, Jobs: ${currentJobs.size}, JobTypes: ${currentJobTypeConfigs.size}")
-            
-            // Sync to Google Sheets
-            googleSheetsService.syncJobTypeConfigsToSheets(currentJobTypeConfigs)
-            googleSheetsService.syncGuestsToSheets(currentGuests, currentVenues)
-            googleSheetsService.syncVolunteersToSheets(currentVolunteers)
-            googleSheetsService.syncJobsToSheets(currentJobs, currentVenues)
-            
-            // Update last sync time
+
+            twoWaySyncService?.backupToGoogleSheets()
+
             val currentTime = System.currentTimeMillis()
             context?.let { ctx ->
                 val settingsManager = SettingsManager(ctx)
                 settingsManager.saveLastSyncTime(currentTime)
             }
             _lastSyncTime.value = currentTime
-            
+
             println("Data synced to Google Sheets successfully")
-                
-            } catch (e: Exception) {
+        } catch (e: Exception) {
             println("Failed to sync to Google Sheets: ${e.message}")
             _syncError.value = "Failed to sync to Google Sheets: ${e.message}"
         }
@@ -2627,60 +2625,67 @@ class EventManagerViewModel(
      */
     fun performFullSync() {
         viewModelScope.launch {
-            _isSyncing.value = true
-            _syncError.value = null
-            
-            AppLogger.i("EventManagerViewModel", "Starting full sync")
-            
-            try {
-                // Perform sync on IO dispatcher
-                val result = withContext(Dispatchers.IO) {
-                    syncManager?.performFullSync()
-                }
-                
-                if (result?.isSuccess == true) {
-                    println("🔄 Sync successful, refreshing UI data...")
-                    println("📊 Before refresh - Guests: ${_guests.value.size}, Volunteers: ${_volunteers.value.size}")
-                    
-                    // CRITICAL: Ensure data refresh happens on Main dispatcher
-                    // This ensures StateFlow updates trigger Compose recomposition
-                    withContext(Dispatchers.Main) {
-                        // Refresh all data after successful sync
-                        refreshAllData()
-                        println("✅ UI data refreshed on Main dispatcher after sync")
-                        println("📊 After refresh - Guests: ${_guests.value.size}, Volunteers: ${_volunteers.value.size}")
-                    }
-                    
-                    // Recalculate volunteer guest list
-                    recalcAndUploadVolunteerGuestList()
+            performFullSyncAwait(suppressSyncErrorDialog = false)
+        }
+    }
 
-                    // Refresh temporary guests from dedicated sheet for artist/entourage invites
-                    refreshTemporaryGuestsFromSheets()
-                    
-                    // Update sync time
-                    updateSyncTime()
-                    
-                    AppLogger.i("EventManagerViewModel", "Full sync completed successfully")
-                    println("✅✅✅ Full sync completed successfully - UI should be updated now")
-                } else {
-                    val errorResult = result as? SyncResult.Error
-                    val errorMsg = errorResult?.message ?: "Full sync failed"
-                    _syncError.value = errorMsg
-                    AppLogger.e("EventManagerViewModel", "Full sync failed: $errorMsg")
+    /**
+     * Same as [performFullSync] but suspends until the sync job finishes. Use this for security
+     * gates (first-admin precheck) where fire-and-forget would leave local Room empty while the UI
+     * already decided there is no remote admin.
+     */
+    suspend fun performFullSyncAwait(suppressSyncErrorDialog: Boolean = false): SyncResult {
+        _isSyncing.value = true
+        _syncError.value = null
+
+        AppLogger.i("EventManagerViewModel", "Starting full sync")
+
+        return try {
+            val result = withContext(Dispatchers.IO) {
+                syncManager?.performFullSync()
+            } ?: SyncResult.Error("Full sync failed")
+
+            if (result.isSuccess) {
+                println("🔄 Sync successful, refreshing UI data...")
+                println("📊 Before refresh - Guests: ${_guests.value.size}, Volunteers: ${_volunteers.value.size}")
+
+                withContext(Dispatchers.Main) {
+                    refreshAllData()
+                    println("✅ UI data refreshed on Main dispatcher after sync")
+                    println("📊 After refresh - Guests: ${_guests.value.size}, Volunteers: ${_volunteers.value.size}")
+                }
+
+                recalcAndUploadVolunteerGuestList()
+                refreshTemporaryGuestsFromSheets()
+                updateSyncTime()
+
+                AppLogger.i("EventManagerViewModel", "Full sync completed successfully")
+                println("✅✅✅ Full sync completed successfully - UI should be updated now")
+                result
+            } else {
+                val errorMsg = (result as? SyncResult.Error)?.message ?: "Full sync failed"
+                _syncError.value = errorMsg
+                AppLogger.e("EventManagerViewModel", "Full sync failed: $errorMsg")
+                if (!suppressSyncErrorDialog) {
                     showSyncErrorIfNotSuppressed(errorMsg)
                 }
-            } catch (e: Exception) {
-                val errorMsg = when {
-                    e.message?.contains("429") == true || e.message?.contains("Rate limit") == true -> "Rate limit exceeded. Please try again later."
-                    else -> "Full sync failed: ${e.message}"
-                }
-                _syncError.value = errorMsg
-                AppLogger.e("EventManagerViewModel", "Full sync exception", e)
-                showSyncErrorIfNotSuppressed(errorMsg)
-                println("Full sync error: $errorMsg")
-            } finally {
-                _isSyncing.value = false
+                result
             }
+        } catch (e: Exception) {
+            val errorMsg = when {
+                e.message?.contains("429") == true || e.message?.contains("Rate limit") == true ->
+                    "Rate limit exceeded. Please try again later."
+                else -> "Full sync failed: ${e.message}"
+            }
+            _syncError.value = errorMsg
+            AppLogger.e("EventManagerViewModel", "Full sync exception", e)
+            if (!suppressSyncErrorDialog) {
+                showSyncErrorIfNotSuppressed(errorMsg)
+            }
+            println("Full sync error: $errorMsg")
+            SyncResult.Error(errorMsg)
+        } finally {
+            _isSyncing.value = false
         }
     }
 
@@ -3398,11 +3403,17 @@ class EventManagerViewModel(
     
     
     /**
-     * Same logical guest row for merge/sync. Display names can repeat; identity uses
-     * Google Sheets row id, guest NanoID, or volunteer-benefit volunteer id.
+     * Same logical guest row for merge/sync.
+     *
+     * IMPORTANT: Google Sheets row numbers are not stable because full-tab uploads
+     * clear and rewrite rows. Never match guests by [sheetsId] first, otherwise two
+     * rows can "swap identities" across sync cycles and appear/disappear in UI.
+     *
+     * Identity priority:
+     * 1) Guest NanoID (stable across devices/syncs)
+     * 2) Volunteer-benefit volunteerId (for benefit rows)
      */
     private fun guestSameSyncIdentity(local: Guest, remote: Guest): Boolean {
-        if (remote.sheetsId != null && local.sheetsId == remote.sheetsId) return true
         if (NanoIdGenerator.isValidNanoId(remote.nanoId) &&
             NanoIdGenerator.isValidNanoId(local.nanoId) &&
             local.nanoId == remote.nanoId
@@ -3426,7 +3437,8 @@ class EventManagerViewModel(
             if (NanoIdGenerator.isValidNanoId(g.nanoId)) g.nanoId else "row:${g.id}"
         val byKey = guests.groupBy { dedupeKey(it) }
         return byKey.values.map { group ->
-            group.minByOrNull { it.lastModified } ?: group.first()
+            // Keep the newest entry for each identity to avoid reverting recent changes.
+            group.maxByOrNull { it.lastModified } ?: group.first()
         }
     }
     
@@ -3694,7 +3706,7 @@ class EventManagerViewModel(
                         for (job in volunteerJobs) {
                             try {
                                 // Track deletion first (same as deleteJob)
-                                deletionTracker?.trackJobDeletion(job.id.toString(), job.sheetsId)
+                                deletionTracker?.trackJobDeletion(job.id.toString(), job.sheetsId, businessKey = "${job.volunteerId}_${job.jobTypeName}_${job.date}_${job.venueName}_${job.shiftTime}")
                                 
                                 // Delete from local database
                                 repository.deleteJob(job)
@@ -3802,6 +3814,8 @@ class EventManagerViewModel(
                         applyDifferentialUIUpdates(changes)
                         println("✅ UI updates applied on Main dispatcher")
                     }
+
+                    checkForNewAnnouncements(_venues.value)
                     
                     // Always recalculate volunteer benefits to ensure they're present
                     // This handles: new volunteers, rank changes from jobs, initial sync, etc.
@@ -3857,7 +3871,7 @@ class EventManagerViewModel(
             // Apply guest changes (excludes volunteer benefits - they're handled separately)
             if (changes.guests.hasChanges) {
                 // Helper to get matching key for a guest (same as DifferentialSyncService)
-                fun guestKey(g: Guest) = g.sheetsId ?: "${g.name}_${g.venueName}_${g.invitations}"
+                fun guestKey(g: Guest) = if (NanoIdGenerator.isValidNanoId(g.nanoId)) g.nanoId else "${g.name}_${g.email}_${g.phoneNumber}_${g.venueName}_${g.invitations}"
                 
                 // Remove deleted guests by matching key (not by id, since synced items may have id=0)
                 changes.guests.deleted.forEach { deletedGuest ->
@@ -3885,7 +3899,7 @@ class EventManagerViewModel(
             // Apply volunteer changes
             if (changes.volunteers.hasChanges) {
                 // Helper to get matching key (same as DifferentialSyncService)
-                fun volunteerKey(v: Volunteer) = v.sheetsId ?: "${v.name}_${v.email}_${v.phoneNumber}"
+                fun volunteerKey(v: Volunteer) = v.id
                 
                 // Remove deleted volunteers by matching key
                 changes.volunteers.deleted.forEach { deletedVolunteer ->
@@ -3914,7 +3928,7 @@ class EventManagerViewModel(
             // Apply job changes
             if (changes.jobs.hasChanges) {
                 // Helper to get matching key (same as DifferentialSyncService)
-                fun jobKey(j: Job) = j.sheetsId ?: "${j.volunteerId}_${j.jobTypeName}_${j.date}_${j.venueName}_${j.shiftTime}"
+                fun jobKey(j: Job) = "${j.volunteerId}_${j.jobTypeName}_${j.date}_${j.venueName}_${j.shiftTime}"
                 
                 // Remove deleted jobs by matching key
                 changes.jobs.deleted.forEach { deletedJob ->
@@ -3941,7 +3955,7 @@ class EventManagerViewModel(
             // Apply job type config changes
             if (changes.jobTypeConfigs.hasChanges) {
                 // Helper to get matching key (same as DifferentialSyncService)
-                fun jobTypeKey(c: JobTypeConfig) = c.sheetsId ?: c.name
+                fun jobTypeKey(c: JobTypeConfig) = c.name
                 
                 // Remove deleted job type configs by matching key
                 changes.jobTypeConfigs.deleted.forEach { deletedConfig ->
@@ -3968,7 +3982,7 @@ class EventManagerViewModel(
             // Apply venue changes
             if (changes.venues.hasChanges) {
                 // Helper to get matching key (same as DifferentialSyncService)
-                fun venueKey(v: VenueEntity) = v.sheetsId ?: v.name
+                fun venueKey(v: VenueEntity) = v.name
                 
                 // Remove deleted venues by matching key
                 changes.venues.deleted.forEach { deletedVenue ->
@@ -4088,7 +4102,7 @@ class EventManagerViewModel(
             val currentVolunteers = _volunteers.value.toMutableList()
             
             // Helper to get matching key (same as DifferentialSyncService)
-            fun volunteerKey(v: Volunteer) = v.sheetsId ?: "${v.name}_${v.email}_${v.phoneNumber}"
+            fun volunteerKey(v: Volunteer) = v.id
             
             // Remove deleted volunteers by matching key
             changes.deleted.forEach { deletedVolunteer ->
@@ -4195,7 +4209,7 @@ class EventManagerViewModel(
             val currentGuests = _guests.value.toMutableList()
             
             // Helper to get matching key (same as DifferentialSyncService)
-            fun guestKey(g: Guest) = g.sheetsId ?: "${g.name}_${g.venueName}_${g.invitations}"
+            fun guestKey(g: Guest) = if (NanoIdGenerator.isValidNanoId(g.nanoId)) g.nanoId else "${g.name}_${g.email}_${g.phoneNumber}_${g.venueName}_${g.invitations}"
             
             // Remove deleted guests by matching key
             changes.deleted.forEach { deletedGuest ->
@@ -4381,7 +4395,7 @@ class EventManagerViewModel(
             val currentJobs = _jobs.value.toMutableList()
             
             // Helper to get matching key (same as DifferentialSyncService)
-            fun jobKey(j: Job) = j.sheetsId ?: "${j.volunteerId}_${j.jobTypeName}_${j.date}_${j.venueName}_${j.shiftTime}"
+            fun jobKey(j: Job) = "${j.volunteerId}_${j.jobTypeName}_${j.date}_${j.venueName}_${j.shiftTime}"
             
             // Remove deleted jobs by matching key
             changes.deleted.forEach { deletedJob ->
@@ -4483,7 +4497,7 @@ class EventManagerViewModel(
             val currentJobTypes = _jobTypeConfigs.value.toMutableList()
             
             // Helper to get matching key (same as DifferentialSyncService)
-            fun jobTypeKey(c: JobTypeConfig) = c.sheetsId ?: c.name
+            fun jobTypeKey(c: JobTypeConfig) = c.name
             
             // Remove deleted job types by matching key
             changes.deleted.forEach { deletedJobType ->
@@ -4552,6 +4566,7 @@ class EventManagerViewModel(
                     // Apply targeted UI updates instead of full refresh
                     applyVenueUIUpdates(changes)
                     reconcilePeopleCounterAfterVenuesChangedInternal()
+                    checkForNewAnnouncements(_venues.value)
                     
                     // Update sync time
                     updateSyncTime()
@@ -4586,7 +4601,7 @@ class EventManagerViewModel(
             val currentVenues = _venues.value.toMutableList()
             
             // Helper to get matching key (same as DifferentialSyncService)
-            fun venueKey(v: VenueEntity) = v.sheetsId ?: v.name
+            fun venueKey(v: VenueEntity) = v.name
             
             // Remove deleted venues by matching key
             changes.deleted.forEach { deletedVenue ->
@@ -4781,14 +4796,6 @@ class EventManagerViewModel(
         sm.setPeopleCounterSelectedVenueId(venueId)
         _peopleCounterSelectedVenueId.value = venueId
         _peopleCounterPriority.value = sm.isPeopleCounterPriority(venueId)
-        viewModelScope.launch {
-            try {
-                pullVenuesDifferentialQuiet()
-            } catch (e: Exception) {
-                println("Venue switch pull failed: ${e.message}")
-            }
-            _peopleCounterPriority.value = sm.isPeopleCounterPriority(venueId)
-        }
     }
 
     fun setPeopleCounterPriority(enabled: Boolean) {
@@ -5022,6 +5029,117 @@ class EventManagerViewModel(
             )
             t.lastUploadAtMs = now
             t.countAtLastUpload = count
+        }
+    }
+
+    // ===================== ANNOUNCEMENTS =====================
+
+    fun openSendAnnouncementDialog() {
+        _showSendAnnouncementDialog.value = true
+    }
+
+    fun closeSendAnnouncementDialog() {
+        _showSendAnnouncementDialog.value = false
+    }
+
+    fun sendAnnouncement(targetVenueIds: List<Long>, title: String, message: String) {
+        val ctx = context ?: return
+        val settingsManager = SettingsManager(ctx)
+        val deviceId = settingsManager.getOrCreatePersistentDeviceId()
+        val sentAt = System.currentTimeMillis()
+
+        viewModelScope.launch {
+            _isAnnouncementSending.value = true
+            try {
+                val allVenues = _venues.value
+                val targets = allVenues.filter { it.id in targetVenueIds }
+
+                withContext(Dispatchers.IO) {
+                    for (venue in targets) {
+                        val row = venue.sheetsId?.toIntOrNull() ?: continue
+                        syncManager?.sendAnnouncement(row, title, message, deviceId)
+                        repository.updateVenue(
+                            venue.copy(
+                                announcementTitle = title,
+                                announcementMessage = message,
+                                announcementSentAt = sentAt,
+                                announcementSenderDeviceId = deviceId
+                            )
+                        )
+                        settingsManager.setAnnouncementLastSeenTimestamp(
+                            venue.sheetsId ?: venue.name, sentAt
+                        )
+                    }
+                }
+
+                _showSendAnnouncementDialog.value = false
+            } catch (e: Exception) {
+                println("❌ Failed to send announcement: ${e.message}")
+            } finally {
+                _isAnnouncementSending.value = false
+            }
+        }
+    }
+
+    fun checkForNewAnnouncements(venues: List<VenueEntity>) {
+        val ctx = context ?: return
+        val settingsManager = SettingsManager(ctx)
+
+        if (!settingsManager.isAnnouncementsReceptionEnabled()) return
+
+        val deviceId = settingsManager.getOrCreatePersistentDeviceId()
+        val trackedIds = settingsManager.getAnnouncementsTrackedVenueIds()
+        val validityMs = settingsManager.getAnnouncementsValidityMinutes() * 60_000L
+        val lastSeen = settingsManager.getAnnouncementsLastSeenTimestamps()
+        val now = System.currentTimeMillis()
+
+        val newAnnouncements = mutableListOf<com.eventmanager.app.ui.components.AnnouncementDisplay>()
+
+        for (venue in venues) {
+            if (venue.announcementSentAt == 0L) continue
+            if (venue.announcementTitle.isBlank() && venue.announcementMessage.isBlank()) continue
+
+            // Auto-exclusion: skip if this device sent it
+            if (venue.announcementSenderDeviceId == deviceId) continue
+
+            // Validity check
+            if (now - venue.announcementSentAt > validityMs) continue
+
+            // Venue filter: empty set means all venues
+            val venueKey = venue.sheetsId ?: venue.name
+            if (trackedIds.isNotEmpty()) {
+                val venueIdStr = venue.id.toString()
+                if (!trackedIds.contains(venueIdStr) && !trackedIds.contains(venueKey)) continue
+            }
+
+            // Already seen check
+            val seenAt = lastSeen[venueKey] ?: 0L
+            if (venue.announcementSentAt <= seenAt) continue
+
+            newAnnouncements.add(
+                com.eventmanager.app.ui.components.AnnouncementDisplay(
+                    venueName = venue.name,
+                    title = venue.announcementTitle,
+                    message = venue.announcementMessage,
+                    sentAt = venue.announcementSentAt,
+                    venueKey = venueKey
+                )
+            )
+        }
+
+        if (newAnnouncements.isNotEmpty()) {
+            _pendingAnnouncements.value = newAnnouncements
+        }
+    }
+
+    fun dismissCurrentAnnouncement() {
+        val ctx = context ?: return
+        val settingsManager = SettingsManager(ctx)
+        val current = _pendingAnnouncements.value.toMutableList()
+        if (current.isNotEmpty()) {
+            val dismissed = current.removeAt(0)
+            settingsManager.setAnnouncementLastSeenTimestamp(dismissed.venueKey, dismissed.sentAt)
+            _pendingAnnouncements.value = current
         }
     }
 }

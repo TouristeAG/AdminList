@@ -94,17 +94,15 @@ class EventManagerRepository(
             volunteer
         }
         
-        // Find existing volunteer - use sheetsId first (most reliable), then name+abbreviation
-        // This allows multiple volunteers with the same first name but different last names
-        val sheetsId = validatedVolunteer.sheetsId
-        val existingVolunteer = if (sheetsId != null) {
-            volunteerDao.getVolunteerBySheetsId(sheetsId)
-        } else {
-            null
-        } ?: volunteerDao.getVolunteerByNameAndAbbreviation(
-            validatedVolunteer.name,
-            validatedVolunteer.lastNameAbbreviation
-        )
+        // Find existing volunteer - prioritize NanoID, then exact name+abbreviation.
+        // sheetsId (row number) is not stable after full-sheet rewrites, so use it only
+        // as a final fallback for legacy records.
+        val existingVolunteer = volunteerDao.getVolunteerById(validatedVolunteer.id)
+            ?: volunteerDao.getVolunteerByNameAndAbbreviation(
+                validatedVolunteer.name,
+                validatedVolunteer.lastNameAbbreviation
+            )
+            ?: validatedVolunteer.sheetsId?.let { volunteerDao.getVolunteerBySheetsId(it) }
         
         if (existingVolunteer != null) {
             if (existingVolunteer.id != validatedVolunteer.id) {
@@ -147,17 +145,14 @@ class EventManagerRepository(
             volunteer
         }
         
-        // Find existing volunteer - use sheetsId first (most reliable), then name+abbreviation
-        // This allows multiple volunteers with the same first name but different last names
-        val sheetsIdForUpdate = validatedVolunteer.sheetsId
-        val existingVolunteer = if (sheetsIdForUpdate != null) {
-            volunteerDao.getVolunteerBySheetsId(sheetsIdForUpdate)
-        } else {
-            null
-        } ?: volunteerDao.getVolunteerByNameAndAbbreviation(
-            validatedVolunteer.name,
-            validatedVolunteer.lastNameAbbreviation
-        )
+        // Find existing volunteer - prioritize NanoID, then exact name+abbreviation.
+        // Keep sheetsId only as last fallback for legacy rows.
+        val existingVolunteer = volunteerDao.getVolunteerById(validatedVolunteer.id)
+            ?: volunteerDao.getVolunteerByNameAndAbbreviation(
+                validatedVolunteer.name,
+                validatedVolunteer.lastNameAbbreviation
+            )
+            ?: validatedVolunteer.sheetsId?.let { volunteerDao.getVolunteerBySheetsId(it) }
         
         if (existingVolunteer != null && existingVolunteer.id != validatedVolunteer.id) {
             // NanoID differs - Google Sheets has the correct NanoID
@@ -208,17 +203,14 @@ class EventManagerRepository(
                 volunteer
             }
             
-            // Find existing volunteer - use sheetsId first (most reliable), then name+abbreviation
-            // This allows multiple volunteers with the same first name but different last names
-            val batchSheetsId = validatedVolunteer.sheetsId
-            val existingVolunteer = if (batchSheetsId != null) {
-                volunteerDao.getVolunteerBySheetsId(batchSheetsId)
-            } else {
-                null
-            } ?: volunteerDao.getVolunteerByNameAndAbbreviation(
-                validatedVolunteer.name,
-                validatedVolunteer.lastNameAbbreviation
-            )
+            // Find existing volunteer - prioritize NanoID, then exact name+abbreviation.
+            // Keep sheetsId only as last fallback for legacy rows.
+            val existingVolunteer = volunteerDao.getVolunteerById(validatedVolunteer.id)
+                ?: volunteerDao.getVolunteerByNameAndAbbreviation(
+                    validatedVolunteer.name,
+                    validatedVolunteer.lastNameAbbreviation
+                )
+                ?: validatedVolunteer.sheetsId?.let { volunteerDao.getVolunteerBySheetsId(it) }
             
             if (existingVolunteer != null && existingVolunteer.id != validatedVolunteer.id) {
                 // NanoID differs - Google Sheets has the correct NanoID

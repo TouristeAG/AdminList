@@ -63,6 +63,14 @@ class SettingsManager(context: Context) {
         private const val KEY_SETUP_WIZARD_COMPLETED = "setup_wizard_completed"
         private const val KEY_BIOMETRIC_ADMIN_LOGIN = "biometric_admin_login"
         
+        // Announcements Settings Keys
+        private const val KEY_ANNOUNCEMENTS_RECEPTION_ENABLED = "announcements_reception_enabled"
+        private const val KEY_ANNOUNCEMENTS_TRACKED_VENUE_IDS = "announcements_tracked_venue_ids"
+        private const val KEY_ANNOUNCEMENTS_VALIDITY_MINUTES = "announcements_validity_minutes"
+        private const val KEY_ANNOUNCEMENTS_NON_ADMIN_SEND_ENABLED = "announcements_non_admin_send_enabled"
+        private const val KEY_CATEGORY_ANNOUNCEMENTS_EXPANDED = "category_announcements_expanded"
+        private const val KEY_ANNOUNCEMENTS_LAST_SEEN_TIMESTAMPS = "announcements_last_seen_timestamps"
+
         // Email Settings Keys
         private const val KEY_EMAIL_SUBJECT = "email_qr_subject"
         private const val KEY_EMAIL_CONTENT_BEFORE = "email_qr_content_before"
@@ -194,7 +202,7 @@ class SettingsManager(context: Context) {
     }
     
     fun isAnimatedBackgroundEnabled(): Boolean {
-        return prefs.getBoolean(KEY_ANIMATED_BACKGROUND, false) // Disabled by default for better performance
+        return prefs.getBoolean(KEY_ANIMATED_BACKGROUND, true) // On by default; users can turn off in settings
     }
     
     fun setAnimatedBackgroundEnabled(enabled: Boolean) {
@@ -419,6 +427,66 @@ class SettingsManager(context: Context) {
     
     fun setStatisticsVisible(visible: Boolean) {
         prefs.edit().putBoolean(KEY_STATISTICS_VISIBLE, visible).apply()
+    }
+
+    // Announcements Configuration
+
+    fun isAnnouncementsReceptionEnabled(): Boolean {
+        return prefs.getBoolean(KEY_ANNOUNCEMENTS_RECEPTION_ENABLED, true)
+    }
+
+    fun setAnnouncementsReceptionEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_ANNOUNCEMENTS_RECEPTION_ENABLED, enabled).apply()
+    }
+
+    fun getAnnouncementsTrackedVenueIds(): Set<String> {
+        return prefs.getStringSet(KEY_ANNOUNCEMENTS_TRACKED_VENUE_IDS, emptySet()) ?: emptySet()
+    }
+
+    fun setAnnouncementsTrackedVenueIds(venueIds: Set<String>) {
+        prefs.edit().putStringSet(KEY_ANNOUNCEMENTS_TRACKED_VENUE_IDS, venueIds).apply()
+    }
+
+    fun getAnnouncementsValidityMinutes(): Int {
+        return prefs.getInt(KEY_ANNOUNCEMENTS_VALIDITY_MINUTES, 60)
+    }
+
+    fun setAnnouncementsValidityMinutes(minutes: Int) {
+        prefs.edit().putInt(KEY_ANNOUNCEMENTS_VALIDITY_MINUTES, minutes).apply()
+    }
+
+    fun isAnnouncementsNonAdminSendEnabled(): Boolean {
+        return prefs.getBoolean(KEY_ANNOUNCEMENTS_NON_ADMIN_SEND_ENABLED, false)
+    }
+
+    fun setAnnouncementsNonAdminSendEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_ANNOUNCEMENTS_NON_ADMIN_SEND_ENABLED, enabled).apply()
+    }
+
+    fun isCategoryAnnouncementsExpanded(): Boolean {
+        return prefs.getBoolean(KEY_CATEGORY_ANNOUNCEMENTS_EXPANDED, false)
+    }
+
+    fun setCategoryAnnouncementsExpanded(expanded: Boolean) {
+        prefs.edit().putBoolean(KEY_CATEGORY_ANNOUNCEMENTS_EXPANDED, expanded).apply()
+    }
+
+    fun getAnnouncementsLastSeenTimestamps(): Map<String, Long> {
+        val set = prefs.getStringSet(KEY_ANNOUNCEMENTS_LAST_SEEN_TIMESTAMPS, emptySet()) ?: emptySet()
+        return set.mapNotNull { entry ->
+            val parts = entry.split(":", limit = 2)
+            if (parts.size == 2) {
+                parts[0] to (parts[1].toLongOrNull() ?: 0L)
+            } else null
+        }.toMap()
+    }
+
+    fun setAnnouncementLastSeenTimestamp(venueKey: String, timestamp: Long) {
+        val set = prefs.getStringSet(KEY_ANNOUNCEMENTS_LAST_SEEN_TIMESTAMPS, emptySet()) ?: emptySet()
+        val mutable = HashSet(set)
+        mutable.removeAll { it.startsWith("$venueKey:") }
+        mutable.add("$venueKey:$timestamp")
+        prefs.edit().putStringSet(KEY_ANNOUNCEMENTS_LAST_SEEN_TIMESTAMPS, mutable).apply()
     }
 
     // Page Scroll Behavior Configuration

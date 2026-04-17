@@ -255,7 +255,8 @@ class SyncManager(
             "guests" to listOf("guests", "guest_list"),
             "volunteers" to listOf("volunteers", "volunteer_list"),
             "jobs" to listOf("jobs", "job_list"),
-            "job_types" to listOf("job_types", "job_type_configs")
+            "job_types" to listOf("job_types", "job_type_configs"),
+            "venues" to listOf("venues", "venue_management", "management:venue")
         )
     }
     
@@ -277,6 +278,26 @@ class SyncManager(
     }
     
     /**
+     * Send an announcement for a specific venue by updating columns H–K on Google Sheets.
+     */
+    suspend fun sendAnnouncement(
+        sheetRow1Based: Int,
+        title: String,
+        message: String,
+        senderDeviceId: String
+    ): SyncResult {
+        return try {
+            val sentAt = System.currentTimeMillis()
+            twoWaySyncService.updateVenueAnnouncementOnSheets(
+                sheetRow1Based, title, message, sentAt, senderDeviceId
+            )
+            SyncResult.Success("Announcement sent successfully")
+        } catch (e: Exception) {
+            SyncResult.Error("Failed to send announcement: ${e.message}")
+        }
+    }
+
+    /**
      * SMART PAGE CHANGE SYNC: Only sync datasets that are relevant to the page change
      */
     suspend fun performSmartPageChangeSync(currentPage: String, newPage: String): SyncResult {
@@ -296,6 +317,7 @@ class SyncManager(
                     "volunteers" -> twoWaySyncService.syncVolunteersOnly()
                     "jobs" -> twoWaySyncService.syncJobsOnly()
                     "job_types" -> twoWaySyncService.syncJobTypesOnly()
+                    "venues" -> twoWaySyncService.syncVenuesWithDifferentialUpdate()
                 }
             }
             
@@ -312,7 +334,7 @@ class SyncManager(
 sealed class SyncResult {
     data class Success(val message: String) : SyncResult()
     data class Error(val message: String) : SyncResult()
-    
+
     val isSuccess: Boolean get() = this is Success
     val isError: Boolean get() = this is Error
 }

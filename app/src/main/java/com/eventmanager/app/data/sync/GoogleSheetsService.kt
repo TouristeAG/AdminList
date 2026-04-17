@@ -52,7 +52,22 @@ private fun logSkippedSheetRows(entityLabel: String, skips: List<Pair<Int, Int>>
 }
 
 class GoogleSheetsService(private val context: Context) {
-    
+
+    companion object {
+        /**
+         * Parse a lastModified timestamp from a Google Sheets cell value.
+         * Handles plain longs AND scientific notation (e.g. "1.7132E12") which
+         * the Sheets API may produce for large numbers.
+         * Falls back to 0 so that the merge-before-upload logic never treats an
+         * unparseable remote value as "newer than local."
+         */
+        fun parseLastModified(raw: String): Long {
+            return raw.toLongOrNull()
+                ?: raw.toDoubleOrNull()?.toLong()
+                ?: 0L
+        }
+    }
+
     /**
      * Creates a user-friendly error message for network connectivity issues
      */
@@ -79,6 +94,32 @@ class GoogleSheetsService(private val context: Context) {
     private var sheetsService: Sheets? = null
     private val settingsManager = SettingsManager(context)
     private val fileManager = FileManager(context)
+
+    private fun requiresShiftTimeForJobType(jobTypeName: String, jobTypeConfigs: List<JobTypeConfig>): Boolean {
+        val config = jobTypeConfigs.firstOrNull { it.name == jobTypeName }
+        // Keep legacy behavior when config is unknown: write/parse explicit shift labels.
+        return config?.requiresShiftTime ?: true
+    }
+
+    private fun toSheetShiftTimeValue(job: Job, jobTypeConfigs: List<JobTypeConfig>): String {
+        return if (requiresShiftTimeForJobType(job.jobTypeName, jobTypeConfigs)) {
+            job.shiftTime.toGoogleSheetsShiftTimeValue()
+        } else {
+            ""
+        }
+    }
+
+    private fun parseSheetShiftTimeValue(
+        rawShiftTime: String,
+        jobTypeName: String,
+        jobTypeConfigs: List<JobTypeConfig>
+    ): ShiftTime {
+        if (!requiresShiftTimeForJobType(jobTypeName, jobTypeConfigs) && rawShiftTime.trim().isEmpty()) {
+            // Non-shift-time job types intentionally keep this cell empty in Sheets.
+            return ShiftTime.BEFORE_MIDNIGHT
+        }
+        return parseShiftTimeFromGoogleSheets(rawShiftTime)
+    }
 
     suspend fun initializeSheetsService() = withContext(Dispatchers.IO) {
         try {
@@ -401,7 +442,7 @@ class GoogleSheetsService(private val context: Context) {
                                 venueName = row[4].toString(),
                                 notes = row[5].toString(),
                                 isVolunteerBenefit = row[6].toString().equals("Yes", ignoreCase = true),
-                                lastModified = row[7].toString().toLongOrNull() ?: System.currentTimeMillis(),
+                                lastModified = parseLastModified(row[7].toString()),
                                 nfcCardUid = row[8].toString(),
                                 isAdmin = isAdmin
                             ))
@@ -424,7 +465,7 @@ class GoogleSheetsService(private val context: Context) {
                                 venueName = row[4].toString(),
                                 notes = row[5].toString(),
                                 isVolunteerBenefit = row[6].toString().equals("Yes", ignoreCase = true),
-                                lastModified = row[7].toString().toLongOrNull() ?: System.currentTimeMillis(),
+                                lastModified = parseLastModified(row[7].toString()),
                                 nfcCardUid = row[8].toString()
                             ))
                         } catch (e: Exception) {
@@ -446,7 +487,7 @@ class GoogleSheetsService(private val context: Context) {
                                 venueName = row[4].toString(),
                                 notes = row[5].toString(),
                                 isVolunteerBenefit = row[6].toString().equals("Yes", ignoreCase = true),
-                                lastModified = row[7].toString().toLongOrNull() ?: System.currentTimeMillis(),
+                                lastModified = parseLastModified(row[7].toString()),
                                 nfcCardUid = ""
                             ))
                         } catch (e: Exception) {
@@ -468,7 +509,7 @@ class GoogleSheetsService(private val context: Context) {
                                 venueName = row[2].toString(),
                                 notes = row[3].toString(),
                                 isVolunteerBenefit = row[4].toString().equals("Yes", ignoreCase = true),
-                                lastModified = row[5].toString().toLongOrNull() ?: System.currentTimeMillis(),
+                                lastModified = parseLastModified(row[5].toString()),
                                 nfcCardUid = ""
                             ))
                         } catch (e: Exception) {
@@ -784,7 +825,7 @@ class GoogleSheetsService(private val context: Context) {
                                     true
                                 },
                                 lastModified = try {
-                                    row[9].toString().toLongOrNull() ?: System.currentTimeMillis()
+                                    parseLastModified(row[9].toString())
                                 } catch (_: Exception) {
                                     println("Failed to parse volunteer last modified for volunteer '${row[1]}', setting to current time")
                                     System.currentTimeMillis()
@@ -831,7 +872,7 @@ class GoogleSheetsService(private val context: Context) {
                                     if (rankString == "No Rank" || rankString.isBlank()) null else VolunteerRank.valueOf(rankString)
                                 } catch (_: Exception) { null },
                                 isActive = row[8].toString().equals("Yes", ignoreCase = true),
-                                lastModified = row[9].toString().toLongOrNull() ?: System.currentTimeMillis(),
+                                lastModified = parseLastModified(row[9].toString()),
                                 nfcCardUid = ""
                             )
                             volunteers.add(volunteer)
@@ -885,7 +926,7 @@ class GoogleSheetsService(private val context: Context) {
     }
 
     // Single Job Operations (App Priority)
-    suspend fun addJobToSheets(job: Job, _venues: List<VenueEntity>): String = withContext(Dispatchers.IO) {
+    suspend fun addJobToSheets(job: Job, _venues: List<VenueEntity>, jobTypeConfigs: List<JobTypeConfig>): String = withContext(Dispatchers.IO) {
         try {
             if (sheetsService == null) {
                 initializeSheetsService()
@@ -898,7 +939,7 @@ class GoogleSheetsService(private val context: Context) {
                         job.jobTypeName,
                         job.venueName,
                         job.date.toString(),
-                        job.shiftTime.toGoogleSheetsShiftTimeValue(),
+                        toSheetShiftTimeValue(job, jobTypeConfigs),
                         job.notes,
                         job.lastModified.toString(),
                         formatJobBenefitFutureEntriesForSheets(job.benefitFutureEntriesRemaining, job.benefitFutureEntryInvites)
@@ -935,7 +976,7 @@ class GoogleSheetsService(private val context: Context) {
         }
     }
     
-    suspend fun updateJobInSheets(job: Job, _venues: List<VenueEntity>) = withContext(Dispatchers.IO) {
+    suspend fun updateJobInSheets(job: Job, _venues: List<VenueEntity>, jobTypeConfigs: List<JobTypeConfig>) = withContext(Dispatchers.IO) {
         try {
             if (sheetsService == null) {
                 initializeSheetsService()
@@ -952,7 +993,7 @@ class GoogleSheetsService(private val context: Context) {
                         job.jobTypeName,
                         job.venueName,
                         job.date.toString(),
-                        job.shiftTime.toGoogleSheetsShiftTimeValue(),
+                        toSheetShiftTimeValue(job, jobTypeConfigs),
                         job.notes,
                         job.lastModified.toString(),
                         formatJobBenefitFutureEntriesForSheets(job.benefitFutureEntriesRemaining, job.benefitFutureEntryInvites)
@@ -982,7 +1023,11 @@ class GoogleSheetsService(private val context: Context) {
     }
 
     // Job Operations
-    suspend fun syncJobsToSheets(jobs: List<Job>, _venues: List<VenueEntity>) = withContext(Dispatchers.IO) {
+    suspend fun syncJobsToSheets(
+        jobs: List<Job>,
+        _venues: List<VenueEntity>,
+        jobTypeConfigs: List<JobTypeConfig>
+    ) = withContext(Dispatchers.IO) {
         try {
             if (sheetsService == null) {
                 initializeSheetsService()
@@ -1002,7 +1047,7 @@ class GoogleSheetsService(private val context: Context) {
                         job.jobTypeName, // Use the personalized job type name
                         job.venueName,
                         job.date.toString(),
-                        job.shiftTime.toGoogleSheetsShiftTimeValue(),
+                        toSheetShiftTimeValue(job, jobTypeConfigs),
                         job.notes,
                         job.lastModified.toString(),
                         formatJobBenefitFutureEntriesForSheets(job.benefitFutureEntriesRemaining, job.benefitFutureEntryInvites)
@@ -1038,7 +1083,7 @@ class GoogleSheetsService(private val context: Context) {
         }
     }
 
-    suspend fun syncJobsFromSheets(_jobTypeConfigs: List<JobTypeConfig>): List<Job> = withContext(Dispatchers.IO) {
+    suspend fun syncJobsFromSheets(jobTypeConfigs: List<JobTypeConfig>): List<Job> = withContext(Dispatchers.IO) {
         try {
             if (sheetsService == null) {
                 initializeSheetsService()
@@ -1095,12 +1140,16 @@ class GoogleSheetsService(private val context: Context) {
                                 jobType = jobType,
                                 jobTypeName = jobTypeName, // Store the actual job type name
                                 venueName = row[2].toString(),
-                                date = row[3].toString().toLongOrNull() ?: System.currentTimeMillis(),
-                                shiftTime = parseShiftTimeFromGoogleSheets(row[4].toString()),
+                                date = parseLastModified(row[3].toString()),
+                                shiftTime = parseSheetShiftTimeValue(
+                                    rawShiftTime = row[4].toString(),
+                                    jobTypeName = jobTypeName,
+                                    jobTypeConfigs = jobTypeConfigs
+                                ),
                                 benefitFutureEntriesRemaining = entryData?.remaining,
                                 benefitFutureEntryInvites = entryData?.invites,
                                 notes = row[5].toString(),
-                                lastModified = row[6].toString().toLongOrNull() ?: System.currentTimeMillis()
+                                lastModified = parseLastModified(row[6].toString())
                             )
                         } catch (e: Exception) {
                             println("Failed to parse job row ${index + 2}: ${e.message}")
@@ -1354,7 +1403,7 @@ class GoogleSheetsService(private val context: Context) {
                                 benefitSystemType = benefitSystemType,
                                 manualRewards = manualRewards,
                                 description = row[7].toString(),
-                                lastModified = row[8].toString().toLongOrNull() ?: System.currentTimeMillis()
+                                lastModified = parseLastModified(row[8].toString())
                             )
                         } catch (e: Exception) {
                             println("Failed to parse job type config row ${index + 2}: ${e.message}")
@@ -1373,7 +1422,7 @@ class GoogleSheetsService(private val context: Context) {
                                 benefitSystemType = BenefitSystemType.STELLAR, // Default for old format
                                 manualRewards = null, // No manual rewards in old format
                                 description = row[5].toString(),
-                                lastModified = row[6].toString().toLongOrNull() ?: System.currentTimeMillis()
+                                lastModified = parseLastModified(row[6].toString())
                             )
                         } catch (e: Exception) {
                             println("Failed to parse job type config row ${index + 2} (old format): ${e.message}")
@@ -1424,7 +1473,11 @@ class GoogleSheetsService(private val context: Context) {
                         venue.lastModified.toString(),
                         venue.peopleCounterCount.toString(),
                         venue.peopleCounterWriterDeviceId,
-                        venue.peopleCounterLastModified.toString()
+                        venue.peopleCounterLastModified.toString(),
+                        venue.announcementTitle,
+                        venue.announcementMessage,
+                        venue.announcementSentAt.toString(),
+                        venue.announcementSenderDeviceId
                     )
                 }
                 
@@ -1438,7 +1491,11 @@ class GoogleSheetsService(private val context: Context) {
                                 "Last Modified",
                                 "Number of people",
                                 "Priority Device ID",
-                                "Last Modified (counter)"
+                                "Last Modified (counter)",
+                                "Announcement Title",
+                                "Announcement Message",
+                                "Announcement Sent At",
+                                "Announcement Sender Device ID"
                             )
                         ) + values
                     )
@@ -1479,7 +1536,7 @@ class GoogleSheetsService(private val context: Context) {
                 operation = {
                 val response = sheetsService?.spreadsheets()?.values()?.get(
                     settingsManager.getSpreadsheetId(),
-                    "${settingsManager.getVenuesSheet()}!A2:G"
+                    "${settingsManager.getVenuesSheet()}!A2:K"
                 )?.execute()
                 
                 if (response == null) {
@@ -1495,15 +1552,19 @@ class GoogleSheetsService(private val context: Context) {
                         try {
                             val rowNumber = index + 2 // +2 because we start from row 2 (after header)
                             VenueEntity(
-                                id = 0, // Will be set by database
+                                id = 0,
                                 sheetsId = rowNumber.toString(),
                                 name = row[0].toString(),
                                 description = row[1].toString(),
                                 isActive = row[2].toString().equals("Active", ignoreCase = true),
-                                lastModified = row[3].toString().toLongOrNull() ?: System.currentTimeMillis(),
+                                lastModified = parseLastModified(row[3].toString()),
                                 peopleCounterCount = row.getOrNull(4)?.toString()?.toIntOrNull() ?: 0,
                                 peopleCounterWriterDeviceId = row.getOrNull(5)?.toString()?.trim() ?: "",
-                                peopleCounterLastModified = row.getOrNull(6)?.toString()?.toLongOrNull() ?: 0L
+                                peopleCounterLastModified = row.getOrNull(6)?.toString()?.toLongOrNull() ?: 0L,
+                                announcementTitle = row.getOrNull(7)?.toString() ?: "",
+                                announcementMessage = row.getOrNull(8)?.toString() ?: "",
+                                announcementSentAt = row.getOrNull(9)?.toString()?.toLongOrNull() ?: 0L,
+                                announcementSenderDeviceId = row.getOrNull(10)?.toString()?.trim() ?: ""
                             )
                         } catch (e: Exception) {
                             println("Failed to parse venue row ${index + 2}: ${e.message}")
@@ -1599,6 +1660,88 @@ class GoogleSheetsService(private val context: Context) {
                 throw IOException(ApiRateLimitHandler.getBriefRateLimitMessage(), e)
             } else {
                 throw IOException(createNetworkErrorMessage("update venue people counter in Google Sheets", e), e)
+            }
+        }
+    }
+
+    /**
+     * Reads columns H–K (announcement title, message, sent-at, sender device id) for one venue row.
+     */
+    suspend fun readVenueAnnouncementCells(sheetRow1Based: Int): AnnouncementCells? = withContext(Dispatchers.IO) {
+        try {
+            if (sheetsService == null) {
+                initializeSheetsService()
+            }
+            val sheet = settingsManager.getVenuesSheet()
+            val response = sheetsService?.spreadsheets()?.values()?.get(
+                settingsManager.getSpreadsheetId(),
+                "$sheet!H$sheetRow1Based:K$sheetRow1Based"
+            )?.execute()
+            val row = response?.getValues()?.firstOrNull() ?: return@withContext null
+            AnnouncementCells(
+                title = row.getOrNull(0)?.toString() ?: "",
+                message = row.getOrNull(1)?.toString() ?: "",
+                sentAt = row.getOrNull(2)?.toString()?.toLongOrNull() ?: 0L,
+                senderDeviceId = row.getOrNull(3)?.toString()?.trim().orEmpty()
+            )
+        } catch (e: Exception) {
+            println("Failed to read venue announcement cells: ${e.message}")
+            null
+        }
+    }
+
+    data class AnnouncementCells(
+        val title: String,
+        val message: String,
+        val sentAt: Long,
+        val senderDeviceId: String
+    )
+
+    /**
+     * Updates only columns H–K on the venues sheet for one row (announcement).
+     */
+    suspend fun updateVenueAnnouncementCells(
+        sheetRow1Based: Int,
+        title: String,
+        message: String,
+        sentAtMs: Long,
+        senderDeviceId: String
+    ) = withContext(Dispatchers.IO) {
+        try {
+            if (sheetsService == null) {
+                initializeSheetsService()
+            }
+            val sheet = settingsManager.getVenuesSheet()
+            ApiRateLimitHandler.executeWithRetry(
+                operation = {
+                    val valueRange = ValueRange().setValues(
+                        listOf(
+                            listOf(
+                                title,
+                                message,
+                                sentAtMs.toString(),
+                                senderDeviceId
+                            )
+                        )
+                    )
+                    val response = sheetsService?.spreadsheets()?.values()?.update(
+                        settingsManager.getSpreadsheetId(),
+                        "$sheet!H$sheetRow1Based:K$sheetRow1Based",
+                        valueRange
+                    )?.setValueInputOption("RAW")?.execute()
+                    if (response == null) {
+                        throw IOException("Failed to update venue announcement in Google Sheets - no response")
+                    }
+                    println("✅ Updated venue announcement row $sheetRow1Based (title=$title)")
+                },
+                operationName = "update venue announcement cells"
+            )
+        } catch (e: Exception) {
+            println("Failed to update venue announcement cells: ${e.message}")
+            if (e.message?.contains("429") == true || e.message?.contains("Rate limit") == true) {
+                throw IOException(ApiRateLimitHandler.getBriefRateLimitMessage(), e)
+            } else {
+                throw IOException(createNetworkErrorMessage("update venue announcement in Google Sheets", e), e)
             }
         }
     }
@@ -1716,7 +1859,11 @@ class GoogleSheetsService(private val context: Context) {
                 "Last Modified",
                 "Number of people",
                 "Priority Device ID",
-                "Last Modified (counter)"
+                "Last Modified (counter)",
+                "Announcement Title",
+                "Announcement Message",
+                "Announcement Sent At",
+                "Announcement Sender Device ID"
             )
         ),
         SheetDefinition(

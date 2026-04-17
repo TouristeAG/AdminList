@@ -21,6 +21,31 @@ import kotlinx.coroutines.withContext
 class DifferentialSyncService(
     private val repository: EventManagerRepository
 ) {
+    /**
+     * Stable sync key for guests.
+     *
+     * Do not use sheets row number as primary identity because row positions change
+     * after full-tab rewrites. Prefer NanoID (or volunteerId for benefit rows).
+     */
+    private fun guestSyncKey(guest: Guest): String {
+        if (guest.nanoId.isNotBlank()) return "nano:${guest.nanoId}"
+        if (guest.isVolunteerBenefit && !guest.volunteerId.isNullOrBlank()) {
+            return "benefit:${guest.volunteerId}"
+        }
+        return "fallback:${guest.name}|${guest.email}|${guest.phoneNumber}|${guest.venueName}|${guest.invitations}"
+    }
+
+    private fun volunteerSyncKey(volunteer: Volunteer): String {
+        if (volunteer.id.isNotBlank()) return "id:${volunteer.id}"
+        return "fallback:${volunteer.name}|${volunteer.lastNameAbbreviation}|${volunteer.email}|${volunteer.phoneNumber}"
+    }
+
+    private fun jobSyncKey(job: Job): String =
+        "${job.volunteerId}|${job.jobTypeName}|${job.date}|${job.venueName}|${job.shiftTime}"
+
+    private fun jobTypeSyncKey(config: JobTypeConfig): String = config.name
+
+    private fun venueSyncKey(venue: VenueEntity): String = venue.name
     
     /**
      * Data class to hold sync changes for a specific entity type
@@ -66,8 +91,8 @@ class DifferentialSyncService(
      */
     suspend fun compareGuests(tempGuests: List<Guest>, mainGuests: List<Guest>): SyncChanges<Guest> =
         withContext(Dispatchers.Default) {
-            val mainMap = mainGuests.associateBy { it.sheetsId ?: "${it.name}_${it.venueName}_${it.invitations}" }
-            val tempMap = tempGuests.associateBy { it.sheetsId ?: "${it.name}_${it.venueName}_${it.invitations}" }
+            val mainMap = mainGuests.associateBy { guestSyncKey(it) }
+            val tempMap = tempGuests.associateBy { guestSyncKey(it) }
             
             val new = mutableListOf<Guest>()
             val modified = mutableListOf<Guest>()
@@ -87,7 +112,7 @@ class DifferentialSyncService(
             
             // Find deleted items (in MAIN_DB but not in TEMP_DB)
             val deleted = mainGuests.filter { mainGuest ->
-                val key = mainGuest.sheetsId ?: "${mainGuest.name}_${mainGuest.venueName}_${mainGuest.invitations}"
+                val key = guestSyncKey(mainGuest)
                 !tempMap.containsKey(key)
             }
             
@@ -107,42 +132,22 @@ class DifferentialSyncService(
     
     // ========== VOLUNTEER COMPARISON ==========
     
-    /**
-     * Compare TEMP_DB volunteers with MAIN_DB volunteers
-     * Uses multiple matching strategies to handle volunteers with or without sheetsId
-     */
+    /** Compare TEMP_DB volunteers with MAIN_DB volunteers using stable NanoID identity. */
     suspend fun compareVolunteers(tempVolunteers: List<Volunteer>, mainVolunteers: List<Volunteer>): SyncChanges<Volunteer> =
         withContext(Dispatchers.Default) {
-            // Create multiple lookup maps for flexible matching
-            val mainBySheetsId = mainVolunteers.filter { it.sheetsId != null }.associateBy { it.sheetsId!! }
-            // Use name + abbreviation as key to allow multiple volunteers with same first name
-            val mainByFullName = mainVolunteers.associateBy { "${it.name}_${it.lastNameAbbreviation}" }
-            val mainByCompositeKey = mainVolunteers.associateBy { "${it.name}_${it.lastNameAbbreviation}_${it.email}_${it.phoneNumber}" }
+            val mainMap = mainVolunteers.associateBy { volunteerSyncKey(it) }
+            val tempMap = tempVolunteers.associateBy { volunteerSyncKey(it) }
             
             val new = mutableListOf<Volunteer>()
             val modified = mutableListOf<Volunteer>()
             val unchanged = mutableListOf<Volunteer>()
-            val matchedMainIds = mutableSetOf<String>() // Track which main volunteers were matched
-            
             // Find new and modified items in TEMP_DB (remote volunteers)
-            for (tempVolunteer in tempVolunteers) {
-                // Try to find matching main (local) volunteer using multiple strategies:
-                // 1. Match by sheetsId first (most reliable)
-                // 2. Then try matching by name+abbreviation (handles case where local has no sheetsId yet)
-                // 3. Finally try composite key as fallback
-                val mainVolunteer = tempVolunteer.sheetsId?.let { mainBySheetsId[it] }
-                    ?: mainByFullName["${tempVolunteer.name}_${tempVolunteer.lastNameAbbreviation}"]
-                    ?: mainByCompositeKey["${tempVolunteer.name}_${tempVolunteer.lastNameAbbreviation}_${tempVolunteer.email}_${tempVolunteer.phoneNumber}"]
-                
+            for ((key, tempVolunteer) in tempMap) {
+                val mainVolunteer = mainMap[key]
                 if (mainVolunteer == null) {
-                    // No matching local volunteer found - this is new from sheets
                     new.add(tempVolunteer)
                 } else {
-                    // Mark this local volunteer as matched
-                    matchedMainIds.add(mainVolunteer.id)
-                    
                     if (hasVolunteerChanged(mainVolunteer, tempVolunteer)) {
-                        // Volunteer exists locally but has changes (including NanoID changes)
                         modified.add(tempVolunteer)
                     } else {
                         unchanged.add(tempVolunteer)
@@ -150,12 +155,8 @@ class DifferentialSyncService(
                 }
             }
             
-            // Find deleted items (in MAIN_DB but not matched by any TEMP_DB volunteer)
-            // Check by name+abbreviation to avoid incorrectly marking as deleted if sheetsId changed
-            val tempFullNames = tempVolunteers.map { "${it.name}_${it.lastNameAbbreviation}" }.toSet()
             val deleted = mainVolunteers.filter { mainVolunteer ->
-                !matchedMainIds.contains(mainVolunteer.id) && 
-                !tempFullNames.contains("${mainVolunteer.name}_${mainVolunteer.lastNameAbbreviation}")
+                !tempMap.containsKey(volunteerSyncKey(mainVolunteer))
             }
             
             SyncChanges(new, modified, deleted, unchanged)
@@ -182,8 +183,8 @@ class DifferentialSyncService(
      */
     suspend fun compareJobs(tempJobs: List<Job>, mainJobs: List<Job>): SyncChanges<Job> =
         withContext(Dispatchers.Default) {
-            val mainMap = mainJobs.associateBy { it.sheetsId ?: "${it.volunteerId}_${it.jobTypeName}_${it.date}_${it.venueName}_${it.shiftTime}" }
-            val tempMap = tempJobs.associateBy { it.sheetsId ?: "${it.volunteerId}_${it.jobTypeName}_${it.date}_${it.venueName}_${it.shiftTime}" }
+            val mainMap = mainJobs.associateBy { jobSyncKey(it) }
+            val tempMap = tempJobs.associateBy { jobSyncKey(it) }
             
             val new = mutableListOf<Job>()
             val modified = mutableListOf<Job>()
@@ -203,7 +204,7 @@ class DifferentialSyncService(
             
             // Find deleted items (in MAIN_DB but not in TEMP_DB)
             val deleted = mainJobs.filter { mainJob ->
-                val key = mainJob.sheetsId ?: "${mainJob.volunteerId}_${mainJob.jobTypeName}_${mainJob.date}_${mainJob.venueName}_${mainJob.shiftTime}"
+                val key = jobSyncKey(mainJob)
                 !tempMap.containsKey(key)
             }
             
@@ -228,8 +229,8 @@ class DifferentialSyncService(
      */
     suspend fun compareJobTypeConfigs(tempConfigs: List<JobTypeConfig>, mainConfigs: List<JobTypeConfig>): SyncChanges<JobTypeConfig> =
         withContext(Dispatchers.Default) {
-            val mainMap = mainConfigs.associateBy { it.sheetsId ?: it.name }
-            val tempMap = tempConfigs.associateBy { it.sheetsId ?: it.name }
+            val mainMap = mainConfigs.associateBy { jobTypeSyncKey(it) }
+            val tempMap = tempConfigs.associateBy { jobTypeSyncKey(it) }
             
             val new = mutableListOf<JobTypeConfig>()
             val modified = mutableListOf<JobTypeConfig>()
@@ -249,7 +250,7 @@ class DifferentialSyncService(
             
             // Find deleted items (in MAIN_DB but not in TEMP_DB)
             val deleted = mainConfigs.filter { mainConfig ->
-                val key = mainConfig.sheetsId ?: mainConfig.name
+                val key = jobTypeSyncKey(mainConfig)
                 !tempMap.containsKey(key)
             }
             
@@ -273,8 +274,8 @@ class DifferentialSyncService(
      */
     suspend fun compareVenues(tempVenues: List<VenueEntity>, mainVenues: List<VenueEntity>): SyncChanges<VenueEntity> =
         withContext(Dispatchers.Default) {
-            val mainMap = mainVenues.associateBy { it.sheetsId ?: it.name }
-            val tempMap = tempVenues.associateBy { it.sheetsId ?: it.name }
+            val mainMap = mainVenues.associateBy { venueSyncKey(it) }
+            val tempMap = tempVenues.associateBy { venueSyncKey(it) }
             
             val new = mutableListOf<VenueEntity>()
             val modified = mutableListOf<VenueEntity>()
@@ -294,7 +295,7 @@ class DifferentialSyncService(
             
             // Find deleted items (in MAIN_DB but not in TEMP_DB)
             val deleted = mainVenues.filter { mainVenue ->
-                val key = mainVenue.sheetsId ?: mainVenue.name
+                val key = venueSyncKey(mainVenue)
                 !tempMap.containsKey(key)
             }
             
@@ -307,7 +308,11 @@ class DifferentialSyncService(
         old.isActive != new.isActive ||
         old.peopleCounterCount != new.peopleCounterCount ||
         old.peopleCounterWriterDeviceId != new.peopleCounterWriterDeviceId ||
-        old.peopleCounterLastModified != new.peopleCounterLastModified
+        old.peopleCounterLastModified != new.peopleCounterLastModified ||
+        old.announcementTitle != new.announcementTitle ||
+        old.announcementMessage != new.announcementMessage ||
+        old.announcementSentAt != new.announcementSentAt ||
+        old.announcementSenderDeviceId != new.announcementSenderDeviceId
     
     // ========== APPLY CHANGES ==========
     

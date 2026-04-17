@@ -861,7 +861,8 @@ fun QRScannerDialog(
 @Composable
 fun QRScannerView(
     onQRCodeScanned: (QRCodeData) -> Unit,
-    onError: (String) -> Unit
+    onError: (String) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     var barcodeView by remember { mutableStateOf<DecoratedBarcodeView?>(null) }
@@ -869,8 +870,6 @@ fun QRScannerView(
     var cameraInitialized by remember { mutableStateOf(false) }
     var lastScanText by remember { mutableStateOf<String?>(null) }
     var lastScanAtMs by remember { mutableStateOf(0L) }
-    val scanBoxSize = 240.dp
-    val containerHeight = 320.dp
     val overlayColor = Color.Black.copy(alpha = 0.5f)
     
     // Add a delay for camera initialization on older devices
@@ -903,12 +902,12 @@ fun QRScannerView(
     }
     
     // Background camera preview with styled overlay
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(containerHeight)
+    BoxWithConstraints(
+        modifier = modifier
             .clip(RoundedCornerShape(12.dp))
     ) {
+        val scanBoxSize = minOf(240.dp, maxWidth * 0.75f, maxHeight * 0.75f)
+        val verticalMaskHeight = (maxHeight - scanBoxSize) / 2
         if (cameraInitialized) {
             AndroidView(
             factory = { ctx ->
@@ -1027,14 +1026,14 @@ fun QRScannerView(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height((containerHeight - scanBoxSize) / 2)
+                .height(verticalMaskHeight)
                 .align(Alignment.TopCenter)
                 .background(overlayColor)
         )
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height((containerHeight - scanBoxSize) / 2)
+                .height(verticalMaskHeight)
                 .align(Alignment.BottomCenter)
                 .background(overlayColor)
         )

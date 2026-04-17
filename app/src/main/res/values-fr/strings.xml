@@ -52,6 +52,13 @@
     <string name="manual_sync_now">Synchronisation manuelle maintenant</string>
     <string name="view_active_volunteers">Voir les bénévoles actif·ve·s</string>
     <string name="cleanup_inactive_volunteers">Nettoyer les bénévoles inactif·ve·s</string>
+    <string name="cleanup_choose_duration">Choisissez depuis combien de temps les bénévoles doivent être inactif·ve·s pour être supprimé·e·s :</string>
+    <string name="cleanup_inactive_for">Inactif·ve depuis :</string>
+    <string name="cleanup_years_value">%d ans</string>
+    <string name="cleanup_hide_preview">Masquer l\'aperçu</string>
+    <string name="cleanup_preview_to_delete">Aperçu des bénévoles à supprimer (%d)</string>
+    <string name="cleanup_volunteers_to_be_deleted">Bénévoles qui seront supprimé·e·s :</string>
+    <string name="cleanup_no_volunteers_found">Aucun·e bénévole inactif·ve depuis %d ans ou plus n\'a été trouvé·e.</string>
     
     <!-- Advanced Settings -->
     <string name="advanced_settings_title">Paramètres avancés</string>
@@ -258,11 +265,16 @@
     <string name="start_admin">Démarrer Admin</string>
     <string name="admin_mode">Admin</string>
     <string name="ticket_check_mode">Billeterie</string>
+    <string name="welcome_background_sync_content_description">Synchronisation avec Google Sheets pour vérifier l\'accès admin</string>
 
     <!-- Admin Auth Screen -->
     <string name="admin_auth_title">Authentification Admin</string>
     <string name="admin_auth_description">Scannez votre badge ou code QR pour vérifier votre accès admin</string>
     <string name="admin_auth_syncing">Chargement des données depuis Google Sheets…</string>
+    <string name="admin_precheck_sync_loading">Préparation de l\'accès admin : vérification de la feuille et synchronisation…</string>
+    <string name="admin_precheck_sync_failed_title">Impossible de préparer l\'accès admin</string>
+    <string name="admin_precheck_sync_failed_message">La feuille n\'a pas pu être réparée ou synchronisée. Vérifiez la connexion et les paramètres du classeur, puis réessayez.</string>
+    <string name="admin_precheck_sync_retry">Réessayer</string>
     <string name="admin_auth_ready">Présentez votre badge NFC ou scannez votre code QR</string>
     <string name="admin_auth_scan_qr">Scanner un code QR</string>
     <string name="admin_auth_granted">Bienvenue, %s ! Accès admin accordé</string>
@@ -326,6 +338,10 @@
     <string name="setup_json_key_description">Téléchargez le fichier de clé JSON de votre compte de service Google pour activer la synchronisation</string>
     <string name="setup_sheets_title">Noms des feuilles</string>
     <string name="setup_sheets_description">Configurez les noms de chaque feuille dans votre Google Spreadsheet — les valeurs par défaut sont pré-remplies</string>
+    <string name="setup_wizard_first_sync_title">Première synchronisation</string>
+    <string name="setup_wizard_first_sync_message">Téléchargement des données de l\'événement depuis Google Sheets…</string>
+    <string name="setup_wizard_first_sync_error_title">Échec de la première synchronisation</string>
+    <string name="setup_wizard_first_sync_error_generic">Impossible de synchroniser avec Google Sheets. Vérifiez l\'ID du classeur, la clé JSON et la connexion, puis réessayez.</string>
     
     <!-- Instructions Dialog -->
     <string name="google_sheets_setup_instructions">Instructions de configuration Google Sheets</string>
@@ -1160,4 +1176,37 @@
     <string name="admin_setup_done">Terminé</string>
     <string name="admin_setup_skip">Passer pour l\'instant</string>
     <string name="admin_setup_no_admin_warning">Attention : Sans admin, vous ne pourrez pas accéder au mode administrateur.</string>
+
+    <!-- Announcements -->
+    <string name="settings_category_announcements">Annonces</string>
+    <string name="announcements_reception_title">Activer la réception</string>
+    <string name="announcements_reception_description">Afficher ou masquer les annonces entrantes</string>
+    <string name="announcements_tracked_venues_title">Lieux suivis</string>
+    <string name="announcements_tracked_venues_description">Sélectionnez les lieux dont vous souhaitez recevoir les annonces</string>
+    <string name="announcements_tracked_venues_all">Tous les lieux</string>
+    <string name="announcements_validity_title">Durée de validité</string>
+    <string name="announcements_validity_description">Les messages plus anciens que cette durée ne seront plus affichés</string>
+    <string name="announcements_validity_15min">15 minutes</string>
+    <string name="announcements_validity_30min">30 minutes</string>
+    <string name="announcements_validity_1h">1 heure</string>
+    <string name="announcements_validity_2h">2 heures</string>
+    <string name="announcements_validity_4h">4 heures</string>
+    <string name="announcements_non_admin_send_title">Autoriser l\'envoi non-admin</string>
+    <string name="announcements_non_admin_send_description">Permettre aux interfaces billetterie d\'envoyer des annonces</string>
+    <string name="announcement_button_label">Faire une annonce</string>
+    <string name="announcement_send_title">Envoyer une annonce</string>
+    <string name="announcement_destination_label">Lieu(x) de destination</string>
+    <string name="announcement_all_venues">Tous les lieux</string>
+    <string name="announcement_title_label">Destinataire / Titre</string>
+    <string name="announcement_title_placeholder">Sujet court…</string>
+    <string name="announcement_message_label">Message</string>
+    <string name="announcement_message_placeholder">Contenu du message…</string>
+    <string name="announcement_send_button">Envoyer</string>
+    <string name="announcement_cancel_button">Annuler</string>
+    <string name="announcement_sending">Envoi en cours…</string>
+    <string name="announcement_sent_success">Annonce envoyée !</string>
+    <string name="announcement_sent_error">Échec de l\'envoi de l\'annonce</string>
+    <string name="announcement_popup_title">Annonce</string>
+    <string name="announcement_popup_close">Fermer</string>
+    <string name="announcement_popup_from">De : %s</string>
 </resources>

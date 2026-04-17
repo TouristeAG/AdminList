@@ -48,13 +48,13 @@ fun CleanupInactiveVolunteersDialog(
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.error
                 )
-                Text("Cleanup Inactive Volunteers")
+                Text(context.getString(com.eventmanager.app.R.string.cleanup_inactive_volunteers))
             }
         },
         text = {
             Column {
                 Text(
-                    text = "Choose how long volunteers must be inactive to be deleted:",
+                    text = context.getString(com.eventmanager.app.R.string.cleanup_choose_duration),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -67,7 +67,7 @@ fun CleanupInactiveVolunteersDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "Inactive for:",
+                        text = context.getString(com.eventmanager.app.R.string.cleanup_inactive_for),
                         style = MaterialTheme.typography.bodyMedium
                     )
                     
@@ -80,7 +80,7 @@ fun CleanupInactiveVolunteersDialog(
                     )
                     
                     Text(
-                        text = "$selectedYears year${if (selectedYears > 1) "s" else ""}",
+                        text = context.getString(com.eventmanager.app.R.string.cleanup_years_value, selectedYears),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
@@ -95,7 +95,14 @@ fun CleanupInactiveVolunteersDialog(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = if (showPreview) "Hide Preview" else "Preview Volunteers to Delete (${volunteersToDelete.size})"
+                        text = if (showPreview) {
+                            context.getString(com.eventmanager.app.R.string.cleanup_hide_preview)
+                        } else {
+                            context.getString(
+                                com.eventmanager.app.R.string.cleanup_preview_to_delete,
+                                volunteersToDelete.size
+                            )
+                        }
                     )
                 }
                 
@@ -113,7 +120,7 @@ fun CleanupInactiveVolunteersDialog(
                             modifier = Modifier.padding(12.dp)
                         ) {
                             Text(
-                                text = "Volunteers to be deleted:",
+                                text = context.getString(com.eventmanager.app.R.string.cleanup_volunteers_to_be_deleted),
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.onErrorContainer,
                                 fontWeight = FontWeight.Bold
@@ -161,7 +168,10 @@ fun CleanupInactiveVolunteersDialog(
                         )
                     ) {
                         Text(
-                            text = "No volunteers found that have been inactive for $selectedYears year${if (selectedYears > 1) "s" else ""} or more.",
+                            text = context.getString(
+                                com.eventmanager.app.R.string.cleanup_no_volunteers_found,
+                                selectedYears
+                            ),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                             modifier = Modifier.padding(12.dp)
@@ -182,7 +192,7 @@ fun CleanupInactiveVolunteersDialog(
                         modifier = Modifier.padding(12.dp)
                     ) {
                         Text(
-                            text = "⚠️ Warning:",
+                            text = context.getString(com.eventmanager.app.R.string.warning),
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.onErrorContainer,
                             fontWeight = FontWeight.Bold
@@ -191,7 +201,11 @@ fun CleanupInactiveVolunteersDialog(
                         Spacer(modifier = Modifier.height(4.dp))
                         
                         Text(
-                            text = "This action will permanently delete ${volunteersToDelete.size} volunteer${if (volunteersToDelete.size != 1) "s" else ""} and all their associated job records. This cannot be undone!",
+                            text = context.getString(
+                                com.eventmanager.app.R.string.cleanup_warning,
+                                volunteersToDelete.size,
+                                if (volunteersToDelete.size != 1) "s" else ""
+                            ),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onErrorContainer
                         )
@@ -207,12 +221,18 @@ fun CleanupInactiveVolunteersDialog(
                     containerColor = MaterialTheme.colorScheme.error
                 )
             ) {
-                Text("Delete ${volunteersToDelete.size} Volunteer${if (volunteersToDelete.size != 1) "s" else ""}")
+                Text(
+                    context.getString(
+                        com.eventmanager.app.R.string.delete_volunteers,
+                        volunteersToDelete.size,
+                        if (volunteersToDelete.size != 1) "s" else ""
+                    )
+                )
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(context.getString(com.eventmanager.app.R.string.cancel))
             }
         }
     )
