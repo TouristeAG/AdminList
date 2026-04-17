@@ -52,6 +52,9 @@ import com.eventmanager.app.ui.components.ScannerMatch
 import com.eventmanager.app.ui.components.VolunteerBenefitsPanel
 import com.eventmanager.app.ui.components.GuestDetailPanel
 import com.eventmanager.app.ui.components.PeopleCounter
+import com.eventmanager.app.ui.components.SendAnnouncementButton
+import com.eventmanager.app.ui.components.SendAnnouncementDialog
+import com.eventmanager.app.ui.components.AnnouncementPopup
 import com.eventmanager.app.ui.scaling.ResolutionScaler
 import com.eventmanager.app.data.models.Guest
 import com.eventmanager.app.data.models.Volunteer
@@ -66,6 +69,8 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.ColorFilter
@@ -545,46 +550,56 @@ fun EventManagerApp(
             // ── First-admin setup gate ──────────────────────────────────────
             var showAdminSetup by rememberSaveable { mutableStateOf(false) }
             var adminCheckDone by rememberSaveable { mutableStateOf(false) }
+            var adminPrecheckComplete by remember { mutableStateOf(false) }
+            var adminPrecheckSucceeded by remember { mutableStateOf(false) }
 
             val adminCheckGuests by viewModel.guests.collectAsState()
             val adminCheckVolunteers by viewModel.volunteers.collectAsState()
 
-            // Skip showing the first-admin wizard when an admin already exists locally (e.g. DB
-            // loaded before the 600ms gate). Do NOT dismiss while the wizard is visible: a full
-            // sync or creating the admin updates these lists and would otherwise close the flow
-            // after ~1–2s or right after the admin row is inserted.
-            LaunchedEffect(adminCheckGuests, adminCheckVolunteers) {
-                if (showAdminSetup) return@LaunchedEffect
-                if (adminCheckDone && !showAdminSetup) return@LaunchedEffect
-                val hasAdmin = adminCheckGuests.any { it.isAdmin } ||
-                               adminCheckVolunteers.any { it.isAdmin }
-                if (hasAdmin) {
-                    showAdminSetup = false
-                    adminCheckDone = true
-                }
-            }
-
-            // After a brief delay (data loaded from local Room), decide
+            // Full sync in the background (no launch blocking UI). Only after it finishes
+            // successfully do we decide whether to show first-admin setup — avoids the old race
+            // where performFullSync() returned immediately while Room was still empty.
             LaunchedEffect(Unit) {
-                delay(600)
-                if (!adminCheckDone) {
-                    val hasAdmin = adminCheckGuests.any { it.isAdmin } ||
-                                   adminCheckVolunteers.any { it.isAdmin }
-                    if (!hasAdmin) {
-                        showAdminSetup = true
+                try {
+                    val result = viewModel.performFullSyncAwait(suppressSyncErrorDialog = true)
+                    adminPrecheckSucceeded = result.isSuccess
+                    if (adminPrecheckSucceeded) {
+                        delay(250)
                     }
-                    adminCheckDone = true
+                } catch (_: Exception) {
+                    adminPrecheckSucceeded = false
                 }
+                adminPrecheckComplete = true
             }
 
-            if (showAdminSetup) {
+            // After background precheck: open first-admin setup only if sync succeeded and
+            // Sheets have no admin. If sync failed, do not offer the wizard (unsafe on empty data).
+            LaunchedEffect(
+                adminPrecheckComplete,
+                adminPrecheckSucceeded,
+                adminCheckGuests,
+                adminCheckVolunteers
+            ) {
+                if (!adminPrecheckComplete || adminCheckDone) return@LaunchedEffect
+                if (!adminPrecheckSucceeded) {
+                    adminCheckDone = true
+                    return@LaunchedEffect
+                }
+                val hasAdmin = adminCheckGuests.any { it.isAdmin } ||
+                    adminCheckVolunteers.any { it.isAdmin }
+                showAdminSetup = !hasAdmin
+                adminCheckDone = true
+            }
+
+            when {
+                showAdminSetup -> {
                 val adminSetupVenues by viewModel.venues.collectAsState()
 
                 LaunchedEffect(Unit) {
                     delay(400)
-                    withContext(Dispatchers.IO) {
-                        try { viewModel.performFullSync() } catch (_: Exception) { }
-                    }
+                    try {
+                        viewModel.performFullSyncAwait(suppressSyncErrorDialog = true)
+                    } catch (_: Exception) { }
                 }
 
                 AdminSetupScreen(
@@ -601,7 +616,8 @@ fun EventManagerApp(
                     onComplete = { showAdminSetup = false },
                     onSkip = { showAdminSetup = false }
                 )
-            } else if (showWelcome) {
+                }
+                showWelcome -> {
                 WelcomeScreen(
                     onAdminSelected = {
                         showWelcome = false
@@ -610,9 +626,11 @@ fun EventManagerApp(
                     onTicketCheckSelected = {
                         showWelcome = false
                         showTicketCheck = true
-                    }
+                    },
+                    showAdminAccessSyncIndicator = !adminPrecheckComplete
                 )
-            } else {
+                }
+                else -> {
 
         val updateCheckResult by viewModel.updateCheckState.collectAsState()
         val updateDownloadState by viewModel.updateDownloadState.collectAsState()
@@ -646,6 +664,11 @@ fun EventManagerApp(
         // Collect sync status state
         val syncStatusMessage by viewModel.syncStatusMessage.collectAsState()
         val showSyncStatusDialog by viewModel.showSyncStatusDialog.collectAsState()
+
+        // Collect announcement state
+        val pendingAnnouncements by viewModel.pendingAnnouncements.collectAsState()
+        val showSendAnnouncementDialog by viewModel.showSendAnnouncementDialog.collectAsState()
+        val isAnnouncementSending by viewModel.isAnnouncementSending.collectAsState()
 
         // Admin session: auto-return to welcome after idle timeout or after screen was turned off (sleep).
         val adminSurfaceActive = !showWelcome && !showAdminAuth && !showTicketCheck
@@ -932,6 +955,12 @@ fun EventManagerApp(
                     kotlinx.coroutines.delay(50)
                     viewModel.syncJobTypesWithTargetedUpdates()
                 } // Enter Benefits
+                5 -> {
+                    // Settings screen: keep management data fresh, including announcements on venues
+                    viewModel.syncJobTypesWithTargetedUpdates()
+                    kotlinx.coroutines.delay(50)
+                    viewModel.syncVenuesWithTargetedUpdates()
+                } // Enter Settings
             }
         }
 
@@ -1313,6 +1342,7 @@ if (pageAnimationsEnabled) {
                                     },
                                     onNavigateToVenueManagement = { 
                                         println("Navigating to Venue Management")
+                                        viewModel.syncVenuesWithTargetedUpdates()
                                         showVenueManagement = true 
                                     }
                                 )
@@ -1360,6 +1390,7 @@ if (pageAnimationsEnabled) {
                                 },
                                 onNavigateToVenueManagement = { 
                                     println("Navigating to Venue Management")
+                                    viewModel.syncVenuesWithTargetedUpdates()
                                     showVenueManagement = true 
                                 }
                             )
@@ -1554,6 +1585,27 @@ if (pageAnimationsEnabled) {
             onDismiss = { viewModel.dismissSyncStatusDialog() },
             statusMessage = syncStatusMessage
         )
+
+        // Send Announcement Dialog
+        if (showSendAnnouncementDialog) {
+            SendAnnouncementDialog(
+                venues = venues,
+                isSending = isAnnouncementSending,
+                onDismiss = { viewModel.closeSendAnnouncementDialog() },
+                onSend = { targetVenueIds, title, message ->
+                    viewModel.sendAnnouncement(targetVenueIds, title, message)
+                }
+            )
+        }
+
+        // Announcement Receive Popup
+        val currentAnnouncement = pendingAnnouncements.firstOrNull()
+        if (currentAnnouncement != null) {
+            AnnouncementPopup(
+                announcement = currentAnnouncement,
+                onDismiss = { viewModel.dismissCurrentAnnouncement() }
+            )
+        }
         } // end of showAdminAuth else (main app content)
 
         if (!showAdminAuth && showUpdateDialog && updateCheckResult is UpdateCheckResult.UpdateAvailable) {
@@ -1677,6 +1729,7 @@ if (pageAnimationsEnabled) {
                 }
             }
         }
+            }
         }
         }
     }
@@ -1925,11 +1978,11 @@ fun DashboardScreen(
         Spacer(modifier = Modifier.height(if (isPhone) 16.dp else 24.dp))
 
         // Calculate statistics - memoized and grouped by data source for efficient single-pass computation
-        // Guest stats: single pass — "permanent" matches GuestListScreen / billeterie (excludes temp & volunteer-benefit rows).
-        // +1 invites: sum of invitations on those permanent rows only (paired with the permanent card).
-        // totalInvitesAll: all rows, for "Total List" headcount (same as historical guests.size + invites + volunteers).
-        val (permanentGuestCount, plusOneInvitesPermanent, totalInvitesAll) = remember(guests) {
+        // Guest stats are split by type for clear "Total List" composition.
+        // +1 invites are summed from all guest rows.
+        val (permanentGuestCount, temporaryGuestCount, plusOneInvitesPermanent, totalInvitesAll) = remember(guests) {
             var permanent = 0
+            var temporary = 0
             var plusOnePermanent = 0
             var invitesAll = 0
             guests.forEach { guest ->
@@ -1937,9 +1990,11 @@ fun DashboardScreen(
                 if (!guest.isVolunteerBenefit && !guest.isTemporaryGuest) {
                     permanent++
                     plusOnePermanent += guest.invitations
+                } else if (guest.isTemporaryGuest) {
+                    temporary++
                 }
             }
-            Triple(permanent, plusOnePermanent, invitesAll)
+            listOf(permanent, temporary, plusOnePermanent, invitesAll)
         }
         
         // Volunteer stats: single pass through volunteers list
@@ -1952,8 +2007,8 @@ fun DashboardScreen(
             Triple(volunteers.size, active, inactive)
         }
         
-        // Total list: every guest row + every volunteer + all +1s (inactive volunteers still count toward roster size).
-        val totalPeople = guests.size + totalVolunteers + totalInvitesAll
+        // Total list = permanent guests + temporary guests + volunteers + all +N invitations.
+        val totalPeople = permanentGuestCount + temporaryGuestCount + totalVolunteers + totalInvitesAll
         // Move expensive calculation to background if needed
         val totalFreeDrinks = remember(volunteers, jobs, jobTypeConfigs, dateChangeOffsetHours) {
             com.eventmanager.app.data.models.BenefitCalculator.calculateTotalFreeDrinks(
@@ -2218,6 +2273,15 @@ fun DashboardScreen(
             viewModel?.let { vm ->
                 PeopleCounter(isPhone = isPhone, viewModel = vm)
             }
+        }
+
+        // Announcement Button - always visible in Admin dashboard
+        viewModel?.let { vm ->
+            Spacer(modifier = Modifier.height(if (isPhone) 16.dp else 24.dp))
+            SendAnnouncementButton(
+                isPhone = isPhone,
+                onClick = { vm.openSendAnnouncementDialog() }
+            )
         }
         
         // Stats Graphs Panel - only show if statistics are enabled
@@ -2578,7 +2642,11 @@ fun BenefitsScreenWithViewModel(viewModel: EventManagerViewModel) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WelcomeScreen(onAdminSelected: () -> Unit, onTicketCheckSelected: () -> Unit) {
+fun WelcomeScreen(
+    onAdminSelected: () -> Unit,
+    onTicketCheckSelected: () -> Unit,
+    showAdminAccessSyncIndicator: Boolean = false
+) {
     val context = LocalContext.current
     val settingsManager = remember { SettingsManager(context) }
     val colorScheme = MaterialTheme.colorScheme
@@ -2863,6 +2931,28 @@ fun WelcomeScreen(onAdminSelected: () -> Unit, onTicketCheckSelected: () -> Unit
                             )
                         }
                     }
+                }
+            }
+
+            if (showAdminAccessSyncIndicator) {
+                val syncIndicatorLabel =
+                    context.getString(R.string.welcome_background_sync_content_description)
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 6.dp, end = 10.dp),
+                    shape = CircleShape,
+                    color = colorScheme.surface.copy(alpha = 0.92f),
+                    shadowElevation = 3.dp
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .padding(8.dp)
+                            .size(22.dp)
+                            .semantics { contentDescription = syncIndicatorLabel },
+                        strokeWidth = 2.5.dp,
+                        color = colorScheme.primary
+                    )
                 }
             }
         }

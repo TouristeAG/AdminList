@@ -53,7 +53,7 @@ public final class VenueDao_Impl implements VenueDao {
       @Override
       @NonNull
       protected String createQuery() {
-        return "INSERT OR REPLACE INTO `venues` (`id`,`sheetsId`,`name`,`description`,`isActive`,`lastModified`,`peopleCounterCount`,`peopleCounterWriterDeviceId`,`peopleCounterLastModified`) VALUES (nullif(?, 0),?,?,?,?,?,?,?,?)";
+        return "INSERT OR REPLACE INTO `venues` (`id`,`sheetsId`,`name`,`description`,`isActive`,`lastModified`,`peopleCounterCount`,`peopleCounterWriterDeviceId`,`peopleCounterLastModified`,`announcementTitle`,`announcementMessage`,`announcementSentAt`,`announcementSenderDeviceId`) VALUES (nullif(?, 0),?,?,?,?,?,?,?,?,?,?,?,?)";
       }
 
       @Override
@@ -73,6 +73,10 @@ public final class VenueDao_Impl implements VenueDao {
         statement.bindLong(7, entity.getPeopleCounterCount());
         statement.bindString(8, entity.getPeopleCounterWriterDeviceId());
         statement.bindLong(9, entity.getPeopleCounterLastModified());
+        statement.bindString(10, entity.getAnnouncementTitle());
+        statement.bindString(11, entity.getAnnouncementMessage());
+        statement.bindLong(12, entity.getAnnouncementSentAt());
+        statement.bindString(13, entity.getAnnouncementSenderDeviceId());
       }
     };
     this.__deletionAdapterOfVenueEntity = new EntityDeletionOrUpdateAdapter<VenueEntity>(__db) {
@@ -92,7 +96,7 @@ public final class VenueDao_Impl implements VenueDao {
       @Override
       @NonNull
       protected String createQuery() {
-        return "UPDATE OR ABORT `venues` SET `id` = ?,`sheetsId` = ?,`name` = ?,`description` = ?,`isActive` = ?,`lastModified` = ?,`peopleCounterCount` = ?,`peopleCounterWriterDeviceId` = ?,`peopleCounterLastModified` = ? WHERE `id` = ?";
+        return "UPDATE OR ABORT `venues` SET `id` = ?,`sheetsId` = ?,`name` = ?,`description` = ?,`isActive` = ?,`lastModified` = ?,`peopleCounterCount` = ?,`peopleCounterWriterDeviceId` = ?,`peopleCounterLastModified` = ?,`announcementTitle` = ?,`announcementMessage` = ?,`announcementSentAt` = ?,`announcementSenderDeviceId` = ? WHERE `id` = ?";
       }
 
       @Override
@@ -112,7 +116,11 @@ public final class VenueDao_Impl implements VenueDao {
         statement.bindLong(7, entity.getPeopleCounterCount());
         statement.bindString(8, entity.getPeopleCounterWriterDeviceId());
         statement.bindLong(9, entity.getPeopleCounterLastModified());
-        statement.bindLong(10, entity.getId());
+        statement.bindString(10, entity.getAnnouncementTitle());
+        statement.bindString(11, entity.getAnnouncementMessage());
+        statement.bindLong(12, entity.getAnnouncementSentAt());
+        statement.bindString(13, entity.getAnnouncementSenderDeviceId());
+        statement.bindLong(14, entity.getId());
       }
     };
     this.__preparedStmtOfDeleteVenueById = new SharedSQLiteStatement(__db) {
@@ -348,6 +356,10 @@ public final class VenueDao_Impl implements VenueDao {
           final int _cursorIndexOfPeopleCounterCount = CursorUtil.getColumnIndexOrThrow(_cursor, "peopleCounterCount");
           final int _cursorIndexOfPeopleCounterWriterDeviceId = CursorUtil.getColumnIndexOrThrow(_cursor, "peopleCounterWriterDeviceId");
           final int _cursorIndexOfPeopleCounterLastModified = CursorUtil.getColumnIndexOrThrow(_cursor, "peopleCounterLastModified");
+          final int _cursorIndexOfAnnouncementTitle = CursorUtil.getColumnIndexOrThrow(_cursor, "announcementTitle");
+          final int _cursorIndexOfAnnouncementMessage = CursorUtil.getColumnIndexOrThrow(_cursor, "announcementMessage");
+          final int _cursorIndexOfAnnouncementSentAt = CursorUtil.getColumnIndexOrThrow(_cursor, "announcementSentAt");
+          final int _cursorIndexOfAnnouncementSenderDeviceId = CursorUtil.getColumnIndexOrThrow(_cursor, "announcementSenderDeviceId");
           final List<VenueEntity> _result = new ArrayList<VenueEntity>(_cursor.getCount());
           while (_cursor.moveToNext()) {
             final VenueEntity _item;
@@ -375,7 +387,15 @@ public final class VenueDao_Impl implements VenueDao {
             _tmpPeopleCounterWriterDeviceId = _cursor.getString(_cursorIndexOfPeopleCounterWriterDeviceId);
             final long _tmpPeopleCounterLastModified;
             _tmpPeopleCounterLastModified = _cursor.getLong(_cursorIndexOfPeopleCounterLastModified);
-            _item = new VenueEntity(_tmpId,_tmpSheetsId,_tmpName,_tmpDescription,_tmpIsActive,_tmpLastModified,_tmpPeopleCounterCount,_tmpPeopleCounterWriterDeviceId,_tmpPeopleCounterLastModified);
+            final String _tmpAnnouncementTitle;
+            _tmpAnnouncementTitle = _cursor.getString(_cursorIndexOfAnnouncementTitle);
+            final String _tmpAnnouncementMessage;
+            _tmpAnnouncementMessage = _cursor.getString(_cursorIndexOfAnnouncementMessage);
+            final long _tmpAnnouncementSentAt;
+            _tmpAnnouncementSentAt = _cursor.getLong(_cursorIndexOfAnnouncementSentAt);
+            final String _tmpAnnouncementSenderDeviceId;
+            _tmpAnnouncementSenderDeviceId = _cursor.getString(_cursorIndexOfAnnouncementSenderDeviceId);
+            _item = new VenueEntity(_tmpId,_tmpSheetsId,_tmpName,_tmpDescription,_tmpIsActive,_tmpLastModified,_tmpPeopleCounterCount,_tmpPeopleCounterWriterDeviceId,_tmpPeopleCounterLastModified,_tmpAnnouncementTitle,_tmpAnnouncementMessage,_tmpAnnouncementSentAt,_tmpAnnouncementSenderDeviceId);
             _result.add(_item);
           }
           return _result;
@@ -410,6 +430,10 @@ public final class VenueDao_Impl implements VenueDao {
           final int _cursorIndexOfPeopleCounterCount = CursorUtil.getColumnIndexOrThrow(_cursor, "peopleCounterCount");
           final int _cursorIndexOfPeopleCounterWriterDeviceId = CursorUtil.getColumnIndexOrThrow(_cursor, "peopleCounterWriterDeviceId");
           final int _cursorIndexOfPeopleCounterLastModified = CursorUtil.getColumnIndexOrThrow(_cursor, "peopleCounterLastModified");
+          final int _cursorIndexOfAnnouncementTitle = CursorUtil.getColumnIndexOrThrow(_cursor, "announcementTitle");
+          final int _cursorIndexOfAnnouncementMessage = CursorUtil.getColumnIndexOrThrow(_cursor, "announcementMessage");
+          final int _cursorIndexOfAnnouncementSentAt = CursorUtil.getColumnIndexOrThrow(_cursor, "announcementSentAt");
+          final int _cursorIndexOfAnnouncementSenderDeviceId = CursorUtil.getColumnIndexOrThrow(_cursor, "announcementSenderDeviceId");
           final List<VenueEntity> _result = new ArrayList<VenueEntity>(_cursor.getCount());
           while (_cursor.moveToNext()) {
             final VenueEntity _item;
@@ -437,7 +461,15 @@ public final class VenueDao_Impl implements VenueDao {
             _tmpPeopleCounterWriterDeviceId = _cursor.getString(_cursorIndexOfPeopleCounterWriterDeviceId);
             final long _tmpPeopleCounterLastModified;
             _tmpPeopleCounterLastModified = _cursor.getLong(_cursorIndexOfPeopleCounterLastModified);
-            _item = new VenueEntity(_tmpId,_tmpSheetsId,_tmpName,_tmpDescription,_tmpIsActive,_tmpLastModified,_tmpPeopleCounterCount,_tmpPeopleCounterWriterDeviceId,_tmpPeopleCounterLastModified);
+            final String _tmpAnnouncementTitle;
+            _tmpAnnouncementTitle = _cursor.getString(_cursorIndexOfAnnouncementTitle);
+            final String _tmpAnnouncementMessage;
+            _tmpAnnouncementMessage = _cursor.getString(_cursorIndexOfAnnouncementMessage);
+            final long _tmpAnnouncementSentAt;
+            _tmpAnnouncementSentAt = _cursor.getLong(_cursorIndexOfAnnouncementSentAt);
+            final String _tmpAnnouncementSenderDeviceId;
+            _tmpAnnouncementSenderDeviceId = _cursor.getString(_cursorIndexOfAnnouncementSenderDeviceId);
+            _item = new VenueEntity(_tmpId,_tmpSheetsId,_tmpName,_tmpDescription,_tmpIsActive,_tmpLastModified,_tmpPeopleCounterCount,_tmpPeopleCounterWriterDeviceId,_tmpPeopleCounterLastModified,_tmpAnnouncementTitle,_tmpAnnouncementMessage,_tmpAnnouncementSentAt,_tmpAnnouncementSenderDeviceId);
             _result.add(_item);
           }
           return _result;
@@ -475,6 +507,10 @@ public final class VenueDao_Impl implements VenueDao {
           final int _cursorIndexOfPeopleCounterCount = CursorUtil.getColumnIndexOrThrow(_cursor, "peopleCounterCount");
           final int _cursorIndexOfPeopleCounterWriterDeviceId = CursorUtil.getColumnIndexOrThrow(_cursor, "peopleCounterWriterDeviceId");
           final int _cursorIndexOfPeopleCounterLastModified = CursorUtil.getColumnIndexOrThrow(_cursor, "peopleCounterLastModified");
+          final int _cursorIndexOfAnnouncementTitle = CursorUtil.getColumnIndexOrThrow(_cursor, "announcementTitle");
+          final int _cursorIndexOfAnnouncementMessage = CursorUtil.getColumnIndexOrThrow(_cursor, "announcementMessage");
+          final int _cursorIndexOfAnnouncementSentAt = CursorUtil.getColumnIndexOrThrow(_cursor, "announcementSentAt");
+          final int _cursorIndexOfAnnouncementSenderDeviceId = CursorUtil.getColumnIndexOrThrow(_cursor, "announcementSenderDeviceId");
           final VenueEntity _result;
           if (_cursor.moveToFirst()) {
             final long _tmpId;
@@ -501,7 +537,15 @@ public final class VenueDao_Impl implements VenueDao {
             _tmpPeopleCounterWriterDeviceId = _cursor.getString(_cursorIndexOfPeopleCounterWriterDeviceId);
             final long _tmpPeopleCounterLastModified;
             _tmpPeopleCounterLastModified = _cursor.getLong(_cursorIndexOfPeopleCounterLastModified);
-            _result = new VenueEntity(_tmpId,_tmpSheetsId,_tmpName,_tmpDescription,_tmpIsActive,_tmpLastModified,_tmpPeopleCounterCount,_tmpPeopleCounterWriterDeviceId,_tmpPeopleCounterLastModified);
+            final String _tmpAnnouncementTitle;
+            _tmpAnnouncementTitle = _cursor.getString(_cursorIndexOfAnnouncementTitle);
+            final String _tmpAnnouncementMessage;
+            _tmpAnnouncementMessage = _cursor.getString(_cursorIndexOfAnnouncementMessage);
+            final long _tmpAnnouncementSentAt;
+            _tmpAnnouncementSentAt = _cursor.getLong(_cursorIndexOfAnnouncementSentAt);
+            final String _tmpAnnouncementSenderDeviceId;
+            _tmpAnnouncementSenderDeviceId = _cursor.getString(_cursorIndexOfAnnouncementSenderDeviceId);
+            _result = new VenueEntity(_tmpId,_tmpSheetsId,_tmpName,_tmpDescription,_tmpIsActive,_tmpLastModified,_tmpPeopleCounterCount,_tmpPeopleCounterWriterDeviceId,_tmpPeopleCounterLastModified,_tmpAnnouncementTitle,_tmpAnnouncementMessage,_tmpAnnouncementSentAt,_tmpAnnouncementSenderDeviceId);
           } else {
             _result = null;
           }
@@ -537,6 +581,10 @@ public final class VenueDao_Impl implements VenueDao {
           final int _cursorIndexOfPeopleCounterCount = CursorUtil.getColumnIndexOrThrow(_cursor, "peopleCounterCount");
           final int _cursorIndexOfPeopleCounterWriterDeviceId = CursorUtil.getColumnIndexOrThrow(_cursor, "peopleCounterWriterDeviceId");
           final int _cursorIndexOfPeopleCounterLastModified = CursorUtil.getColumnIndexOrThrow(_cursor, "peopleCounterLastModified");
+          final int _cursorIndexOfAnnouncementTitle = CursorUtil.getColumnIndexOrThrow(_cursor, "announcementTitle");
+          final int _cursorIndexOfAnnouncementMessage = CursorUtil.getColumnIndexOrThrow(_cursor, "announcementMessage");
+          final int _cursorIndexOfAnnouncementSentAt = CursorUtil.getColumnIndexOrThrow(_cursor, "announcementSentAt");
+          final int _cursorIndexOfAnnouncementSenderDeviceId = CursorUtil.getColumnIndexOrThrow(_cursor, "announcementSenderDeviceId");
           final VenueEntity _result;
           if (_cursor.moveToFirst()) {
             final long _tmpId;
@@ -563,7 +611,15 @@ public final class VenueDao_Impl implements VenueDao {
             _tmpPeopleCounterWriterDeviceId = _cursor.getString(_cursorIndexOfPeopleCounterWriterDeviceId);
             final long _tmpPeopleCounterLastModified;
             _tmpPeopleCounterLastModified = _cursor.getLong(_cursorIndexOfPeopleCounterLastModified);
-            _result = new VenueEntity(_tmpId,_tmpSheetsId,_tmpName,_tmpDescription,_tmpIsActive,_tmpLastModified,_tmpPeopleCounterCount,_tmpPeopleCounterWriterDeviceId,_tmpPeopleCounterLastModified);
+            final String _tmpAnnouncementTitle;
+            _tmpAnnouncementTitle = _cursor.getString(_cursorIndexOfAnnouncementTitle);
+            final String _tmpAnnouncementMessage;
+            _tmpAnnouncementMessage = _cursor.getString(_cursorIndexOfAnnouncementMessage);
+            final long _tmpAnnouncementSentAt;
+            _tmpAnnouncementSentAt = _cursor.getLong(_cursorIndexOfAnnouncementSentAt);
+            final String _tmpAnnouncementSenderDeviceId;
+            _tmpAnnouncementSenderDeviceId = _cursor.getString(_cursorIndexOfAnnouncementSenderDeviceId);
+            _result = new VenueEntity(_tmpId,_tmpSheetsId,_tmpName,_tmpDescription,_tmpIsActive,_tmpLastModified,_tmpPeopleCounterCount,_tmpPeopleCounterWriterDeviceId,_tmpPeopleCounterLastModified,_tmpAnnouncementTitle,_tmpAnnouncementMessage,_tmpAnnouncementSentAt,_tmpAnnouncementSenderDeviceId);
           } else {
             _result = null;
           }

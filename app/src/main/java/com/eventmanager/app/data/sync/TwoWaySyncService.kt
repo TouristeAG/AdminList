@@ -13,12 +13,13 @@ import kotlinx.coroutines.sync.withLock
 import java.io.IOException
 
 /**
- * Two-way sync service implementing the new sync rules:
- * 1. Backup Mode: Local Changes → Google Sheets (overwrite entire dataset)
+ * Two-way sync service implementing the sync rules:
+ * 1. Backup Mode: Local Changes → Google Sheets (read-merge-write to preserve other devices' data)
  * 2. Sync Mode: Google Sheets → App (download and replace local data)
  * 3. Page Change Sync: Download current + new page only
  * 4. Manual/Scheduled Sync: Download entire dataset
- * 5. No merge logic - simple overwrite behavior
+ * 5. Merge-before-upload: backups read the sheet first, merge remote-only entries from
+ *    other devices using last-modified-wins, then upload the combined result.
  * 6. Differential Sync: Efficient UI updates via data comparison
  */
 class TwoWaySyncService(
@@ -29,6 +30,7 @@ class TwoWaySyncService(
     
     private val settingsManager = SettingsManager(context)
     private val differentialSyncService = DifferentialSyncService(repository)
+    private val deletionTracker = DeletionTracker(context)
     
     // Simple synchronization to prevent concurrent backup operations
     @Volatile
@@ -55,7 +57,7 @@ class TwoWaySyncService(
             
             // Get all local data
             val guests = repository.getAllGuests().first()
-            val volunteers = repository.getAllVolunteers().first() // Get ALL volunteers (active and inactive)
+            val volunteers = repository.getAllVolunteers().first()
             val jobs = repository.getAllJobs().first()
             val jobTypeConfigs = repository.getAllJobTypeConfigs().first()
             val venues = repository.getAllVenues().first()
@@ -63,12 +65,75 @@ class TwoWaySyncService(
             println("Starting backup to Google Sheets...")
             println("Backing up: ${guests.size} guests, ${volunteers.size} volunteers, ${jobs.size} jobs, ${jobTypeConfigs.size} job types, ${venues.size} venues")
             
-            // Upload each dataset completely (overwrites entire sheet)
-            googleSheetsService.syncJobTypeConfigsToSheets(jobTypeConfigs)
-            googleSheetsService.syncGuestsToSheets(guests, venues)
-            googleSheetsService.syncVolunteersToSheets(volunteers)
-            googleSheetsService.syncJobsToSheets(jobs, venues)
-            googleSheetsService.syncVenuesToSheets(venues)
+            // Read current remote data in parallel for merge
+            val (remoteJobTypeConfigs, remoteGuests, remoteVolunteers, remoteVenues) = try {
+                coroutineScope {
+                    val jtcDef = async { try { googleSheetsService.syncJobTypeConfigsFromSheets() } catch (_: Exception) { emptyList() } }
+                    val gDef = async { try { googleSheetsService.syncGuestsFromSheets() } catch (_: Exception) { emptyList() } }
+                    val vDef = async { try { googleSheetsService.syncVolunteersFromSheets() } catch (_: Exception) { emptyList() } }
+                    val vnDef = async { try { googleSheetsService.syncVenuesFromSheets() } catch (_: Exception) { emptyList() } }
+                    Quad(jtcDef.await(), gDef.await(), vDef.await(), vnDef.await())
+                }
+            } catch (e: Exception) {
+                println("⚠️ Could not read remote data for merge, uploading local only: ${e.message}")
+                Quad(emptyList<JobTypeConfig>(), emptyList<Guest>(), emptyList<Volunteer>(), emptyList<VenueEntity>())
+            }
+
+            val remoteJobs = try {
+                val configsForParsing = remoteJobTypeConfigs.ifEmpty { jobTypeConfigs }
+                googleSheetsService.syncJobsFromSheets(configsForParsing)
+            } catch (_: Exception) { emptyList() }
+
+            // Load deletion tracker keys for all entity types
+            val delGuest = deletionTracker.getDeletedBusinessKeys("guest")
+            val delVolunteer = deletionTracker.getDeletedBusinessKeys("volunteer")
+            val delJob = deletionTracker.getDeletedBusinessKeys("job")
+            val delJobType = deletionTracker.getDeletedBusinessKeys("job_type")
+            val delVenue = deletionTracker.getDeletedBusinessKeys("venue")
+
+            // Merge each entity type
+            val mergedJobTypeConfigs = mergeLocalWithRemote(
+                jobTypeConfigs, remoteJobTypeConfigs, { it.name }, { it.lastModified }, delJobType
+            )
+
+            val localRegularGuests = guests.filter { !it.isVolunteerBenefit && !it.isTemporaryGuest }
+            val remoteRegularGuests = remoteGuests.filter { !it.isVolunteerBenefit && !it.isTemporaryGuest }
+            val mergedRegularGuests = mergeLocalWithRemote(
+                localRegularGuests, remoteRegularGuests, { it.nanoId }, { it.lastModified }, delGuest
+            )
+            val allGuestsForUpload = mergedRegularGuests + guests.filter { it.isVolunteerBenefit || it.isTemporaryGuest }
+
+            val mergedVolunteers = mergeLocalWithRemote(
+                volunteers, remoteVolunteers, { it.id }, { it.lastModified }, delVolunteer
+            )
+
+            val mergedJobs = mergeLocalWithRemote(
+                jobs, remoteJobs,
+                { "${it.volunteerId}_${it.jobTypeName}_${it.date}_${it.venueName}_${it.shiftTime}" },
+                { it.lastModified }, delJob
+            )
+
+            val mergedVenues = mergeLocalWithRemote(
+                venues, remoteVenues, { it.name }, { it.lastModified }, delVenue
+            )
+
+            println("📊 After merge: ${mergedRegularGuests.size} guests, ${mergedVolunteers.size} volunteers, ${mergedJobs.size} jobs, ${mergedJobTypeConfigs.size} job types, ${mergedVenues.size} venues")
+            
+            // Upload merged datasets
+            googleSheetsService.syncJobTypeConfigsToSheets(mergedJobTypeConfigs)
+            googleSheetsService.syncGuestsToSheets(allGuestsForUpload, mergedVenues)
+            googleSheetsService.syncVolunteersToSheets(mergedVolunteers)
+            googleSheetsService.syncJobsToSheets(mergedJobs, mergedVenues, mergedJobTypeConfigs)
+            googleSheetsService.syncVenuesToSheets(mergedVenues)
+
+            // Reflect merged snapshot locally so UI updates without a second sync.
+            applyMergedSnapshotToLocal(
+                guests = allGuestsForUpload,
+                volunteers = mergedVolunteers,
+                jobs = mergedJobs,
+                jobTypeConfigs = mergedJobTypeConfigs,
+                venues = mergedVenues
+            )
             
             // Update last sync time
             updateLastSyncTime()
@@ -158,15 +223,15 @@ class TwoWaySyncService(
             // Merge volunteers (preserve local volunteers not in remote data)
             // Google Sheets is the source of truth for NanoIDs
             val localVolunteers = repository.getAllVolunteers().first()
-            val remoteVolunteersMap = remoteVolunteers.associateBy { it.sheetsId }
-            val localVolunteersBySheetsId = localVolunteers.associateBy { it.sheetsId }
+            val remoteVolunteersById = remoteVolunteers.associateBy { it.id }
+            val localVolunteersById = localVolunteers.associateBy { it.id }
             // Use name + abbreviation as key to allow multiple volunteers with same first name
             val localVolunteersByFullName = localVolunteers.associateBy { "${it.name}_${it.lastNameAbbreviation}" }
             
             // Process each remote volunteer - Google Sheets NanoID is source of truth
             for (volunteer in remoteVolunteers) {
-                // Try to find existing volunteer by sheetsId first, then by name+abbreviation
-                val existingVolunteer = localVolunteersBySheetsId[volunteer.sheetsId]
+                // Try to find existing volunteer by NanoID first, then by name+abbreviation
+                val existingVolunteer = localVolunteersById[volunteer.id]
                     ?: localVolunteersByFullName["${volunteer.name}_${volunteer.lastNameAbbreviation}"]
                 
                 if (existingVolunteer != null) {
@@ -190,10 +255,10 @@ class TwoWaySyncService(
             }
             
             // Keep local volunteers that don't exist in remote data
-            // Check by sheetsId and name+abbreviation to avoid preserving duplicates
+            // Check by NanoID and name+abbreviation to avoid preserving duplicates
             val remoteVolunteerFullNames = remoteVolunteers.map { "${it.name}_${it.lastNameAbbreviation}" }.toSet()
             val localVolunteersToKeep = localVolunteers.filter { localVolunteer ->
-                (localVolunteer.sheetsId == null || remoteVolunteersMap[localVolunteer.sheetsId] == null) &&
+                remoteVolunteersById[localVolunteer.id] == null &&
                 !remoteVolunteerFullNames.contains("${localVolunteer.name}_${localVolunteer.lastNameAbbreviation}")
             }
             
@@ -366,7 +431,97 @@ class TwoWaySyncService(
     
     // Helper class for parallel downloads (destructuring 5 values)
     private data class Quint<A, B, C, D, E>(val first: A, val second: B, val third: C, val fourth: D, val fifth: E)
-    
+
+    /**
+     * Merges local and remote entity lists for upload, using last-modified-wins semantics.
+     * This prevents data loss when multiple devices make concurrent changes:
+     * - Entities only in local: included (our changes)
+     * - Entities only in remote AND not in [deletedKeys]: included (other device's additions)
+     * - Entities only in remote AND in [deletedKeys]: excluded (deleted locally)
+     * - Entities in both: the version with the newer lastModified wins
+     */
+    private fun <T> mergeLocalWithRemote(
+        local: List<T>,
+        remote: List<T>,
+        keyExtractor: (T) -> String,
+        lastModifiedExtractor: (T) -> Long,
+        deletedKeys: Set<String> = emptySet()
+    ): List<T> {
+        if (remote.isEmpty()) return local
+
+        val localByKey = LinkedHashMap<String, T>()
+        for (item in local) localByKey[keyExtractor(item)] = item
+
+        val remoteByKey = LinkedHashMap<String, T>()
+        for (item in remote) remoteByKey[keyExtractor(item)] = item
+
+        val result = mutableListOf<T>()
+
+        for ((key, localItem) in localByKey) {
+            val remoteItem = remoteByKey[key]
+            if (remoteItem != null && lastModifiedExtractor(remoteItem) > lastModifiedExtractor(localItem)) {
+                result.add(remoteItem)
+            } else {
+                result.add(localItem)
+            }
+        }
+
+        var remoteOnlyCount = 0
+        var skippedDeletedCount = 0
+        for ((key, remoteItem) in remoteByKey) {
+            if (!localByKey.containsKey(key)) {
+                if (deletedKeys.contains(key)) {
+                    skippedDeletedCount++
+                } else {
+                    result.add(remoteItem)
+                    remoteOnlyCount++
+                }
+            }
+        }
+
+        if (remoteOnlyCount > 0) {
+            println("🔀 Merge: preserved $remoteOnlyCount remote-only entries from other devices")
+        }
+        if (skippedDeletedCount > 0) {
+            println("🗑️ Merge: excluded $skippedDeletedCount locally-deleted entries")
+        }
+
+        return result
+    }
+
+    /**
+     * Apply a merged snapshot back to local DB so backup mode also refreshes UI.
+     * This avoids requiring a second sync to display remote-only entries preserved by merge.
+     */
+    private suspend fun applyMergedSnapshotToLocal(
+        guests: List<Guest>? = null,
+        volunteers: List<Volunteer>? = null,
+        jobs: List<Job>? = null,
+        jobTypeConfigs: List<JobTypeConfig>? = null,
+        venues: List<VenueEntity>? = null
+    ) {
+        if (jobTypeConfigs != null) {
+            repository.clearAllJobTypeConfigs()
+            if (jobTypeConfigs.isNotEmpty()) repository.insertJobTypeConfigsAll(jobTypeConfigs)
+        }
+        if (venues != null) {
+            repository.clearAllVenues()
+            if (venues.isNotEmpty()) repository.insertVenuesAll(venues)
+        }
+        if (guests != null) {
+            repository.clearAllGuests()
+            if (guests.isNotEmpty()) repository.insertGuestsAll(guests)
+        }
+        if (volunteers != null) {
+            repository.clearAllVolunteers()
+            if (volunteers.isNotEmpty()) repository.insertVolunteersAll(volunteers)
+        }
+        if (jobs != null) {
+            repository.clearAllJobs()
+            if (jobs.isNotEmpty()) repository.insertJobsAll(jobs)
+        }
+    }
+
     /**
      * PAGE CHANGE SYNC: Download only current page and new page data
      * This is used when user changes pages in the app
@@ -399,6 +554,12 @@ class TwoWaySyncService(
             
             if (pagesToSync.contains("job_types") || pagesToSync.contains("job_type_configs")) {
                 syncJobTypesOnly()
+            }
+
+            if (pagesToSync.contains("venues") ||
+                pagesToSync.contains("venue_management") ||
+                pagesToSync.contains("management:venue")) {
+                syncVenuesWithDifferentialUpdate()
             }
             
             println("Page change sync completed successfully")
@@ -492,16 +653,16 @@ class TwoWaySyncService(
             println("Found ${localVolunteers.size} local volunteers")
             
             // Create maps for efficient lookup - Google Sheets is source of truth for NanoIDs
-            val remoteVolunteersMap = remoteVolunteers.associateBy { it.sheetsId }
-            val localVolunteersBySheetsId = localVolunteers.associateBy { it.sheetsId }
+            val remoteVolunteersById = remoteVolunteers.associateBy { it.id }
+            val localVolunteersById = localVolunteers.associateBy { it.id }
             // Use name + abbreviation as key to allow multiple volunteers with same first name
             val localVolunteersByFullName = localVolunteers.associateBy { "${it.name}_${it.lastNameAbbreviation}" }
             
             // Update or insert remote volunteers - use NanoID from Google Sheets
             for (volunteer in remoteVolunteers) {
                 try {
-                    // Try to find existing volunteer by sheetsId first, then by name+abbreviation
-                    val existingVolunteer = localVolunteersBySheetsId[volunteer.sheetsId]
+                    // Try to find existing volunteer by NanoID first, then by name+abbreviation
+                    val existingVolunteer = localVolunteersById[volunteer.id]
                         ?: localVolunteersByFullName["${volunteer.name}_${volunteer.lastNameAbbreviation}"]
                     
                     if (existingVolunteer != null) {
@@ -528,10 +689,10 @@ class TwoWaySyncService(
             }
             
             // Keep local volunteers that don't exist in remote data (preserve inactive volunteers)
-            // Check by sheetsId and name+abbreviation to avoid preserving duplicates
+            // Check by NanoID and name+abbreviation to avoid preserving duplicates
             val remoteVolunteerFullNames = remoteVolunteers.map { "${it.name}_${it.lastNameAbbreviation}" }.toSet()
             val localVolunteersToKeep = localVolunteers.filter { localVolunteer ->
-                (localVolunteer.sheetsId == null || remoteVolunteersMap[localVolunteer.sheetsId] == null) &&
+                remoteVolunteersById[localVolunteer.id] == null &&
                 !remoteVolunteerFullNames.contains("${localVolunteer.name}_${localVolunteer.lastNameAbbreviation}")
             }
             
@@ -818,7 +979,7 @@ class TwoWaySyncService(
         }
     }
 
-    private fun venueDifferentialKey(v: VenueEntity): String = v.sheetsId ?: v.name
+    private fun venueDifferentialKey(v: VenueEntity): String = v.name
 
     private fun shouldPreserveLocalPeopleCounterOnVenuePull(local: VenueEntity, myId: String): Boolean {
         if (!settingsManager.isPeopleCounterPriority(local.id)) return false
@@ -887,7 +1048,32 @@ class TwoWaySyncService(
                 }
             }
         }
-    
+
+    /**
+     * Updates announcement columns (H–K) for a single venue row on Google Sheets.
+     */
+    suspend fun updateVenueAnnouncementOnSheets(
+        sheetRow1Based: Int,
+        title: String,
+        message: String,
+        sentAtMs: Long,
+        senderDeviceId: String
+    ) = withContext(Dispatchers.IO) {
+        sheetsOpMutex.withLock {
+            if (!isGoogleSheetsConfigured()) {
+                throw IOException("Google Sheets not configured")
+            }
+            googleSheetsService.initializeSheetsService()
+            googleSheetsService.updateVenueAnnouncementCells(
+                sheetRow1Based,
+                title,
+                message,
+                sentAtMs,
+                senderDeviceId
+            )
+        }
+    }
+
     /**
      * BACKUP SPECIFIC DATASET: Upload specific dataset to Google Sheets
      * This is used when user makes changes to specific data
@@ -905,13 +1091,30 @@ class TwoWaySyncService(
             val venues = repository.getAllVenues().first()
             println("📊 Retrieved ${guests.size} guests from repository for backup")
             
-            // Log guest details for debugging
-            guests.forEachIndexed { index, guest ->
-                println("  Guest ${index + 1}: ${guest.name} (ID: ${guest.id})")
+            val remoteGuests = try {
+                googleSheetsService.syncGuestsFromSheets()
+            } catch (e: Exception) {
+                println("⚠️ Could not read remote guests for merge, uploading local only: ${e.message}")
+                emptyList()
             }
-            
-            googleSheetsService.syncGuestsToSheets(guests, venues)
-            println("✅ Backed up ${guests.size} guests to Google Sheets")
+
+            val localRegular = guests.filter { !it.isVolunteerBenefit && !it.isTemporaryGuest }
+            val remoteRegular = remoteGuests.filter { !it.isVolunteerBenefit && !it.isTemporaryGuest }
+
+            val deletedGuestKeys = deletionTracker.getDeletedBusinessKeys("guest")
+
+            val mergedRegular = mergeLocalWithRemote(
+                local = localRegular,
+                remote = remoteRegular,
+                keyExtractor = { it.nanoId },
+                lastModifiedExtractor = { it.lastModified },
+                deletedKeys = deletedGuestKeys
+            )
+
+            val allForUpload = mergedRegular + guests.filter { it.isVolunteerBenefit || it.isTemporaryGuest }
+            googleSheetsService.syncGuestsToSheets(allForUpload, venues)
+            applyMergedSnapshotToLocal(guests = allForUpload)
+            println("✅ Backed up ${mergedRegular.size} regular guests to Google Sheets (${localRegular.size} local, ${mergedRegular.size - localRegular.size} preserved from other devices)")
         } catch (e: Exception) {
             println("❌ Failed to backup guests: ${e.message}")
             throw e
@@ -928,17 +1131,29 @@ class TwoWaySyncService(
             
             googleSheetsService.initializeSheetsService()
             googleSheetsService.validateAndRepairSheetsStructure()
-            // Get ALL volunteers (both active and inactive) to ensure complete backup
             val volunteers = repository.getAllVolunteers().first()
             println("📊 Retrieved ${volunteers.size} volunteers from repository for backup")
             
-            // Log volunteer details for debugging
-            volunteers.forEachIndexed { index, volunteer ->
-                println("  Volunteer ${index + 1}: ${volunteer.name} (ID: ${volunteer.id}, Active: ${volunteer.isActive})")
+            val remoteVolunteers = try {
+                googleSheetsService.syncVolunteersFromSheets()
+            } catch (e: Exception) {
+                println("⚠️ Could not read remote volunteers for merge, uploading local only: ${e.message}")
+                emptyList()
             }
-            
-            googleSheetsService.syncVolunteersToSheets(volunteers)
-            println("✅ Backed up ${volunteers.size} volunteers to Google Sheets")
+
+            val deletedVolunteerKeys = deletionTracker.getDeletedBusinessKeys("volunteer")
+
+            val merged = mergeLocalWithRemote(
+                local = volunteers,
+                remote = remoteVolunteers,
+                keyExtractor = { it.id },
+                lastModifiedExtractor = { it.lastModified },
+                deletedKeys = deletedVolunteerKeys
+            )
+
+            googleSheetsService.syncVolunteersToSheets(merged)
+            applyMergedSnapshotToLocal(volunteers = merged)
+            println("✅ Backed up ${merged.size} volunteers to Google Sheets (${volunteers.size} local, ${merged.size - volunteers.size} preserved from other devices)")
         } catch (e: Exception) {
             println("❌ Failed to backup volunteers: ${e.message}")
             throw e
@@ -965,18 +1180,31 @@ class TwoWaySyncService(
             googleSheetsService.initializeSheetsService()
             val jobs = repository.getAllJobs().first()
             val venues = repository.getAllVenues().first()
+            val jobTypeConfigs = repository.getAllJobTypeConfigs().first()
             println("📊 Retrieved ${jobs.size} jobs from repository for backup")
             
-            // Log job details for debugging
-            jobs.forEachIndexed { index, job ->
-                println("  Job ${index + 1}: ${job.jobTypeName} (ID: ${job.id}, Volunteer: ${job.volunteerId})")
+            val remoteJobs = try {
+                googleSheetsService.syncJobsFromSheets(jobTypeConfigs)
+            } catch (e: Exception) {
+                println("⚠️ Could not read remote jobs for merge, uploading local only: ${e.message}")
+                emptyList()
             }
-            
-            // Add a small delay to prevent rapid successive calls
+
+            val deletedJobKeys = deletionTracker.getDeletedBusinessKeys("job")
+
+            val merged = mergeLocalWithRemote(
+                local = jobs,
+                remote = remoteJobs,
+                keyExtractor = { "${it.volunteerId}_${it.jobTypeName}_${it.date}_${it.venueName}_${it.shiftTime}" },
+                lastModifiedExtractor = { it.lastModified },
+                deletedKeys = deletedJobKeys
+            )
+
             kotlinx.coroutines.delay(100)
             
-            googleSheetsService.syncJobsToSheets(jobs, venues)
-            println("✅ Successfully backed up ${jobs.size} jobs to Google Sheets")
+            googleSheetsService.syncJobsToSheets(merged, venues, jobTypeConfigs)
+            applyMergedSnapshotToLocal(jobs = merged)
+            println("✅ Successfully backed up ${merged.size} jobs to Google Sheets (${jobs.size} local, ${merged.size - jobs.size} preserved from other devices)")
             }
         } catch (e: Exception) {
             println("❌ Failed to backup jobs: ${e.message}")
@@ -998,16 +1226,28 @@ class TwoWaySyncService(
             val jobTypeConfigs = repository.getAllJobTypeConfigs().first()
             println("📊 Retrieved ${jobTypeConfigs.size} job types from repository for backup")
             
-            // Log job type details for debugging
-            jobTypeConfigs.forEachIndexed { index, config ->
-                println("  Job Type ${index + 1}: ${config.name} (ID: ${config.id}, Active: ${config.isActive})")
+            val remoteJobTypes = try {
+                googleSheetsService.syncJobTypeConfigsFromSheets()
+            } catch (e: Exception) {
+                println("⚠️ Could not read remote job types for merge, uploading local only: ${e.message}")
+                emptyList()
             }
-            
-            // Add a small delay to prevent rapid successive calls
+
+            val deletedJobTypeKeys = deletionTracker.getDeletedBusinessKeys("job_type")
+
+            val merged = mergeLocalWithRemote(
+                local = jobTypeConfigs,
+                remote = remoteJobTypes,
+                keyExtractor = { it.name },
+                lastModifiedExtractor = { it.lastModified },
+                deletedKeys = deletedJobTypeKeys
+            )
+
             kotlinx.coroutines.delay(100)
             
-            googleSheetsService.syncJobTypeConfigsToSheets(jobTypeConfigs)
-            println("✅ Successfully backed up ${jobTypeConfigs.size} job types to Google Sheets")
+            googleSheetsService.syncJobTypeConfigsToSheets(merged)
+            applyMergedSnapshotToLocal(jobTypeConfigs = merged)
+            println("✅ Successfully backed up ${merged.size} job types to Google Sheets (${jobTypeConfigs.size} local, ${merged.size - jobTypeConfigs.size} preserved from other devices)")
         } catch (e: Exception) {
             println("❌ Failed to backup job types: ${e.message}")
             throw e
@@ -1027,16 +1267,28 @@ class TwoWaySyncService(
             val venues = repository.getAllVenues().first()
             println("📊 Retrieved ${venues.size} venues from repository for backup")
             
-            // Log venue details for debugging
-            venues.forEachIndexed { index, venue ->
-                println("  Venue ${index + 1}: ${venue.name} (ID: ${venue.id}, Active: ${venue.isActive})")
+            val remoteVenues = try {
+                googleSheetsService.syncVenuesFromSheets()
+            } catch (e: Exception) {
+                println("⚠️ Could not read remote venues for merge, uploading local only: ${e.message}")
+                emptyList()
             }
-            
-            // Add a small delay to prevent rapid successive calls
+
+            val deletedVenueKeys = deletionTracker.getDeletedBusinessKeys("venue")
+
+            val merged = mergeLocalWithRemote(
+                local = venues,
+                remote = remoteVenues,
+                keyExtractor = { it.name },
+                lastModifiedExtractor = { it.lastModified },
+                deletedKeys = deletedVenueKeys
+            )
+
             kotlinx.coroutines.delay(100)
             
-            googleSheetsService.syncVenuesToSheets(venues)
-            println("✅ Successfully backed up ${venues.size} venues to Google Sheets")
+            googleSheetsService.syncVenuesToSheets(merged)
+            applyMergedSnapshotToLocal(venues = merged)
+            println("✅ Successfully backed up ${merged.size} venues to Google Sheets (${venues.size} local, ${merged.size - venues.size} preserved from other devices)")
         } catch (e: Exception) {
             println("❌ Failed to backup venues: ${e.message}")
             throw e

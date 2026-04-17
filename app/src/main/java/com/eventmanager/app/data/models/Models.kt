@@ -258,7 +258,15 @@ data class VenueEntity(
     /** Google Sheets column F — header "Priority Device ID"; device ID that may write counter updates. */
     val peopleCounterWriterDeviceId: String = "",
     /** Google Sheets column G — header "Last Modified (counter)"; millis when counter cells were last written. */
-    val peopleCounterLastModified: Long = 0L
+    val peopleCounterLastModified: Long = 0L,
+    /** Google Sheets column H — header "Announcement Title". */
+    val announcementTitle: String = "",
+    /** Google Sheets column I — header "Announcement Message". */
+    val announcementMessage: String = "",
+    /** Google Sheets column J — header "Announcement Sent At"; millis when the announcement was sent. */
+    val announcementSentAt: Long = 0L,
+    /** Google Sheets column K — header "Announcement Sender Device ID"; device that sent the announcement. */
+    val announcementSenderDeviceId: String = ""
 ) : Parcelable
 
 enum class ShiftTime {
@@ -1016,4 +1024,7 @@ object BenefitCalculator {
         }
     }
 }
+
+
+
 

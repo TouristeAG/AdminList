@@ -1751,10 +1751,11 @@ private fun guestStableKey(guest: Guest): String {
         guest.isVolunteerBenefit -> "vol"
         else -> "reg"
     }
-    if (!guest.sheetsId.isNullOrBlank()) return "$typePrefix:${guest.sheetsId}"
-    // nanoId is unique per guest row; id/name/venue/date alone can collide (e.g. vol:0_a_BOTH_null).
+    // Use a row-unique key first. `sheetsId` is not guaranteed unique during sync transitions.
+    if (guest.id > 0L) return "$typePrefix:id_${guest.id}"
+    // Fallback: NanoID should be globally unique even when DB id is not yet assigned.
     if (guest.nanoId.isNotBlank()) return "$typePrefix:n_${guest.nanoId}"
-    return "$typePrefix:f_${guest.id}_${guest.lastModified}_${guest.name}_${guest.venueName}_${guest.invitations}_${guest.temporaryEventDate}"
+    return "$typePrefix:f_${guest.lastModified}_${guest.name}_${guest.venueName}_${guest.invitations}_${guest.temporaryEventDate}"
 }
 
 /**

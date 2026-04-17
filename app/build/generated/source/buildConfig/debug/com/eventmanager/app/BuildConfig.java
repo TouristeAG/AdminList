@@ -7,8 +7,8 @@ public final class BuildConfig {
   public static final boolean DEBUG = Boolean.parseBoolean("true");
   public static final String APPLICATION_ID = "com.eventmanager.app";
   public static final String BUILD_TYPE = "debug";
-  public static final int VERSION_CODE = 15;
-  public static final String VERSION_NAME = "0.9.9.5";
+  public static final int VERSION_CODE = 16;
+  public static final String VERSION_NAME = "0.9.9.6";
   // Field from default config.
   public static final String UPDATE_FALLBACK_STORE_URL = "https://play.google.com/store/apps/details?id=com.eventmanager.app";
   // Field from default config.

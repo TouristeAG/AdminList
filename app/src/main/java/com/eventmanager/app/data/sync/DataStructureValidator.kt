@@ -31,7 +31,11 @@ class DataStructureValidator(
             "Last Modified",
             "Number of people",
             "Priority Device ID",
-            "Last Modified (counter)"
+            "Last Modified (counter)",
+            "Announcement Title",
+            "Announcement Message",
+            "Announcement Sent At",
+            "Announcement Sender Device ID"
         )
     )
     

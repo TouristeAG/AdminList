@@ -9,7 +9,11 @@ import org.json.JSONObject
 
 /**
  * Tracks deleted items to prevent them from being re-downloaded during sync
- * and to ensure they are properly deleted from Google Sheets
+ * and to ensure they are properly deleted from Google Sheets.
+ *
+ * [businessKey] stores the same key used by the merge logic (e.g. nanoId for guests,
+ * volunteer NanoID, name for job types / venues, composite key for jobs) so that the
+ * merge-before-upload step can recognise locally-deleted items on the sheet and skip them.
  */
 class DeletionTracker(private val context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences("deletion_tracker", Context.MODE_PRIVATE)
@@ -20,37 +24,39 @@ class DeletionTracker(private val context: Context) {
         private const val KEY_DELETED_JOBS = "deleted_jobs"
         private const val KEY_DELETED_JOB_TYPES = "deleted_job_types"
         private const val KEY_DELETED_VENUES = "deleted_venues"
+        private const val MAX_AGE_MS = 30L * 24 * 60 * 60 * 1000 // 30 days
     }
     
     data class DeletedItem(
         val id: String,
         val sheetsId: String?,
         val deletionTime: Long,
-        val type: String
+        val type: String,
+        val businessKey: String? = null
     )
     
-    suspend fun trackGuestDeletion(guestId: String, sheetsId: String?, deletionTime: Long = System.currentTimeMillis()) = withContext(Dispatchers.IO) {
-        val deletedItem = DeletedItem(guestId, sheetsId, deletionTime, "guest")
+    suspend fun trackGuestDeletion(guestId: String, sheetsId: String?, deletionTime: Long = System.currentTimeMillis(), businessKey: String? = null) = withContext(Dispatchers.IO) {
+        val deletedItem = DeletedItem(guestId, sheetsId, deletionTime, "guest", businessKey)
         addDeletedItem(KEY_DELETED_GUESTS, deletedItem)
     }
     
-    suspend fun trackVolunteerDeletion(volunteerId: String, sheetsId: String?, deletionTime: Long = System.currentTimeMillis()) = withContext(Dispatchers.IO) {
-        val deletedItem = DeletedItem(volunteerId, sheetsId, deletionTime, "volunteer")
+    suspend fun trackVolunteerDeletion(volunteerId: String, sheetsId: String?, deletionTime: Long = System.currentTimeMillis(), businessKey: String? = null) = withContext(Dispatchers.IO) {
+        val deletedItem = DeletedItem(volunteerId, sheetsId, deletionTime, "volunteer", businessKey ?: volunteerId)
         addDeletedItem(KEY_DELETED_VOLUNTEERS, deletedItem)
     }
     
-    suspend fun trackJobDeletion(jobId: String, sheetsId: String?, deletionTime: Long = System.currentTimeMillis()) = withContext(Dispatchers.IO) {
-        val deletedItem = DeletedItem(jobId, sheetsId, deletionTime, "job")
+    suspend fun trackJobDeletion(jobId: String, sheetsId: String?, deletionTime: Long = System.currentTimeMillis(), businessKey: String? = null) = withContext(Dispatchers.IO) {
+        val deletedItem = DeletedItem(jobId, sheetsId, deletionTime, "job", businessKey)
         addDeletedItem(KEY_DELETED_JOBS, deletedItem)
     }
     
-    suspend fun trackJobTypeDeletion(jobTypeId: String, sheetsId: String?, deletionTime: Long = System.currentTimeMillis()) = withContext(Dispatchers.IO) {
-        val deletedItem = DeletedItem(jobTypeId, sheetsId, deletionTime, "job_type")
+    suspend fun trackJobTypeDeletion(jobTypeId: String, sheetsId: String?, deletionTime: Long = System.currentTimeMillis(), businessKey: String? = null) = withContext(Dispatchers.IO) {
+        val deletedItem = DeletedItem(jobTypeId, sheetsId, deletionTime, "job_type", businessKey)
         addDeletedItem(KEY_DELETED_JOB_TYPES, deletedItem)
     }
     
-    suspend fun trackVenueDeletion(venueId: String, sheetsId: String?, deletionTime: Long = System.currentTimeMillis()) = withContext(Dispatchers.IO) {
-        val deletedItem = DeletedItem(venueId, sheetsId, deletionTime, "venue")
+    suspend fun trackVenueDeletion(venueId: String, sheetsId: String?, deletionTime: Long = System.currentTimeMillis(), businessKey: String? = null) = withContext(Dispatchers.IO) {
+        val deletedItem = DeletedItem(venueId, sheetsId, deletionTime, "venue", businessKey)
         addDeletedItem(KEY_DELETED_VENUES, deletedItem)
     }
     
@@ -63,12 +69,24 @@ class DeletionTracker(private val context: Context) {
             put("sheetsId", deletedItem.sheetsId ?: "")
             put("deletionTime", deletedItem.deletionTime)
             put("type", deletedItem.type)
+            put("businessKey", deletedItem.businessKey ?: "")
         }
         
         jsonArray.put(itemJson)
-        prefs.edit().putString(key, jsonArray.toString()).apply()
+
+        // Prune entries older than MAX_AGE_MS to prevent unbounded growth
+        val now = System.currentTimeMillis()
+        val pruned = JSONArray()
+        for (i in 0 until jsonArray.length()) {
+            val obj = jsonArray.getJSONObject(i)
+            if (now - obj.getLong("deletionTime") < MAX_AGE_MS) {
+                pruned.put(obj)
+            }
+        }
+
+        prefs.edit().putString(key, pruned.toString()).apply()
         
-        println("Tracked deletion: ${deletedItem.type} with ID ${deletedItem.id}")
+        println("Tracked deletion: ${deletedItem.type} with ID ${deletedItem.id} (businessKey=${deletedItem.businessKey})")
     }
     
     suspend fun getDeletedGuests(): List<DeletedItem> = withContext(Dispatchers.IO) {
@@ -90,6 +108,22 @@ class DeletionTracker(private val context: Context) {
     suspend fun getDeletedVenues(): List<DeletedItem> = withContext(Dispatchers.IO) {
         getDeletedItems(KEY_DELETED_VENUES)
     }
+
+    /**
+     * Returns the set of business keys for all tracked deletions of a given entity type.
+     * Used by the merge-before-upload logic to exclude locally-deleted items.
+     */
+    suspend fun getDeletedBusinessKeys(entityType: String): Set<String> = withContext(Dispatchers.IO) {
+        val key = when (entityType) {
+            "guest" -> KEY_DELETED_GUESTS
+            "volunteer" -> KEY_DELETED_VOLUNTEERS
+            "job" -> KEY_DELETED_JOBS
+            "job_type" -> KEY_DELETED_JOB_TYPES
+            "venue" -> KEY_DELETED_VENUES
+            else -> return@withContext emptySet()
+        }
+        getDeletedItems(key).mapNotNull { it.businessKey?.takeIf(String::isNotEmpty) }.toSet()
+    }
     
     private fun getDeletedItems(key: String): List<DeletedItem> {
         val jsonString = prefs.getString(key, "[]") ?: "[]"
@@ -103,7 +137,8 @@ class DeletionTracker(private val context: Context) {
                     id = itemJson.getString("id"),
                     sheetsId = if (itemJson.getString("sheetsId").isEmpty()) null else itemJson.getString("sheetsId"),
                     deletionTime = itemJson.getLong("deletionTime"),
-                    type = itemJson.getString("type")
+                    type = itemJson.getString("type"),
+                    businessKey = itemJson.optString("businessKey", "").takeIf { it.isNotEmpty() }
                 )
             )
         }
