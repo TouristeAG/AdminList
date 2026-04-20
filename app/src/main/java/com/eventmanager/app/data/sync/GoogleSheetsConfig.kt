@@ -31,6 +31,7 @@ object GoogleSheetsConfig {
     const val JOBS_SHEET = "Shifts"
     const val JOB_TYPES_SHEET = "Shift Types"
     const val VENUES_SHEET = "Venues"
+    const val SALES_ITEMS_SHEET = "Sales"
     const val TEMP_GUEST_LIST_SHEET = "Temp Guest List"
     
     // Service account key file name (should be placed in assets folder)

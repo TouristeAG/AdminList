@@ -1208,7 +1208,7 @@ class GoogleSheetsService(private val context: Context) {
                     
                     val response = sheetsService?.spreadsheets()?.values()?.append(
                         settingsManager.getSpreadsheetId(),
-                        "JobTypes!A:J",
+                        "${settingsManager.getJobTypesSheet()}!A:J",
                         valueRange
                     )?.setValueInputOption("RAW")?.execute()
                     
@@ -1251,7 +1251,7 @@ class GoogleSheetsService(private val context: Context) {
                     
                     val response = sheetsService?.spreadsheets()?.values()?.update(
                         settingsManager.getSpreadsheetId(),
-                        "JobTypes!A$rowNumber:J$rowNumber",
+                        "${settingsManager.getJobTypesSheet()}!A$rowNumber:J$rowNumber",
                         valueRange
                     )?.setValueInputOption("RAW")?.execute()
                     
@@ -1281,7 +1281,7 @@ class GoogleSheetsService(private val context: Context) {
             ApiRateLimitHandler.executeWithRetry(
                 operation = {
                 // First, clear the entire sheet to prevent duplicate last rows
-                clearSheetRange("JobTypes!A:Z")
+                clearSheetRange("${settingsManager.getJobTypesSheet()}!A:Z")
                 println("🧹 Cleared entire job types sheet to prevent duplicates")
                 
                 val values = jobTypeConfigs.map { config -> jobTypeConfigToSheetRow(config) }
@@ -1293,7 +1293,7 @@ class GoogleSheetsService(private val context: Context) {
                 
                 val response = sheetsService?.spreadsheets()?.values()?.update(
                     settingsManager.getSpreadsheetId(),
-                    "JobTypes!A1",
+                    "${settingsManager.getJobTypesSheet()}!A1",
                     valueRange
                 )?.setValueInputOption("RAW")?.execute()
                 
@@ -1325,7 +1325,7 @@ class GoogleSheetsService(private val context: Context) {
                 operation = {
                 val response = sheetsService?.spreadsheets()?.values()?.get(
                     settingsManager.getSpreadsheetId(),
-                    "JobTypes!A2:J"
+                    "${settingsManager.getJobTypesSheet()}!A2:J"
                 )?.execute()
                 
                 if (response == null) {
@@ -1592,6 +1592,144 @@ class GoogleSheetsService(private val context: Context) {
         }
     }
 
+    // Sales Sheet Item Operations
+    suspend fun syncSalesSheetItemsToSheets(items: List<SalesSheetItem>) = withContext(Dispatchers.IO) {
+        try {
+            if (sheetsService == null) {
+                initializeSheetsService()
+            }
+
+            println("🔄 Syncing ${items.size} sales sheet items to Google Sheets (OVERWRITE MODE)...")
+
+            ApiRateLimitHandler.executeWithRetry(
+                operation = {
+                    clearSheetRange("${settingsManager.getSalesItemsSheet()}!A:Z")
+                    println("🧹 Cleared entire sales items sheet to prevent duplicates")
+
+                    val values = items.map { item ->
+                        listOf(
+                            item.name,
+                            item.price.toString(),
+                            if (item.hasDiscount) "Yes" else "No",
+                            item.requiredRank?.name.orEmpty(),
+                            if (item.isActive) "Active" else "Inactive",
+                            item.lastModified.toString()
+                        )
+                    }
+
+                    val valueRange = ValueRange()
+                        .setValues(
+                            listOf(
+                                listOf(
+                                    "Name",
+                                    "Price",
+                                    "Discount",
+                                    "Required Rank",
+                                    "Status",
+                                    "Last Modified"
+                                )
+                            ) + values
+                        )
+
+                    val response = sheetsService?.spreadsheets()?.values()?.update(
+                        settingsManager.getSpreadsheetId(),
+                        "${settingsManager.getSalesItemsSheet()}!A1",
+                        valueRange
+                    )?.setValueInputOption("RAW")?.execute()
+
+                    if (response == null) {
+                        throw IOException("Failed to update sales items in Google Sheets - no response received")
+                    }
+                    println("✅ Successfully synced ${items.size} sales items to Google Sheets")
+                },
+                operationName = "sync sales sheet items to sheets"
+            )
+        } catch (e: Exception) {
+            println("❌ Failed to sync sales sheet items to sheets: ${e.message}")
+            if (e.message?.contains("429") == true || e.message?.contains("Rate limit") == true) {
+                throw IOException(ApiRateLimitHandler.getBriefRateLimitMessage(), e)
+            } else {
+                throw IOException(createNetworkErrorMessage("sync sales sheet items to Google Sheets", e), e)
+            }
+        }
+    }
+
+    suspend fun syncSalesSheetItemsFromSheets(): List<SalesSheetItem> = withContext(Dispatchers.IO) {
+        try {
+            if (sheetsService == null) {
+                initializeSheetsService()
+            }
+
+            ApiRateLimitHandler.executeWithRetry(
+                operation = {
+                    val response = sheetsService?.spreadsheets()?.values()?.get(
+                        settingsManager.getSpreadsheetId(),
+                        "${settingsManager.getSalesItemsSheet()}!A2:F"
+                    )?.execute()
+
+                    if (response == null) {
+                        throw IOException("Failed to retrieve sales sheet items from Google Sheets - no response received")
+                    }
+
+                    val values = response.getValues() ?: emptyList()
+                    val skippedRows = mutableListOf<Pair<Int, Int>>()
+                    val items = values.mapIndexedNotNull { index, row ->
+                        if (row.size >= 4) {
+                            try {
+                                val rowNumber = index + 2
+                                val requiredRankRaw = row.getOrNull(3)?.toString().orEmpty()
+                                val normalizedRequiredRank = requiredRankRaw.trim()
+                                val requiredRank = if (normalizedRequiredRank.isEmpty()) {
+                                    null
+                                } else {
+                                    try {
+                                        VolunteerRank.valueOf(normalizedRequiredRank)
+                                    } catch (_: Exception) {
+                                        null
+                                    }
+                                }
+                                val discountRaw = row.getOrNull(2)?.toString().orEmpty().trim()
+                                val hasDiscount = when {
+                                    discountRaw.equals("yes", ignoreCase = true) -> true
+                                    discountRaw.equals("no", ignoreCase = true) -> false
+                                    discountRaw.toIntOrNull()?.let { it > 0 } == true -> true
+                                    else -> false
+                                }
+                                SalesSheetItem(
+                                    id = 0,
+                                    sheetsId = rowNumber.toString(),
+                                    name = row[0].toString(),
+                                    price = row.getOrNull(1)?.toString()?.toDoubleOrNull() ?: 0.0,
+                                    hasDiscount = hasDiscount,
+                                    requiredRank = requiredRank,
+                                    isActive = row.getOrNull(4)?.toString()?.equals("Inactive", ignoreCase = true) != true,
+                                    lastModified = parseLastModified(row.getOrNull(5)?.toString().orEmpty())
+                                )
+                            } catch (e: Exception) {
+                                println("Failed to parse sales sheet item row ${index + 2}: ${e.message}")
+                                null
+                            }
+                        } else {
+                            skippedRows.add((index + 2) to row.size)
+                            null
+                        }
+                    }
+                    logSkippedSheetRows("sales sheet item", skippedRows)
+                    println("Successfully parsed ${items.size} sales sheet items")
+                    items
+                },
+                operationName = "sync sales sheet items from sheets"
+            )
+        } catch (e: Exception) {
+            println("Failed to sync sales sheet items from sheets: ${e.message}")
+            if (e.message?.contains("429") == true || e.message?.contains("Rate limit") == true) {
+                throw IOException(ApiRateLimitHandler.getBriefRateLimitMessage(), e)
+            } else {
+                throw IOException(createNetworkErrorMessage("sync sales sheet items from Google Sheets", e), e)
+            }
+        }
+    }
+
     /**
      * Reads columns E–G (people count, writer device id, counter last modified) for one venue row.
      */
@@ -1847,7 +1985,7 @@ class GoogleSheetsService(private val context: Context) {
             listOf("Volunteer ID", "Job Type", "Venue", "Date", "Shift Time", "Notes", "Last Modified", "Entries left")
         ),
         SheetDefinition(
-            "JobTypes",
+            settingsManager.getJobTypesSheet(),
             listOf("Name", "Status", "Shift Type", "Orion Type", "Requires Time", "Benefit System", "Manual Rewards", "Description", "Last Modified", "Nova Job Type")
         ),
         SheetDefinition(
@@ -1877,6 +2015,10 @@ class GoogleSheetsService(private val context: Context) {
                 "Comment",
                 "ID"
             )
+        ),
+        SheetDefinition(
+            settingsManager.getSalesItemsSheet(),
+            listOf("Name", "Price", "Discount", "Required Rank", "Status", "Last Modified")
         )
     )
 

@@ -127,6 +127,7 @@ import com.eventmanager.app.ui.screens.AdminType
 import com.eventmanager.app.ui.screens.BilleterieHomeScreen
 import com.eventmanager.app.ui.screens.BilleterieScannerScreen
 import com.eventmanager.app.ui.screens.BilleterieSettingsScreen
+import com.eventmanager.app.ui.screens.SalesSheetItemManagementScreen
 import com.eventmanager.app.ui.screens.VenueManagementScreen
 import com.eventmanager.app.ui.screens.VolunteerScreen
 import com.eventmanager.app.ui.theme.EventManagerTheme
@@ -491,6 +492,7 @@ fun EventManagerApp(
     val pageAnimationsEnabled = settingsManager.isPageAnimationsEnabled()
     var showJobTypeManagement by rememberSaveable { mutableStateOf(false) }
     var showVenueManagement by rememberSaveable { mutableStateOf(false) }
+    var showSalesSheetItemManagement by rememberSaveable { mutableStateOf(false) }
     var showQRScanner by rememberSaveable { mutableStateOf(false) }
     var showVolunteerBenefits: Volunteer? by remember { mutableStateOf(null) }
     var showScannedGuestDetail: Guest? by remember { mutableStateOf(null) }
@@ -539,7 +541,8 @@ fun EventManagerApp(
                     db.volunteerDao(),
                     db.jobDao(),
                     db.jobTypeConfigDao(),
-                    db.venueDao()
+                    db.venueDao(),
+                    db.salesSheetItemDao()
                 )
             }
             val googleSheetsService = remember { GoogleSheetsService(appContext) }
@@ -679,6 +682,7 @@ fun EventManagerApp(
             selectedTab = 0
             showJobTypeManagement = false
             showVenueManagement = false
+            showSalesSheetItemManagement = false
         }
         val mainActivity = context as? MainActivity
         DisposableEffect(adminSurfaceActive, mainActivity) {
@@ -1001,6 +1005,7 @@ fun EventManagerApp(
                                                 // Close any open settings dialogs when switching tabs
                                                 showJobTypeManagement = false
                                                 showVenueManagement = false
+                                                showSalesSheetItemManagement = false
                                                 // Very subtle haptic feedback for page change
                                                 performSubtleHaptic(vibrator)
                                             }
@@ -1081,6 +1086,7 @@ fun EventManagerApp(
                                             // Close any open settings dialogs when switching tabs
                                             showJobTypeManagement = false
                                             showVenueManagement = false
+                                            showSalesSheetItemManagement = false
                                             // Very subtle haptic feedback for page change
                                             performSubtleHaptic(vibrator)
                                         }
@@ -1132,6 +1138,7 @@ fun EventManagerApp(
                         selectedTab = 0
                         showJobTypeManagement = false
                         showVenueManagement = false
+                        showSalesSheetItemManagement = false
                     }
                     // Animated background
                     AnimatedBackground(
@@ -1214,6 +1221,7 @@ fun EventManagerApp(
                                                 // Close any open settings dialogs when swiping to a different tab
                                                 showJobTypeManagement = false
                                                 showVenueManagement = false
+                                                showSalesSheetItemManagement = false
                                                 // Very subtle haptic feedback for page change
                                                 performSubtleHaptic(capturedVibrator)
                                                 previousTab = selectedTab
@@ -1227,6 +1235,7 @@ fun EventManagerApp(
                                                 // Close any open settings dialogs when swiping to a different tab
                                                 showJobTypeManagement = false
                                                 showVenueManagement = false
+                                                showSalesSheetItemManagement = false
                                                 // Very subtle haptic feedback for page change
                                                 performSubtleHaptic(capturedVibrator)
                                                 previousTab = selectedTab
@@ -1249,6 +1258,7 @@ fun EventManagerApp(
                 val currentScreenState = when {
                     showJobTypeManagement -> "management:jobtype"
                     showVenueManagement -> "management:venue"
+                    showSalesSheetItemManagement -> "management:sales-items"
                     else -> "tab:$selectedTab"
                 }
                 
@@ -1317,6 +1327,12 @@ if (pageAnimationsEnabled) {
                                     showVenueManagement = false
                                 }
                             }
+                            screenState == "management:sales-items" -> key("sales_sheet_item_management") {
+                                SalesSheetItemManagementScreenWithViewModel(viewModel) {
+                                    println("Exiting Sales Sheet Item Management")
+                                    showSalesSheetItemManagement = false
+                                }
+                            }
                             screenState == "tab:0" -> key("dashboard") {
                                 DashboardScreenWithViewModel(
                                     viewModel = viewModel,
@@ -1344,6 +1360,11 @@ if (pageAnimationsEnabled) {
                                         println("Navigating to Venue Management")
                                         viewModel.syncVenuesWithTargetedUpdates()
                                         showVenueManagement = true 
+                                    },
+                                    onNavigateToSalesSheetItemManagement = {
+                                        println("Navigating to Sales Sheet Item Management")
+                                        viewModel.syncSalesSheetItemsWithTargetedUpdates()
+                                        showSalesSheetItemManagement = true
                                     }
                                 )
                             }
@@ -1363,6 +1384,12 @@ if (pageAnimationsEnabled) {
                             VenueManagementScreenWithViewModel(viewModel) {
                                 println("Exiting Venue Management")
                                 showVenueManagement = false
+                            }
+                        }
+                        showSalesSheetItemManagement -> key("sales_sheet_item_management") {
+                            SalesSheetItemManagementScreenWithViewModel(viewModel) {
+                                println("Exiting Sales Sheet Item Management")
+                                showSalesSheetItemManagement = false
                             }
                         }
                         selectedTab == 0 -> key("dashboard") {
@@ -1392,6 +1419,11 @@ if (pageAnimationsEnabled) {
                                     println("Navigating to Venue Management")
                                     viewModel.syncVenuesWithTargetedUpdates()
                                     showVenueManagement = true 
+                                },
+                                onNavigateToSalesSheetItemManagement = {
+                                    println("Navigating to Sales Sheet Item Management")
+                                    viewModel.syncSalesSheetItemsWithTargetedUpdates()
+                                    showSalesSheetItemManagement = true
                                 }
                             )
                         }
@@ -3090,6 +3122,69 @@ fun VenueManagementScreenWithViewModel(
                     viewModel.updateVenueStatus(id, isActive)
                 } catch (e: Exception) {
                     println("Venue status update failed: ${e.message}")
+                }
+            }
+        },
+        onBack = _onBack
+    )
+}
+
+@Composable
+fun SalesSheetItemManagementScreenWithViewModel(
+    viewModel: EventManagerViewModel,
+    _onBack: () -> Unit
+) {
+    val items by viewModel.salesSheetItems.collectAsState()
+    val coroutineScope = rememberCoroutineScope()
+    var isInitialized by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isInitialized) {
+        if (!isInitialized) {
+            println("Sales Sheet Item Management screen loaded - triggering TARGETED sales items sync")
+            viewModel.syncSalesSheetItemsWithTargetedUpdates()
+            isInitialized = true
+        }
+    }
+
+    BackHandler {
+        _onBack()
+    }
+
+    SalesSheetItemManagementScreen(
+        items = items,
+        onAddItem = { item ->
+            coroutineScope.launch {
+                try {
+                    viewModel.addSalesSheetItem(item)
+                } catch (e: Exception) {
+                    println("Sales sheet item addition failed: ${e.message}")
+                }
+            }
+        },
+        onUpdateItem = { item ->
+            coroutineScope.launch {
+                try {
+                    viewModel.updateSalesSheetItem(item)
+                } catch (e: Exception) {
+                    println("Sales sheet item update failed: ${e.message}")
+                }
+            }
+        },
+        onDeleteItem = { item ->
+            coroutineScope.launch {
+                try {
+                    viewModel.deleteSalesSheetItem(item)
+                } catch (e: Exception) {
+                    println("Sales sheet item deletion failed: ${e.message}")
+                }
+            }
+        },
+        onUpdateItemStatus = { id, isActive ->
+            coroutineScope.launch {
+                try {
+                    viewModel.updateSalesSheetItemStatus(id, isActive)
+                } catch (e: Exception) {
+                    println("Sales sheet item status update failed: ${e.message}")
                 }
             }
         },

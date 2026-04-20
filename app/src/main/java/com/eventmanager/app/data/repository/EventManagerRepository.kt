@@ -3,6 +3,7 @@ package com.eventmanager.app.data.repository
 import com.eventmanager.app.data.dao.GuestDao
 import com.eventmanager.app.data.dao.JobDao
 import com.eventmanager.app.data.dao.JobTypeConfigDao
+import com.eventmanager.app.data.dao.SalesSheetItemDao
 import com.eventmanager.app.data.dao.VenueDao
 import com.eventmanager.app.data.dao.VolunteerDao
 import com.eventmanager.app.data.models.*
@@ -22,7 +23,8 @@ class EventManagerRepository(
     private val volunteerDao: VolunteerDao,
     private val jobDao: JobDao,
     private val jobTypeConfigDao: JobTypeConfigDao,
-    private val venueDao: VenueDao
+    private val venueDao: VenueDao,
+    private val salesSheetItemDao: SalesSheetItemDao
 ) {
     // Guest operations
     fun getAllGuests(): Flow<List<Guest>> = guestDao.getAllGuests()
@@ -271,6 +273,20 @@ class EventManagerRepository(
     suspend fun updateVenuesAll(venues: List<VenueEntity>) = venueDao.updateVenuesAll(venues)
     suspend fun deleteVenuesAll(venues: List<VenueEntity>) = venueDao.deleteVenuesAll(venues)
 
+    // Sales sheet item operations
+    fun getAllSalesSheetItems(): Flow<List<SalesSheetItem>> = salesSheetItemDao.getAllSalesSheetItems()
+    suspend fun getSalesSheetItemById(id: Long): SalesSheetItem? = salesSheetItemDao.getSalesSheetItemById(id)
+    suspend fun insertSalesSheetItem(item: SalesSheetItem): Long = salesSheetItemDao.insertSalesSheetItem(item)
+    suspend fun updateSalesSheetItem(item: SalesSheetItem) = salesSheetItemDao.updateSalesSheetItem(item)
+    suspend fun deleteSalesSheetItem(item: SalesSheetItem) = salesSheetItemDao.deleteSalesSheetItem(item)
+    suspend fun updateSalesSheetItemStatus(id: Long, isActive: Boolean) = salesSheetItemDao.updateSalesSheetItemStatus(id, isActive)
+    suspend fun clearAllSalesSheetItems() = salesSheetItemDao.deleteAllSalesSheetItems()
+
+    // Batch sales sheet item operations for optimized sync
+    suspend fun insertSalesSheetItemsAll(items: List<SalesSheetItem>): List<Long> = salesSheetItemDao.insertSalesSheetItemsAll(items)
+    suspend fun updateSalesSheetItemsAll(items: List<SalesSheetItem>) = salesSheetItemDao.updateSalesSheetItemsAll(items)
+    suspend fun deleteSalesSheetItemsAll(items: List<SalesSheetItem>) = salesSheetItemDao.deleteSalesSheetItemsAll(items)
+
     // Get volunteer benefit status with time-based calculations
     suspend fun getVolunteerBenefitStatus(volunteerId: String, offsetHours: Int = 0): VolunteerBenefitStatus? {
         val volunteer = getVolunteerById(volunteerId) ?: return null
@@ -312,6 +328,7 @@ class EventManagerRepository(
         jobDao.deleteAllJobs()
         jobTypeConfigDao.deleteAllJobTypeConfigs()
         venueDao.deleteAllVenues()
+        salesSheetItemDao.deleteAllSalesSheetItems()
     }
     
     suspend fun clearAllGuests() {
@@ -329,6 +346,6 @@ class EventManagerRepository(
     suspend fun clearAllJobTypeConfigs() {
         jobTypeConfigDao.deleteAllJobTypeConfigs()
     }
-    
+
 }
 

@@ -1111,6 +1111,7 @@ fun SettingsScreen(
     viewModel: EventManagerViewModel,
     onNavigateToJobTypeManagement: () -> Unit = {},
     onNavigateToVenueManagement: () -> Unit = {},
+    onNavigateToSalesSheetItemManagement: () -> Unit = {},
     variant: SettingsScreenVariant = SettingsScreenVariant.Full,
     modifier: Modifier = Modifier
 ) {
@@ -1126,6 +1127,7 @@ fun SettingsScreen(
     var volunteerGuestListSheet by remember { mutableStateOf(settingsManager.getVolunteerGuestListSheet()) }
     var jobTypesSheet by remember { mutableStateOf(settingsManager.getJobTypesSheet()) }
     var venuesSheet by remember { mutableStateOf(settingsManager.getVenuesSheet()) }
+    var salesItemsSheet by remember { mutableStateOf(settingsManager.getSalesItemsSheet()) }
     var tempGuestListSheet by remember { mutableStateOf(settingsManager.getTempGuestListSheet()) }
     var showInstructions by remember { mutableStateOf(false) }
     var jsonKeyInfo by remember { mutableStateOf<JsonKeyInfo?>(null) }
@@ -1381,6 +1383,18 @@ fun SettingsScreen(
                             }
                         )
                     }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    OutlinedTextField(
+                        value = salesItemsSheet,
+                        onValueChange = { salesItemsSheet = it },
+                        label = { Text(context.getString(R.string.sales_items_sheet_label)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        leadingIcon = {
+                            Icon(Icons.Default.PointOfSale, contentDescription = null)
+                        }
+                    )
                     
                     Spacer(modifier = Modifier.height(24.dp))
                     
@@ -1395,6 +1409,7 @@ fun SettingsScreen(
                             settingsManager.saveTempGuestListSheet(tempGuestListSheet)
                             settingsManager.saveJobTypesSheet(jobTypesSheet)
                             settingsManager.saveVenuesSheet(venuesSheet)
+                            settingsManager.saveSalesItemsSheet(salesItemsSheet)
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -3657,6 +3672,55 @@ fun SettingsScreen(
         
         Spacer(modifier = Modifier.height(24.dp))
         
+        // Sales Items Management Section
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.PointOfSale,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = context.getString(R.string.sales_items_management_title),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = context.getString(R.string.sales_items_management_description),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Button(
+                    onClick = onNavigateToSalesSheetItemManagement,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.Settings, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(context.getString(R.string.manage_sales_items))
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
         // Venue Management Section
         Card(
             modifier = Modifier.fillMaxWidth(),

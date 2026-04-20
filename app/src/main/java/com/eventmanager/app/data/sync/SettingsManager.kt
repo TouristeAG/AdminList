@@ -20,6 +20,7 @@ class SettingsManager(context: Context) {
         private const val KEY_JOB_TYPES_SHEET = "job_types_sheet"
         private const val KEY_VOLUNTEER_GUEST_LIST_SHEET = "volunteer_guest_list_sheet"
         private const val KEY_VENUES_SHEET = "venues_sheet"
+        private const val KEY_SALES_ITEMS_SHEET = "sales_items_sheet"
         private const val KEY_TEMP_GUEST_LIST_SHEET = "temp_guest_list_sheet"
         private const val KEY_SYNC_ENABLED = "sync_enabled"
         private const val KEY_AUTO_SYNC = "auto_sync"
@@ -157,6 +158,15 @@ class SettingsManager(context: Context) {
 
     fun saveVenuesSheet(sheet: String) {
         prefs.edit().putString(KEY_VENUES_SHEET, sheet).apply()
+    }
+
+    fun getSalesItemsSheet(): String {
+        return prefs.getString(KEY_SALES_ITEMS_SHEET, GoogleSheetsConfig.SALES_ITEMS_SHEET)
+            ?: GoogleSheetsConfig.SALES_ITEMS_SHEET
+    }
+
+    fun saveSalesItemsSheet(sheet: String) {
+        prefs.edit().putString(KEY_SALES_ITEMS_SHEET, sheet).apply()
     }
 
     fun getTempGuestListSheet(): String {

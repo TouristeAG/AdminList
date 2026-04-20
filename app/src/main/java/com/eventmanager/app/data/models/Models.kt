@@ -269,6 +269,29 @@ data class VenueEntity(
     val announcementSenderDeviceId: String = ""
 ) : Parcelable
 
+@Entity(
+    tableName = "sales_sheet_items",
+    indices = [
+        Index(value = ["sheetsId"]),
+        Index(value = ["name"], unique = true),
+        Index(value = ["requiredRank"]),
+        Index(value = ["isActive"]),
+        Index(value = ["lastModified"])
+    ]
+)
+@Parcelize
+data class SalesSheetItem(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val sheetsId: String? = null, // Google Sheets row ID for syncing
+    val name: String,
+    val price: Double,
+    val hasDiscount: Boolean = false,
+    val requiredRank: VolunteerRank? = null,
+    val isActive: Boolean = true,
+    val lastModified: Long = System.currentTimeMillis()
+) : Parcelable
+
 enum class ShiftTime {
     BEFORE_MIDNIGHT,
     AFTER_MIDNIGHT
@@ -1024,6 +1047,7 @@ object BenefitCalculator {
         }
     }
 }
+
 
 
 

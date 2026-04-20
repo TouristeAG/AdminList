@@ -19,6 +19,7 @@ import com.eventmanager.app.data.sync.VolunteerSyncResult
 import com.eventmanager.app.data.sync.GuestSyncResult
 import com.eventmanager.app.data.sync.JobSyncResult
 import com.eventmanager.app.data.sync.JobTypeSyncResult
+import com.eventmanager.app.data.sync.SalesSheetItemSyncResult
 import com.eventmanager.app.data.sync.VenueSyncResult
 import com.eventmanager.app.data.sync.SyncErrorManager
 import com.eventmanager.app.data.sync.AppLogger
@@ -85,6 +86,9 @@ class EventManagerViewModel(
 
     private val _venues = MutableStateFlow<List<VenueEntity>>(emptyList())
     val venues: StateFlow<List<VenueEntity>> = _venues
+
+    private val _salesSheetItems = MutableStateFlow<List<SalesSheetItem>>(emptyList())
+    val salesSheetItems: StateFlow<List<SalesSheetItem>> = _salesSheetItems
 
     private val _peopleCounterSelectedVenueId = MutableStateFlow(0L)
     val peopleCounterSelectedVenueId: StateFlow<Long> = _peopleCounterSelectedVenueId.asStateFlow()
@@ -456,6 +460,16 @@ class EventManagerViewModel(
             } catch (e: Exception) {
                 println("Failed to load venues: ${e.message}")
                 _venues.value = emptyList()
+            }
+        }
+        viewModelScope.launch {
+            try {
+                repository.getAllSalesSheetItems().collect {
+                    _salesSheetItems.value = it
+                }
+            } catch (e: Exception) {
+                println("Failed to load sales sheet items: ${e.message}")
+                _salesSheetItems.value = emptyList()
             }
         }
     }
@@ -1104,6 +1118,60 @@ class EventManagerViewModel(
             } catch (e: Exception) {
                 println("Failed to update venue status: ${e.message}")
                 _syncError.value = "Failed to update venue status: ${e.message}"
+            }
+        }
+    }
+
+    // Sales sheet item operations
+    fun addSalesSheetItem(item: SalesSheetItem) {
+        viewModelScope.launch {
+            try {
+                repository.insertSalesSheetItem(item)
+                twoWaySyncService?.backupSalesSheetItemsToSheets()
+                println("Successfully added sales sheet item: ${item.name}")
+            } catch (e: Exception) {
+                println("Failed to add sales sheet item: ${e.message}")
+                _syncError.value = "Failed to add sales sheet item: ${e.message}"
+            }
+        }
+    }
+
+    fun updateSalesSheetItem(item: SalesSheetItem) {
+        viewModelScope.launch {
+            try {
+                repository.updateSalesSheetItem(item)
+                twoWaySyncService?.backupSalesSheetItemsToSheets()
+                println("Successfully updated sales sheet item: ${item.name}")
+            } catch (e: Exception) {
+                println("Failed to update sales sheet item: ${e.message}")
+                _syncError.value = "Failed to update sales sheet item: ${e.message}"
+            }
+        }
+    }
+
+    fun deleteSalesSheetItem(item: SalesSheetItem) {
+        viewModelScope.launch {
+            try {
+                deletionTracker?.trackSalesSheetItemDeletion(item.id.toString(), item.sheetsId, businessKey = item.name)
+                repository.deleteSalesSheetItem(item)
+                twoWaySyncService?.backupSalesSheetItemsToSheets()
+                println("Successfully deleted sales sheet item: ${item.name}")
+            } catch (e: Exception) {
+                println("Failed to delete sales sheet item: ${e.message}")
+                _syncError.value = "Failed to delete sales sheet item: ${e.message}"
+            }
+        }
+    }
+
+    fun updateSalesSheetItemStatus(id: Long, isActive: Boolean) {
+        viewModelScope.launch {
+            try {
+                repository.updateSalesSheetItemStatus(id, isActive)
+                twoWaySyncService?.backupSalesSheetItemsToSheets()
+                println("Successfully updated sales sheet item status: $id to $isActive")
+            } catch (e: Exception) {
+                println("Failed to update sales sheet item status: ${e.message}")
+                _syncError.value = "Failed to update sales sheet item status: ${e.message}"
             }
         }
     }
@@ -2582,6 +2650,11 @@ class EventManagerViewModel(
         val updatedVenues = repository.getAllVenues().first()
         _venues.value = removeDuplicateVenues(updatedVenues)
     }
+
+    private suspend fun refreshSalesSheetItemData() {
+        val updatedItems = repository.getAllSalesSheetItems().first()
+        _salesSheetItems.value = updatedItems
+    }
     
     private fun updateSyncTime() {
         val currentTime = System.currentTimeMillis()
@@ -3266,18 +3339,19 @@ class EventManagerViewModel(
             delay(100)
             
             // Get data from repository on IO dispatcher
-            val (guests, volunteers, jobs, jobTypeConfigs, venues) = withContext(Dispatchers.IO) {
+            val (guests, volunteers, jobs, jobTypeConfigs, venues, salesSheetItems) = withContext(Dispatchers.IO) {
                 println("📊 Reading fresh data from database...")
                 val guestsData = repository.getAllGuests().first()
                 val volunteersData = repository.getAllVolunteers().first()
                 val jobsData = repository.getAllJobs().first()
                 val jobTypeConfigsData = repository.getAllJobTypeConfigs().first()
                 val venuesData = repository.getAllVenues().first()
+                val salesSheetItemsData = repository.getAllSalesSheetItems().first()
                 
-                println("📊 Database read complete: ${guestsData.size} guests, ${volunteersData.size} volunteers, ${jobsData.size} jobs, ${jobTypeConfigsData.size} job types, ${venuesData.size} venues")
+                println("📊 Database read complete: ${guestsData.size} guests, ${volunteersData.size} volunteers, ${jobsData.size} jobs, ${jobTypeConfigsData.size} job types, ${venuesData.size} venues, ${salesSheetItemsData.size} sales items")
                 
                 // Return all data as a tuple
-                Quint(guestsData, volunteersData, jobsData, jobTypeConfigsData, venuesData)
+                Sext(guestsData, volunteersData, jobsData, jobTypeConfigsData, venuesData, salesSheetItemsData)
             }
             
             // Update StateFlows on Main dispatcher to ensure Compose recomposition
@@ -3293,8 +3367,9 @@ class EventManagerViewModel(
                 _jobs.value = removeDuplicateJobs(jobs).toList()
                 _jobTypeConfigs.value = removeDuplicateJobTypes(jobTypeConfigs).toList()
                 _venues.value = removeDuplicateVenues(venues).toList()
+                _salesSheetItems.value = salesSheetItems.sortedBy { it.name }
                 
-                println("✅ StateFlows updated - Guests: $oldGuestCount → ${_guests.value.size}, Volunteers: $oldVolunteerCount → ${_volunteers.value.size}, Jobs: ${_jobs.value.size}, Job Types: ${_jobTypeConfigs.value.size}, Venues: ${_venues.value.size}")
+                println("✅ StateFlows updated - Guests: $oldGuestCount → ${_guests.value.size}, Volunteers: $oldVolunteerCount → ${_volunteers.value.size}, Jobs: ${_jobs.value.size}, Job Types: ${_jobTypeConfigs.value.size}, Venues: ${_venues.value.size}, Sales Items: ${_salesSheetItems.value.size}")
                 println("✅ UI should now recompose with new data")
             }
         } catch (e: Exception) {
@@ -3303,8 +3378,9 @@ class EventManagerViewModel(
         }
     }
     
-    // Helper class for returning 5 values from suspend function
+    // Helper classes for returning values from suspend function
     private data class Quint<A, B, C, D, E>(val first: A, val second: B, val third: C, val fourth: D, val fifth: E)
+    private data class Sext<A, B, C, D, E, F>(val first: A, val second: B, val third: C, val fourth: D, val fifth: E, val sixth: F)
     
     /**
      * Updates volunteer activity based on current jobs
@@ -4589,6 +4665,79 @@ class EventManagerViewModel(
             } finally {
                 _isSyncing.value = false
             }
+        }
+    }
+
+    fun syncSalesSheetItemsWithTargetedUpdates() {
+        viewModelScope.launch {
+            _isSyncing.value = true
+            _syncError.value = null
+
+            try {
+                println("🔄 Starting TARGETED sales sheet item sync with UI updates...")
+
+                if (!isGoogleSheetsConfigured()) {
+                    val errorMsg = "Google Sheets not configured. Please check your service account key and spreadsheet settings."
+                    println(errorMsg)
+                    _syncError.value = errorMsg
+                    return@launch
+                }
+
+                googleSheetsService.initializeSheetsService()
+
+                val result = syncManager?.performSalesSheetItemDifferentialSync()
+                if (result is SalesSheetItemSyncResult.Success) {
+                    val changes = result.changes
+                    println("📋 Sales sheet item changes: ${changes.new.size} new, ${changes.modified.size} modified, ${changes.deleted.size} deleted")
+                    applySalesSheetItemUIUpdates(changes)
+                    updateSyncTime()
+                    println("✅ Targeted sales sheet item sync completed successfully")
+                } else {
+                    val errorResult = result as? SalesSheetItemSyncResult.Error
+                    val errorMsg = errorResult?.message ?: "Targeted sales sheet item sync failed"
+                    _syncError.value = errorMsg
+                    showSyncErrorIfNotSuppressed(errorMsg)
+                }
+            } catch (e: Exception) {
+                val errorMsg = when {
+                    e.message?.contains("429") == true || e.message?.contains("Rate limit") == true -> "Rate limit exceeded. Please try again later."
+                    else -> "Targeted sales sheet item sync failed: ${e.message}"
+                }
+                _syncError.value = errorMsg
+                showSyncErrorIfNotSuppressed(errorMsg)
+                println("❌ Targeted sales sheet item sync error: $errorMsg")
+            } finally {
+                _isSyncing.value = false
+            }
+        }
+    }
+
+    private suspend fun applySalesSheetItemUIUpdates(changes: DifferentialSyncService.SyncChanges<SalesSheetItem>) {
+        try {
+            val currentItems = _salesSheetItems.value.toMutableList()
+            fun key(item: SalesSheetItem) = item.name
+
+            changes.deleted.forEach { deleted ->
+                currentItems.removeAll { key(it) == key(deleted) }
+            }
+
+            changes.new.forEach { added ->
+                currentItems.add(added)
+            }
+
+            changes.modified.forEach { modified ->
+                val index = currentItems.indexOfFirst { key(it) == key(modified) }
+                if (index >= 0) {
+                    currentItems[index] = modified.copy(id = currentItems[index].id)
+                }
+            }
+
+            _salesSheetItems.value = currentItems.sortedBy { it.name }
+            println("✅ Applied ${changes.totalChanges} targeted sales sheet item UI updates")
+        } catch (e: Exception) {
+            println("❌ Failed to apply targeted sales sheet item UI updates: ${e.message}")
+            e.printStackTrace()
+            refreshSalesSheetItemData()
         }
     }
     

@@ -46,6 +46,7 @@ class DifferentialSyncService(
     private fun jobTypeSyncKey(config: JobTypeConfig): String = config.name
 
     private fun venueSyncKey(venue: VenueEntity): String = venue.name
+    private fun salesSheetItemSyncKey(item: SalesSheetItem): String = item.name
     
     /**
      * Data class to hold sync changes for a specific entity type
@@ -68,18 +69,20 @@ class DifferentialSyncService(
         val volunteers: SyncChanges<Volunteer> = SyncChanges(),
         val jobs: SyncChanges<Job> = SyncChanges(),
         val jobTypeConfigs: SyncChanges<JobTypeConfig> = SyncChanges(),
+        val salesSheetItems: SyncChanges<SalesSheetItem> = SyncChanges(),
         val venues: SyncChanges<VenueEntity> = SyncChanges(),
         val syncTime: Long = System.currentTimeMillis()
     ) {
         fun hasAnyChanges(): Boolean =
             guests.hasChanges || volunteers.hasChanges || jobs.hasChanges || 
-            jobTypeConfigs.hasChanges || venues.hasChanges
+            jobTypeConfigs.hasChanges || salesSheetItems.hasChanges || venues.hasChanges
         
         fun summary(): String = buildString {
             append("Guests: ${guests.new.size} new, ${guests.modified.size} modified, ${guests.deleted.size} deleted")
             append(" | Volunteers: ${volunteers.new.size} new, ${volunteers.modified.size} modified, ${volunteers.deleted.size} deleted")
             append(" | Jobs: ${jobs.new.size} new, ${jobs.modified.size} modified, ${jobs.deleted.size} deleted")
             append(" | JobTypes: ${jobTypeConfigs.new.size} new, ${jobTypeConfigs.modified.size} modified, ${jobTypeConfigs.deleted.size} deleted")
+            append(" | SalesItems: ${salesSheetItems.new.size} new, ${salesSheetItems.modified.size} modified, ${salesSheetItems.deleted.size} deleted")
             append(" | Venues: ${venues.new.size} new, ${venues.modified.size} modified, ${venues.deleted.size} deleted")
         }
     }
@@ -313,6 +316,44 @@ class DifferentialSyncService(
         old.announcementMessage != new.announcementMessage ||
         old.announcementSentAt != new.announcementSentAt ||
         old.announcementSenderDeviceId != new.announcementSenderDeviceId
+
+    // ========== SALES SHEET ITEM COMPARISON ==========
+
+    suspend fun compareSalesSheetItems(
+        tempItems: List<SalesSheetItem>,
+        mainItems: List<SalesSheetItem>
+    ): SyncChanges<SalesSheetItem> = withContext(Dispatchers.Default) {
+        val mainMap = mainItems.associateBy { salesSheetItemSyncKey(it) }
+        val tempMap = tempItems.associateBy { salesSheetItemSyncKey(it) }
+
+        val new = mutableListOf<SalesSheetItem>()
+        val modified = mutableListOf<SalesSheetItem>()
+        val unchanged = mutableListOf<SalesSheetItem>()
+
+        for ((key, tempItem) in tempMap) {
+            val mainItem = mainMap[key]
+            if (mainItem == null) {
+                new.add(tempItem)
+            } else if (hasSalesSheetItemChanged(mainItem, tempItem)) {
+                modified.add(tempItem)
+            } else {
+                unchanged.add(tempItem)
+            }
+        }
+
+        val deleted = mainItems.filter { mainItem ->
+            !tempMap.containsKey(salesSheetItemSyncKey(mainItem))
+        }
+
+        SyncChanges(new, modified, deleted, unchanged)
+    }
+
+    private fun hasSalesSheetItemChanged(old: SalesSheetItem, new: SalesSheetItem): Boolean =
+        old.name != new.name ||
+            old.price != new.price ||
+            old.hasDiscount != new.hasDiscount ||
+            old.requiredRank != new.requiredRank ||
+            old.isActive != new.isActive
     
     // ========== APPLY CHANGES ==========
     
@@ -363,6 +404,17 @@ class DifferentialSyncService(
         }
         if (result.jobTypeConfigs.deleted.isNotEmpty()) {
             repository.deleteJobTypeConfigsAll(result.jobTypeConfigs.deleted)
+        }
+
+        // Apply sales sheet item changes (batch operations)
+        if (result.salesSheetItems.new.isNotEmpty()) {
+            repository.insertSalesSheetItemsAll(result.salesSheetItems.new)
+        }
+        if (result.salesSheetItems.modified.isNotEmpty()) {
+            repository.updateSalesSheetItemsAll(result.salesSheetItems.modified)
+        }
+        if (result.salesSheetItems.deleted.isNotEmpty()) {
+            repository.deleteSalesSheetItemsAll(result.salesSheetItems.deleted)
         }
         
         // Apply venue changes (batch operations)

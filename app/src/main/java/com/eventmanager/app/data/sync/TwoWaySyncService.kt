@@ -61,22 +61,24 @@ class TwoWaySyncService(
             val jobs = repository.getAllJobs().first()
             val jobTypeConfigs = repository.getAllJobTypeConfigs().first()
             val venues = repository.getAllVenues().first()
+            val salesSheetItems = repository.getAllSalesSheetItems().first()
             
             println("Starting backup to Google Sheets...")
-            println("Backing up: ${guests.size} guests, ${volunteers.size} volunteers, ${jobs.size} jobs, ${jobTypeConfigs.size} job types, ${venues.size} venues")
+            println("Backing up: ${guests.size} guests, ${volunteers.size} volunteers, ${jobs.size} jobs, ${jobTypeConfigs.size} job types, ${venues.size} venues, ${salesSheetItems.size} sales items")
             
             // Read current remote data in parallel for merge
-            val (remoteJobTypeConfigs, remoteGuests, remoteVolunteers, remoteVenues) = try {
+            val (remoteJobTypeConfigs, remoteGuests, remoteVolunteers, remoteVenues, remoteSalesSheetItems) = try {
                 coroutineScope {
                     val jtcDef = async { try { googleSheetsService.syncJobTypeConfigsFromSheets() } catch (_: Exception) { emptyList() } }
                     val gDef = async { try { googleSheetsService.syncGuestsFromSheets() } catch (_: Exception) { emptyList() } }
                     val vDef = async { try { googleSheetsService.syncVolunteersFromSheets() } catch (_: Exception) { emptyList() } }
                     val vnDef = async { try { googleSheetsService.syncVenuesFromSheets() } catch (_: Exception) { emptyList() } }
-                    Quad(jtcDef.await(), gDef.await(), vDef.await(), vnDef.await())
+                    val siDef = async { try { googleSheetsService.syncSalesSheetItemsFromSheets() } catch (_: Exception) { emptyList() } }
+                    Quint(jtcDef.await(), gDef.await(), vDef.await(), vnDef.await(), siDef.await())
                 }
             } catch (e: Exception) {
                 println("⚠️ Could not read remote data for merge, uploading local only: ${e.message}")
-                Quad(emptyList<JobTypeConfig>(), emptyList<Guest>(), emptyList<Volunteer>(), emptyList<VenueEntity>())
+                Quint(emptyList<JobTypeConfig>(), emptyList<Guest>(), emptyList<Volunteer>(), emptyList<VenueEntity>(), emptyList<SalesSheetItem>())
             }
 
             val remoteJobs = try {
@@ -90,6 +92,7 @@ class TwoWaySyncService(
             val delJob = deletionTracker.getDeletedBusinessKeys("job")
             val delJobType = deletionTracker.getDeletedBusinessKeys("job_type")
             val delVenue = deletionTracker.getDeletedBusinessKeys("venue")
+            val delSalesItem = deletionTracker.getDeletedBusinessKeys("sales_item")
 
             // Merge each entity type
             val mergedJobTypeConfigs = mergeLocalWithRemote(
@@ -116,8 +119,11 @@ class TwoWaySyncService(
             val mergedVenues = mergeLocalWithRemote(
                 venues, remoteVenues, { it.name }, { it.lastModified }, delVenue
             )
+            val mergedSalesSheetItems = mergeLocalWithRemote(
+                salesSheetItems, remoteSalesSheetItems, { it.name }, { it.lastModified }, delSalesItem
+            )
 
-            println("📊 After merge: ${mergedRegularGuests.size} guests, ${mergedVolunteers.size} volunteers, ${mergedJobs.size} jobs, ${mergedJobTypeConfigs.size} job types, ${mergedVenues.size} venues")
+            println("📊 After merge: ${mergedRegularGuests.size} guests, ${mergedVolunteers.size} volunteers, ${mergedJobs.size} jobs, ${mergedJobTypeConfigs.size} job types, ${mergedVenues.size} venues, ${mergedSalesSheetItems.size} sales items")
             
             // Upload merged datasets
             googleSheetsService.syncJobTypeConfigsToSheets(mergedJobTypeConfigs)
@@ -125,6 +131,7 @@ class TwoWaySyncService(
             googleSheetsService.syncVolunteersToSheets(mergedVolunteers)
             googleSheetsService.syncJobsToSheets(mergedJobs, mergedVenues, mergedJobTypeConfigs)
             googleSheetsService.syncVenuesToSheets(mergedVenues)
+            googleSheetsService.syncSalesSheetItemsToSheets(mergedSalesSheetItems)
 
             // Reflect merged snapshot locally so UI updates without a second sync.
             applyMergedSnapshotToLocal(
@@ -132,7 +139,8 @@ class TwoWaySyncService(
                 volunteers = mergedVolunteers,
                 jobs = mergedJobs,
                 jobTypeConfigs = mergedJobTypeConfigs,
-                venues = mergedVenues
+                venues = mergedVenues,
+                salesSheetItems = mergedSalesSheetItems
             )
             
             // Update last sync time
@@ -168,11 +176,12 @@ class TwoWaySyncService(
             println("Starting sync from Google Sheets...")
             
             // OPTIMIZATION: Download data in parallel (except jobs which depends on jobTypeConfigs)
-            val (remoteJobTypeConfigs, remoteGuests, remoteVolunteers, remoteVenues) = coroutineScope {
+            val (remoteJobTypeConfigs, remoteGuests, remoteVolunteers, remoteVenues, remoteSalesSheetItems) = coroutineScope {
                 val jobTypeConfigsDeferred = async { googleSheetsService.syncJobTypeConfigsFromSheets() }
                 val guestsDeferred = async { googleSheetsService.syncGuestsFromSheets() }
                 val volunteersDeferred = async { googleSheetsService.syncVolunteersFromSheets() }
                 val venuesDeferred = async { googleSheetsService.syncVenuesFromSheets() }
+                val salesSheetItemsDeferred = async { googleSheetsService.syncSalesSheetItemsFromSheets() }
                 
                 // Await all parallel downloads
                 val jobTypeConfigs = jobTypeConfigsDeferred.await()
@@ -180,17 +189,17 @@ class TwoWaySyncService(
                 val volunteers = volunteersDeferred.await()
                 val venues = venuesDeferred.await()
                 
-                Quad(jobTypeConfigs, guests, volunteers, venues)
+                Quint(jobTypeConfigs, guests, volunteers, venues, salesSheetItemsDeferred.await())
             }
             
             // Jobs depend on job type configs, so download after
             val remoteJobs = googleSheetsService.syncJobsFromSheets(remoteJobTypeConfigs)
             
-            println("Downloaded from sheets: ${remoteGuests.size} guests, ${remoteVolunteers.size} volunteers, ${remoteJobs.size} jobs, ${remoteJobTypeConfigs.size} job types, ${remoteVenues.size} venues")
+            println("Downloaded from sheets: ${remoteGuests.size} guests, ${remoteVolunteers.size} volunteers, ${remoteJobs.size} jobs, ${remoteJobTypeConfigs.size} job types, ${remoteVenues.size} venues, ${remoteSalesSheetItems.size} sales items")
             
             // Safety check: Only replace local data if we have remote data to prevent data loss
             val hasRemoteData = remoteGuests.isNotEmpty() || remoteVolunteers.isNotEmpty() || 
-                               remoteJobs.isNotEmpty() || remoteJobTypeConfigs.isNotEmpty() || remoteVenues.isNotEmpty()
+                               remoteJobs.isNotEmpty() || remoteJobTypeConfigs.isNotEmpty() || remoteVenues.isNotEmpty() || remoteSalesSheetItems.isNotEmpty()
             
             if (!hasRemoteData) {
                 println("⚠️ No data found in Google Sheets - keeping existing local data")
@@ -212,6 +221,12 @@ class TwoWaySyncService(
             repository.clearAllVenues()
             if (remoteVenues.isNotEmpty()) {
                 repository.insertVenuesAll(remoteVenues)
+            }
+
+            // Merge sales sheet items (batch insert)
+            repository.clearAllSalesSheetItems()
+            if (remoteSalesSheetItems.isNotEmpty()) {
+                repository.insertSalesSheetItemsAll(remoteSalesSheetItems)
             }
             
             // Merge guests (batch insert)
@@ -278,7 +293,7 @@ class TwoWaySyncService(
                 repository.insertJobsAll(remoteJobs)
             }
             
-            println("✅ Successfully replaced local data with ${remoteGuests.size} guests, ${remoteVolunteers.size} volunteers, ${remoteJobs.size} jobs, ${remoteJobTypeConfigs.size} job types from Google Sheets")
+            println("✅ Successfully replaced local data with ${remoteGuests.size} guests, ${remoteVolunteers.size} volunteers, ${remoteJobs.size} jobs, ${remoteJobTypeConfigs.size} job types, ${remoteVenues.size} venues and ${remoteSalesSheetItems.size} sales items from Google Sheets")
             
             // Update last sync time
             updateLastSyncTime()
@@ -324,28 +339,30 @@ class TwoWaySyncService(
             println("🔄 Starting differential sync from Google Sheets...")
             
             // STEP 1: Download all data from sheets (TEMP_DB) - OPTIMIZED: parallel downloads
-            val (remoteJobTypeConfigs, remoteGuests, remoteVolunteers, remoteVenues) = coroutineScope {
+            val (remoteJobTypeConfigs, remoteGuests, remoteVolunteers, remoteVenues, remoteSalesSheetItems) = coroutineScope {
                 val jobTypeConfigsDeferred = async { googleSheetsService.syncJobTypeConfigsFromSheets() }
                 val guestsDeferred = async { googleSheetsService.syncGuestsFromSheets() }
                 val volunteersDeferred = async { googleSheetsService.syncVolunteersFromSheets() }
                 val venuesDeferred = async { googleSheetsService.syncVenuesFromSheets() }
+                val salesItemsDeferred = async { googleSheetsService.syncSalesSheetItemsFromSheets() }
                 
-                Quad(
+                Quint(
                     jobTypeConfigsDeferred.await(),
                     guestsDeferred.await(),
                     volunteersDeferred.await(),
-                    venuesDeferred.await()
+                    venuesDeferred.await(),
+                    salesItemsDeferred.await()
                 )
             }
             
             // Jobs depend on job type configs, so download after
             val remoteJobs = googleSheetsService.syncJobsFromSheets(remoteJobTypeConfigs)
             
-            println("📥 Downloaded from sheets: ${remoteGuests.size} guests, ${remoteVolunteers.size} volunteers, ${remoteJobs.size} jobs, ${remoteJobTypeConfigs.size} job types, ${remoteVenues.size} venues")
+            println("📥 Downloaded from sheets: ${remoteGuests.size} guests, ${remoteVolunteers.size} volunteers, ${remoteJobs.size} jobs, ${remoteJobTypeConfigs.size} job types, ${remoteVenues.size} venues, ${remoteSalesSheetItems.size} sales items")
             
             // Safety check: Only proceed if we have remote data to prevent data loss
             val hasRemoteData = remoteGuests.isNotEmpty() || remoteVolunteers.isNotEmpty() || 
-                               remoteJobs.isNotEmpty() || remoteJobTypeConfigs.isNotEmpty() || remoteVenues.isNotEmpty()
+                               remoteJobs.isNotEmpty() || remoteJobTypeConfigs.isNotEmpty() || remoteVenues.isNotEmpty() || remoteSalesSheetItems.isNotEmpty()
             
             if (!hasRemoteData) {
                 println("⚠️ No data found in Google Sheets - returning empty differential result")
@@ -353,23 +370,25 @@ class TwoWaySyncService(
             }
             
             // STEP 2: Get current local data (MAIN_DB) - OPTIMIZED: parallel reads
-            val (mainGuests, mainVolunteers, mainJobs, mainJobTypeConfigs, mainVenues) = coroutineScope {
+            val (mainGuests, mainVolunteers, mainJobs, mainJobTypeConfigs, mainVenues, mainSalesSheetItems) = coroutineScope {
                 val guestsDeferred = async { repository.getAllGuests().first() }
                 val volunteersDeferred = async { repository.getAllVolunteers().first() }
                 val jobsDeferred = async { repository.getAllJobs().first() }
                 val jobTypeConfigsDeferred = async { repository.getAllJobTypeConfigs().first() }
                 val venuesDeferred = async { repository.getAllVenues().first() }
+                val salesItemsDeferred = async { repository.getAllSalesSheetItems().first() }
                 
-                Quint(
+                Sext(
                     guestsDeferred.await(),
                     volunteersDeferred.await(),
                     jobsDeferred.await(),
                     jobTypeConfigsDeferred.await(),
-                    venuesDeferred.await()
+                    venuesDeferred.await(),
+                    salesItemsDeferred.await()
                 )
             }
             
-            println("📊 Current local data: ${mainGuests.size} guests (${mainGuests.count { it.isVolunteerBenefit }} volunteer benefits), ${mainVolunteers.size} volunteers, ${mainJobs.size} jobs, ${mainJobTypeConfigs.size} job types, ${mainVenues.size} venues")
+            println("📊 Current local data: ${mainGuests.size} guests (${mainGuests.count { it.isVolunteerBenefit }} volunteer benefits), ${mainVolunteers.size} volunteers, ${mainJobs.size} jobs, ${mainJobTypeConfigs.size} job types, ${mainVenues.size} venues, ${mainSalesSheetItems.size} sales items")
             
             // STEP 3: Compare TEMP_DB vs MAIN_DB - OPTIMIZED: parallel comparisons
             // CRITICAL: Exclude both volunteer benefits and temporary guests from comparison.
@@ -377,19 +396,21 @@ class TwoWaySyncService(
             // - Temporary guests come from a dedicated sheet and must not be deleted by regular guest sync.
             val regularMainGuests = mainGuests.filter { !it.isVolunteerBenefit && !it.isTemporaryGuest }
             
-            val (guestChanges, volunteerChanges, jobChanges, jobTypeChanges, venueChanges) = coroutineScope {
+            val (guestChanges, volunteerChanges, jobChanges, jobTypeChanges, venueChanges, salesItemChanges) = coroutineScope {
                 val guestChangesDeferred = async { differentialSyncService.compareGuests(remoteGuests, regularMainGuests) }
                 val volunteerChangesDeferred = async { differentialSyncService.compareVolunteers(remoteVolunteers, mainVolunteers) }
                 val jobChangesDeferred = async { differentialSyncService.compareJobs(remoteJobs, mainJobs) }
                 val jobTypeChangesDeferred = async { differentialSyncService.compareJobTypeConfigs(remoteJobTypeConfigs, mainJobTypeConfigs) }
                 val venueChangesDeferred = async { differentialSyncService.compareVenues(remoteVenues, mainVenues) }
+                val salesItemsChangesDeferred = async { differentialSyncService.compareSalesSheetItems(remoteSalesSheetItems, mainSalesSheetItems) }
                 
-                Quint(
+                Sext(
                     guestChangesDeferred.await(),
                     volunteerChangesDeferred.await(),
                     jobChangesDeferred.await(),
                     jobTypeChangesDeferred.await(),
-                    venueChangesDeferred.await()
+                    venueChangesDeferred.await(),
+                    salesItemsChangesDeferred.await()
                 )
             }
             
@@ -399,6 +420,7 @@ class TwoWaySyncService(
                 volunteers = volunteerChanges,
                 jobs = jobChanges,
                 jobTypeConfigs = jobTypeChanges,
+                salesSheetItems = salesItemChanges,
                 venues = venueChanges,
                 syncTime = System.currentTimeMillis()
             )
@@ -408,7 +430,7 @@ class TwoWaySyncService(
             // STEP 5: Apply changes to database (merge TEMP_DB → MAIN_DB) - OPTIMIZED: batch operations
             if (result.hasAnyChanges()) {
                 differentialSyncService.applyChangesBatched(result)
-                println("✅ Applied ${result.guests.totalChanges + result.volunteers.totalChanges + result.jobs.totalChanges + result.jobTypeConfigs.totalChanges + result.venues.totalChanges} changes to local database")
+                println("✅ Applied ${result.guests.totalChanges + result.volunteers.totalChanges + result.jobs.totalChanges + result.jobTypeConfigs.totalChanges + result.venues.totalChanges + result.salesSheetItems.totalChanges} changes to local database")
             } else {
                 println("ℹ️ No changes detected - data is already in sync")
             }
@@ -431,6 +453,8 @@ class TwoWaySyncService(
     
     // Helper class for parallel downloads (destructuring 5 values)
     private data class Quint<A, B, C, D, E>(val first: A, val second: B, val third: C, val fourth: D, val fifth: E)
+    // Helper class for parallel downloads (destructuring 6 values)
+    private data class Sext<A, B, C, D, E, F>(val first: A, val second: B, val third: C, val fourth: D, val fifth: E, val sixth: F)
 
     /**
      * Merges local and remote entity lists for upload, using last-modified-wins semantics.
@@ -498,7 +522,8 @@ class TwoWaySyncService(
         volunteers: List<Volunteer>? = null,
         jobs: List<Job>? = null,
         jobTypeConfigs: List<JobTypeConfig>? = null,
-        venues: List<VenueEntity>? = null
+        venues: List<VenueEntity>? = null,
+        salesSheetItems: List<SalesSheetItem>? = null
     ) {
         if (jobTypeConfigs != null) {
             repository.clearAllJobTypeConfigs()
@@ -507,6 +532,10 @@ class TwoWaySyncService(
         if (venues != null) {
             repository.clearAllVenues()
             if (venues.isNotEmpty()) repository.insertVenuesAll(venues)
+        }
+        if (salesSheetItems != null) {
+            repository.clearAllSalesSheetItems()
+            if (salesSheetItems.isNotEmpty()) repository.insertSalesSheetItemsAll(salesSheetItems)
         }
         if (guests != null) {
             repository.clearAllGuests()
@@ -554,6 +583,11 @@ class TwoWaySyncService(
             
             if (pagesToSync.contains("job_types") || pagesToSync.contains("job_type_configs")) {
                 syncJobTypesOnly()
+            }
+
+            if (pagesToSync.contains("sales_items") ||
+                pagesToSync.contains("management:sales-items")) {
+                syncSalesSheetItemsWithDifferentialUpdate()
             }
 
             if (pagesToSync.contains("venues") ||
@@ -891,6 +925,57 @@ class TwoWaySyncService(
             println("❌ Differential job type sync failed: ${e.message}")
             e.printStackTrace()
             throw IOException("Differential job type sync failed: ${e.message}", e)
+        }
+        }
+    }
+
+    suspend fun syncSalesSheetItemsOnly() = withContext(Dispatchers.IO) {
+        sheetsOpMutex.withLock {
+        try {
+            val remoteItems = googleSheetsService.syncSalesSheetItemsFromSheets()
+            repository.clearAllSalesSheetItems()
+            if (remoteItems.isNotEmpty()) {
+                repository.insertSalesSheetItemsAll(remoteItems)
+            }
+            println("Synced ${remoteItems.size} sales sheet items")
+        } catch (e: Exception) {
+            println("Failed to sync sales sheet items: ${e.message}")
+            throw e
+        }
+        }
+    }
+
+    suspend fun syncSalesSheetItemsWithDifferentialUpdate(): DifferentialSyncService.SyncChanges<SalesSheetItem> =
+        withContext(Dispatchers.IO) {
+        sheetsOpMutex.withLock {
+        try {
+            println("🔄 Starting differential sales sheet item sync from Google Sheets...")
+
+            val remoteItems = googleSheetsService.syncSalesSheetItemsFromSheets()
+            println("📥 Downloaded ${remoteItems.size} sales sheet items from sheets")
+
+            val mainItems = repository.getAllSalesSheetItems().first()
+            println("📊 Current local data: ${mainItems.size} sales sheet items")
+
+            val itemChanges = differentialSyncService.compareSalesSheetItems(remoteItems, mainItems)
+            println("📋 Changes detected: ${itemChanges.new.size} new, ${itemChanges.modified.size} modified, ${itemChanges.deleted.size} deleted")
+
+            if (itemChanges.hasChanges) {
+                itemChanges.new.forEach { repository.insertSalesSheetItem(it) }
+                itemChanges.modified.forEach { repository.updateSalesSheetItem(it) }
+                itemChanges.deleted.forEach { repository.deleteSalesSheetItem(it) }
+                println("✅ Applied ${itemChanges.totalChanges} sales sheet item changes to database")
+            } else {
+                println("ℹ️ No sales sheet item changes detected - data is already in sync")
+            }
+
+            updateLastSyncTime()
+            println("✅ Differential sales sheet item sync completed successfully")
+            itemChanges
+        } catch (e: Exception) {
+            println("❌ Differential sales sheet item sync failed: ${e.message}")
+            e.printStackTrace()
+            throw IOException("Differential sales sheet item sync failed: ${e.message}", e)
         }
         }
     }
@@ -1291,6 +1376,44 @@ class TwoWaySyncService(
             println("✅ Successfully backed up ${merged.size} venues to Google Sheets (${venues.size} local, ${merged.size - venues.size} preserved from other devices)")
         } catch (e: Exception) {
             println("❌ Failed to backup venues: ${e.message}")
+            throw e
+        }
+        }
+    }
+
+    suspend fun backupSalesSheetItemsToSheets() = withContext(Dispatchers.IO) {
+        sheetsOpMutex.withLock {
+        try {
+            if (!isGoogleSheetsConfigured()) {
+                throw IOException("Google Sheets not configured")
+            }
+
+            println("Starting backup of sales sheet items to Google Sheets...")
+            googleSheetsService.initializeSheetsService()
+            val items = repository.getAllSalesSheetItems().first()
+            println("📊 Retrieved ${items.size} sales sheet items from repository for backup")
+
+            val remoteItems = try {
+                googleSheetsService.syncSalesSheetItemsFromSheets()
+            } catch (e: Exception) {
+                println("⚠️ Could not read remote sales sheet items for merge, uploading local only: ${e.message}")
+                emptyList()
+            }
+
+            val deletedKeys = deletionTracker.getDeletedBusinessKeys("sales_item")
+            val merged = mergeLocalWithRemote(
+                local = items,
+                remote = remoteItems,
+                keyExtractor = { it.name },
+                lastModifiedExtractor = { it.lastModified },
+                deletedKeys = deletedKeys
+            )
+
+            googleSheetsService.syncSalesSheetItemsToSheets(merged)
+            applyMergedSnapshotToLocal(salesSheetItems = merged)
+            println("✅ Successfully backed up ${merged.size} sales sheet items to Google Sheets (${items.size} local, ${merged.size - items.size} preserved from other devices)")
+        } catch (e: Exception) {
+            println("❌ Failed to backup sales sheet items: ${e.message}")
             throw e
         }
         }

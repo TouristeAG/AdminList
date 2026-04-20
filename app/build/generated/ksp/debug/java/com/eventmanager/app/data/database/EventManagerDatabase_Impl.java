@@ -17,6 +17,8 @@ import com.eventmanager.app.data.dao.JobDao;
 import com.eventmanager.app.data.dao.JobDao_Impl;
 import com.eventmanager.app.data.dao.JobTypeConfigDao;
 import com.eventmanager.app.data.dao.JobTypeConfigDao_Impl;
+import com.eventmanager.app.data.dao.SalesSheetItemDao;
+import com.eventmanager.app.data.dao.SalesSheetItemDao_Impl;
 import com.eventmanager.app.data.dao.VenueDao;
 import com.eventmanager.app.data.dao.VenueDao_Impl;
 import com.eventmanager.app.data.dao.VolunteerDao;
@@ -47,10 +49,12 @@ public final class EventManagerDatabase_Impl extends EventManagerDatabase {
 
   private volatile VenueDao _venueDao;
 
+  private volatile SalesSheetItemDao _salesSheetItemDao;
+
   @Override
   @NonNull
   protected SupportSQLiteOpenHelper createOpenHelper(@NonNull final DatabaseConfiguration config) {
-    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(30) {
+    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(32) {
       @Override
       public void createAllTables(@NonNull final SupportSQLiteDatabase db) {
         db.execSQL("CREATE TABLE IF NOT EXISTS `guests` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sheetsId` TEXT, `nanoId` TEXT NOT NULL, `name` TEXT NOT NULL, `lastNameAbbreviation` TEXT NOT NULL, `email` TEXT NOT NULL, `phoneNumber` TEXT NOT NULL, `invitations` INTEGER NOT NULL, `venueName` TEXT NOT NULL, `notes` TEXT NOT NULL, `isVolunteerBenefit` INTEGER NOT NULL, `volunteerId` TEXT, `lastModified` INTEGER NOT NULL, `isTemporaryGuest` INTEGER NOT NULL, `temporaryArtistName` TEXT NOT NULL, `temporaryEventDate` INTEGER, `temporaryContactPhone` TEXT NOT NULL, `nfcCardUid` TEXT NOT NULL, `isAdmin` INTEGER NOT NULL)");
@@ -83,8 +87,14 @@ public final class EventManagerDatabase_Impl extends EventManagerDatabase {
         db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_venues_name` ON `venues` (`name`)");
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_venues_isActive` ON `venues` (`isActive`)");
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_venues_lastModified` ON `venues` (`lastModified`)");
+        db.execSQL("CREATE TABLE IF NOT EXISTS `sales_sheet_items` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sheetsId` TEXT, `name` TEXT NOT NULL, `price` REAL NOT NULL, `hasDiscount` INTEGER NOT NULL, `requiredRank` TEXT, `isActive` INTEGER NOT NULL, `lastModified` INTEGER NOT NULL)");
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_sales_sheet_items_sheetsId` ON `sales_sheet_items` (`sheetsId`)");
+        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_sales_sheet_items_name` ON `sales_sheet_items` (`name`)");
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_sales_sheet_items_requiredRank` ON `sales_sheet_items` (`requiredRank`)");
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_sales_sheet_items_isActive` ON `sales_sheet_items` (`isActive`)");
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_sales_sheet_items_lastModified` ON `sales_sheet_items` (`lastModified`)");
         db.execSQL("CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)");
-        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '5176898a97fa8f46b27653d1cb1916ab')");
+        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e9dd6b8073e42cbf636f7f20caba8d9c')");
       }
 
       @Override
@@ -94,6 +104,7 @@ public final class EventManagerDatabase_Impl extends EventManagerDatabase {
         db.execSQL("DROP TABLE IF EXISTS `jobs`");
         db.execSQL("DROP TABLE IF EXISTS `job_type_configs`");
         db.execSQL("DROP TABLE IF EXISTS `venues`");
+        db.execSQL("DROP TABLE IF EXISTS `sales_sheet_items`");
         final List<? extends RoomDatabase.Callback> _callbacks = mCallbacks;
         if (_callbacks != null) {
           for (RoomDatabase.Callback _callback : _callbacks) {
@@ -282,9 +293,32 @@ public final class EventManagerDatabase_Impl extends EventManagerDatabase {
                   + " Expected:\n" + _infoVenues + "\n"
                   + " Found:\n" + _existingVenues);
         }
+        final HashMap<String, TableInfo.Column> _columnsSalesSheetItems = new HashMap<String, TableInfo.Column>(8);
+        _columnsSalesSheetItems.put("id", new TableInfo.Column("id", "INTEGER", true, 1, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsSalesSheetItems.put("sheetsId", new TableInfo.Column("sheetsId", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsSalesSheetItems.put("name", new TableInfo.Column("name", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsSalesSheetItems.put("price", new TableInfo.Column("price", "REAL", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsSalesSheetItems.put("hasDiscount", new TableInfo.Column("hasDiscount", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsSalesSheetItems.put("requiredRank", new TableInfo.Column("requiredRank", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsSalesSheetItems.put("isActive", new TableInfo.Column("isActive", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsSalesSheetItems.put("lastModified", new TableInfo.Column("lastModified", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        final HashSet<TableInfo.ForeignKey> _foreignKeysSalesSheetItems = new HashSet<TableInfo.ForeignKey>(0);
+        final HashSet<TableInfo.Index> _indicesSalesSheetItems = new HashSet<TableInfo.Index>(5);
+        _indicesSalesSheetItems.add(new TableInfo.Index("index_sales_sheet_items_sheetsId", false, Arrays.asList("sheetsId"), Arrays.asList("ASC")));
+        _indicesSalesSheetItems.add(new TableInfo.Index("index_sales_sheet_items_name", true, Arrays.asList("name"), Arrays.asList("ASC")));
+        _indicesSalesSheetItems.add(new TableInfo.Index("index_sales_sheet_items_requiredRank", false, Arrays.asList("requiredRank"), Arrays.asList("ASC")));
+        _indicesSalesSheetItems.add(new TableInfo.Index("index_sales_sheet_items_isActive", false, Arrays.asList("isActive"), Arrays.asList("ASC")));
+        _indicesSalesSheetItems.add(new TableInfo.Index("index_sales_sheet_items_lastModified", false, Arrays.asList("lastModified"), Arrays.asList("ASC")));
+        final TableInfo _infoSalesSheetItems = new TableInfo("sales_sheet_items", _columnsSalesSheetItems, _foreignKeysSalesSheetItems, _indicesSalesSheetItems);
+        final TableInfo _existingSalesSheetItems = TableInfo.read(db, "sales_sheet_items");
+        if (!_infoSalesSheetItems.equals(_existingSalesSheetItems)) {
+          return new RoomOpenHelper.ValidationResult(false, "sales_sheet_items(com.eventmanager.app.data.models.SalesSheetItem).\n"
+                  + " Expected:\n" + _infoSalesSheetItems + "\n"
+                  + " Found:\n" + _existingSalesSheetItems);
+        }
         return new RoomOpenHelper.ValidationResult(true, null);
       }
-    }, "5176898a97fa8f46b27653d1cb1916ab", "a6712bbd8cedf6aba67116badff7f6f2");
+    }, "e9dd6b8073e42cbf636f7f20caba8d9c", "0fdb392810ace3751f931d070d76a62b");
     final SupportSQLiteOpenHelper.Configuration _sqliteConfig = SupportSQLiteOpenHelper.Configuration.builder(config.context).name(config.name).callback(_openCallback).build();
     final SupportSQLiteOpenHelper _helper = config.sqliteOpenHelperFactory.create(_sqliteConfig);
     return _helper;
@@ -295,7 +329,7 @@ public final class EventManagerDatabase_Impl extends EventManagerDatabase {
   protected InvalidationTracker createInvalidationTracker() {
     final HashMap<String, String> _shadowTablesMap = new HashMap<String, String>(0);
     final HashMap<String, Set<String>> _viewTables = new HashMap<String, Set<String>>(0);
-    return new InvalidationTracker(this, _shadowTablesMap, _viewTables, "guests","volunteers","jobs","job_type_configs","venues");
+    return new InvalidationTracker(this, _shadowTablesMap, _viewTables, "guests","volunteers","jobs","job_type_configs","venues","sales_sheet_items");
   }
 
   @Override
@@ -309,6 +343,7 @@ public final class EventManagerDatabase_Impl extends EventManagerDatabase {
       _db.execSQL("DELETE FROM `jobs`");
       _db.execSQL("DELETE FROM `job_type_configs`");
       _db.execSQL("DELETE FROM `venues`");
+      _db.execSQL("DELETE FROM `sales_sheet_items`");
       super.setTransactionSuccessful();
     } finally {
       super.endTransaction();
@@ -328,6 +363,7 @@ public final class EventManagerDatabase_Impl extends EventManagerDatabase {
     _typeConvertersMap.put(JobDao.class, JobDao_Impl.getRequiredConverters());
     _typeConvertersMap.put(JobTypeConfigDao.class, JobTypeConfigDao_Impl.getRequiredConverters());
     _typeConvertersMap.put(VenueDao.class, VenueDao_Impl.getRequiredConverters());
+    _typeConvertersMap.put(SalesSheetItemDao.class, SalesSheetItemDao_Impl.getRequiredConverters());
     return _typeConvertersMap;
   }
 
@@ -412,6 +448,20 @@ public final class EventManagerDatabase_Impl extends EventManagerDatabase {
           _venueDao = new VenueDao_Impl(this);
         }
         return _venueDao;
+      }
+    }
+  }
+
+  @Override
+  public SalesSheetItemDao salesSheetItemDao() {
+    if (_salesSheetItemDao != null) {
+      return _salesSheetItemDao;
+    } else {
+      synchronized(this) {
+        if(_salesSheetItemDao == null) {
+          _salesSheetItemDao = new SalesSheetItemDao_Impl(this);
+        }
+        return _salesSheetItemDao;
       }
     }
   }
