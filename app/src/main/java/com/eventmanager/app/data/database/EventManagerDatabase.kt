@@ -10,18 +10,20 @@ import android.content.Context
 import com.eventmanager.app.data.dao.GuestDao
 import com.eventmanager.app.data.dao.JobDao
 import com.eventmanager.app.data.dao.JobTypeConfigDao
+import com.eventmanager.app.data.dao.SalesSheetItemDao
 import com.eventmanager.app.data.dao.VenueDao
 import com.eventmanager.app.data.dao.VolunteerDao
 import com.eventmanager.app.data.models.Converters
 import com.eventmanager.app.data.models.Guest
 import com.eventmanager.app.data.models.Job
 import com.eventmanager.app.data.models.JobTypeConfig
+import com.eventmanager.app.data.models.SalesSheetItem
 import com.eventmanager.app.data.models.VenueEntity
 import com.eventmanager.app.data.models.Volunteer
 
 @Database(
-    entities = [Guest::class, Volunteer::class, Job::class, JobTypeConfig::class, VenueEntity::class],
-    version = 30,
+    entities = [Guest::class, Volunteer::class, Job::class, JobTypeConfig::class, VenueEntity::class, SalesSheetItem::class],
+    version = 32,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -31,6 +33,7 @@ abstract class EventManagerDatabase : RoomDatabase() {
     abstract fun jobDao(): JobDao
     abstract fun jobTypeConfigDao(): JobTypeConfigDao
     abstract fun venueDao(): VenueDao
+    abstract fun salesSheetItemDao(): SalesSheetItemDao
 
     companion object {
         @Volatile
@@ -1091,6 +1094,89 @@ abstract class EventManagerDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * MIGRATION 30→31: Create sales_sheet_items table for Lightspeed sales items.
+         */
+        private val MIGRATION_30_31 = object : Migration(30, 31) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                try {
+                    println("Starting migration 30→31: Creating sales_sheet_items table")
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS sales_sheet_items (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                            sheetsId TEXT,
+                            name TEXT NOT NULL,
+                            price REAL NOT NULL,
+                            discountPercent INTEGER NOT NULL DEFAULT 0,
+                            requiredRank TEXT NOT NULL DEFAULT 'NOVA',
+                            isActive INTEGER NOT NULL DEFAULT 1,
+                            lastModified INTEGER NOT NULL
+                        )
+                    """)
+                    db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_sales_sheet_items_name ON sales_sheet_items(name)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_sales_sheet_items_sheetsId ON sales_sheet_items(sheetsId)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_sales_sheet_items_requiredRank ON sales_sheet_items(requiredRank)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_sales_sheet_items_isActive ON sales_sheet_items(isActive)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_sales_sheet_items_lastModified ON sales_sheet_items(lastModified)")
+                    println("Migration 30→31 completed successfully")
+                } catch (e: Exception) {
+                    println("Migration 30→31 failed: ${e.message}")
+                    e.printStackTrace()
+                    throw e
+                }
+            }
+        }
+
+        /**
+         * MIGRATION 31→32:
+         * - Replace sales discount from percentage to boolean flag (hasDiscount)
+         * - Allow null requiredRank (no rank required)
+         */
+        private val MIGRATION_31_32 = object : Migration(31, 32) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                try {
+                    println("Starting migration 31→32: Updating sales_sheet_items schema")
+                    db.execSQL("""
+                        CREATE TABLE IF NOT EXISTS sales_sheet_items_new (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                            sheetsId TEXT,
+                            name TEXT NOT NULL,
+                            price REAL NOT NULL,
+                            hasDiscount INTEGER NOT NULL DEFAULT 0,
+                            requiredRank TEXT,
+                            isActive INTEGER NOT NULL DEFAULT 1,
+                            lastModified INTEGER NOT NULL
+                        )
+                    """)
+                    db.execSQL("""
+                        INSERT INTO sales_sheet_items_new (id, sheetsId, name, price, hasDiscount, requiredRank, isActive, lastModified)
+                        SELECT
+                            id,
+                            sheetsId,
+                            name,
+                            price,
+                            CASE WHEN discountPercent > 0 THEN 1 ELSE 0 END,
+                            CASE WHEN requiredRank = '' THEN NULL ELSE requiredRank END,
+                            isActive,
+                            lastModified
+                        FROM sales_sheet_items
+                    """)
+                    db.execSQL("DROP TABLE sales_sheet_items")
+                    db.execSQL("ALTER TABLE sales_sheet_items_new RENAME TO sales_sheet_items")
+                    db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_sales_sheet_items_name ON sales_sheet_items(name)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_sales_sheet_items_sheetsId ON sales_sheet_items(sheetsId)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_sales_sheet_items_requiredRank ON sales_sheet_items(requiredRank)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_sales_sheet_items_isActive ON sales_sheet_items(isActive)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_sales_sheet_items_lastModified ON sales_sheet_items(lastModified)")
+                    println("Migration 31→32 completed successfully")
+                } catch (e: Exception) {
+                    println("Migration 31→32 failed: ${e.message}")
+                    e.printStackTrace()
+                    throw e
+                }
+            }
+        }
+
         fun getDatabase(context: Context): EventManagerDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -1127,7 +1213,9 @@ abstract class EventManagerDatabase : RoomDatabase() {
                     MIGRATION_26_27,
                     MIGRATION_27_28,
                     MIGRATION_28_29,
-                    MIGRATION_29_30
+                    MIGRATION_29_30,
+                    MIGRATION_30_31,
+                    MIGRATION_31_32
                 )
                 .fallbackToDestructiveMigration()
                 .build()

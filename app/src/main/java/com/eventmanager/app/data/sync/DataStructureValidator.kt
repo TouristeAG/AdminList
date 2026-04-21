@@ -22,8 +22,9 @@ class DataStructureValidator(
     private val expectedHeaders = mapOf(
         "guests" to listOf("Name", "Email", "Phone", "Invitations", "Venue", "Notes", "Volunteer Benefit", "Last Modified", "NFC UID", "ID", "Admin"),
         "volunteers" to listOf("ID", "Name", "Abbreviation", "Email", "Phone", "Date of Birth", "Gender", "Rank", "Active", "Last Modified", "NFC UID", "Admin"),
-        "jobs" to listOf("Volunteer ID", "Job Type", "Venue", "Date", "Shift Time", "Notes", "Last Modified", "Entries left"),
+        "jobs" to listOf("Volunteer ID", "Volunteer Name", "Job Type", "Venue", "Date", "Shift Time", "Notes", "Last Modified", "Entries left"),
         "job_types" to listOf("Name", "Status", "Shift Type", "Orion Type", "Requires Time", "Benefit System", "Manual Rewards", "Description", "Last Modified", "Nova Job Type"),
+        "sales_items" to listOf("Name", "Price", "Discount", "Required Rank", "Status", "Last Modified"),
         "venues" to listOf(
             "Name",
             "Description",
@@ -56,7 +57,8 @@ class DataStructureValidator(
             results["guests"] = validateSheet("guests", settingsManager.getGuestListSheet())
             results["volunteers"] = validateSheet("volunteers", settingsManager.getVolunteerSheet())
             results["jobs"] = validateSheet("jobs", settingsManager.getJobsSheet())
-            results["job_types"] = validateSheet("job_types", "JobTypes")
+            results["job_types"] = validateSheet("job_types", settingsManager.getJobTypesSheet())
+            results["sales_items"] = validateSheet("sales_items", settingsManager.getSalesItemsSheet())
             results["venues"] = validateSheet("venues", settingsManager.getVenuesSheet())
             
             val allValid = results.values.all { it.isValid }
@@ -186,7 +188,8 @@ class DataStructureValidator(
             results["guests"] = createOrFixSheet("guests", settingsManager.getGuestListSheet())
             results["volunteers"] = createOrFixSheet("volunteers", settingsManager.getVolunteerSheet())
             results["jobs"] = createOrFixSheet("jobs", settingsManager.getJobsSheet())
-            results["job_types"] = createOrFixSheet("job_types", "JobTypes")
+            results["job_types"] = createOrFixSheet("job_types", settingsManager.getJobTypesSheet())
+            results["sales_items"] = createOrFixSheet("sales_items", settingsManager.getSalesItemsSheet())
             results["venues"] = createOrFixSheet("venues", settingsManager.getVenuesSheet())
             
             val allValid = results.values.all { it.isValid }

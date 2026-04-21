@@ -24,6 +24,7 @@ class DeletionTracker(private val context: Context) {
         private const val KEY_DELETED_JOBS = "deleted_jobs"
         private const val KEY_DELETED_JOB_TYPES = "deleted_job_types"
         private const val KEY_DELETED_VENUES = "deleted_venues"
+        private const val KEY_DELETED_SALES_ITEMS = "deleted_sales_items"
         private const val MAX_AGE_MS = 30L * 24 * 60 * 60 * 1000 // 30 days
     }
     
@@ -58,6 +59,11 @@ class DeletionTracker(private val context: Context) {
     suspend fun trackVenueDeletion(venueId: String, sheetsId: String?, deletionTime: Long = System.currentTimeMillis(), businessKey: String? = null) = withContext(Dispatchers.IO) {
         val deletedItem = DeletedItem(venueId, sheetsId, deletionTime, "venue", businessKey)
         addDeletedItem(KEY_DELETED_VENUES, deletedItem)
+    }
+
+    suspend fun trackSalesSheetItemDeletion(itemId: String, sheetsId: String?, deletionTime: Long = System.currentTimeMillis(), businessKey: String? = null) = withContext(Dispatchers.IO) {
+        val deletedItem = DeletedItem(itemId, sheetsId, deletionTime, "sales_item", businessKey)
+        addDeletedItem(KEY_DELETED_SALES_ITEMS, deletedItem)
     }
     
     private fun addDeletedItem(key: String, deletedItem: DeletedItem) {
@@ -109,6 +115,10 @@ class DeletionTracker(private val context: Context) {
         getDeletedItems(KEY_DELETED_VENUES)
     }
 
+    suspend fun getDeletedSalesSheetItems(): List<DeletedItem> = withContext(Dispatchers.IO) {
+        getDeletedItems(KEY_DELETED_SALES_ITEMS)
+    }
+
     /**
      * Returns the set of business keys for all tracked deletions of a given entity type.
      * Used by the merge-before-upload logic to exclude locally-deleted items.
@@ -120,6 +130,7 @@ class DeletionTracker(private val context: Context) {
             "job" -> KEY_DELETED_JOBS
             "job_type" -> KEY_DELETED_JOB_TYPES
             "venue" -> KEY_DELETED_VENUES
+            "sales_item" -> KEY_DELETED_SALES_ITEMS
             else -> return@withContext emptySet()
         }
         getDeletedItems(key).mapNotNull { it.businessKey?.takeIf(String::isNotEmpty) }.toSet()
@@ -153,6 +164,7 @@ class DeletionTracker(private val context: Context) {
             "job" -> KEY_DELETED_JOBS
             "job_type" -> KEY_DELETED_JOB_TYPES
             "venue" -> KEY_DELETED_VENUES
+            "sales_item" -> KEY_DELETED_SALES_ITEMS
             else -> return@withContext false
         }
         
@@ -167,6 +179,7 @@ class DeletionTracker(private val context: Context) {
             "job" -> KEY_DELETED_JOBS
             "job_type" -> KEY_DELETED_JOB_TYPES
             "venue" -> KEY_DELETED_VENUES
+            "sales_item" -> KEY_DELETED_SALES_ITEMS
             else -> return@withContext false
         }
         

@@ -35,9 +35,8 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Sync
@@ -127,6 +126,7 @@ import com.eventmanager.app.ui.screens.AdminType
 import com.eventmanager.app.ui.screens.BilleterieHomeScreen
 import com.eventmanager.app.ui.screens.BilleterieScannerScreen
 import com.eventmanager.app.ui.screens.BilleterieSettingsScreen
+import com.eventmanager.app.ui.screens.SalesSheetItemManagementScreen
 import com.eventmanager.app.ui.screens.VenueManagementScreen
 import com.eventmanager.app.ui.screens.VolunteerScreen
 import com.eventmanager.app.ui.theme.EventManagerTheme
@@ -491,6 +491,7 @@ fun EventManagerApp(
     val pageAnimationsEnabled = settingsManager.isPageAnimationsEnabled()
     var showJobTypeManagement by rememberSaveable { mutableStateOf(false) }
     var showVenueManagement by rememberSaveable { mutableStateOf(false) }
+    var showSalesSheetItemManagement by rememberSaveable { mutableStateOf(false) }
     var showQRScanner by rememberSaveable { mutableStateOf(false) }
     var showVolunteerBenefits: Volunteer? by remember { mutableStateOf(null) }
     var showScannedGuestDetail: Guest? by remember { mutableStateOf(null) }
@@ -539,7 +540,8 @@ fun EventManagerApp(
                     db.volunteerDao(),
                     db.jobDao(),
                     db.jobTypeConfigDao(),
-                    db.venueDao()
+                    db.venueDao(),
+                    db.salesSheetItemDao()
                 )
             }
             val googleSheetsService = remember { GoogleSheetsService(appContext) }
@@ -679,6 +681,7 @@ fun EventManagerApp(
             selectedTab = 0
             showJobTypeManagement = false
             showVenueManagement = false
+            showSalesSheetItemManagement = false
         }
         val mainActivity = context as? MainActivity
         DisposableEffect(adminSurfaceActive, mainActivity) {
@@ -1001,6 +1004,7 @@ fun EventManagerApp(
                                                 // Close any open settings dialogs when switching tabs
                                                 showJobTypeManagement = false
                                                 showVenueManagement = false
+                                                showSalesSheetItemManagement = false
                                                 // Very subtle haptic feedback for page change
                                                 performSubtleHaptic(vibrator)
                                             }
@@ -1081,6 +1085,7 @@ fun EventManagerApp(
                                             // Close any open settings dialogs when switching tabs
                                             showJobTypeManagement = false
                                             showVenueManagement = false
+                                            showSalesSheetItemManagement = false
                                             // Very subtle haptic feedback for page change
                                             performSubtleHaptic(vibrator)
                                         }
@@ -1132,6 +1137,7 @@ fun EventManagerApp(
                         selectedTab = 0
                         showJobTypeManagement = false
                         showVenueManagement = false
+                        showSalesSheetItemManagement = false
                     }
                     // Animated background
                     AnimatedBackground(
@@ -1214,6 +1220,7 @@ fun EventManagerApp(
                                                 // Close any open settings dialogs when swiping to a different tab
                                                 showJobTypeManagement = false
                                                 showVenueManagement = false
+                                                showSalesSheetItemManagement = false
                                                 // Very subtle haptic feedback for page change
                                                 performSubtleHaptic(capturedVibrator)
                                                 previousTab = selectedTab
@@ -1227,6 +1234,7 @@ fun EventManagerApp(
                                                 // Close any open settings dialogs when swiping to a different tab
                                                 showJobTypeManagement = false
                                                 showVenueManagement = false
+                                                showSalesSheetItemManagement = false
                                                 // Very subtle haptic feedback for page change
                                                 performSubtleHaptic(capturedVibrator)
                                                 previousTab = selectedTab
@@ -1249,6 +1257,7 @@ fun EventManagerApp(
                 val currentScreenState = when {
                     showJobTypeManagement -> "management:jobtype"
                     showVenueManagement -> "management:venue"
+                    showSalesSheetItemManagement -> "management:sales-items"
                     else -> "tab:$selectedTab"
                 }
                 
@@ -1317,6 +1326,12 @@ if (pageAnimationsEnabled) {
                                     showVenueManagement = false
                                 }
                             }
+                            screenState == "management:sales-items" -> key("sales_sheet_item_management") {
+                                SalesSheetItemManagementScreenWithViewModel(viewModel) {
+                                    println("Exiting Sales Sheet Item Management")
+                                    showSalesSheetItemManagement = false
+                                }
+                            }
                             screenState == "tab:0" -> key("dashboard") {
                                 DashboardScreenWithViewModel(
                                     viewModel = viewModel,
@@ -1344,6 +1359,11 @@ if (pageAnimationsEnabled) {
                                         println("Navigating to Venue Management")
                                         viewModel.syncVenuesWithTargetedUpdates()
                                         showVenueManagement = true 
+                                    },
+                                    onNavigateToSalesSheetItemManagement = {
+                                        println("Navigating to Sales Sheet Item Management")
+                                        viewModel.syncSalesSheetItemsWithTargetedUpdates()
+                                        showSalesSheetItemManagement = true
                                     }
                                 )
                             }
@@ -1363,6 +1383,12 @@ if (pageAnimationsEnabled) {
                             VenueManagementScreenWithViewModel(viewModel) {
                                 println("Exiting Venue Management")
                                 showVenueManagement = false
+                            }
+                        }
+                        showSalesSheetItemManagement -> key("sales_sheet_item_management") {
+                            SalesSheetItemManagementScreenWithViewModel(viewModel) {
+                                println("Exiting Sales Sheet Item Management")
+                                showSalesSheetItemManagement = false
                             }
                         }
                         selectedTab == 0 -> key("dashboard") {
@@ -1392,6 +1418,11 @@ if (pageAnimationsEnabled) {
                                     println("Navigating to Venue Management")
                                     viewModel.syncVenuesWithTargetedUpdates()
                                     showVenueManagement = true 
+                                },
+                                onNavigateToSalesSheetItemManagement = {
+                                    println("Navigating to Sales Sheet Item Management")
+                                    viewModel.syncSalesSheetItemsWithTargetedUpdates()
+                                    showSalesSheetItemManagement = true
                                 }
                             )
                         }
@@ -1820,12 +1851,12 @@ viewModel: EventManagerViewModel,
                 )
             } else {
                 Icon(
-                    imageVector = if (lastSyncTime > 0) Icons.Default.Refresh else Icons.Default.Sync,
+                    imageVector = Icons.Default.Sync,
                     contentDescription = "Tap to sync",
                     modifier = Modifier.size(16.dp),
-                    tint = if (lastSyncTime > 0) 
-                        MaterialTheme.colorScheme.primary 
-                    else 
+                    tint = if (lastSyncTime > 0)
+                        MaterialTheme.colorScheme.primary
+                    else
                         MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
@@ -1969,6 +2000,11 @@ fun DashboardScreen(
         val isPeopleCounterVisible = remember { settingsManager.isPeopleCounterVisible() }
         val isStatisticsVisible = remember { settingsManager.isStatisticsVisible() }
         val dateChangeOffsetHours = remember { settingsManager.getDateChangeOffsetHours() }
+        val guestListZone = GuestListDefaultZoneId
+        val guestListEffectiveToday = rememberGuestListEffectiveToday(
+            zone = guestListZone,
+            offsetHours = dateChangeOffsetHours
+        )
 
         DashboardClockCard(
             settingsManager = settingsManager,
@@ -1977,24 +2013,25 @@ fun DashboardScreen(
         
         Spacer(modifier = Modifier.height(if (isPhone) 16.dp else 24.dp))
 
-        // Calculate statistics - memoized and grouped by data source for efficient single-pass computation
-        // Guest stats are split by type for clear "Total List" composition.
-        // +1 invites are summed from all guest rows.
-        val (permanentGuestCount, temporaryGuestCount, plusOneInvitesPermanent, totalInvitesAll) = remember(guests) {
+        // Permanent + temporary rows for the same "today" as the guest list (date-change offset + Zurich zone).
+        // Temporary rows for other event dates are hidden on the list and should not inflate the dashboard.
+        val (permanentGuestCount, temporaryGuestCount) = remember(guests, guestListEffectiveToday) {
             var permanent = 0
             var temporary = 0
-            var plusOnePermanent = 0
-            var invitesAll = 0
             guests.forEach { guest ->
-                invitesAll += guest.invitations
-                if (!guest.isVolunteerBenefit && !guest.isTemporaryGuest) {
-                    permanent++
-                    plusOnePermanent += guest.invitations
-                } else if (guest.isTemporaryGuest) {
-                    temporary++
+                when {
+                    guest.isTemporaryGuest -> {
+                        val ts = guest.temporaryEventDate ?: return@forEach
+                        val eventDate = java.time.Instant.ofEpochMilli(ts)
+                            .atZone(guestListZone)
+                            .toLocalDate()
+                        if (eventDate == guestListEffectiveToday) temporary++
+                    }
+                    guest.isVolunteerBenefit -> { /* not part of dashboard headcount */ }
+                    else -> permanent++
                 }
             }
-            listOf(permanent, temporary, plusOnePermanent, invitesAll)
+            permanent to temporary
         }
         
         // Volunteer stats: single pass through volunteers list
@@ -2007,8 +2044,8 @@ fun DashboardScreen(
             Triple(volunteers.size, active, inactive)
         }
         
-        // Total list = permanent guests + temporary guests + volunteers + all +N invitations.
-        val totalPeople = permanentGuestCount + temporaryGuestCount + totalVolunteers + totalInvitesAll
+        // Total list = permanent guest-list entries + temporary guest-list entries + all volunteers.
+        val totalPeople = permanentGuestCount + temporaryGuestCount + totalVolunteers
         // Move expensive calculation to background if needed
         val totalFreeDrinks = remember(volunteers, jobs, jobTypeConfigs, dateChangeOffsetHours) {
             com.eventmanager.app.data.models.BenefitCalculator.calculateTotalFreeDrinks(
@@ -2045,15 +2082,15 @@ fun DashboardScreen(
                 )
             }
             
-            // Row 2: +1 Invites, Total People
+            // Row 2: Temporary guests (on guest list), Total People
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(if (isPhone) 12.dp else 16.dp)
             ) {
                 StatCardV2(
-                    title = context.getString(R.string.plus_one_invites),
-                    value = plusOneInvitesPermanent.toString(),
-                    icon = Icons.Default.PlayArrow,
+                    title = context.getString(R.string.filter_temporary_guests),
+                    value = temporaryGuestCount.toString(),
+                    icon = Icons.Default.Event,
                     modifier = Modifier.weight(1f),
                     isPhone = isPhone
                 )
@@ -3090,6 +3127,69 @@ fun VenueManagementScreenWithViewModel(
                     viewModel.updateVenueStatus(id, isActive)
                 } catch (e: Exception) {
                     println("Venue status update failed: ${e.message}")
+                }
+            }
+        },
+        onBack = _onBack
+    )
+}
+
+@Composable
+fun SalesSheetItemManagementScreenWithViewModel(
+    viewModel: EventManagerViewModel,
+    _onBack: () -> Unit
+) {
+    val items by viewModel.salesSheetItems.collectAsState()
+    val coroutineScope = rememberCoroutineScope()
+    var isInitialized by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isInitialized) {
+        if (!isInitialized) {
+            println("Sales Sheet Item Management screen loaded - triggering TARGETED sales items sync")
+            viewModel.syncSalesSheetItemsWithTargetedUpdates()
+            isInitialized = true
+        }
+    }
+
+    BackHandler {
+        _onBack()
+    }
+
+    SalesSheetItemManagementScreen(
+        items = items,
+        onAddItem = { item ->
+            coroutineScope.launch {
+                try {
+                    viewModel.addSalesSheetItem(item)
+                } catch (e: Exception) {
+                    println("Sales sheet item addition failed: ${e.message}")
+                }
+            }
+        },
+        onUpdateItem = { item ->
+            coroutineScope.launch {
+                try {
+                    viewModel.updateSalesSheetItem(item)
+                } catch (e: Exception) {
+                    println("Sales sheet item update failed: ${e.message}")
+                }
+            }
+        },
+        onDeleteItem = { item ->
+            coroutineScope.launch {
+                try {
+                    viewModel.deleteSalesSheetItem(item)
+                } catch (e: Exception) {
+                    println("Sales sheet item deletion failed: ${e.message}")
+                }
+            }
+        },
+        onUpdateItemStatus = { id, isActive ->
+            coroutineScope.launch {
+                try {
+                    viewModel.updateSalesSheetItemStatus(id, isActive)
+                } catch (e: Exception) {
+                    println("Sales sheet item status update failed: ${e.message}")
                 }
             }
         },

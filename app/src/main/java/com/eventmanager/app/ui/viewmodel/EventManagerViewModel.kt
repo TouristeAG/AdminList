@@ -19,6 +19,7 @@ import com.eventmanager.app.data.sync.VolunteerSyncResult
 import com.eventmanager.app.data.sync.GuestSyncResult
 import com.eventmanager.app.data.sync.JobSyncResult
 import com.eventmanager.app.data.sync.JobTypeSyncResult
+import com.eventmanager.app.data.sync.SalesSheetItemSyncResult
 import com.eventmanager.app.data.sync.VenueSyncResult
 import com.eventmanager.app.data.sync.SyncErrorManager
 import com.eventmanager.app.data.sync.AppLogger
@@ -85,6 +86,9 @@ class EventManagerViewModel(
 
     private val _venues = MutableStateFlow<List<VenueEntity>>(emptyList())
     val venues: StateFlow<List<VenueEntity>> = _venues
+
+    private val _salesSheetItems = MutableStateFlow<List<SalesSheetItem>>(emptyList())
+    val salesSheetItems: StateFlow<List<SalesSheetItem>> = _salesSheetItems
 
     private val _peopleCounterSelectedVenueId = MutableStateFlow(0L)
     val peopleCounterSelectedVenueId: StateFlow<Long> = _peopleCounterSelectedVenueId.asStateFlow()
@@ -161,12 +165,6 @@ class EventManagerViewModel(
         loadLastSyncTime()
         // Clean up any existing duplicates in the database
         cleanupDuplicates()
-        // Ensure volunteer benefits reflected in guestlist on startup (no upload on launch)
-        // Delay this to allow initial data load to complete
-        viewModelScope.launch {
-            delay(1000) // Increased delay to allow data to load from database
-            recalcVolunteerGuestListNoUpload()
-        }
         // Ensure volunteer activity is calculated after initial data load
         viewModelScope.launch {
             delay(800) // Small delay to ensure all data is loaded
@@ -456,6 +454,16 @@ class EventManagerViewModel(
             } catch (e: Exception) {
                 println("Failed to load venues: ${e.message}")
                 _venues.value = emptyList()
+            }
+        }
+        viewModelScope.launch {
+            try {
+                repository.getAllSalesSheetItems().collect {
+                    _salesSheetItems.value = it
+                }
+            } catch (e: Exception) {
+                println("Failed to load sales sheet items: ${e.message}")
+                _salesSheetItems.value = emptyList()
             }
         }
     }
@@ -794,6 +802,11 @@ class EventManagerViewModel(
         return job
     }
 
+    private fun volunteerDisplayNameForSheetsJob(volunteerId: String): String {
+        val v = _volunteers.value.find { it.id == volunteerId }
+        return if (v != null) "${v.name} ${v.lastNameAbbreviation}".trim() else ""
+    }
+
     // Job operations
     fun addJob(job: Job) {
         viewModelScope.launch {
@@ -811,7 +824,12 @@ class EventManagerViewModel(
                 val jobWithId = jobWithBenefit.copy(id = jobId)
                 
                 // Add individual job to Google Sheets and get sheetsId
-                val sheetsId = googleSheetsService.addJobToSheets(jobWithId, _venues.value, _jobTypeConfigs.value)
+                val sheetsId = googleSheetsService.addJobToSheets(
+                    jobWithId,
+                    _venues.value,
+                    _jobTypeConfigs.value,
+                    volunteerDisplayNameForSheetsJob(jobWithId.volunteerId)
+                )
                 val jobWithSheetsId = jobWithId.copy(sheetsId = sheetsId)
                 repository.updateJob(jobWithSheetsId)
                 println("Successfully added job to Google Sheets with sheetsId: $sheetsId")
@@ -834,7 +852,12 @@ class EventManagerViewModel(
                 // Update individual job in Google Sheets if sheetsId exists
                 if (job.sheetsId != null) {
                     try {
-                        googleSheetsService.updateJobInSheets(job, _venues.value, _jobTypeConfigs.value)
+                        googleSheetsService.updateJobInSheets(
+                            job,
+                            _venues.value,
+                            _jobTypeConfigs.value,
+                            volunteerDisplayNameForSheetsJob(job.volunteerId)
+                        )
                         println("Successfully updated job in Google Sheets: ${job.jobTypeName}")
                     } catch (e: Exception) {
                         println("Individual job update failed, falling back to backup mode: ${e.message}")
@@ -954,7 +977,12 @@ class EventManagerViewModel(
                     // Sync to Google Sheets
                     if (updatedJob.sheetsId != null) {
                         try {
-                            googleSheetsService.updateJobInSheets(updatedJob, _venues.value, _jobTypeConfigs.value)
+                            googleSheetsService.updateJobInSheets(
+                                updatedJob,
+                                _venues.value,
+                                _jobTypeConfigs.value,
+                                volunteerDisplayNameForSheetsJob(updatedJob.volunteerId)
+                            )
                         } catch (e: Exception) {
                             twoWaySyncService?.backupJobsToSheets()
                         }
@@ -1108,6 +1136,60 @@ class EventManagerViewModel(
         }
     }
 
+    // Sales sheet item operations
+    fun addSalesSheetItem(item: SalesSheetItem) {
+        viewModelScope.launch {
+            try {
+                repository.insertSalesSheetItem(item)
+                twoWaySyncService?.backupSalesSheetItemsToSheets()
+                println("Successfully added sales sheet item: ${item.name}")
+            } catch (e: Exception) {
+                println("Failed to add sales sheet item: ${e.message}")
+                _syncError.value = "Failed to add sales sheet item: ${e.message}"
+            }
+        }
+    }
+
+    fun updateSalesSheetItem(item: SalesSheetItem) {
+        viewModelScope.launch {
+            try {
+                repository.updateSalesSheetItem(item)
+                twoWaySyncService?.backupSalesSheetItemsToSheets()
+                println("Successfully updated sales sheet item: ${item.name}")
+            } catch (e: Exception) {
+                println("Failed to update sales sheet item: ${e.message}")
+                _syncError.value = "Failed to update sales sheet item: ${e.message}"
+            }
+        }
+    }
+
+    fun deleteSalesSheetItem(item: SalesSheetItem) {
+        viewModelScope.launch {
+            try {
+                deletionTracker?.trackSalesSheetItemDeletion(item.id.toString(), item.sheetsId, businessKey = item.name)
+                repository.deleteSalesSheetItem(item)
+                twoWaySyncService?.backupSalesSheetItemsToSheets()
+                println("Successfully deleted sales sheet item: ${item.name}")
+            } catch (e: Exception) {
+                println("Failed to delete sales sheet item: ${e.message}")
+                _syncError.value = "Failed to delete sales sheet item: ${e.message}"
+            }
+        }
+    }
+
+    fun updateSalesSheetItemStatus(id: Long, isActive: Boolean) {
+        viewModelScope.launch {
+            try {
+                repository.updateSalesSheetItemStatus(id, isActive)
+                twoWaySyncService?.backupSalesSheetItemsToSheets()
+                println("Successfully updated sales sheet item status: $id to $isActive")
+            } catch (e: Exception) {
+                println("Failed to update sales sheet item status: ${e.message}")
+                _syncError.value = "Failed to update sales sheet item status: ${e.message}"
+            }
+        }
+    }
+
     // Job assignment operations - simplified for current Job model
     @Suppress("unused")
     fun assignJobToVolunteer(job: Job, volunteer: Volunteer) {
@@ -1181,12 +1263,18 @@ class EventManagerViewModel(
             if (!isGoogleSheetsConfigured()) return
             googleSheetsService.initializeSheetsService()
             
+            val jobs = repository.getAllJobs().first()
+            val jobTypeConfigs = repository.getAllJobTypeConfigs().first()
+            val benefitPrimaryRank = BenefitCalculator.calculateVolunteerBenefitStatus(
+                volunteer, jobs, jobTypeConfigs
+            ).rank
+            
             val sheetsId = if (volunteer.sheetsId == null) {
                 // New volunteer - add to sheets
-                googleSheetsService.addVolunteerToSheets(volunteer)
+                googleSheetsService.addVolunteerToSheets(volunteer, benefitPrimaryRank)
             } else {
                 // Existing volunteer - update in sheets
-                googleSheetsService.updateVolunteerInSheets(volunteer)
+                googleSheetsService.updateVolunteerInSheets(volunteer, benefitPrimaryRank)
                 volunteer.sheetsId
             }
             
@@ -1210,10 +1298,20 @@ class EventManagerViewModel(
             
             val sheetsId = if (job.sheetsId == null) {
                 // New job - add to sheets
-                googleSheetsService.addJobToSheets(job, _venues.value, _jobTypeConfigs.value)
+                googleSheetsService.addJobToSheets(
+                    job,
+                    _venues.value,
+                    _jobTypeConfigs.value,
+                    volunteerDisplayNameForSheetsJob(job.volunteerId)
+                )
             } else {
                 // Existing job - update in sheets
-                googleSheetsService.updateJobInSheets(job, _venues.value, _jobTypeConfigs.value)
+                googleSheetsService.updateJobInSheets(
+                    job,
+                    _venues.value,
+                    _jobTypeConfigs.value,
+                    volunteerDisplayNameForSheetsJob(job.volunteerId)
+                )
                 job.sheetsId
             }
             
@@ -1625,15 +1723,9 @@ class EventManagerViewModel(
                 
                     // Refresh all data after successful sync
                     refreshAllData()
-            
-            // Save sync time
-                val currentTime = System.currentTimeMillis()
-            context?.let { ctx ->
-                val settingsManager = SettingsManager(ctx)
-                settingsManager.saveLastSyncTime(currentTime)
-            }
-                _lastSyncTime.value = currentTime
-            
+
+                updateSyncTime()
+
                 println("Smart bidirectional sync completed successfully")
             
         } catch (e: Exception) {
@@ -1674,8 +1766,11 @@ class EventManagerViewModel(
             // Upload to Google Sheets
             googleSheetsService.syncJobTypeConfigsToSheets(localJobTypeConfigs)
             googleSheetsService.syncGuestsToSheets(localGuests, localVenues)
-            googleSheetsService.syncVolunteersToSheets(localVolunteers)
-            googleSheetsService.syncJobsToSheets(localJobs, localVenues, localJobTypeConfigs)
+            val volunteerRanksForSheet = BenefitCalculator.volunteerPrimaryRanksForSheetUpload(
+                localVolunteers, localJobs, localJobTypeConfigs
+            )
+            googleSheetsService.syncVolunteersToSheets(localVolunteers, volunteerRanksForSheet)
+            googleSheetsService.syncJobsToSheets(localJobs, localVenues, localJobTypeConfigs, localVolunteers)
             googleSheetsService.syncVenuesToSheets(localVenues)
             
             println("Step 1 completed: Local changes uploaded to Google Sheets")
@@ -1989,7 +2084,12 @@ class EventManagerViewModel(
     @Suppress("unused")
     private suspend fun uploadVolunteersToSheets(volunteers: List<Volunteer>) {
         try {
-            googleSheetsService.syncVolunteersToSheets(volunteers)
+            val jobs = repository.getAllJobs().first()
+            val jobTypeConfigs = repository.getAllJobTypeConfigs().first()
+            val volunteerRanksForSheet = BenefitCalculator.volunteerPrimaryRanksForSheetUpload(
+                volunteers, jobs, jobTypeConfigs
+            )
+            googleSheetsService.syncVolunteersToSheets(volunteers, volunteerRanksForSheet)
             println("Uploaded ${volunteers.size} volunteers to sheets")
             } catch (e: Exception) {
             println("Failed to upload volunteers: ${e.message}")
@@ -2001,7 +2101,8 @@ class EventManagerViewModel(
     private suspend fun uploadJobsToSheets(jobs: List<Job>) {
         try {
             val venues = repository.getAllVenues().first()
-            googleSheetsService.syncJobsToSheets(jobs, venues, _jobTypeConfigs.value)
+            val volunteers = repository.getAllVolunteers().first()
+            googleSheetsService.syncJobsToSheets(jobs, venues, _jobTypeConfigs.value, volunteers)
             println("Uploaded ${jobs.size} jobs to sheets")
         } catch (e: Exception) {
             println("Failed to upload jobs: ${e.message}")
@@ -2083,6 +2184,7 @@ class EventManagerViewModel(
             withContext(Dispatchers.Main) {
                 refreshGuestData()
             }
+            updateSyncTime()
             println("Refreshed ${guests.size} temporary guests from sheets (effective today: $effectiveToday, offsetHours=$offsetHours)")
         } catch (e: Exception) {
             println("Failed to refresh temporary guests from sheets: ${e.message}")
@@ -2108,7 +2210,8 @@ class EventManagerViewModel(
     
     private suspend fun downloadJobsFromSheets(jobTypeConfigs: List<JobTypeConfig>): List<Job> {
         try {
-            val jobs = googleSheetsService.syncJobsFromSheets(jobTypeConfigs)
+            val volunteers = repository.getAllVolunteers().first()
+            val jobs = googleSheetsService.syncJobsFromSheets(jobTypeConfigs, volunteers)
             println("Downloaded ${jobs.size} jobs from sheets")
             return jobs
         } catch (e: Exception) {
@@ -2582,12 +2685,16 @@ class EventManagerViewModel(
         val updatedVenues = repository.getAllVenues().first()
         _venues.value = removeDuplicateVenues(updatedVenues)
     }
+
+    private suspend fun refreshSalesSheetItemData() {
+        val updatedItems = repository.getAllSalesSheetItems().first()
+        _salesSheetItems.value = updatedItems
+    }
     
     private fun updateSyncTime() {
         val currentTime = System.currentTimeMillis()
         context?.let { ctx ->
-            val settingsManager = SettingsManager(ctx)
-            settingsManager.saveLastSyncTime(currentTime)
+            SettingsManager(ctx).recordSheetsPullAt(currentTime)
         }
         _lastSyncTime.value = currentTime
     }
@@ -2602,13 +2709,6 @@ class EventManagerViewModel(
             }
 
             twoWaySyncService?.backupToGoogleSheets()
-
-            val currentTime = System.currentTimeMillis()
-            context?.let { ctx ->
-                val settingsManager = SettingsManager(ctx)
-                settingsManager.saveLastSyncTime(currentTime)
-            }
-            _lastSyncTime.value = currentTime
 
             println("Data synced to Google Sheets successfully")
         } catch (e: Exception) {
@@ -2669,6 +2769,11 @@ class EventManagerViewModel(
                 if (!suppressSyncErrorDialog) {
                     showSyncErrorIfNotSuppressed(errorMsg)
                 }
+                try {
+                    recalcAndUploadVolunteerGuestList(skipSheetsUpload = true)
+                } catch (re: Exception) {
+                    println("⚠️ Volunteer guest list recalc after failed sync: ${re.message}")
+                }
                 result
             }
         } catch (e: Exception) {
@@ -2683,6 +2788,11 @@ class EventManagerViewModel(
                 showSyncErrorIfNotSuppressed(errorMsg)
             }
             println("Full sync error: $errorMsg")
+            try {
+                recalcAndUploadVolunteerGuestList(skipSheetsUpload = true)
+            } catch (re: Exception) {
+                println("⚠️ Volunteer guest list recalc after sync exception: ${re.message}")
+            }
             SyncResult.Error(errorMsg)
         } finally {
             _isSyncing.value = false
@@ -2750,10 +2860,14 @@ class EventManagerViewModel(
                 val futureEntryPoolRemaining = benefits.futureEventEntriesRemaining ?: 0
                 if (!benefits.isActive && futureEntryPoolRemaining <= 0) continue
 
-                val volunteer = volunteersById[status.volunteerId] ?: continue
+                // Guest list row only if free entry, +1 / invites, or redeemable future entries — not drinks/bar alone
+                val hasEntryOrTickets = benefits.freeEntry ||
+                    benefits.friendInvitation ||
+                    benefits.inviteCount > 0 ||
+                    futureEntryPoolRemaining > 0
+                if (!hasEntryOrTickets) continue
 
-                val hasUnusedFutureEntryVouchers = futureEntryPoolRemaining > 0
-                if (!benefits.isActive && !hasUnusedFutureEntryVouchers) continue
+                val volunteer = volunteersById[status.volunteerId] ?: continue
                 entries.add(
                     Guest(
                         name = volunteer.name,
@@ -2776,7 +2890,7 @@ class EventManagerViewModel(
         }
     }
 
-    suspend fun recalcAndUploadVolunteerGuestList() = withContext(Dispatchers.IO) {
+    suspend fun recalcAndUploadVolunteerGuestList(skipSheetsUpload: Boolean = false) = withContext(Dispatchers.IO) {
         try {
             println("Starting volunteer guest list recalculation with differential updates...")
 
@@ -2832,8 +2946,8 @@ class EventManagerViewModel(
                 toUpdate.forEach { repository.updateGuest(it) }
             }
 
-            // Upload to Google Sheets
-            if (isGoogleSheetsConfigured()) {
+            // Upload to Google Sheets (skipped on local-only recalculations to avoid redundant API work)
+            if (!skipSheetsUpload && isGoogleSheetsConfigured()) {
                 println("Uploading volunteer guest list to Google Sheets...")
                 googleSheetsService.initializeSheetsService()
                 googleSheetsService.syncVolunteerGuestListToSheets(newVolunteerGuests, _venues.value)
@@ -2879,23 +2993,6 @@ class EventManagerViewModel(
         }
     }
 
-    // Startup-only variant: recalc volunteer guest list locally without uploading
-    private suspend fun recalcVolunteerGuestListNoUpload() = withContext(Dispatchers.IO) {
-        try {
-            println("Startup: recalculating volunteer guest list locally without upload...")
-            val volunteerGuests = computeVolunteerGuestEntries()
-            val existingVolunteerGuests = repository.getVolunteerBenefitGuests()
-            existingVolunteerGuests.forEach { repository.deleteGuest(it) }
-            volunteerGuests.forEach { repository.insertGuest(it) }
-            withContext(Dispatchers.Main) {
-                refreshGuestData()
-            }
-            println("Startup: volunteer guest list recalculation done (no upload)")
-        } catch (e: Exception) {
-            println("Startup: failed to recalc volunteer guest list: ${e.message}")
-        }
-    }
-    
     /**
      * PAGE CHANGE SYNC: Download only current page and new page data
      * This is used when user changes pages in the app
@@ -2979,8 +3076,6 @@ class EventManagerViewModel(
                 val result = syncManager?.performBackupToSheets()
                 
                 if (result?.isSuccess == true) {
-                    // Update sync time
-                    updateSyncTime()
                     println("Backup to Google Sheets completed successfully")
                 } else {
                     val errorResult = result as? SyncResult.Error
@@ -3266,18 +3361,19 @@ class EventManagerViewModel(
             delay(100)
             
             // Get data from repository on IO dispatcher
-            val (guests, volunteers, jobs, jobTypeConfigs, venues) = withContext(Dispatchers.IO) {
+            val (guests, volunteers, jobs, jobTypeConfigs, venues, salesSheetItems) = withContext(Dispatchers.IO) {
                 println("📊 Reading fresh data from database...")
                 val guestsData = repository.getAllGuests().first()
                 val volunteersData = repository.getAllVolunteers().first()
                 val jobsData = repository.getAllJobs().first()
                 val jobTypeConfigsData = repository.getAllJobTypeConfigs().first()
                 val venuesData = repository.getAllVenues().first()
+                val salesSheetItemsData = repository.getAllSalesSheetItems().first()
                 
-                println("📊 Database read complete: ${guestsData.size} guests, ${volunteersData.size} volunteers, ${jobsData.size} jobs, ${jobTypeConfigsData.size} job types, ${venuesData.size} venues")
+                println("📊 Database read complete: ${guestsData.size} guests, ${volunteersData.size} volunteers, ${jobsData.size} jobs, ${jobTypeConfigsData.size} job types, ${venuesData.size} venues, ${salesSheetItemsData.size} sales items")
                 
                 // Return all data as a tuple
-                Quint(guestsData, volunteersData, jobsData, jobTypeConfigsData, venuesData)
+                Sext(guestsData, volunteersData, jobsData, jobTypeConfigsData, venuesData, salesSheetItemsData)
             }
             
             // Update StateFlows on Main dispatcher to ensure Compose recomposition
@@ -3293,8 +3389,9 @@ class EventManagerViewModel(
                 _jobs.value = removeDuplicateJobs(jobs).toList()
                 _jobTypeConfigs.value = removeDuplicateJobTypes(jobTypeConfigs).toList()
                 _venues.value = removeDuplicateVenues(venues).toList()
+                _salesSheetItems.value = salesSheetItems.sortedBy { it.name }
                 
-                println("✅ StateFlows updated - Guests: $oldGuestCount → ${_guests.value.size}, Volunteers: $oldVolunteerCount → ${_volunteers.value.size}, Jobs: ${_jobs.value.size}, Job Types: ${_jobTypeConfigs.value.size}, Venues: ${_venues.value.size}")
+                println("✅ StateFlows updated - Guests: $oldGuestCount → ${_guests.value.size}, Volunteers: $oldVolunteerCount → ${_volunteers.value.size}, Jobs: ${_jobs.value.size}, Job Types: ${_jobTypeConfigs.value.size}, Venues: ${_venues.value.size}, Sales Items: ${_salesSheetItems.value.size}")
                 println("✅ UI should now recompose with new data")
             }
         } catch (e: Exception) {
@@ -3303,8 +3400,9 @@ class EventManagerViewModel(
         }
     }
     
-    // Helper class for returning 5 values from suspend function
+    // Helper classes for returning values from suspend function
     private data class Quint<A, B, C, D, E>(val first: A, val second: B, val third: C, val fourth: D, val fifth: E)
+    private data class Sext<A, B, C, D, E, F>(val first: A, val second: B, val third: C, val fourth: D, val fifth: E, val sixth: F)
     
     /**
      * Updates volunteer activity based on current jobs
@@ -4589,6 +4687,79 @@ class EventManagerViewModel(
             } finally {
                 _isSyncing.value = false
             }
+        }
+    }
+
+    fun syncSalesSheetItemsWithTargetedUpdates() {
+        viewModelScope.launch {
+            _isSyncing.value = true
+            _syncError.value = null
+
+            try {
+                println("🔄 Starting TARGETED sales sheet item sync with UI updates...")
+
+                if (!isGoogleSheetsConfigured()) {
+                    val errorMsg = "Google Sheets not configured. Please check your service account key and spreadsheet settings."
+                    println(errorMsg)
+                    _syncError.value = errorMsg
+                    return@launch
+                }
+
+                googleSheetsService.initializeSheetsService()
+
+                val result = syncManager?.performSalesSheetItemDifferentialSync()
+                if (result is SalesSheetItemSyncResult.Success) {
+                    val changes = result.changes
+                    println("📋 Sales sheet item changes: ${changes.new.size} new, ${changes.modified.size} modified, ${changes.deleted.size} deleted")
+                    applySalesSheetItemUIUpdates(changes)
+                    updateSyncTime()
+                    println("✅ Targeted sales sheet item sync completed successfully")
+                } else {
+                    val errorResult = result as? SalesSheetItemSyncResult.Error
+                    val errorMsg = errorResult?.message ?: "Targeted sales sheet item sync failed"
+                    _syncError.value = errorMsg
+                    showSyncErrorIfNotSuppressed(errorMsg)
+                }
+            } catch (e: Exception) {
+                val errorMsg = when {
+                    e.message?.contains("429") == true || e.message?.contains("Rate limit") == true -> "Rate limit exceeded. Please try again later."
+                    else -> "Targeted sales sheet item sync failed: ${e.message}"
+                }
+                _syncError.value = errorMsg
+                showSyncErrorIfNotSuppressed(errorMsg)
+                println("❌ Targeted sales sheet item sync error: $errorMsg")
+            } finally {
+                _isSyncing.value = false
+            }
+        }
+    }
+
+    private suspend fun applySalesSheetItemUIUpdates(changes: DifferentialSyncService.SyncChanges<SalesSheetItem>) {
+        try {
+            val currentItems = _salesSheetItems.value.toMutableList()
+            fun key(item: SalesSheetItem) = item.name
+
+            changes.deleted.forEach { deleted ->
+                currentItems.removeAll { key(it) == key(deleted) }
+            }
+
+            changes.new.forEach { added ->
+                currentItems.add(added)
+            }
+
+            changes.modified.forEach { modified ->
+                val index = currentItems.indexOfFirst { key(it) == key(modified) }
+                if (index >= 0) {
+                    currentItems[index] = modified.copy(id = currentItems[index].id)
+                }
+            }
+
+            _salesSheetItems.value = currentItems.sortedBy { it.name }
+            println("✅ Applied ${changes.totalChanges} targeted sales sheet item UI updates")
+        } catch (e: Exception) {
+            println("❌ Failed to apply targeted sales sheet item UI updates: ${e.message}")
+            e.printStackTrace()
+            refreshSalesSheetItemData()
         }
     }
     

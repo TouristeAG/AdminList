@@ -6,6 +6,7 @@ import com.eventmanager.app.data.models.Volunteer
 import com.eventmanager.app.data.models.Guest
 import com.eventmanager.app.data.models.Job
 import com.eventmanager.app.data.models.JobTypeConfig
+import com.eventmanager.app.data.models.SalesSheetItem
 import com.eventmanager.app.data.models.VenueEntity
 import kotlinx.coroutines.flow.first
 
@@ -135,6 +136,19 @@ class SyncManager(
             VenueSyncResult.Error("Venue differential sync failed: ${e.message}")
         }
     }
+
+    /**
+     * DIFFERENTIAL SALES ITEM SYNC: Download and update only changed sales items
+     * This is used for the sales items settings page to avoid full-page reload
+     */
+    suspend fun performSalesSheetItemDifferentialSync(): SalesSheetItemSyncResult {
+        return try {
+            val changes = twoWaySyncService.syncSalesSheetItemsWithDifferentialUpdate()
+            SalesSheetItemSyncResult.Success(changes)
+        } catch (e: Exception) {
+            SalesSheetItemSyncResult.Error("Sales items differential sync failed: ${e.message}")
+        }
+    }
     
     /**
      * PAGE CHANGE SYNC: Download only current page and new page data
@@ -256,6 +270,7 @@ class SyncManager(
             "volunteers" to listOf("volunteers", "volunteer_list"),
             "jobs" to listOf("jobs", "job_list"),
             "job_types" to listOf("job_types", "job_type_configs"),
+            "sales_items" to listOf("sales_items", "management:sales-items"),
             "venues" to listOf("venues", "venue_management", "management:venue")
         )
     }
@@ -317,6 +332,7 @@ class SyncManager(
                     "volunteers" -> twoWaySyncService.syncVolunteersOnly()
                     "jobs" -> twoWaySyncService.syncJobsOnly()
                     "job_types" -> twoWaySyncService.syncJobTypesOnly()
+                    "sales_items" -> twoWaySyncService.syncSalesSheetItemsWithDifferentialUpdate()
                     "venues" -> twoWaySyncService.syncVenuesWithDifferentialUpdate()
                 }
             }
@@ -407,6 +423,18 @@ sealed class VenueSyncResult {
     data class Success(val changes: DifferentialSyncService.SyncChanges<com.eventmanager.app.data.models.VenueEntity>) : VenueSyncResult()
     data class Error(val message: String) : VenueSyncResult()
     
+    val isSuccess: Boolean get() = this is Success
+    val isError: Boolean get() = this is Error
+}
+
+/**
+ * Result of sales item differential sync operation
+ * Contains information about sales item changes (new, modified, deleted)
+ */
+sealed class SalesSheetItemSyncResult {
+    data class Success(val changes: DifferentialSyncService.SyncChanges<SalesSheetItem>) : SalesSheetItemSyncResult()
+    data class Error(val message: String) : SalesSheetItemSyncResult()
+
     val isSuccess: Boolean get() = this is Success
     val isError: Boolean get() = this is Error
 }

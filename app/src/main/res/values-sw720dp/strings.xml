@@ -7,7 +7,7 @@
     <string name="tablet_optimized">Optimized for large tablet displays</string>
     <string name="large_screen_experience">Premium experience designed for large screens</string>
     <string name="nav_dashboard_tablet">Dashboard Overview</string>
-    <string name="nav_guests_tablet">Guest Management System</string>
+    <string name="nav_guests_tablet">Guest List Management System</string>
     <string name="nav_volunteers_tablet">Volunteer Management System</string>
     <string name="nav_shifts_tablet">Shift Tracking System</string>
     <string name="nav_benefits_tablet">Benefits Management</string>
