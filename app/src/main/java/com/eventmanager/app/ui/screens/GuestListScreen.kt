@@ -1468,7 +1468,10 @@ private fun TemporaryGuestsTimelineDialog(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
+                        .padding(horizontal = 16.dp),
+                    // Ranges already include ALL_TIME ("All" / "Tous"); a separate filter_all row
+                    // duplicated the label in FR and mapped null to THREE_DAYS (wrong).
+                    includeFilterAllMenuItem = false
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))

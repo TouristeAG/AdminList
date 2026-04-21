@@ -350,7 +350,7 @@ fun parseJobBenefitFutureEntriesFromSheets(cellValue: String): FutureEntrySheetD
     val s = cellValue.trim()
     if (s.isEmpty()) return null
     when (s.lowercase()) {
-        "yes" -> return FutureEntrySheetData(0, 1)
+        "yes", "oui", "sí", "si" -> return FutureEntrySheetData(0, 1)
         "no" -> return FutureEntrySheetData(1, 1)
     }
     jobSheetEntriesLeftWithInvRegex.matchEntire(s)?.let { m ->
@@ -365,17 +365,53 @@ fun parseJobBenefitFutureEntriesFromSheets(cellValue: String): FutureEntrySheetD
     return null
 }
 
+/**
+ * Legacy jobs/shifts sheets sometimes put [Venue] enum names or venue nicknames in the "Shift Time"
+ * column instead of [ShiftTime] or the English evening labels. Map those to a sensible default so
+ * rows still load and the UI can show shifts.
+ */
+private fun shiftTimeFromLegacyVenueLikeCell(normalizedToken: String): ShiftTime? {
+    val n = normalizedToken.uppercase()
+    if (n == "BOTH" || n == "GROOVE" || n == "LE_TERREAU") return ShiftTime.BEFORE_MIDNIGHT
+    if (n.contains("GROOVE") || n.contains("TERREAU")) return ShiftTime.BEFORE_MIDNIGHT
+    return null
+}
+
+private val sheetShiftTimeProfitedAliases: Set<String> = setOf(
+    ShiftTimeGoogleSheets.EVENING_PROFITED,
+    "Profited",
+    "Profité",
+    "Con beneficio",
+    "可享",
+).map { it.lowercase() }.toSet()
+
+private val sheetShiftTimeNonProfitedAliases: Set<String> = setOf(
+    ShiftTimeGoogleSheets.EVENING_NON_PROFITED,
+    "Not profited",
+    "Pas profité",
+    "Sin beneficio",
+    "不可享",
+).map { it.lowercase() }.toSet()
+
 fun parseShiftTimeFromGoogleSheets(cellValue: String): ShiftTime {
     val s = cellValue.trim()
-    if (s.isEmpty()) throw IllegalArgumentException("Empty shift time")
+    if (s.isEmpty()) return ShiftTime.BEFORE_MIDNIGHT
     if (s.equals(ShiftTimeGoogleSheets.EVENING_PROFITED, ignoreCase = true)) return ShiftTime.BEFORE_MIDNIGHT
     if (s.equals(ShiftTimeGoogleSheets.EVENING_NON_PROFITED, ignoreCase = true)) return ShiftTime.AFTER_MIDNIGHT
+    val lower = s.lowercase()
+    if (lower in sheetShiftTimeProfitedAliases) return ShiftTime.BEFORE_MIDNIGHT
+    if (lower in sheetShiftTimeNonProfitedAliases) return ShiftTime.AFTER_MIDNIGHT
     val normalized = normalizedShiftTimeToken(s)
     when (normalized) {
         "BEFORE_MIDNIGHT" -> return ShiftTime.BEFORE_MIDNIGHT
         "AFTER_MIDNIGHT" -> return ShiftTime.AFTER_MIDNIGHT
     }
-    return ShiftTime.valueOf(normalized)
+    shiftTimeFromLegacyVenueLikeCell(normalized)?.let { return it }
+    return try {
+        ShiftTime.valueOf(normalized)
+    } catch (_: IllegalArgumentException) {
+        ShiftTime.BEFORE_MIDNIGHT
+    }
 }
 
 /** True when the sheet cell should be rewritten to [toGoogleSheetsShiftTimeValue] (legacy enum-style labels). */
@@ -385,7 +421,9 @@ fun shouldMigrateShiftTimeSheetCell(raw: String): Boolean {
     if (s.equals(ShiftTimeGoogleSheets.EVENING_PROFITED, ignoreCase = true)) return false
     if (s.equals(ShiftTimeGoogleSheets.EVENING_NON_PROFITED, ignoreCase = true)) return false
     val normalized = normalizedShiftTimeToken(s)
-    return normalized == "BEFORE_MIDNIGHT" || normalized == "AFTER_MIDNIGHT"
+    if (normalized == "BEFORE_MIDNIGHT" || normalized == "AFTER_MIDNIGHT") return true
+    // Rewrite venue tokens mistakenly stored in the shift column to canonical sheet labels.
+    return shiftTimeFromLegacyVenueLikeCell(normalized) != null
 }
 
 enum class BenefitSystemType {
@@ -564,6 +602,26 @@ object BenefitCalculator {
     ): VolunteerBenefitStatus {
         val ctx = CalculationContext(jobTypeConfigs, currentTime, offsetHours)
         return calculateWithContext(volunteer, volunteerJobs, ctx)
+    }
+
+    /**
+     * Primary display rank per volunteer for the Google Sheets "Rank" column.
+     * Matches in-app [calculateVolunteerBenefitStatus] / benefits UI (job-driven), not [Volunteer.currentRank] alone.
+     */
+    fun volunteerPrimaryRanksForSheetUpload(
+        volunteers: List<Volunteer>,
+        jobs: List<Job>,
+        jobTypeConfigs: List<JobTypeConfig>,
+        currentTime: Long = System.currentTimeMillis(),
+        offsetHours: Int = 0
+    ): Map<String, VolunteerRank?> {
+        if (volunteers.isEmpty()) return emptyMap()
+        val ctx = CalculationContext(jobTypeConfigs, currentTime, offsetHours)
+        val jobsByVolunteerId = jobs.groupBy { it.volunteerId }
+        return volunteers.associate { volunteer ->
+            val volunteerJobs = jobsByVolunteerId[volunteer.id] ?: emptyList()
+            volunteer.id to calculateWithContext(volunteer, volunteerJobs, ctx).rank
+        }
     }
 
     /**
@@ -778,7 +836,8 @@ object BenefitCalculator {
             inviteCount = if (sameNightActive && sameNightFriend) 1 else 0,
             drinkTokens = totalDrinks,
             barDiscount = if (sameNightActive) sameNightBarDiscount else 0,
-            guestListAccess = hasAnyActiveToday || futurePool > 0,
+            // Guest list = venue entry / invites / future entry pool — not off-event drink-only perks (meetings, etc.)
+            guestListAccess = sameNightActive || futurePool > 0,
             validUntil = sameNightValidUntil,
             isActive = hasAnyActiveToday,
             futureEventEntriesRemaining = futurePool.takeIf { it > 0 },
@@ -999,6 +1058,11 @@ object BenefitCalculator {
 
     private fun aggregateBenefits(benefits: List<Benefit>): Benefit {
         val activeBenefits = benefits.filter { it.isActive }
+        // Do not treat guestListAccess as structural: only count access that is live now or backed
+        // by a redeemable future-entry pool (avoids drinks/bar-only rows inheriting a stale flag).
+        val aggregatedGuestListAccess = benefits.any { b ->
+            b.guestListAccess && (b.isActive || ((b.futureEventEntriesRemaining ?: 0) > 0))
+        }
         val descriptionParts = mutableListOf<String>()
         if (activeBenefits.any { it.freeEntry }) descriptionParts.add("Free entry")
         if (activeBenefits.any { it.friendInvitation }) descriptionParts.add("Friend invitation")
@@ -1008,7 +1072,7 @@ object BenefitCalculator {
         if (totalDrinkTokens > 0) descriptionParts.add("$totalDrinkTokens drink tokens")
         val maxDiscount = activeBenefits.maxOfOrNull { it.barDiscount } ?: 0
         if (maxDiscount > 0) descriptionParts.add("$maxDiscount% bar discount")
-        if (benefits.any { it.guestListAccess }) descriptionParts.add("Guest list access")
+        if (aggregatedGuestListAccess) descriptionParts.add("Guest list access")
         if (activeBenefits.any { it.extraordinaryBenefits }) descriptionParts.add("Extraordinary benefits")
 
         val futureEntryTotals = benefits.mapNotNull { it.futureEventEntriesRemaining }
@@ -1023,7 +1087,7 @@ object BenefitCalculator {
             inviteCount = activeBenefits.sumOf { it.inviteCount },
             drinkTokens = activeBenefits.sumOf { it.drinkTokens },
             barDiscount = activeBenefits.maxOfOrNull { it.barDiscount } ?: 0,
-            guestListAccess = benefits.any { it.guestListAccess },
+            guestListAccess = aggregatedGuestListAccess,
             extraordinaryBenefits = activeBenefits.any { it.extraordinaryBenefits },
             validUntil = activeBenefits.mapNotNull { it.validUntil }.maxOrNull(),
             isActive = benefits.any { it.isActive } || benefits.any { (it.futureEventEntriesRemaining ?: 0) > 0 },

@@ -83,7 +83,7 @@ class TwoWaySyncService(
 
             val remoteJobs = try {
                 val configsForParsing = remoteJobTypeConfigs.ifEmpty { jobTypeConfigs }
-                googleSheetsService.syncJobsFromSheets(configsForParsing)
+                googleSheetsService.syncJobsFromSheets(configsForParsing, remoteVolunteers)
             } catch (_: Exception) { emptyList() }
 
             // Load deletion tracker keys for all entity types
@@ -128,8 +128,11 @@ class TwoWaySyncService(
             // Upload merged datasets
             googleSheetsService.syncJobTypeConfigsToSheets(mergedJobTypeConfigs)
             googleSheetsService.syncGuestsToSheets(allGuestsForUpload, mergedVenues)
-            googleSheetsService.syncVolunteersToSheets(mergedVolunteers)
-            googleSheetsService.syncJobsToSheets(mergedJobs, mergedVenues, mergedJobTypeConfigs)
+            val volunteerRanksForSheet = BenefitCalculator.volunteerPrimaryRanksForSheetUpload(
+                mergedVolunteers, mergedJobs, mergedJobTypeConfigs
+            )
+            googleSheetsService.syncVolunteersToSheets(mergedVolunteers, volunteerRanksForSheet)
+            googleSheetsService.syncJobsToSheets(mergedJobs, mergedVenues, mergedJobTypeConfigs, mergedVolunteers)
             googleSheetsService.syncVenuesToSheets(mergedVenues)
             googleSheetsService.syncSalesSheetItemsToSheets(mergedSalesSheetItems)
 
@@ -142,10 +145,7 @@ class TwoWaySyncService(
                 venues = mergedVenues,
                 salesSheetItems = mergedSalesSheetItems
             )
-            
-            // Update last sync time
-            updateLastSyncTime()
-            
+
             println("Backup to Google Sheets completed successfully")
             
         } catch (e: Exception) {
@@ -193,7 +193,7 @@ class TwoWaySyncService(
             }
             
             // Jobs depend on job type configs, so download after
-            val remoteJobs = googleSheetsService.syncJobsFromSheets(remoteJobTypeConfigs)
+            val remoteJobs = googleSheetsService.syncJobsFromSheets(remoteJobTypeConfigs, remoteVolunteers)
             
             println("Downloaded from sheets: ${remoteGuests.size} guests, ${remoteVolunteers.size} volunteers, ${remoteJobs.size} jobs, ${remoteJobTypeConfigs.size} job types, ${remoteVenues.size} venues, ${remoteSalesSheetItems.size} sales items")
             
@@ -356,7 +356,7 @@ class TwoWaySyncService(
             }
             
             // Jobs depend on job type configs, so download after
-            val remoteJobs = googleSheetsService.syncJobsFromSheets(remoteJobTypeConfigs)
+            val remoteJobs = googleSheetsService.syncJobsFromSheets(remoteJobTypeConfigs, remoteVolunteers)
             
             println("📥 Downloaded from sheets: ${remoteGuests.size} guests, ${remoteVolunteers.size} volunteers, ${remoteJobs.size} jobs, ${remoteJobTypeConfigs.size} job types, ${remoteVenues.size} venues, ${remoteSalesSheetItems.size} sales items")
             
@@ -617,6 +617,7 @@ class TwoWaySyncService(
                 repository.insertGuest(guest)
             }
             println("Synced ${remoteGuests.size} guests")
+            updateLastSyncTime()
         } catch (e: Exception) {
             println("Failed to sync guests: ${e.message}")
             throw e
@@ -743,6 +744,7 @@ class TwoWaySyncService(
             println("Preserved ${localVolunteersToKeep.size} local volunteers not found in remote data")
             
             println("Successfully synced volunteers from Google Sheets (${remoteVolunteers.size} remote, ${localVolunteersToKeep.size} preserved local)")
+            updateLastSyncTime()
         } catch (e: Exception) {
             println("Failed to sync volunteers: ${e.message}")
             e.printStackTrace()
@@ -803,12 +805,14 @@ class TwoWaySyncService(
         sheetsOpMutex.withLock {
         try {
             val remoteJobTypeConfigs = repository.getAllJobTypeConfigs().first()
-            val remoteJobs = googleSheetsService.syncJobsFromSheets(remoteJobTypeConfigs)
+            val volunteers = repository.getAllVolunteers().first()
+            val remoteJobs = googleSheetsService.syncJobsFromSheets(remoteJobTypeConfigs, volunteers)
             repository.clearAllJobs()
             for (job in remoteJobs) {
                 repository.insertJob(job)
             }
             println("Synced ${remoteJobs.size} jobs")
+            updateLastSyncTime()
         } catch (e: Exception) {
             println("Failed to sync jobs: ${e.message}")
             throw e
@@ -828,7 +832,8 @@ class TwoWaySyncService(
             
             // STEP 1: Download jobs from sheets (TEMP_DB)
             val remoteJobTypeConfigs = repository.getAllJobTypeConfigs().first()
-            val remoteJobs = googleSheetsService.syncJobsFromSheets(remoteJobTypeConfigs)
+            val volunteers = repository.getAllVolunteers().first()
+            val remoteJobs = googleSheetsService.syncJobsFromSheets(remoteJobTypeConfigs, volunteers)
             println("📥 Downloaded ${remoteJobs.size} jobs from sheets")
             
             // STEP 2: Get current local jobs (MAIN_DB)
@@ -874,6 +879,7 @@ class TwoWaySyncService(
                 repository.insertJobTypeConfig(config)
             }
             println("Synced ${remoteJobTypeConfigs.size} job types")
+            updateLastSyncTime()
         } catch (e: Exception) {
             println("Failed to sync job types: ${e.message}")
             throw e
@@ -938,6 +944,7 @@ class TwoWaySyncService(
                 repository.insertSalesSheetItemsAll(remoteItems)
             }
             println("Synced ${remoteItems.size} sales sheet items")
+            updateLastSyncTime()
         } catch (e: Exception) {
             println("Failed to sync sales sheet items: ${e.message}")
             throw e
@@ -1236,7 +1243,12 @@ class TwoWaySyncService(
                 deletedKeys = deletedVolunteerKeys
             )
 
-            googleSheetsService.syncVolunteersToSheets(merged)
+            val jobs = repository.getAllJobs().first()
+            val jobTypeConfigs = repository.getAllJobTypeConfigs().first()
+            val volunteerRanksForSheet = BenefitCalculator.volunteerPrimaryRanksForSheetUpload(
+                merged, jobs, jobTypeConfigs
+            )
+            googleSheetsService.syncVolunteersToSheets(merged, volunteerRanksForSheet)
             applyMergedSnapshotToLocal(volunteers = merged)
             println("✅ Backed up ${merged.size} volunteers to Google Sheets (${volunteers.size} local, ${merged.size - volunteers.size} preserved from other devices)")
         } catch (e: Exception) {
@@ -1266,10 +1278,11 @@ class TwoWaySyncService(
             val jobs = repository.getAllJobs().first()
             val venues = repository.getAllVenues().first()
             val jobTypeConfigs = repository.getAllJobTypeConfigs().first()
+            val volunteers = repository.getAllVolunteers().first()
             println("📊 Retrieved ${jobs.size} jobs from repository for backup")
             
             val remoteJobs = try {
-                googleSheetsService.syncJobsFromSheets(jobTypeConfigs)
+                googleSheetsService.syncJobsFromSheets(jobTypeConfigs, volunteers)
             } catch (e: Exception) {
                 println("⚠️ Could not read remote jobs for merge, uploading local only: ${e.message}")
                 emptyList()
@@ -1287,7 +1300,7 @@ class TwoWaySyncService(
 
             kotlinx.coroutines.delay(100)
             
-            googleSheetsService.syncJobsToSheets(merged, venues, jobTypeConfigs)
+            googleSheetsService.syncJobsToSheets(merged, venues, jobTypeConfigs, volunteers)
             applyMergedSnapshotToLocal(jobs = merged)
             println("✅ Successfully backed up ${merged.size} jobs to Google Sheets (${jobs.size} local, ${merged.size - jobs.size} preserved from other devices)")
             }
@@ -1427,8 +1440,7 @@ class TwoWaySyncService(
     }
     
     private fun updateLastSyncTime() {
-        val currentTime = System.currentTimeMillis()
-        settingsManager.saveLastSyncTime(currentTime)
+        settingsManager.recordSheetsPullAt(System.currentTimeMillis())
     }
     
     fun getLastSyncTime(): Long {
@@ -1473,11 +1485,11 @@ class TwoWaySyncService(
             
             try {
                 val jobTypeConfigs = googleSheetsService.syncJobTypeConfigsFromSheets()
-                val jobs = googleSheetsService.syncJobsFromSheets(jobTypeConfigs)
+                val jobs = googleSheetsService.syncJobsFromSheets(jobTypeConfigs, emptyList())
                 diagnostics["jobs"] = mapOf(
                     "status" to "OK",
                     "count" to jobs.size,
-                    "headers" to listOf("Volunteer ID", "Job Type", "Venue", "Date", "Shift Time", "Notes", "Last Modified")
+                    "headers" to listOf("Volunteer ID", "Volunteer Name", "Job Type", "Venue", "Date", "Shift Time", "Notes", "Last Modified", "Entries left")
                 )
             } catch (e: Exception) {
                 diagnostics["jobs"] = mapOf("status" to "ERROR", "message" to e.message)

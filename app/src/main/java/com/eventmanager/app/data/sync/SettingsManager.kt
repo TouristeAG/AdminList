@@ -28,7 +28,10 @@ class SettingsManager(context: Context) {
         private const val KEY_DEBUG_MODE = "debug_mode"
         private const val KEY_ANIMATED_BACKGROUND = "animated_background"
         private const val KEY_PAGE_ANIMATIONS = "page_animations"
+        /** Legacy: was also updated on upload-only paths; still read for migration. */
         private const val KEY_LAST_SYNC_TIME = "last_sync_time"
+        /** Last successful read of Google Sheets data into the app (any tab / scope). */
+        private const val KEY_LAST_SHEETS_PULL_AT = "last_sheets_pull_at_ms"
         private const val KEY_LANGUAGE = "language"
         private const val KEY_THEME_MODE = "theme_mode"
         private const val KEY_COLOR_THEME = "color_theme"
@@ -137,7 +140,31 @@ class SettingsManager(context: Context) {
     }
     
     fun getJobTypesSheet(): String {
-        return prefs.getString(KEY_JOB_TYPES_SHEET, GoogleSheetsConfig.JOB_TYPES_SHEET) ?: GoogleSheetsConfig.JOB_TYPES_SHEET
+        val stored = prefs.getString(KEY_JOB_TYPES_SHEET, GoogleSheetsConfig.JOB_TYPES_SHEET)
+            ?: GoogleSheetsConfig.JOB_TYPES_SHEET
+        return migrateLegacyJobTypesSheetNameToCanonical(stored)
+    }
+
+    /**
+     * Older builds / docs used "JobTypes" or "Job Types" while the spreadsheet (and current default)
+     * uses "Shift Types". Keeping the legacy string in prefs made structure validation create a new
+     * empty "Job Types" tab while the app read/wrote "Shift Types" from [GoogleSheetsConfig].
+     */
+    private fun migrateLegacyJobTypesSheetNameToCanonical(stored: String): String {
+        val trimmed = stored.trim()
+        val canonical = GoogleSheetsConfig.JOB_TYPES_SHEET.trim()
+        if (trimmed.isEmpty()) {
+            prefs.edit().putString(KEY_JOB_TYPES_SHEET, canonical).apply()
+            return canonical
+        }
+        val isDeprecatedEnglishTabName =
+            trimmed.equals("JobTypes", ignoreCase = true) ||
+                trimmed.equals("Job Types", ignoreCase = true)
+        if (isDeprecatedEnglishTabName && !trimmed.equals(canonical, ignoreCase = true)) {
+            prefs.edit().putString(KEY_JOB_TYPES_SHEET, canonical).apply()
+            return canonical
+        }
+        return trimmed
     }
     
     fun saveJobTypesSheet(sheet: String) {
@@ -228,13 +255,26 @@ class SettingsManager(context: Context) {
         prefs.edit().putBoolean(KEY_PAGE_ANIMATIONS, enabled).apply()
     }
     
-    fun getLastSyncTime(): Long {
+    /**
+     * Millis of the last time the app successfully **pulled** data from Google Sheets
+     * (full sync, differential sync, tab-targeted pull, temp guest sheet, etc.).
+     * Upload-only / backup-only operations must not advance this value.
+     */
+    fun getLastSheetsPullAt(): Long {
+        val pull = prefs.getLong(KEY_LAST_SHEETS_PULL_AT, 0L)
+        if (pull > 0L) return pull
         return prefs.getLong(KEY_LAST_SYNC_TIME, 0L)
     }
-    
-    fun saveLastSyncTime(timestamp: Long) {
-        prefs.edit().putLong(KEY_LAST_SYNC_TIME, timestamp).apply()
+
+    fun recordSheetsPullAt(timestamp: Long = System.currentTimeMillis()) {
+        prefs.edit().putLong(KEY_LAST_SHEETS_PULL_AT, timestamp).apply()
     }
+
+    /** @see getLastSheetsPullAt */
+    fun getLastSyncTime(): Long = getLastSheetsPullAt()
+
+    /** Call [recordSheetsPullAt] after a successful Sheets download; kept for older call sites. */
+    fun saveLastSyncTime(timestamp: Long) = recordSheetsPullAt(timestamp)
     
     // Language Configuration
     fun getLanguage(): String {

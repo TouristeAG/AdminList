@@ -1,8 +1,8 @@
 {
-  "latestVersionCode": 17,
-  "latestVersionName": "0.9.9.7",
-  "minSupportedVersionCode": "17",
-  "changelogShort": "New fingerprint login",
-  "downloadUrl": "https://github.com/TouristeAG/AdminList/releases/download/0.9.9.7/app-release-0.9.9.7.apk",
+  "latestVersionCode": 18,
+  "latestVersionName": "0.9.9.8",
+  "minSupportedVersionCode": "18",
+  "changelogShort": "New bug fixes",
+  "downloadUrl": "https://github.com/TouristeAG/AdminList/releases/download/0.9.9.8/app-release-0.9.9.8.apk",
   "storeUrl": "https://play.google.com/store/apps/details?id=com.eventmanager.app"
 }

@@ -6,7 +6,6 @@ import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
@@ -43,15 +42,14 @@ fun DateTimePicker(
             fontWeight = FontWeight.Medium
         )
         
-        Row(
+        // Stacked: date then time — narrow dialogs clip two side-by-side buttons.
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Date picker button
             OutlinedButton(
                 onClick = { showDatePicker = true },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Icon(
                     Icons.Default.CalendarToday,
@@ -61,11 +59,9 @@ fun DateTimePicker(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(DateTimeUtils.formatGenevaDateOnly(selectedTimestamp))
             }
-            
-            // Time picker button
             OutlinedButton(
                 onClick = { showTimePicker = true },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Icon(
                     Icons.Default.Schedule,

@@ -18,6 +18,18 @@
     <string name="volunteer_sheet_label">Volunteer Sheet</string>
     <string name="shifts_sheet_label">Shifts Sheet</string>
     <string name="volunteer_guest_list_sheet_label">Volunteer Guest List Sheet</string>
+    <!-- Read-only banner written to the volunteer benefit guest list Google Sheet (K1:M5, K6:M6); language follows app setting -->
+    <string name="volunteer_guest_sheet_banner_title">DO NOT EDIT — Volunteer benefit guest list (read-only)</string>
+    <string name="volunteer_guest_sheet_banner_l2">Do not modify this sheet.</string>
+    <string name="volunteer_guest_sheet_banner_l3">Changes made here are not saved by the app.</string>
+    <string name="volunteer_guest_sheet_banner_l4">This tab only lists volunteers who currently have guest-list benefits from the app.</string>
+    <string name="volunteer_guest_sheet_banner_l5">The app refreshes this tab—if the app is not used, it is no longer up to date.</string>
+    <string name="volunteer_guest_sheet_last_updated">Last updated: %1$s</string>
+    <!-- Epoch helper panel written to Google Sheets (formulas + titles); language follows app setting -->
+    <string name="sheet_epoch_calc_title_ms_to_date">Timestamp (ms) → date/time</string>
+    <string name="sheet_epoch_calc_title_date_to_ms">Date/time → timestamp (ms)</string>
+    <string name="sheet_epoch_calc_hint_ms">Type epoch ms here (e.g. 1776711088094)</string>
+    <string name="sheet_epoch_calc_hint_datetime">Pick or type a date/time cell</string>
     <string name="temp_guest_list_sheet_label">Temp Guest List Sheet</string>
     <string name="shift_types_sheet_label">Shift Types Sheet</string>
     <string name="venues_sheet_label">Venues Sheet</string>
@@ -439,7 +451,7 @@
     
     <!-- Navigation -->
     <string name="nav_dashboard">Dashboard</string>
-    <string name="nav_guests">Guests</string>
+    <string name="nav_guests">Guest List</string>
     <string name="nav_volunteers">Volunteers</string>
     <string name="nav_shifts">Shifts</string>
     <string name="nav_benefits">Benefits</string>
@@ -480,8 +492,8 @@
     <string name="last_update_min_sec_ago">%1$dmin %2$ds ago</string>
     <string name="last_update_hour_min_ago">%1$dh %2$dm ago</string>
     <string name="last_update_days_ago">%dd ago</string>
-    <string name="last_update_line">Last update · %s</string>
-    <string name="last_update_none_line">Last update · —</string>
+    <string name="last_update_line">Update · %s</string>
+    <string name="last_update_none_line">Update · —</string>
     <string name="sync_pill_minutes_ago">%dmin ago</string>
     <string name="sync_pill_hours_ago">%dh ago</string>
     <string name="sync_pill_hours_minutes_ago">%1$dh %2$dmin ago</string>
@@ -1101,7 +1113,7 @@
     <string name="tablet_optimized">Optimized for tablet viewing</string>
     <string name="large_screen_experience">Enhanced experience for large screens</string>
     <string name="nav_dashboard_tablet">Dashboard Overview</string>
-    <string name="nav_guests_tablet">Guest Management</string>
+    <string name="nav_guests_tablet">Guest List Management</string>
     <string name="nav_volunteers_tablet">Volunteer Management</string>
     <string name="nav_shifts_tablet">Shift Tracking</string>
     <string name="nav_benefits_tablet">Benefits Overview</string>

@@ -121,7 +121,13 @@ fun SearchBarWithFilter(
     filterOptions: List<String> = emptyList(),
     selectedFilter: String? = null,
     onFilterChange: (String?) -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /**
+     * When true (default), the first menu row is [R.string.filter_all] and selects `null`.
+     * Set false when every real option is already in [filterOptions] (e.g. guest-list
+     * history ranges include "all time") so you do not duplicate "All" / break selection.
+     */
+    includeFilterAllMenuItem: Boolean = true
 ) {
     var showFilterDropdown by remember { mutableStateOf(false) }
     val isPhone = !isTablet()
@@ -218,36 +224,38 @@ fun SearchBarWithFilter(
                                 shape = RoundedCornerShape(12.dp)
                             )
                     ) {
-                        DropdownMenuItem(
-                            text = { 
-                                Text(
-                                    allLabel,
-                                    style = if (isPhone) 
-                                        MaterialTheme.typography.bodySmall
-                                    else 
-                                        MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                ) 
-                            },
-                            onClick = {
-                                onFilterChange(null)
-                                showFilterDropdown = false
-                            },
-                            modifier = Modifier
-                                .height(if (isPhone) 48.dp else 56.dp)
-                                .background(
-                                    color = Color.Transparent,
-                                    shape = RoundedCornerShape(8.dp)
-                                ),
-                            colors = MenuDefaults.itemColors(
-                                textColor = MaterialTheme.colorScheme.onSurface,
-                                leadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                trailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                disabledTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-                                disabledLeadingIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-                                disabledTrailingIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        if (includeFilterAllMenuItem) {
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        allLabel,
+                                        style = if (isPhone)
+                                            MaterialTheme.typography.bodySmall
+                                        else
+                                            MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                },
+                                onClick = {
+                                    onFilterChange(null)
+                                    showFilterDropdown = false
+                                },
+                                modifier = Modifier
+                                    .height(if (isPhone) 48.dp else 56.dp)
+                                    .background(
+                                        color = Color.Transparent,
+                                        shape = RoundedCornerShape(8.dp)
+                                    ),
+                                colors = MenuDefaults.itemColors(
+                                    textColor = MaterialTheme.colorScheme.onSurface,
+                                    leadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    trailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    disabledTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                                    disabledLeadingIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                                    disabledTrailingIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                )
                             )
-                        )
+                        }
                         filterOptions.forEach { option ->
                             DropdownMenuItem(
                                 text = { 

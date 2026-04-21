@@ -35,9 +35,8 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Sync
@@ -1852,12 +1851,12 @@ viewModel: EventManagerViewModel,
                 )
             } else {
                 Icon(
-                    imageVector = if (lastSyncTime > 0) Icons.Default.Refresh else Icons.Default.Sync,
+                    imageVector = Icons.Default.Sync,
                     contentDescription = "Tap to sync",
                     modifier = Modifier.size(16.dp),
-                    tint = if (lastSyncTime > 0) 
-                        MaterialTheme.colorScheme.primary 
-                    else 
+                    tint = if (lastSyncTime > 0)
+                        MaterialTheme.colorScheme.primary
+                    else
                         MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
@@ -2001,6 +2000,11 @@ fun DashboardScreen(
         val isPeopleCounterVisible = remember { settingsManager.isPeopleCounterVisible() }
         val isStatisticsVisible = remember { settingsManager.isStatisticsVisible() }
         val dateChangeOffsetHours = remember { settingsManager.getDateChangeOffsetHours() }
+        val guestListZone = GuestListDefaultZoneId
+        val guestListEffectiveToday = rememberGuestListEffectiveToday(
+            zone = guestListZone,
+            offsetHours = dateChangeOffsetHours
+        )
 
         DashboardClockCard(
             settingsManager = settingsManager,
@@ -2009,24 +2013,25 @@ fun DashboardScreen(
         
         Spacer(modifier = Modifier.height(if (isPhone) 16.dp else 24.dp))
 
-        // Calculate statistics - memoized and grouped by data source for efficient single-pass computation
-        // Guest stats are split by type for clear "Total List" composition.
-        // +1 invites are summed from all guest rows.
-        val (permanentGuestCount, temporaryGuestCount, plusOneInvitesPermanent, totalInvitesAll) = remember(guests) {
+        // Permanent + temporary rows for the same "today" as the guest list (date-change offset + Zurich zone).
+        // Temporary rows for other event dates are hidden on the list and should not inflate the dashboard.
+        val (permanentGuestCount, temporaryGuestCount) = remember(guests, guestListEffectiveToday) {
             var permanent = 0
             var temporary = 0
-            var plusOnePermanent = 0
-            var invitesAll = 0
             guests.forEach { guest ->
-                invitesAll += guest.invitations
-                if (!guest.isVolunteerBenefit && !guest.isTemporaryGuest) {
-                    permanent++
-                    plusOnePermanent += guest.invitations
-                } else if (guest.isTemporaryGuest) {
-                    temporary++
+                when {
+                    guest.isTemporaryGuest -> {
+                        val ts = guest.temporaryEventDate ?: return@forEach
+                        val eventDate = java.time.Instant.ofEpochMilli(ts)
+                            .atZone(guestListZone)
+                            .toLocalDate()
+                        if (eventDate == guestListEffectiveToday) temporary++
+                    }
+                    guest.isVolunteerBenefit -> { /* not part of dashboard headcount */ }
+                    else -> permanent++
                 }
             }
-            listOf(permanent, temporary, plusOnePermanent, invitesAll)
+            permanent to temporary
         }
         
         // Volunteer stats: single pass through volunteers list
@@ -2039,8 +2044,8 @@ fun DashboardScreen(
             Triple(volunteers.size, active, inactive)
         }
         
-        // Total list = permanent guests + temporary guests + volunteers + all +N invitations.
-        val totalPeople = permanentGuestCount + temporaryGuestCount + totalVolunteers + totalInvitesAll
+        // Total list = permanent guest-list entries + temporary guest-list entries + all volunteers.
+        val totalPeople = permanentGuestCount + temporaryGuestCount + totalVolunteers
         // Move expensive calculation to background if needed
         val totalFreeDrinks = remember(volunteers, jobs, jobTypeConfigs, dateChangeOffsetHours) {
             com.eventmanager.app.data.models.BenefitCalculator.calculateTotalFreeDrinks(
@@ -2077,15 +2082,15 @@ fun DashboardScreen(
                 )
             }
             
-            // Row 2: +1 Invites, Total People
+            // Row 2: Temporary guests (on guest list), Total People
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(if (isPhone) 12.dp else 16.dp)
             ) {
                 StatCardV2(
-                    title = context.getString(R.string.plus_one_invites),
-                    value = plusOneInvitesPermanent.toString(),
-                    icon = Icons.Default.PlayArrow,
+                    title = context.getString(R.string.filter_temporary_guests),
+                    value = temporaryGuestCount.toString(),
+                    icon = Icons.Default.Event,
                     modifier = Modifier.weight(1f),
                     isPhone = isPhone
                 )

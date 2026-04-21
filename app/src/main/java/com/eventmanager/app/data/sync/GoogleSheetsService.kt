@@ -1,6 +1,8 @@
 package com.eventmanager.app.data.sync
 
 import android.content.Context
+import android.content.res.Configuration
+import com.eventmanager.app.R
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
 import com.google.api.client.json.gson.GsonFactory
 import com.google.api.services.sheets.v4.Sheets
@@ -14,6 +16,13 @@ import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.security.GeneralSecurityException
 import java.net.UnknownHostException
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
+import java.util.Locale
 
 /** Formats 1-based sheet row numbers for logs, e.g. "3", "10-15", "3, 10-15". */
 private fun formatSheetRowNumberRanges(rowNumbers: Collection<Int>): String {
@@ -51,9 +60,64 @@ private fun logSkippedSheetRows(entityLabel: String, skips: List<Pair<Int, Int>>
     )
 }
 
+/** Volunteers sheet "Rank" column: computed benefit rank when provided, else persisted [Volunteer.currentRank]. */
+private fun volunteerRankLabelForSheet(volunteer: Volunteer, benefitPrimaryRank: VolunteerRank?): String =
+    (benefitPrimaryRank ?: volunteer.currentRank)?.name ?: "No Rank"
+
+/** Display string for the shifts (jobs) sheet next to volunteer NanoID — matches roster style (name + abbreviation). */
+private fun volunteerDisplayNameForJobSheet(volunteer: Volunteer): String =
+    "${volunteer.name} ${volunteer.lastNameAbbreviation}".trim()
+
+private fun volunteerDisplayNameForJobSheet(volunteerId: String, volunteers: List<Volunteer>): String =
+    volunteers.find { it.id == volunteerId }?.let { volunteerDisplayNameForJobSheet(it) } ?: ""
+
+private val JOBS_SHEET_HEADERS_V2 = listOf(
+    "Volunteer ID", "Volunteer Name", "Job Type", "Venue", "Date", "Shift Time", "Notes", "Last Modified", "Entries left"
+)
+
+/** Shifts sheet column layout: v1 = NanoID then job type; v2 = NanoID, display name, then job type. */
+private enum class JobsSheetLayout { LEGACY_EIGHT_COL, VOLUNTEER_NAME_NINE_COL }
+
+private fun padJobSheetRowToEightLegacyCells(row: List<Any>): List<Any> {
+    val out = row.map { it }.toMutableList()
+    while (out.size < 8) out.add("")
+    if (out.size > 8) return out.take(8)
+    return out
+}
+
+private fun legacyEightColRowToV2Row(row: List<Any>, volunteerName: String): List<Any> {
+    val eight = padJobSheetRowToEightLegacyCells(row)
+    return listOf(eight[0], volunteerName) + eight.drop(1)
+}
+
 class GoogleSheetsService(private val context: Context) {
 
     companion object {
+        /** 0-based index of last column with app data (before the two blank columns + epoch panel). */
+        private const val SHEET_LAST_COL_GUEST_LIST = 10 // K
+        private const val SHEET_LAST_COL_VOLUNTEER_GUEST_DATA = 7 // H
+        private const val SHEET_LAST_COL_VOLUNTEER = 11 // L
+        private const val SHEET_LAST_COL_JOBS = 8 // I (v2 shifts sheet)
+        private const val SHEET_LAST_COL_JOB_TYPES = 9 // J
+        private const val SHEET_LAST_COL_VENUES = 10 // K
+        private const val SHEET_LAST_COL_SALES_ITEMS = 5 // F
+
+        /** Epoch helper: 0-based column index, 1-based top row (product layout per tab). */
+        private const val EPOCH_COL_GUEST_LIST = 13 // N
+        private const val EPOCH_ROW_GUEST_LIST = 2
+        private const val EPOCH_COL_VOLUNTEER_GUEST = 10 // K
+        private const val EPOCH_ROW_VOLUNTEER_GUEST = 9
+        private const val EPOCH_COL_VOLUNTEERS = 14 // O
+        private const val EPOCH_ROW_VOLUNTEERS = 2
+        private const val EPOCH_COL_JOBS = 11 // L (v2: data A–I, blanks J–K, epoch here)
+        private const val EPOCH_ROW_JOBS = 2
+        private const val EPOCH_COL_VENUES = 13 // N
+        private const val EPOCH_ROW_VENUES = 2
+        private const val EPOCH_COL_JOB_TYPES = 12 // M
+        private const val EPOCH_ROW_JOB_TYPES = 2
+        private const val EPOCH_COL_SALES = 8 // I
+        private const val EPOCH_ROW_SALES = 2
+
         /**
          * Parse a lastModified timestamp from a Google Sheets cell value.
          * Handles plain longs AND scientific notation (e.g. "1.7132E12") which
@@ -65,6 +129,48 @@ class GoogleSheetsService(private val context: Context) {
             return raw.toLongOrNull()
                 ?: raw.toDoubleOrNull()?.toLong()
                 ?: 0L
+        }
+
+        /**
+         * Parses the shifts-sheet **event date** cell (not necessarily epoch millis).
+         * Supports epoch milliseconds (and scientific notation via [toDoubleOrNull]),
+         * ISO-8601 dates/datetimes, and Google Sheets / Excel **serial day** numbers (typical range 1–60000).
+         */
+        fun parseJobEventDateFromSheets(raw: String): Long {
+            val s = raw.trim()
+            if (s.isEmpty()) return 0L
+            val zone = ZoneId.of("Europe/Zurich")
+            s.toLongOrNull()?.takeIf { it >= 100_000_000_000L }?.let { return it }
+            val asDouble = s.toDoubleOrNull()
+            if (asDouble != null && !asDouble.isNaN()) {
+                when {
+                    asDouble >= 100_000_000_000.0 -> return asDouble.toLong()
+                    asDouble >= 1.0 && asDouble < 1_000_000.0 -> {
+                        val base = LocalDate.of(1899, 12, 30)
+                        val dayIndex = asDouble.toLong()
+                        return base.plusDays(dayIndex)
+                            .atStartOfDay(zone)
+                            .toInstant()
+                            .toEpochMilli()
+                    }
+                }
+            }
+            try {
+                return LocalDate.parse(s, DateTimeFormatter.ISO_LOCAL_DATE)
+                    .atStartOfDay(zone)
+                    .toInstant()
+                    .toEpochMilli()
+            } catch (_: Exception) {
+            }
+            try {
+                return ZonedDateTime.parse(s).toInstant().toEpochMilli()
+            } catch (_: Exception) {
+            }
+            try {
+                return Instant.parse(s).toEpochMilli()
+            } catch (_: Exception) {
+            }
+            return parseLastModified(s).takeIf { it > 0L } ?: 0L
         }
     }
 
@@ -95,6 +201,460 @@ class GoogleSheetsService(private val context: Context) {
     private val settingsManager = SettingsManager(context)
     private val fileManager = FileManager(context)
 
+    // ── API-call reduction caches ───────────────────────────────────────────
+    //
+    // The Google Sheets API is rate-limited. Several helpers (structure
+    // validation, the epoch calculator panel, the volunteer-guest banner,
+    // etc.) are decorative/structural and rarely need to run more than once
+    // per session on the same spreadsheet. Caching their result in memory
+    // removes dozens of API calls per sync cycle without changing behaviour
+    // for the user: structure still gets checked the first time we talk to
+    // the sheet, and after [invalidateSessionCaches] (e.g. when the sheet
+    // ID / tab names change) the caches are rebuilt.
+
+    /** Spreadsheet id a cached structure validation was performed against. */
+    @Volatile
+    private var lastStructureValidationSpreadsheetId: String? = null
+
+    /** Unix millis of the last successful [validateAndRepairSheetsStructure] run. */
+    @Volatile
+    private var lastStructureValidationAtMs: Long = 0L
+
+    /** Structure validation TTL: after this the sheet is re-checked (1 hour). */
+    private val structureValidationTtlMs: Long = 60L * 60L * 1000L
+
+    /** Tabs that already received [applyEpochCalculatorPanel] this session (spreadsheetId|tabTitle). */
+    private val epochPanelAppliedTabs: MutableSet<String> = java.util.Collections.synchronizedSet(mutableSetOf())
+
+    /** Volunteer-guest read-only banner keys (spreadsheetId|tabTitle) already applied this session. */
+    private val volunteerGuestBannerAppliedTabs: MutableSet<String> = java.util.Collections.synchronizedSet(mutableSetOf())
+
+    /**
+     * Drops session caches; call after the spreadsheet id or any tab name
+     * changes so the next sync re-validates structure and reapplies banners
+     * on the new target. Safe to call many times.
+     */
+    @Suppress("unused")
+    fun invalidateSessionCaches() {
+        lastStructureValidationSpreadsheetId = null
+        lastStructureValidationAtMs = 0L
+        epochPanelAppliedTabs.clear()
+        volunteerGuestBannerAppliedTabs.clear()
+    }
+
+    private fun structureValidationCacheIsFresh(spreadsheetId: String): Boolean {
+        if (spreadsheetId.isBlank()) return false
+        if (lastStructureValidationSpreadsheetId != spreadsheetId) return false
+        val age = System.currentTimeMillis() - lastStructureValidationAtMs
+        return age in 0..structureValidationTtlMs
+    }
+
+    private fun markStructureValidationFresh(spreadsheetId: String) {
+        lastStructureValidationSpreadsheetId = spreadsheetId
+        lastStructureValidationAtMs = System.currentTimeMillis()
+    }
+
+    private fun epochPanelCacheKey(spreadsheetId: String, tabTitle: String): String =
+        "$spreadsheetId|$tabTitle"
+
+    private fun volunteerGuestBannerCacheKey(spreadsheetId: String, tabTitle: String): String =
+        "$spreadsheetId|$tabTitle"
+
+    /** Matches [com.eventmanager.app.MainActivity] language → locale mapping (incl. en-GB). */
+    private fun localeFromAppLanguageSetting(): Locale {
+        val code = settingsManager.getLanguage()
+        return when {
+            code.equals("en", ignoreCase = true) -> Locale("en", "GB")
+            code.contains("-") -> {
+                val parts = code.split("-")
+                if (parts.size >= 2) Locale(parts[0], parts[1]) else Locale(code)
+            }
+            code.contains("_") -> {
+                val parts = code.split("_")
+                if (parts.size >= 2) Locale(parts[0], parts[1]) else Locale(code)
+            }
+            else -> Locale(code)
+        }
+    }
+
+    private fun localizedContextForSheetsBanner(): Context {
+        val locale = localeFromAppLanguageSetting()
+        val config = Configuration(context.resources.configuration)
+        config.setLocale(locale)
+        return context.createConfigurationContext(config)
+    }
+
+    /** A1 column letters for 0-based column index (0 = A). */
+    private fun a1ColumnLetterFromIndex0(zeroBasedIndex: Int): String {
+        require(zeroBasedIndex >= 0)
+        var n = zeroBasedIndex + 1
+        val sb = StringBuilder()
+        while (n > 0) {
+            val rem = (n - 1) % 26
+            sb.append(('A'.code + rem).toChar())
+            n = (n - 1) / 26
+        }
+        return sb.toString().reversed()
+    }
+
+    private data class ResolvedSheetTab(val sheetId: Int, val title: String)
+
+    /**
+     * Resolves a configured tab title to the spreadsheet's actual tab (trim + exact match, then case-insensitive).
+     */
+    private fun resolveSheetTab(spreadsheet: Spreadsheet, configuredTitle: String): ResolvedSheetTab? {
+        val want = configuredTitle.trim()
+        val list = spreadsheet.sheets ?: return null
+        for (sh in list) {
+            val t = sh.properties?.title?.trim() ?: continue
+            if (t == want) {
+                val sid = sh.properties?.sheetId?.toInt() ?: continue
+                return ResolvedSheetTab(sid, t)
+            }
+        }
+        for (sh in list) {
+            val t = sh.properties?.title?.trim() ?: continue
+            if (t.equals(want, ignoreCase = true)) {
+                val sid = sh.properties?.sheetId?.toInt() ?: continue
+                return ResolvedSheetTab(sid, t)
+            }
+        }
+        return null
+    }
+
+    /**
+     * Google Sheets uses `;` between function arguments in many European locales (e.g. fr_FR)
+     * and `,` in en_US / en_GB. Formulas written with the wrong separator show #ERROR! / parse errors.
+     */
+    private fun sheetFormulaListSeparator(spreadsheetLocale: String?): Char {
+        if (spreadsheetLocale.isNullOrBlank()) return ','
+        val l = spreadsheetLocale.lowercase(Locale.ROOT).replace('-', '_')
+        val lang = l.substringBefore('_').trim()
+        val semiLanguages = setOf(
+            "fr", "de", "it", "nl", "ru", "pl", "cs", "sk", "hu", "ro", "da", "sv", "no", "nb", "nn",
+            "fi", "el", "pt", "ca", "eu", "gl", "is", "sq", "sl", "hr", "sr", "bs", "bg", "uk", "be",
+            "et", "lv", "lt", "lb", "mt", "ga", "cy", "mk", "tr"
+        )
+        if (lang in semiLanguages) return ';'
+        if (lang == "es") {
+            if (l.contains("_us", ignoreCase = true) || l.contains("_mx", ignoreCase = true)) return ','
+            return ';'
+        }
+        return ','
+    }
+
+    /**
+     * Clears only the main data rectangle so the epoch helper panel (right of [lastDataCol0] + 2 blanks) survives.
+     * Uses [quoteSheetTabForRange] so tab names with spaces (e.g. "Volunteer Guest List") clear correctly.
+     */
+    private suspend fun clearSheetDataColumns(sheetName: String, lastDataColumnZeroBased: Int) {
+        val tab = quoteSheetTabForRange(sheetName)
+        val endLetter = a1ColumnLetterFromIndex0(lastDataColumnZeroBased + 2)
+        clearSheetRange("$tab!A:$endLetter")
+    }
+
+    /**
+     * Two-column epoch helper in a fixed 4-row block (e.g. N2:O5): merged section titles (with short hints),
+     * then input | formula for ms→datetime and date→ms. [leftCol0] is 0-based column (N=13); [topRow1Based] is the first row.
+     */
+    private suspend fun applyEpochCalculatorPanel(
+        spreadsheetId: String,
+        sheetTitle: String,
+        leftCol0: Int,
+        topRow1Based: Int
+    ) = withContext(Dispatchers.IO) {
+        if (sheetsService == null) {
+            initializeSheetsService()
+        }
+        val service = sheetsService ?: return@withContext
+
+        // Skip entirely when we already wrote this purely-decorative panel to
+        // this tab in this process session. The panel layout never changes, so
+        // re-running it on every upload just burns 3-4 API calls per tab.
+        val cacheKey = epochPanelCacheKey(spreadsheetId, sheetTitle)
+        if (epochPanelAppliedTabs.contains(cacheKey)) {
+            return@withContext
+        }
+        val ss = service.spreadsheets().get(spreadsheetId).execute()
+        val epochResolved = resolveSheetTab(ss, sheetTitle)
+            ?: run {
+                println("⚠️ No sheetId for tab '$sheetTitle' — skipping epoch calculator panel")
+                return@withContext
+            }
+        val sheetId = epochResolved.sheetId
+        val tabQuoted = quoteSheetTabForRange(epochResolved.title)
+
+        val c0 = a1ColumnLetterFromIndex0(leftCol0)
+        val c1 = a1ColumnLetterFromIndex0(leftCol0 + 1)
+        val rTitle1 = topRow1Based
+        val rMs = topRow1Based + 1
+        val rTitle2 = topRow1Based + 2
+        val rDt = topRow1Based + 3
+        val row0Panel = topRow1Based - 1
+        val rowEndExclusive = row0Panel + 4
+
+        try {
+            service.spreadsheets().batchUpdate(
+                spreadsheetId,
+                BatchUpdateSpreadsheetRequest().setRequests(
+                    listOf(
+                        Request().setUnmergeCells(
+                            UnmergeCellsRequest().setRange(
+                                GridRange()
+                                    .setSheetId(sheetId)
+                                    .setStartRowIndex(row0Panel)
+                                    .setEndRowIndex(rowEndExclusive + 1)
+                                    .setStartColumnIndex(leftCol0)
+                                    .setEndColumnIndex(leftCol0 + 3)
+                            )
+                        )
+                    )
+                )
+            ).execute()
+        } catch (e: Exception) {
+            println("⚠️ Epoch panel unmerge (non-fatal): ${e.message}")
+        }
+
+        val mergeT1 = Request().setMergeCells(
+            MergeCellsRequest()
+                .setMergeType("MERGE_ALL")
+                .setRange(
+                    GridRange()
+                        .setSheetId(sheetId)
+                        .setStartRowIndex(rTitle1 - 1)
+                        .setEndRowIndex(rTitle1)
+                        .setStartColumnIndex(leftCol0)
+                        .setEndColumnIndex(leftCol0 + 2)
+                )
+        )
+        val mergeT2 = Request().setMergeCells(
+            MergeCellsRequest()
+                .setMergeType("MERGE_ALL")
+                .setRange(
+                    GridRange()
+                        .setSheetId(sheetId)
+                        .setStartRowIndex(rTitle2 - 1)
+                        .setEndRowIndex(rTitle2)
+                        .setStartColumnIndex(leftCol0)
+                        .setEndColumnIndex(leftCol0 + 2)
+                )
+        )
+        service.spreadsheets().batchUpdate(
+            spreadsheetId,
+            BatchUpdateSpreadsheetRequest().setRequests(listOf(mergeT1, mergeT2))
+        ).execute()
+
+        val locCtx = localizedContextForSheetsBanner()
+        val hintMs = locCtx.getString(R.string.sheet_epoch_calc_hint_ms)
+        val hintDt = locCtx.getString(R.string.sheet_epoch_calc_hint_datetime)
+        val title1 = locCtx.getString(R.string.sheet_epoch_calc_title_ms_to_date) + "\n" + hintMs
+        val title2 = locCtx.getString(R.string.sheet_epoch_calc_title_date_to_ms) + "\n" + hintDt
+        val sep = sheetFormulaListSeparator(ss.properties?.locale)
+        val msToDateFormula =
+            "=IF(COUNTBLANK($c0$rMs)=1${sep}\"\"${sep}(($c0$rMs)+0)/(1000*60*60*24)+DATE(1970${sep}1${sep}1))"
+        val dateToMsFormula =
+            "=IF(COUNTBLANK($c0$rDt)=1${sep}\"\"${sep}(($c0$rDt)-DATE(1970${sep}1${sep}1))*86400000)"
+
+        service.spreadsheets().values().batchUpdate(
+            spreadsheetId,
+            BatchUpdateValuesRequest()
+                .setValueInputOption("USER_ENTERED")
+                .setData(
+                    listOf(
+                        ValueRange().setRange("$tabQuoted!$c0$rTitle1").setValues(listOf(listOf(title1))),
+                        ValueRange().setRange("$tabQuoted!$c0$rMs").setValues(listOf(listOf(""))),
+                        ValueRange().setRange("$tabQuoted!$c1$rMs").setValues(listOf(listOf(msToDateFormula))),
+                        ValueRange().setRange("$tabQuoted!$c0$rTitle2").setValues(listOf(listOf(title2))),
+                        ValueRange().setRange("$tabQuoted!$c0$rDt").setValues(listOf(listOf(""))),
+                        ValueRange().setRange("$tabQuoted!$c1$rDt").setValues(listOf(listOf(dateToMsFormula)))
+                    )
+                )
+        ).execute()
+
+        val panelBg = Color().setRed(0.97f).setGreen(0.98f).setBlue(1f)
+        val titleBg = Color().setRed(0.88f).setGreen(0.92f).setBlue(0.99f)
+        val inputBg = Color().setRed(1f).setGreen(1f).setBlue(1f)
+        val outBg = Color().setRed(0.94f).setGreen(0.96f).setBlue(0.99f)
+        val borderColor = Color().setRed(0.55f).setGreen(0.62f).setBlue(0.75f)
+        val textDark = Color().setRed(0.14f).setGreen(0.18f).setBlue(0.26f)
+        val borderSolid = Border().setStyle("SOLID").setWidth(1).setColor(borderColor)
+
+        val fmtTitle = CellFormat()
+            .setBackgroundColor(titleBg)
+            .setHorizontalAlignment("CENTER")
+            .setVerticalAlignment("MIDDLE")
+            .setWrapStrategy("WRAP")
+            .setTextFormat(TextFormat().setBold(true).setFontSize(10).setForegroundColor(textDark))
+
+        val fmtInput = CellFormat()
+            .setBackgroundColor(inputBg)
+            .setHorizontalAlignment("LEFT")
+            .setVerticalAlignment("MIDDLE")
+            .setWrapStrategy("WRAP")
+            .setTextFormat(TextFormat().setBold(false).setFontSize(10).setForegroundColor(textDark))
+
+        val fmtOutMs = CellFormat()
+            .setBackgroundColor(outBg)
+            .setHorizontalAlignment("LEFT")
+            .setVerticalAlignment("MIDDLE")
+            .setNumberFormat(NumberFormat().setType("DATE_TIME").setPattern("yyyy-MM-dd HH:mm:ss"))
+
+        val fmtOutMsNum = CellFormat()
+            .setBackgroundColor(outBg)
+            .setHorizontalAlignment("RIGHT")
+            .setVerticalAlignment("MIDDLE")
+            .setNumberFormat(NumberFormat().setType("NUMBER").setPattern("0"))
+
+        val formatRequests = listOf(
+            Request().setRepeatCell(
+                RepeatCellRequest()
+                    .setRange(
+                        GridRange()
+                            .setSheetId(sheetId)
+                            .setStartRowIndex(row0Panel)
+                            .setEndRowIndex(rowEndExclusive)
+                            .setStartColumnIndex(leftCol0)
+                            .setEndColumnIndex(leftCol0 + 2)
+                    )
+                    .setCell(
+                        CellData().setUserEnteredFormat(
+                            CellFormat()
+                                .setBackgroundColor(panelBg)
+                                .setWrapStrategy("WRAP")
+                                .setVerticalAlignment("TOP")
+                        )
+                    )
+                    .setFields(
+                        "userEnteredFormat.backgroundColor,userEnteredFormat.wrapStrategy," +
+                            "userEnteredFormat.verticalAlignment"
+                    )
+            ),
+            Request().setRepeatCell(
+                RepeatCellRequest()
+                    .setRange(
+                        GridRange()
+                            .setSheetId(sheetId)
+                            .setStartRowIndex(rTitle1 - 1)
+                            .setEndRowIndex(rTitle1)
+                            .setStartColumnIndex(leftCol0)
+                            .setEndColumnIndex(leftCol0 + 2)
+                    )
+                    .setCell(CellData().setUserEnteredFormat(fmtTitle))
+                    .setFields(
+                        "userEnteredFormat.backgroundColor,userEnteredFormat.horizontalAlignment," +
+                            "userEnteredFormat.verticalAlignment,userEnteredFormat.wrapStrategy," +
+                            "userEnteredFormat.textFormat"
+                    )
+            ),
+            Request().setRepeatCell(
+                RepeatCellRequest()
+                    .setRange(
+                        GridRange()
+                            .setSheetId(sheetId)
+                            .setStartRowIndex(rTitle2 - 1)
+                            .setEndRowIndex(rTitle2)
+                            .setStartColumnIndex(leftCol0)
+                            .setEndColumnIndex(leftCol0 + 2)
+                    )
+                    .setCell(CellData().setUserEnteredFormat(fmtTitle))
+                    .setFields(
+                        "userEnteredFormat.backgroundColor,userEnteredFormat.horizontalAlignment," +
+                            "userEnteredFormat.verticalAlignment,userEnteredFormat.wrapStrategy," +
+                            "userEnteredFormat.textFormat"
+                    )
+            ),
+            Request().setRepeatCell(
+                RepeatCellRequest()
+                    .setRange(
+                        GridRange()
+                            .setSheetId(sheetId)
+                            .setStartRowIndex(rMs - 1)
+                            .setEndRowIndex(rMs)
+                            .setStartColumnIndex(leftCol0)
+                            .setEndColumnIndex(leftCol0 + 1)
+                    )
+                    .setCell(CellData().setUserEnteredFormat(fmtInput))
+                    .setFields(
+                        "userEnteredFormat.backgroundColor,userEnteredFormat.horizontalAlignment," +
+                            "userEnteredFormat.verticalAlignment,userEnteredFormat.wrapStrategy," +
+                            "userEnteredFormat.textFormat"
+                    )
+            ),
+            Request().setRepeatCell(
+                RepeatCellRequest()
+                    .setRange(
+                        GridRange()
+                            .setSheetId(sheetId)
+                            .setStartRowIndex(rDt - 1)
+                            .setEndRowIndex(rDt)
+                            .setStartColumnIndex(leftCol0)
+                            .setEndColumnIndex(leftCol0 + 1)
+                    )
+                    .setCell(CellData().setUserEnteredFormat(fmtInput))
+                    .setFields(
+                        "userEnteredFormat.backgroundColor,userEnteredFormat.horizontalAlignment," +
+                            "userEnteredFormat.verticalAlignment,userEnteredFormat.wrapStrategy," +
+                            "userEnteredFormat.textFormat"
+                    )
+            ),
+            Request().setRepeatCell(
+                RepeatCellRequest()
+                    .setRange(
+                        GridRange()
+                            .setSheetId(sheetId)
+                            .setStartRowIndex(rMs - 1)
+                            .setEndRowIndex(rMs)
+                            .setStartColumnIndex(leftCol0 + 1)
+                            .setEndColumnIndex(leftCol0 + 2)
+                    )
+                    .setCell(CellData().setUserEnteredFormat(fmtOutMs))
+                    .setFields(
+                        "userEnteredFormat.backgroundColor,userEnteredFormat.horizontalAlignment," +
+                            "userEnteredFormat.verticalAlignment,userEnteredFormat.numberFormat"
+                    )
+            ),
+            Request().setRepeatCell(
+                RepeatCellRequest()
+                    .setRange(
+                        GridRange()
+                            .setSheetId(sheetId)
+                            .setStartRowIndex(rDt - 1)
+                            .setEndRowIndex(rDt)
+                            .setStartColumnIndex(leftCol0 + 1)
+                            .setEndColumnIndex(leftCol0 + 2)
+                    )
+                    .setCell(CellData().setUserEnteredFormat(fmtOutMsNum))
+                    .setFields(
+                        "userEnteredFormat.backgroundColor,userEnteredFormat.horizontalAlignment," +
+                            "userEnteredFormat.verticalAlignment,userEnteredFormat.numberFormat"
+                    )
+            ),
+            Request().setUpdateBorders(
+                UpdateBordersRequest()
+                    .setRange(
+                        GridRange()
+                            .setSheetId(sheetId)
+                            .setStartRowIndex(row0Panel)
+                            .setEndRowIndex(rowEndExclusive)
+                            .setStartColumnIndex(leftCol0)
+                            .setEndColumnIndex(leftCol0 + 2)
+                    )
+                    .setTop(borderSolid)
+                    .setBottom(borderSolid)
+                    .setLeft(borderSolid)
+                    .setRight(borderSolid)
+            )
+        )
+        service.spreadsheets().batchUpdate(
+            spreadsheetId,
+            BatchUpdateSpreadsheetRequest().setRequests(formatRequests)
+        ).execute()
+
+        // Remember that this tab is now set up so subsequent uploads in the
+        // same session skip the ~4 API calls above.
+        epochPanelAppliedTabs.add(epochPanelCacheKey(spreadsheetId, sheetTitle))
+    }
+
     private fun requiresShiftTimeForJobType(jobTypeName: String, jobTypeConfigs: List<JobTypeConfig>): Boolean {
         val config = jobTypeConfigs.firstOrNull { it.name == jobTypeName }
         // Keep legacy behavior when config is unknown: write/parse explicit shift labels.
@@ -118,7 +678,204 @@ class GoogleSheetsService(private val context: Context) {
             // Non-shift-time job types intentionally keep this cell empty in Sheets.
             return ShiftTime.BEFORE_MIDNIGHT
         }
-        return parseShiftTimeFromGoogleSheets(rawShiftTime)
+        return try {
+            parseShiftTimeFromGoogleSheets(rawShiftTime)
+        } catch (_: Exception) {
+            ShiftTime.BEFORE_MIDNIGHT
+        }
+    }
+
+    private fun normalizeJobTypeNameFromSheets(raw: Any?): String =
+        raw?.toString()?.trim().orEmpty().ifBlank { "Other" }
+
+    private fun normalizeJobTextCellFromSheets(raw: Any?): String =
+        raw?.toString()?.trim().orEmpty()
+
+    /**
+     * How to interpret one shifts-sheet data row. Rows may have 9+ cells from the API while still
+     * using the legacy column map (job type in column B); treating those as v2 puts epoch dates
+     * into [parseShiftTimeFromGoogleSheets] and breaks parsing.
+     */
+    private enum class JobSheetRowParseMode { LEGACY_EIGHT_COL, VOLUNTEER_NAME_NINE_COL }
+
+    private fun isBareMillisTimestampString(s: String): Boolean {
+        val t = s.trim()
+        if (t.isEmpty()) return false
+        if (t.all { it.isDigit() }) return t.length in 10..15
+        val d = t.toDoubleOrNull() ?: return false
+        val lv = kotlin.math.round(d).toLong()
+        return lv in 1_000_000_000_000L..99_999_999_999_999L
+    }
+
+    /**
+     * True when a cell likely holds an event date (epoch millis, Sheets serial day, ISO date).
+     * Used only to disambiguate legacy vs v2 column maps when job-type names do not match configs.
+     */
+    private fun isLikelyJobSheetEventDateCell(s: String): Boolean {
+        val t = s.trim()
+        if (t.isEmpty()) return false
+        if (isBareMillisTimestampString(t)) return true
+        if (t.matches(Regex("^\\d{4}-\\d{2}-\\d{2}([Tt].*)?$"))) return true
+        // Google Sheets serial days are almost always 5–7 digit numbers (avoid "3" / small codes).
+        if (t.matches(Regex("^\\d{5,7}(\\.\\d+)?$"))) {
+            val d = t.toDoubleOrNull() ?: return false
+            if (!d.isNaN() && d >= 1.0 && d < 1_000_000.0) return true
+        }
+        return false
+    }
+
+    /**
+     * True when a cell looks like the human-readable "Shift time" column (not a bare millis timestamp).
+     */
+    private fun cellLooksLikeJobSheetShiftColumn(raw: String): Boolean {
+        val t = raw.trim()
+        if (t.isEmpty()) return false
+        if (isBareMillisTimestampString(t)) return false
+        val low = t.lowercase()
+        return low.contains("evening") || low.contains("shift") ||
+            low.contains("profit") || low.contains("profité") || low.contains("profited") ||
+            low.contains("non-prof") || low.contains("pas profit") || low.contains("non prof") ||
+            low.contains("midnight") || low.contains("con beneficio") || low.contains("sin beneficio") ||
+            low == "both" || low.contains("groove") || low.contains("terreau") ||
+            low == "before_midnight" || low == "after_midnight"
+    }
+
+    private fun inferJobSheetRowParseMode(row: List<Any>, jobTypeConfigs: List<JobTypeConfig>): JobSheetRowParseMode {
+        if (row.size < 7) return JobSheetRowParseMode.LEGACY_EIGHT_COL
+        val shiftCol = row.getOrNull(5)?.toString()?.trim().orEmpty()
+        if (isBareMillisTimestampString(shiftCol)) {
+            return JobSheetRowParseMode.LEGACY_EIGHT_COL
+        }
+        val col1 = row.getOrNull(1)?.toString()?.trim().orEmpty()
+        val col2 = row.getOrNull(2)?.toString()?.trim().orEmpty()
+        val typeNames = jobTypeConfigs.map { it.name.trim() }.filter { it.isNotEmpty() }.toSet()
+        if (typeNames.isNotEmpty()) {
+            val jtAt1 = col1 in typeNames
+            val jtAt2 = col2 in typeNames
+            when {
+                jtAt2 && !jtAt1 -> return JobSheetRowParseMode.VOLUNTEER_NAME_NINE_COL
+                jtAt1 && !jtAt2 -> return JobSheetRowParseMode.LEGACY_EIGHT_COL
+                jtAt1 && jtAt2 -> {
+                    val cell3 = row.getOrNull(3)?.toString()?.trim().orEmpty()
+                    val cell4 = row.getOrNull(4)?.toString()?.trim().orEmpty()
+                    val cell5 = row.getOrNull(5)?.toString()?.trim().orEmpty()
+                    val d3 = isLikelyJobSheetEventDateCell(cell3)
+                    val d4 = isLikelyJobSheetEventDateCell(cell4)
+                    val s4 = cellLooksLikeJobSheetShiftColumn(cell4)
+                    val s5 = cellLooksLikeJobSheetShiftColumn(cell5)
+                    return resolveJobSheetParseModeFromDateShiftSignals(d3, d4, s4, s5)
+                }
+            }
+        }
+
+        val cell3 = row.getOrNull(3)?.toString()?.trim().orEmpty()
+        val cell4 = row.getOrNull(4)?.toString()?.trim().orEmpty()
+        val cell5 = row.getOrNull(5)?.toString()?.trim().orEmpty()
+        val d3 = isLikelyJobSheetEventDateCell(cell3)
+        val d4 = isLikelyJobSheetEventDateCell(cell4)
+        val s4 = cellLooksLikeJobSheetShiftColumn(cell4)
+        val s5 = cellLooksLikeJobSheetShiftColumn(cell5)
+        return resolveJobSheetParseModeFromDateShiftSignals(d3, d4, s4, s5)
+    }
+
+    /**
+     * When job-type cells do not match [JobTypeConfig] names (typos, locales, inactive types),
+     * infer layout from where the event date and shift label sit so [Job.jobTypeName] still matches benefits logic.
+     */
+    private fun resolveJobSheetParseModeFromDateShiftSignals(
+        dateLikelyCol3: Boolean,
+        dateLikelyCol4: Boolean,
+        shiftLikelyCol4: Boolean,
+        shiftLikelyCol5: Boolean
+    ): JobSheetRowParseMode {
+        val v2Strong = dateLikelyCol4 && shiftLikelyCol5 && !(dateLikelyCol3 && shiftLikelyCol4)
+        val legacyStrong = dateLikelyCol3 && shiftLikelyCol4 && !(dateLikelyCol4 && shiftLikelyCol5)
+        when {
+            v2Strong && !legacyStrong -> return JobSheetRowParseMode.VOLUNTEER_NAME_NINE_COL
+            legacyStrong && !v2Strong -> return JobSheetRowParseMode.LEGACY_EIGHT_COL
+            dateLikelyCol3 && !dateLikelyCol4 -> return JobSheetRowParseMode.LEGACY_EIGHT_COL
+            dateLikelyCol4 && !dateLikelyCol3 -> return JobSheetRowParseMode.VOLUNTEER_NAME_NINE_COL
+            // Prefer legacy when still ambiguous: defaulting to v2 used volunteer name as job type and broke benefits.
+            else -> return JobSheetRowParseMode.LEGACY_EIGHT_COL
+        }
+    }
+
+    private fun detectJobsSheetLayout(
+        header: List<String>,
+        anchorDataRow: List<Any>?,
+        jobTypeConfigs: List<JobTypeConfig>
+    ): JobsSheetLayout {
+        val h1 = header.getOrNull(1)?.trim().orEmpty()
+        when {
+            h1.equals("Volunteer Name", ignoreCase = true) ||
+                h1.equals("Nom du bénévole", ignoreCase = true) ||
+                h1.equals("Nombre del voluntario", ignoreCase = true) ->
+                return JobsSheetLayout.VOLUNTEER_NAME_NINE_COL
+            h1.equals("Job Type", ignoreCase = true) ||
+                h1.equals("Type de poste", ignoreCase = true) ||
+                h1.equals("Tipo de trabajo", ignoreCase = true) ->
+                return JobsSheetLayout.LEGACY_EIGHT_COL
+        }
+        val anchor = anchorDataRow ?: return JobsSheetLayout.LEGACY_EIGHT_COL
+        val n = anchor.size
+        if (n >= 9) return JobsSheetLayout.VOLUNTEER_NAME_NINE_COL
+        if (n >= 7 && rowContentSuggestsVolunteerNameColumnBeforeJobType(anchor, jobTypeConfigs)) {
+            return JobsSheetLayout.VOLUNTEER_NAME_NINE_COL
+        }
+        if (n in 1..8) return JobsSheetLayout.LEGACY_EIGHT_COL
+        return JobsSheetLayout.VOLUNTEER_NAME_NINE_COL
+    }
+
+    /**
+     * True when column B is already the volunteer display string and column C is the configured job type
+     * (v2 layout), including rows where the API returns only 8 cells because "Entries left" is empty.
+     */
+    private fun rowContentSuggestsVolunteerNameColumnBeforeJobType(
+        row: List<Any>,
+        jobTypeConfigs: List<JobTypeConfig>
+    ): Boolean {
+        if (row.size < 3) return false
+        val typeNames = jobTypeConfigs.map { it.name.trim() }.filter { it.isNotEmpty() }.toSet()
+        if (typeNames.isNotEmpty()) {
+            val c1 = row.getOrNull(1)?.toString()?.trim().orEmpty()
+            val c2 = row.getOrNull(2)?.toString()?.trim().orEmpty()
+            when {
+                c2 in typeNames && c1 !in typeNames -> return true
+                c1 in typeNames && c2 !in typeNames -> return false
+            }
+        }
+        if (row.size < 6) return false
+        val cell3 = row.getOrNull(3)?.toString()?.trim().orEmpty()
+        val cell4 = row.getOrNull(4)?.toString()?.trim().orEmpty()
+        val cell5 = row.getOrNull(5)?.toString()?.trim().orEmpty()
+        val d3 = isLikelyJobSheetEventDateCell(cell3)
+        val d4 = isLikelyJobSheetEventDateCell(cell4)
+        val s4 = cellLooksLikeJobSheetShiftColumn(cell4)
+        val s5 = cellLooksLikeJobSheetShiftColumn(cell5)
+        return resolveJobSheetParseModeFromDateShiftSignals(d3, d4, s4, s5) ==
+            JobSheetRowParseMode.VOLUNTEER_NAME_NINE_COL
+    }
+
+    private fun jobsSheetNeedsV2ColumnMigration(
+        layout: JobsSheetLayout,
+        dataRows: List<List<Any>>,
+        jobTypeConfigs: List<JobTypeConfig>
+    ): Boolean {
+        // v2 sheets often have 8 API cells when the last column is empty — do NOT re-run
+        // [legacyEightColRowToV2Row] or every row shifts right and "Volunteer Name" is duplicated into Job Type.
+        if (layout == JobsSheetLayout.VOLUNTEER_NAME_NINE_COL) return false
+        if (layout == JobsSheetLayout.LEGACY_EIGHT_COL) return true
+        val substantial = dataRows.filter { it.size >= 7 }
+        if (substantial.isEmpty()) return false
+        if (substantial.all { rowContentSuggestsVolunteerNameColumnBeforeJobType(it, jobTypeConfigs) }) return false
+        return true
+    }
+
+    private fun anyJobRowsUseVolunteerNameNineColLayout(
+        dataRows: List<List<Any>>,
+        jobTypeConfigs: List<JobTypeConfig>
+    ): Boolean = dataRows.any { row ->
+        row.size >= 8 && inferJobSheetRowParseMode(row, jobTypeConfigs) == JobSheetRowParseMode.VOLUNTEER_NAME_NINE_COL
     }
 
     suspend fun initializeSheetsService() = withContext(Dispatchers.IO) {
@@ -289,9 +1046,8 @@ class GoogleSheetsService(private val context: Context) {
             
             ApiRateLimitHandler.executeWithRetry(
                 operation = {
-                // First, clear the entire sheet to prevent duplicate last rows
-                clearSheetRange("${settingsManager.getGuestListSheet()}!A:Z")
-                println("🧹 Cleared entire guests sheet to prevent duplicates")
+                clearSheetDataColumns(settingsManager.getGuestListSheet(), SHEET_LAST_COL_GUEST_LIST)
+                println("🧹 Cleared guest data columns (epoch helper panel preserved)")
                 
                 // Only upload regular guests here; volunteer benefits and temporary guests go to their own sheets
                 val values = guests.filter { !it.isVolunteerBenefit && !it.isTemporaryGuest }.map { guest ->
@@ -313,9 +1069,10 @@ class GoogleSheetsService(private val context: Context) {
                 val valueRange = ValueRange()
                     .setValues(listOf(listOf("Name", "Email", "Phone", "Invitations", "Venue", "Notes", "Volunteer Benefit", "Last Modified", "NFC UID", "ID", "Admin")) + values)
                 
+                val guestTab = quoteSheetTabForRange(settingsManager.getGuestListSheet())
                 val response = sheetsService?.spreadsheets()?.values()?.update(
                     settingsManager.getSpreadsheetId(),
-                    "${settingsManager.getGuestListSheet()}!A1",
+                    "$guestTab!A1",
                     valueRange
                 )?.setValueInputOption("RAW")?.execute()
                 
@@ -325,6 +1082,16 @@ class GoogleSheetsService(private val context: Context) {
                 }
                 
                 println("Successfully synced ${values.size} regular guests to Google Sheets")
+                    try {
+                        applyEpochCalculatorPanel(
+                            settingsManager.getSpreadsheetId(),
+                            settingsManager.getGuestListSheet(),
+                            EPOCH_COL_GUEST_LIST,
+                            EPOCH_ROW_GUEST_LIST
+                        )
+                    } catch (e: Exception) {
+                        println("⚠️ Epoch calculator on guest sheet: ${e.message}")
+                    }
                 },
                 operationName = "sync guests to sheets"
             )
@@ -349,9 +1116,8 @@ class GoogleSheetsService(private val context: Context) {
             }
             ApiRateLimitHandler.executeWithRetry(
                 operation = {
-                    // Clear the entire volunteer guest list sheet before upload
-                    clearSheetRange("${settingsManager.getVolunteerGuestListSheet()}!A:Z")
-                    println("🧹 Cleared entire volunteer guest list sheet to prevent duplicates")
+                    clearSheetDataColumns(settingsManager.getVolunteerGuestListSheet(), SHEET_LAST_COL_VOLUNTEER_GUEST_DATA)
+                    println("🧹 Cleared volunteer guest list data columns A:H (side panels preserved)")
                     val values = volunteerGuests.map { guest ->
                         listOf(
                             guest.name,
@@ -366,15 +1132,34 @@ class GoogleSheetsService(private val context: Context) {
                     }
                     val valueRange = ValueRange()
                         .setValues(listOf(listOf("Name", "Last Name Abbreviation", "Invitations", "Venue", "Notes", "Volunteer Benefit", "Last Modified", "NFC UID")) + values)
+                    val spreadsheetId = settingsManager.getSpreadsheetId()
+                    val volunteerGuestTab = settingsManager.getVolunteerGuestListSheet()
+                    val vgRange = "${quoteSheetTabForRange(volunteerGuestTab)}!A1"
                     val response = sheetsService?.spreadsheets()?.values()?.update(
-                        settingsManager.getSpreadsheetId(),
-                        "${settingsManager.getVolunteerGuestListSheet()}!A1",
+                        spreadsheetId,
+                        vgRange,
                         valueRange
                     )?.setValueInputOption("RAW")?.execute()
                     if (response == null) {
                         throw IOException("Failed to update volunteer guest list in Google Sheets - no response received")
                     }
                     println("Successfully synced ${values.size} volunteer guest entries to Google Sheets")
+                    try {
+                        applyVolunteerGuestListReadOnlyBanner(spreadsheetId, volunteerGuestTab)
+                    } catch (e: Exception) {
+                        println("⚠️ Volunteer guest list read-only banner (K:Q) failed (data was written): ${e.message}")
+                        e.printStackTrace()
+                    }
+                    try {
+                        applyEpochCalculatorPanel(
+                            spreadsheetId,
+                            volunteerGuestTab,
+                            EPOCH_COL_VOLUNTEER_GUEST,
+                            EPOCH_ROW_VOLUNTEER_GUEST
+                        )
+                    } catch (e: Exception) {
+                        println("⚠️ Volunteer guest list epoch calculator: ${e.message}")
+                    }
                 },
                 operationName = "sync volunteer guest list to sheets"
             )
@@ -555,7 +1340,10 @@ class GoogleSheetsService(private val context: Context) {
     }
 
     // Single Volunteer Operations (App Priority)
-    suspend fun addVolunteerToSheets(volunteer: Volunteer) = withContext(Dispatchers.IO) {
+    suspend fun addVolunteerToSheets(
+        volunteer: Volunteer,
+        benefitPrimaryRank: VolunteerRank? = null
+    ) = withContext(Dispatchers.IO) {
         try {
             if (sheetsService == null) {
                 initializeSheetsService()
@@ -579,7 +1367,7 @@ class GoogleSheetsService(private val context: Context) {
                                 Gender.PREFER_NOT_TO_DISCLOSE -> "Prefer not to disclose"
                             }
                         } ?: "",
-                        volunteer.currentRank?.name ?: "No Rank",
+                        volunteerRankLabelForSheet(volunteer, benefitPrimaryRank),
                         if (volunteer.isActive) "Yes" else "No",
                         volunteer.lastModified.toString(),
                         volunteer.nfcCardUid,
@@ -615,7 +1403,10 @@ class GoogleSheetsService(private val context: Context) {
         }
     }
     
-    suspend fun updateVolunteerInSheets(volunteer: Volunteer) = withContext(Dispatchers.IO) {
+    suspend fun updateVolunteerInSheets(
+        volunteer: Volunteer,
+        benefitPrimaryRank: VolunteerRank? = null
+    ) = withContext(Dispatchers.IO) {
         try {
             if (sheetsService == null) {
                 initializeSheetsService()
@@ -643,7 +1434,7 @@ class GoogleSheetsService(private val context: Context) {
                                 Gender.PREFER_NOT_TO_DISCLOSE -> "Prefer not to disclose"
                             }
                         } ?: "",
-                        volunteer.currentRank?.name ?: "No Rank",
+                        volunteerRankLabelForSheet(volunteer, benefitPrimaryRank),
                         if (volunteer.isActive) "Yes" else "No",
                         volunteer.lastModified.toString(),
                         volunteer.nfcCardUid,
@@ -674,7 +1465,10 @@ class GoogleSheetsService(private val context: Context) {
     }
 
     // Volunteer Operations
-    suspend fun syncVolunteersToSheets(volunteers: List<Volunteer>) = withContext(Dispatchers.IO) {
+    suspend fun syncVolunteersToSheets(
+        volunteers: List<Volunteer>,
+        benefitPrimaryRankByVolunteerId: Map<String, VolunteerRank?> = emptyMap()
+    ) = withContext(Dispatchers.IO) {
         try {
             if (sheetsService == null) {
                 initializeSheetsService()
@@ -682,9 +1476,8 @@ class GoogleSheetsService(private val context: Context) {
             
             ApiRateLimitHandler.executeWithRetry(
                 operation = {
-                // First, clear the entire sheet to prevent duplicate last rows
-                clearSheetRange("${settingsManager.getVolunteerSheet()}!A:Z")
-                println("🧹 Cleared entire volunteers sheet to prevent duplicates")
+                clearSheetDataColumns(settingsManager.getVolunteerSheet(), SHEET_LAST_COL_VOLUNTEER)
+                println("🧹 Cleared volunteer data columns (epoch helper preserved)")
                 
                 val values = volunteers.map { volunteer ->
                     listOf(
@@ -703,7 +1496,10 @@ class GoogleSheetsService(private val context: Context) {
                                 Gender.PREFER_NOT_TO_DISCLOSE -> "Prefer not to disclose"
                             }
                         } ?: "",
-                        volunteer.currentRank?.name ?: "No Rank",
+                        volunteerRankLabelForSheet(
+                            volunteer,
+                            benefitPrimaryRankByVolunteerId[volunteer.id]
+                        ),
                         if (volunteer.isActive) "Yes" else "No",
                         volunteer.lastModified.toString(),
                         volunteer.nfcCardUid,
@@ -725,6 +1521,16 @@ class GoogleSheetsService(private val context: Context) {
                 }
                 
                 println("Successfully synced ${volunteers.size} volunteers to Google Sheets")
+                    try {
+                        applyEpochCalculatorPanel(
+                            settingsManager.getSpreadsheetId(),
+                            settingsManager.getVolunteerSheet(),
+                            EPOCH_COL_VOLUNTEERS,
+                            EPOCH_ROW_VOLUNTEERS
+                        )
+                    } catch (e: Exception) {
+                        println("⚠️ Epoch calculator on volunteers sheet: ${e.message}")
+                    }
                 },
                 operationName = "sync volunteers to sheets"
             )
@@ -926,7 +1732,12 @@ class GoogleSheetsService(private val context: Context) {
     }
 
     // Single Job Operations (App Priority)
-    suspend fun addJobToSheets(job: Job, _venues: List<VenueEntity>, jobTypeConfigs: List<JobTypeConfig>): String = withContext(Dispatchers.IO) {
+    suspend fun addJobToSheets(
+        job: Job,
+        _venues: List<VenueEntity>,
+        jobTypeConfigs: List<JobTypeConfig>,
+        volunteerDisplayName: String
+    ): String = withContext(Dispatchers.IO) {
         try {
             if (sheetsService == null) {
                 initializeSheetsService()
@@ -936,6 +1747,7 @@ class GoogleSheetsService(private val context: Context) {
                 operation = {
                     val values = listOf(
                         job.volunteerId, // NanoID (String) - no conversion needed
+                        volunteerDisplayName,
                         job.jobTypeName,
                         job.venueName,
                         job.date.toString(),
@@ -949,7 +1761,7 @@ class GoogleSheetsService(private val context: Context) {
                     
                     val response = sheetsService?.spreadsheets()?.values()?.append(
                         settingsManager.getSpreadsheetId(),
-                        "${settingsManager.getJobsSheet()}!A:H",
+                        "${settingsManager.getJobsSheet()}!A:I",
                         valueRange
                     )?.setValueInputOption("RAW")?.execute()
                     
@@ -976,7 +1788,12 @@ class GoogleSheetsService(private val context: Context) {
         }
     }
     
-    suspend fun updateJobInSheets(job: Job, _venues: List<VenueEntity>, jobTypeConfigs: List<JobTypeConfig>) = withContext(Dispatchers.IO) {
+    suspend fun updateJobInSheets(
+        job: Job,
+        _venues: List<VenueEntity>,
+        jobTypeConfigs: List<JobTypeConfig>,
+        volunteerDisplayName: String
+    ) = withContext(Dispatchers.IO) {
         try {
             if (sheetsService == null) {
                 initializeSheetsService()
@@ -990,6 +1807,7 @@ class GoogleSheetsService(private val context: Context) {
                 operation = {
                     val values = listOf(
                         job.volunteerId, // NanoID (String) - no conversion needed
+                        volunteerDisplayName,
                         job.jobTypeName,
                         job.venueName,
                         job.date.toString(),
@@ -1004,7 +1822,7 @@ class GoogleSheetsService(private val context: Context) {
                     
                     val response = sheetsService?.spreadsheets()?.values()?.update(
                         settingsManager.getSpreadsheetId(),
-                        "${settingsManager.getJobsSheet()}!A$rowNumber:H$rowNumber",
+                        "${settingsManager.getJobsSheet()}!A$rowNumber:I$rowNumber",
                         valueRange
                     )?.setValueInputOption("RAW")?.execute()
                     
@@ -1026,7 +1844,8 @@ class GoogleSheetsService(private val context: Context) {
     suspend fun syncJobsToSheets(
         jobs: List<Job>,
         _venues: List<VenueEntity>,
-        jobTypeConfigs: List<JobTypeConfig>
+        jobTypeConfigs: List<JobTypeConfig>,
+        volunteers: List<Volunteer>
     ) = withContext(Dispatchers.IO) {
         try {
             if (sheetsService == null) {
@@ -1038,12 +1857,13 @@ class GoogleSheetsService(private val context: Context) {
             ApiRateLimitHandler.executeWithRetry(
                 operation = {
                 // First, clear the entire sheet to prevent duplicate last rows
-                clearSheetRange("${settingsManager.getJobsSheet()}!A:Z")
-                println("🧹 Cleared entire jobs sheet to prevent duplicates")
+                clearSheetDataColumns(settingsManager.getJobsSheet(), SHEET_LAST_COL_JOBS)
+                println("🧹 Cleared jobs data columns (epoch helper preserved)")
                 
                 val values = jobs.map { job ->
                     listOf(
                         job.volunteerId, // NanoID (String) - no conversion needed
+                        volunteerDisplayNameForJobSheet(job.volunteerId, volunteers),
                         job.jobTypeName, // Use the personalized job type name
                         job.venueName,
                         job.date.toString(),
@@ -1055,7 +1875,7 @@ class GoogleSheetsService(private val context: Context) {
                 }
                 
                 val valueRange = ValueRange()
-                    .setValues(listOf(listOf("Volunteer ID", "Job Type", "Venue", "Date", "Shift Time", "Notes", "Last Modified", "Entries left")) + values)
+                    .setValues(listOf(JOBS_SHEET_HEADERS_V2) + values)
                 
                 println("📤 Sending ${values.size + 1} rows (including header) to Google Sheets...")
                 
@@ -1070,6 +1890,16 @@ class GoogleSheetsService(private val context: Context) {
                 }
                 
                 println("✅ Successfully synced ${jobs.size} jobs to Google Sheets (overwrote entire sheet)")
+                    try {
+                        applyEpochCalculatorPanel(
+                            settingsManager.getSpreadsheetId(),
+                            settingsManager.getJobsSheet(),
+                            EPOCH_COL_JOBS,
+                            EPOCH_ROW_JOBS
+                        )
+                    } catch (e: Exception) {
+                        println("⚠️ Epoch calculator on jobs sheet: ${e.message}")
+                    }
                 },
                 operationName = "sync jobs to sheets"
             )
@@ -1083,7 +1913,10 @@ class GoogleSheetsService(private val context: Context) {
         }
     }
 
-    suspend fun syncJobsFromSheets(jobTypeConfigs: List<JobTypeConfig>): List<Job> = withContext(Dispatchers.IO) {
+    suspend fun syncJobsFromSheets(
+        jobTypeConfigs: List<JobTypeConfig>,
+        volunteersForJobNameColumn: List<Volunteer> = emptyList()
+    ): List<Job> = withContext(Dispatchers.IO) {
         try {
             if (sheetsService == null) {
                 initializeSheetsService()
@@ -1091,72 +1924,159 @@ class GoogleSheetsService(private val context: Context) {
             
             ApiRateLimitHandler.executeWithRetry(
                 operation = {
-                val response = sheetsService?.spreadsheets()?.values()?.get(
+                val tab = quoteSheetTabForRange(settingsManager.getJobsSheet())
+                val headerAndData = sheetsService?.spreadsheets()?.values()?.get(
                     settingsManager.getSpreadsheetId(),
-                    "${settingsManager.getJobsSheet()}!A2:H"
-                )?.execute()
-                
-                if (response == null) {
-                    throw IOException("Failed to retrieve jobs from Google Sheets - no response received")
-                }
-                
-                val values = response.getValues() ?: emptyList()
-                println("Retrieved ${values.size} job rows from sheets")
+                    "$tab!A1:I5000"
+                )?.execute()?.getValues() ?: emptyList()
 
-                try {
-                    migrateLegacyShiftTimeLabelsInJobsSheet(values)
-                } catch (e: Exception) {
-                    println("⚠️ Shift time label migration in sheets skipped: ${e.message}")
+                if (headerAndData.isEmpty()) {
+                    println("Retrieved 0 job rows from sheets (empty tab)")
+                    emptyList()
+                } else {
+                val header = headerAndData.first().map { it.toString().trim() }
+                var dataRows = headerAndData.drop(1)
+                println("Retrieved ${dataRows.size} job rows from sheets")
+
+                val layout = detectJobsSheetLayout(header, dataRows.firstOrNull(), jobTypeConfigs)
+                val needsV2Migration = jobsSheetNeedsV2ColumnMigration(layout, dataRows, jobTypeConfigs)
+                val anchorBefore = dataRows.firstOrNull { it.size >= 7 }
+                val physicalEightColLayout = anchorBefore != null &&
+                    anchorBefore.size <= 8 &&
+                    layout == JobsSheetLayout.LEGACY_EIGHT_COL &&
+                    !rowContentSuggestsVolunteerNameColumnBeforeJobType(anchorBefore, jobTypeConfigs)
+
+                var volunteersResolved = volunteersForJobNameColumn
+                if (needsV2Migration && volunteersResolved.isEmpty()) {
+                    try {
+                        volunteersResolved = syncVolunteersFromSheets()
+                        println("📇 Loaded ${volunteersResolved.size} volunteer(s) from sheets for shifts name migration")
+                    } catch (e: Exception) {
+                        println("⚠️ Could not load volunteers for shifts name column: ${e.message}")
+                    }
                 }
 
-                try {
-                    migrateLegacyEntriesLeftLabelsInJobsSheet(values)
-                } catch (e: Exception) {
-                    println("⚠️ Entries left (Used/Yes/No) migration in sheets skipped: ${e.message}")
+                if (physicalEightColLayout) {
+                    try {
+                        migrateLegacyShiftTimeLabelsInJobsSheet(dataRows, shiftTimeColumnIndex = 4)
+                    } catch (e: Exception) {
+                        println("⚠️ Shift time label migration in sheets skipped: ${e.message}")
+                    }
+                    try {
+                        migrateLegacyEntriesLeftLabelsInJobsSheet(dataRows, entriesLeftColumnIndex = 7)
+                    } catch (e: Exception) {
+                        println("⚠️ Entries left (Used/Yes/No) migration in sheets skipped: ${e.message}")
+                    }
+                }
+
+                if (needsV2Migration) {
+                    try {
+                        val migratedBody = dataRows.map { row ->
+                            when {
+                                row.size < 7 -> row
+                                rowContentSuggestsVolunteerNameColumnBeforeJobType(row, jobTypeConfigs) -> row
+                                else -> legacyEightColRowToV2Row(
+                                    row,
+                                    volunteerDisplayNameForJobSheet(row[0].toString(), volunteersResolved)
+                                )
+                            }
+                        }
+                        val allRows = listOf(JOBS_SHEET_HEADERS_V2) + migratedBody
+                        val lastRow = allRows.size
+                        sheetsService?.spreadsheets()?.values()?.update(
+                            settingsManager.getSpreadsheetId(),
+                            "$tab!A1:I$lastRow",
+                            ValueRange().setValues(allRows)
+                        )?.setValueInputOption("RAW")?.execute()
+                        println("✅ Migrated shifts sheet to v2 (Volunteer Name column); ${migratedBody.size} data row(s) rewritten in A1:I (row numbers preserved)")
+                        dataRows = migratedBody
+                    } catch (e: Exception) {
+                        println("⚠️ Shifts sheet v2 column migration failed: ${e.message}")
+                    }
+                }
+
+                val runV2SheetMigrators = anyJobRowsUseVolunteerNameNineColLayout(dataRows, jobTypeConfigs)
+
+                if (runV2SheetMigrators) {
+                    try {
+                        migrateLegacyShiftTimeLabelsInJobsSheet(dataRows, shiftTimeColumnIndex = 5)
+                    } catch (e: Exception) {
+                        println("⚠️ Shift time label migration (v2 cols) skipped: ${e.message}")
+                    }
+                    try {
+                        migrateLegacyEntriesLeftLabelsInJobsSheet(dataRows, entriesLeftColumnIndex = 8)
+                    } catch (e: Exception) {
+                        println("⚠️ Entries left migration (v2 cols) skipped: ${e.message}")
+                    }
                 }
 
                 val skippedJobRows = mutableListOf<Pair<Int, Int>>()
-                val jobs = values.mapIndexedNotNull { index, row ->
-                    if (row.size >= 7) {
-                        try {
-                            val rowNumber = index + 2 // +2 because we start from row 2 (after header)
-                            val jobTypeName = row[1].toString()
-                            
-                            // Column A now contains volunteer NanoID (String)
-                            // Validate and fix invalid IDs automatically
-                            val rawVolunteerId = row[0].toString()
-                            val validVolunteerId = NanoIdGenerator.ensureValidNanoId(rawVolunteerId, "job_${rowNumber}")
-                            
-                            // For custom job types, always use OTHER as the enum value
-                            // The actual job type name is stored in jobTypeName field
-                            val jobType = JobType.OTHER
-                            
-                            val entriesLeftRaw = if (row.size > 7) row[7].toString().trim() else ""
-                            val entryData = parseJobBenefitFutureEntriesFromSheets(entriesLeftRaw)
-                            
-                            Job(
-                                sheetsId = rowNumber.toString(),
-                                volunteerId = validVolunteerId, // Validated NanoID (generated if invalid)
-                                jobType = jobType,
-                                jobTypeName = jobTypeName, // Store the actual job type name
-                                venueName = row[2].toString(),
-                                date = parseLastModified(row[3].toString()),
-                                shiftTime = parseSheetShiftTimeValue(
-                                    rawShiftTime = row[4].toString(),
+                val jobs = dataRows.mapIndexedNotNull { index, row ->
+                    val rowNumber = index + 2
+                    if (row.size < 7) {
+                        skippedJobRows.add(rowNumber to row.size)
+                        return@mapIndexedNotNull null
+                    }
+                    val mode = inferJobSheetRowParseMode(row, jobTypeConfigs)
+                    try {
+                        when (mode) {
+                            JobSheetRowParseMode.VOLUNTEER_NAME_NINE_COL -> {
+                                if (row.size < 8) {
+                                    skippedJobRows.add(rowNumber to row.size)
+                                    null
+                                } else {
+                                    val jobTypeName = normalizeJobTypeNameFromSheets(row[2])
+                                    val rawVolunteerId = row[0].toString()
+                                    val validVolunteerId = NanoIdGenerator.ensureValidNanoId(rawVolunteerId, "job_$rowNumber")
+                                    val entriesLeftRaw = row.getOrNull(8)?.toString()?.trim().orEmpty()
+                                    val entryData = parseJobBenefitFutureEntriesFromSheets(entriesLeftRaw)
+                                    Job(
+                                        sheetsId = rowNumber.toString(),
+                                        volunteerId = validVolunteerId,
+                                        jobType = JobType.OTHER,
+                                        jobTypeName = jobTypeName,
+                                        venueName = normalizeJobTextCellFromSheets(row[3]),
+                                        date = parseJobEventDateFromSheets(row[4].toString()),
+                                        shiftTime = parseSheetShiftTimeValue(
+                                            rawShiftTime = row[5].toString(),
+                                            jobTypeName = jobTypeName,
+                                            jobTypeConfigs = jobTypeConfigs
+                                        ),
+                                        benefitFutureEntriesRemaining = entryData?.remaining,
+                                        benefitFutureEntryInvites = entryData?.invites,
+                                        notes = normalizeJobTextCellFromSheets(row[6]),
+                                        lastModified = parseLastModified(row[7].toString())
+                                    )
+                                }
+                            }
+                            JobSheetRowParseMode.LEGACY_EIGHT_COL -> {
+                                val eight = padJobSheetRowToEightLegacyCells(row)
+                                val jobTypeName = normalizeJobTypeNameFromSheets(eight[1])
+                                val rawVolunteerId = eight[0].toString()
+                                val validVolunteerId = NanoIdGenerator.ensureValidNanoId(rawVolunteerId, "job_$rowNumber")
+                                val entriesLeftRaw = eight.getOrNull(7)?.toString()?.trim().orEmpty()
+                                val entryData = parseJobBenefitFutureEntriesFromSheets(entriesLeftRaw)
+                                Job(
+                                    sheetsId = rowNumber.toString(),
+                                    volunteerId = validVolunteerId,
+                                    jobType = JobType.OTHER,
                                     jobTypeName = jobTypeName,
-                                    jobTypeConfigs = jobTypeConfigs
-                                ),
-                                benefitFutureEntriesRemaining = entryData?.remaining,
-                                benefitFutureEntryInvites = entryData?.invites,
-                                notes = row[5].toString(),
-                                lastModified = parseLastModified(row[6].toString())
-                            )
-                        } catch (e: Exception) {
-                            println("Failed to parse job row ${index + 2}: ${e.message}")
-                            null
+                                    venueName = normalizeJobTextCellFromSheets(eight[2]),
+                                    date = parseJobEventDateFromSheets(eight[3].toString()),
+                                    shiftTime = parseSheetShiftTimeValue(
+                                        rawShiftTime = eight[4].toString(),
+                                        jobTypeName = jobTypeName,
+                                        jobTypeConfigs = jobTypeConfigs
+                                    ),
+                                    benefitFutureEntriesRemaining = entryData?.remaining,
+                                    benefitFutureEntryInvites = entryData?.invites,
+                                    notes = normalizeJobTextCellFromSheets(eight[5]),
+                                    lastModified = parseLastModified(eight[6].toString())
+                                )
+                            }
                         }
-                    } else {
-                        skippedJobRows.add((index + 2) to row.size)
+                    } catch (e: Exception) {
+                        println("Failed to parse job row $rowNumber: ${e.message}")
                         null
                     }
                 }
@@ -1164,6 +2084,7 @@ class GoogleSheetsService(private val context: Context) {
 
                 println("Successfully parsed ${jobs.size} jobs")
                 jobs
+                }
                 },
                 operationName = "sync jobs from sheets"
             )
@@ -1281,8 +2202,8 @@ class GoogleSheetsService(private val context: Context) {
             ApiRateLimitHandler.executeWithRetry(
                 operation = {
                 // First, clear the entire sheet to prevent duplicate last rows
-                clearSheetRange("${settingsManager.getJobTypesSheet()}!A:Z")
-                println("🧹 Cleared entire job types sheet to prevent duplicates")
+                clearSheetDataColumns(settingsManager.getJobTypesSheet(), SHEET_LAST_COL_JOB_TYPES)
+                println("🧹 Cleared job types data columns (epoch helper preserved)")
                 
                 val values = jobTypeConfigs.map { config -> jobTypeConfigToSheetRow(config) }
                 
@@ -1302,6 +2223,16 @@ class GoogleSheetsService(private val context: Context) {
                 }
                 
                 println("✅ Successfully synced ${jobTypeConfigs.size} job types to Google Sheets (overwrote entire sheet)")
+                    try {
+                        applyEpochCalculatorPanel(
+                            settingsManager.getSpreadsheetId(),
+                            settingsManager.getJobTypesSheet(),
+                            EPOCH_COL_JOB_TYPES,
+                            EPOCH_ROW_JOB_TYPES
+                        )
+                    } catch (e: Exception) {
+                        println("⚠️ Epoch calculator on job types sheet: ${e.message}")
+                    }
                 },
                 operationName = "sync job type configs to sheets"
             )
@@ -1462,8 +2393,8 @@ class GoogleSheetsService(private val context: Context) {
             ApiRateLimitHandler.executeWithRetry(
                 operation = {
                 // First, clear the entire sheet to prevent duplicate last rows
-                clearSheetRange("${settingsManager.getVenuesSheet()}!A:Z")
-                println("🧹 Cleared entire venues sheet to prevent duplicates")
+                clearSheetDataColumns(settingsManager.getVenuesSheet(), SHEET_LAST_COL_VENUES)
+                println("🧹 Cleared venues data columns (epoch helper preserved)")
                 
                 val values = venues.map { venue ->
                     listOf(
@@ -1513,6 +2444,16 @@ class GoogleSheetsService(private val context: Context) {
                 }
                 
                 println("✅ Successfully synced ${venues.size} venues to Google Sheets (overwrote entire sheet)")
+                    try {
+                        applyEpochCalculatorPanel(
+                            settingsManager.getSpreadsheetId(),
+                            settingsManager.getVenuesSheet(),
+                            EPOCH_COL_VENUES,
+                            EPOCH_ROW_VENUES
+                        )
+                    } catch (e: Exception) {
+                        println("⚠️ Epoch calculator on venues sheet: ${e.message}")
+                    }
                 },
                 operationName = "sync venues to sheets"
             )
@@ -1603,8 +2544,8 @@ class GoogleSheetsService(private val context: Context) {
 
             ApiRateLimitHandler.executeWithRetry(
                 operation = {
-                    clearSheetRange("${settingsManager.getSalesItemsSheet()}!A:Z")
-                    println("🧹 Cleared entire sales items sheet to prevent duplicates")
+                    clearSheetDataColumns(settingsManager.getSalesItemsSheet(), SHEET_LAST_COL_SALES_ITEMS)
+                    println("🧹 Cleared sales items data columns (epoch helper preserved)")
 
                     val values = items.map { item ->
                         listOf(
@@ -1641,6 +2582,16 @@ class GoogleSheetsService(private val context: Context) {
                         throw IOException("Failed to update sales items in Google Sheets - no response received")
                     }
                     println("✅ Successfully synced ${items.size} sales items to Google Sheets")
+                    try {
+                        applyEpochCalculatorPanel(
+                            settingsManager.getSpreadsheetId(),
+                            settingsManager.getSalesItemsSheet(),
+                            EPOCH_COL_SALES,
+                            EPOCH_ROW_SALES
+                        )
+                    } catch (e: Exception) {
+                        println("⚠️ Epoch calculator on sales items sheet: ${e.message}")
+                    }
                 },
                 operationName = "sync sales sheet items to sheets"
             )
@@ -1887,7 +2838,7 @@ class GoogleSheetsService(private val context: Context) {
     suspend fun syncAllFromSheetsWithJobTypes(jobTypeConfigs: List<JobTypeConfig>): Triple<List<Guest>, List<Volunteer>, List<Job>> {
         val guests = syncGuestsFromSheets()
         val volunteers = syncVolunteersFromSheets()
-        val jobs = syncJobsFromSheets(jobTypeConfigs)
+        val jobs = syncJobsFromSheets(jobTypeConfigs, volunteers)
         return Triple(guests, volunteers, jobs)
     }
     
@@ -1982,7 +2933,7 @@ class GoogleSheetsService(private val context: Context) {
         ),
         SheetDefinition(
             settingsManager.getJobsSheet(),
-            listOf("Volunteer ID", "Job Type", "Venue", "Date", "Shift Time", "Notes", "Last Modified", "Entries left")
+            JOBS_SHEET_HEADERS_V2
         ),
         SheetDefinition(
             settingsManager.getJobTypesSheet(),
@@ -2314,7 +3265,8 @@ class GoogleSheetsService(private val context: Context) {
      * do not trigger unnecessary overwrites.
      *
      * API budget: 2 calls when everything is OK (metadata + batchGet),
-     * up to 3 when repairs are needed.
+     * up to 3 when repairs are needed. After repairs, applies the volunteer benefit guest list
+     * read-only banner (K2:Q6 + K7:Q7 timestamp) when that tab exists — migrates existing spreadsheets.
      *
      * @return true on success (with or without repairs), false on error.
      */
@@ -2327,17 +3279,29 @@ class GoogleSheetsService(private val context: Context) {
                 return@withContext false
             }
 
+            // Sheets layout (tab names, header row) only changes on first-run
+            // migrations or when the user edits settings. The previous code
+            // spent 3-9 API calls on every sync/backup re-proving it. Serve
+            // from a short-lived session cache instead; [invalidateSessionCaches]
+            // clears it when the target spreadsheet/tab names change, and the
+            // TTL bounds staleness for long-running processes.
+            if (structureValidationCacheIsFresh(spreadsheetId)) {
+                return@withContext true
+            }
+
             val definitions = getSheetDefinitions()
 
             // Step 1 — get metadata (1 API call)
             val spreadsheet = sheetsService?.spreadsheets()?.get(spreadsheetId)?.execute()
                 ?: throw IOException("Failed to get spreadsheet metadata")
-            val existingNames = spreadsheet.sheets
-                ?.mapNotNull { it.properties?.title }?.toHashSet() ?: hashSetOf()
+
+            // Match configured tab names case-insensitively (Sheets titles are case-sensitive; users
+            // may have "shift types" while settings say "Shift Types"). Avoid creating duplicate tabs.
+            val (existing, missing) = definitions.partition { def ->
+                resolveSheetTab(spreadsheet, def.name) != null
+            }
 
             // Step 2 — create missing tabs (0-1 API call)
-            val (existing, missing) = definitions.partition { it.name in existingNames }
-
             if (missing.isNotEmpty()) {
                 println("➕ Creating ${missing.size} missing sheet tab(s)")
                 sheetsService?.spreadsheets()?.batchUpdate(spreadsheetId,
@@ -2351,7 +3315,10 @@ class GoogleSheetsService(private val context: Context) {
             // Step 3 — read row 1 from existing tabs (1 API call via batchGet)
             val currentHeaders: List<Pair<SheetDefinition, List<String>>> =
                 if (existing.isNotEmpty()) {
-                    val ranges = existing.map { "'${it.name}'!A1:Z1" }
+                    val ranges = existing.map { def ->
+                        val actualTitle = resolveSheetTab(spreadsheet, def.name)?.title ?: def.name
+                        "${quoteSheetTabForRange(actualTitle)}!A1:Z1"
+                    }
                     val batchGet = sheetsService?.spreadsheets()?.values()
                         ?.batchGet(spreadsheetId)?.setRanges(ranges)?.execute()
                     existing.mapIndexed { i, def ->
@@ -2367,7 +3334,7 @@ class GoogleSheetsService(private val context: Context) {
 
             for (def in missing) {
                 headerWrites.add(ValueRange()
-                    .setRange("'${def.name}'!A1")
+                    .setRange("${quoteSheetTabForRange(def.name)}!A1")
                     .setValues(listOf(def.headers)))
             }
 
@@ -2380,17 +3347,19 @@ class GoogleSheetsService(private val context: Context) {
                     trimmedRow.zip(trimmedExpected).all { (c, e) -> c.equals(e, ignoreCase = true) }
                 if (isExactMatch) continue
 
+                val actualTitle = resolveSheetTab(spreadsheet, def.name)?.title ?: def.name
+
                 if (row.isEmpty()) {
-                    println("🔧 '${def.name}' header empty — writing expected headers")
+                    println("🔧 '$actualTitle' (${def.name}) header empty — writing expected headers")
                 } else {
                     val matchCount = trimmedRow.zip(trimmedExpected).count { (c, e) ->
                         c.equals(e, ignoreCase = true)
                     }
-                    println("🔧 '${def.name}' header mismatch ($matchCount/${def.headers.size} match) — overwriting row 1")
+                    println("🔧 '$actualTitle' (${def.name}) header mismatch ($matchCount/${def.headers.size} match) — overwriting row 1")
                 }
 
                 headerWrites.add(ValueRange()
-                    .setRange("'${def.name}'!A1")
+                    .setRange("${quoteSheetTabForRange(actualTitle)}!A1")
                     .setValues(listOf(def.headers)))
             }
 
@@ -2404,6 +3373,27 @@ class GoogleSheetsService(private val context: Context) {
                 println("✅ Repaired ${headerWrites.size} sheet header(s)")
             }
 
+            // Step 6 — read-only banner on volunteer benefit guest list (existing spreadsheets / post-repair migration)
+            try {
+                val vgConfigured = settingsManager.getVolunteerGuestListSheet()
+                val metaForBanner = if (missing.isNotEmpty()) {
+                    sheetsService?.spreadsheets()?.get(spreadsheetId)?.execute() ?: spreadsheet
+                } else {
+                    spreadsheet
+                }
+                if (resolveSheetTab(metaForBanner, vgConfigured) != null) {
+                    applyVolunteerGuestListReadOnlyBanner(spreadsheetId, vgConfigured)
+                    println("✅ Volunteer guest list read-only banner applied (structure validation)")
+                }
+            } catch (e: Exception) {
+                println("⚠️ Volunteer guest list banner during structure validation: ${e.message}")
+                e.printStackTrace()
+            }
+
+            // Structure and headers are verified/repaired for this spreadsheet;
+            // subsequent calls in the same session (or within the TTL) will
+            // skip the 3-9 API calls above via [structureValidationCacheIsFresh].
+            markStructureValidationFresh(spreadsheetId)
             true
         } catch (e: Exception) {
             println("❌ Sheet structure validation failed: ${e.message}")
@@ -2426,27 +3416,31 @@ class GoogleSheetsService(private val context: Context) {
      * and updates the header cell H1 to "Entries left" when any data cell was migrated.
      * Same pattern as [migrateLegacyShiftTimeLabelsInJobsSheet]: in-place batch updates only, no row deletion.
      */
-    private suspend fun migrateLegacyEntriesLeftLabelsInJobsSheet(values: List<List<Any>>) = withContext(Dispatchers.IO) {
+    private suspend fun migrateLegacyEntriesLeftLabelsInJobsSheet(
+        values: List<List<Any>>,
+        entriesLeftColumnIndex: Int
+    ) = withContext(Dispatchers.IO) {
         if (values.isEmpty()) return@withContext
         if (sheetsService == null) {
             initializeSheetsService()
         }
         val spreadsheetId = settingsManager.getSpreadsheetId()
         val sheetName = settingsManager.getJobsSheet()
+        val colLetter = a1ColumnLetterFromIndex0(entriesLeftColumnIndex)
         val data = mutableListOf<ValueRange>()
         values.forEachIndexed { index, row ->
-            if (row.size <= 7) return@forEachIndexed
-            val raw = row[7].toString()
+            if (row.size <= entriesLeftColumnIndex) return@forEachIndexed
+            val raw = row[entriesLeftColumnIndex].toString()
             if (!shouldMigrateLegacyEntriesLeftCell(raw)) return@forEachIndexed
             val rowNum = index + 2
             val parsed = parseJobBenefitFutureEntriesFromSheets(raw)
             val newText = if (parsed != null) formatJobBenefitFutureEntriesForSheets(parsed.remaining, parsed.invites) else ""
             if (newText.isNotEmpty()) {
-                data.add(ValueRange().setRange("$sheetName!H$rowNum").setValues(listOf(listOf(newText))))
+                data.add(ValueRange().setRange("$sheetName!$colLetter$rowNum").setValues(listOf(listOf(newText))))
             }
         }
         if (data.isEmpty()) return@withContext
-        data.add(0, ValueRange().setRange("$sheetName!H1").setValues(listOf(listOf("Entries left"))))
+        data.add(0, ValueRange().setRange("$sheetName!${colLetter}1").setValues(listOf(listOf("Entries left"))))
         data.chunked(100).forEach { chunk ->
             sheetsService?.spreadsheets()?.values()?.batchUpdate(
                 spreadsheetId,
@@ -2462,21 +3456,25 @@ class GoogleSheetsService(private val context: Context) {
      * Rewrites legacy "Shift Time" cells (e.g. BEFORE_MIDNIGHT) to English labels expected by current app versions,
      * without removing rows or changing other columns.
      */
-    private suspend fun migrateLegacyShiftTimeLabelsInJobsSheet(values: List<List<Any>>) = withContext(Dispatchers.IO) {
+    private suspend fun migrateLegacyShiftTimeLabelsInJobsSheet(
+        values: List<List<Any>>,
+        shiftTimeColumnIndex: Int
+    ) = withContext(Dispatchers.IO) {
         if (values.isEmpty()) return@withContext
         if (sheetsService == null) {
             initializeSheetsService()
         }
         val spreadsheetId = settingsManager.getSpreadsheetId()
         val sheetName = settingsManager.getJobsSheet()
+        val colLetter = a1ColumnLetterFromIndex0(shiftTimeColumnIndex)
         val data = mutableListOf<ValueRange>()
         values.forEachIndexed { index, row ->
-            if (row.size <= 4) return@forEachIndexed
-            val raw = row[4].toString()
+            if (row.size <= shiftTimeColumnIndex) return@forEachIndexed
+            val raw = row[shiftTimeColumnIndex].toString()
             if (!shouldMigrateShiftTimeSheetCell(raw)) return@forEachIndexed
             val rowNum = index + 2
             val newText = parseShiftTimeFromGoogleSheets(raw).toGoogleSheetsShiftTimeValue()
-            data.add(ValueRange().setRange("$sheetName!E$rowNum").setValues(listOf(listOf(newText))))
+            data.add(ValueRange().setRange("$sheetName!$colLetter$rowNum").setValues(listOf(listOf(newText))))
         }
         if (data.isEmpty()) return@withContext
         data.chunked(100).forEach { chunk ->
@@ -2488,6 +3486,199 @@ class GoogleSheetsService(private val context: Context) {
             )?.execute()
         }
         println("✅ Migrated ${data.size} job row(s) to English shift time labels in Google Sheets")
+    }
+
+    /**
+     * Quotes a sheet tab title for A1 notation when it contains spaces or single quotes.
+     */
+    private fun quoteSheetTabForRange(tabTitle: String): String =
+        if (tabTitle.contains(' ') || tabTitle.contains('\''))
+            "'${tabTitle.replace("'", "''")}'"
+        else
+            tabTitle
+
+    /**
+     * Read-only notice: merged K2:Q6 (title + body) and K7:Q7 (last refresh). Data stays in A:H from row 1.
+     */
+    private suspend fun applyVolunteerGuestListReadOnlyBanner(
+        spreadsheetId: String,
+        sheetTitleConfigured: String
+    ) = withContext(Dispatchers.IO) {
+        if (sheetsService == null) {
+            initializeSheetsService()
+        }
+        val service = sheetsService ?: return@withContext
+
+        // Cosmetic banner — the content and layout are static per tab, so
+        // re-applying it on every pull/upload just wastes API calls. Cache
+        // per (spreadsheet, tab) per session; [invalidateSessionCaches]
+        // clears it when settings change.
+        val cacheKey = volunteerGuestBannerCacheKey(spreadsheetId, sheetTitleConfigured)
+        if (volunteerGuestBannerAppliedTabs.contains(cacheKey)) {
+            return@withContext
+        }
+        val ss = service.spreadsheets().get(spreadsheetId).execute()
+        val resolved = resolveSheetTab(ss, sheetTitleConfigured)
+            ?: run {
+                val available = ss.sheets?.mapNotNull { it.properties?.title }?.joinToString(", ") ?: "(none)"
+                println("⚠️ Volunteer guest list tab not found for '${sheetTitleConfigured.trim()}'. Tabs: $available")
+                return@withContext
+            }
+        val sheetId = resolved.sheetId
+        val tabQuoted = quoteSheetTabForRange(resolved.title)
+
+        val colK = 10
+        val colAfterQ = 17
+
+        val unmerge = Request().setUnmergeCells(
+            UnmergeCellsRequest().setRange(
+                GridRange()
+                    .setSheetId(sheetId)
+                    .setStartRowIndex(0)
+                    .setEndRowIndex(30)
+                    .setStartColumnIndex(colK)
+                    .setEndColumnIndex(20)
+            )
+        )
+        try {
+            service.spreadsheets().batchUpdate(
+                spreadsheetId,
+                BatchUpdateSpreadsheetRequest().setRequests(listOf(unmerge))
+            ).execute()
+        } catch (e: Exception) {
+            println("⚠️ Unmerge before volunteer guest banner (non-fatal): ${e.message}")
+        }
+
+        val locCtx = localizedContextForSheetsBanner()
+        val appLocale = localeFromAppLanguageSetting()
+        val title = locCtx.getString(R.string.volunteer_guest_sheet_banner_title).trim()
+        val line2 = locCtx.getString(R.string.volunteer_guest_sheet_banner_l2).trim()
+        val line3 = locCtx.getString(R.string.volunteer_guest_sheet_banner_l3).trim()
+        val line4 = locCtx.getString(R.string.volunteer_guest_sheet_banner_l4).trim()
+        val line5 = locCtx.getString(R.string.volunteer_guest_sheet_banner_l5).trim()
+        val bodyLines = listOf(line2, line3, line4, line5).filter { it.isNotEmpty() }
+        val bodyText = bodyLines.joinToString("\n\n")
+        val warningText = if (bodyText.isEmpty()) title else "$title\n\n$bodyText"
+
+        val zoned = Instant.ofEpochMilli(System.currentTimeMillis())
+            .atZone(ZoneId.systemDefault())
+        val stamp = zoned.format(
+            DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT).withLocale(appLocale)
+        )
+        val stampText = locCtx.getString(R.string.volunteer_guest_sheet_last_updated, stamp)
+
+        service.spreadsheets().values().batchUpdate(
+            spreadsheetId,
+            BatchUpdateValuesRequest()
+                .setValueInputOption("USER_ENTERED")
+                .setData(
+                    listOf(
+                        ValueRange().setRange("$tabQuoted!K2").setValues(listOf(listOf(warningText))),
+                        ValueRange().setRange("$tabQuoted!K7").setValues(listOf(listOf(stampText)))
+                    )
+                )
+        ).execute()
+
+        val mergeWarning = Request().setMergeCells(
+            MergeCellsRequest()
+                .setMergeType("MERGE_ALL")
+                .setRange(
+                    GridRange()
+                        .setSheetId(sheetId)
+                        .setStartRowIndex(1)
+                        .setEndRowIndex(6)
+                        .setStartColumnIndex(colK)
+                        .setEndColumnIndex(colAfterQ)
+                )
+        )
+        val mergeStamp = Request().setMergeCells(
+            MergeCellsRequest()
+                .setMergeType("MERGE_ALL")
+                .setRange(
+                    GridRange()
+                        .setSheetId(sheetId)
+                        .setStartRowIndex(6)
+                        .setEndRowIndex(7)
+                        .setStartColumnIndex(colK)
+                        .setEndColumnIndex(colAfterQ)
+                )
+        )
+        val orange = Color().setRed(1f).setGreen(0.596f).setBlue(0.08f)
+        val darkText = Color().setRed(0.13f).setGreen(0.13f).setBlue(0.13f)
+        val stampBg = Color().setRed(0.93f).setGreen(0.94f).setBlue(0.95f)
+
+        val formatWarning = Request().setRepeatCell(
+            RepeatCellRequest()
+                .setRange(
+                    GridRange()
+                        .setSheetId(sheetId)
+                        .setStartRowIndex(1)
+                        .setEndRowIndex(6)
+                        .setStartColumnIndex(colK)
+                        .setEndColumnIndex(colAfterQ)
+                )
+                .setCell(
+                    CellData().setUserEnteredFormat(
+                        CellFormat()
+                            .setBackgroundColor(orange)
+                            .setWrapStrategy("WRAP")
+                            .setVerticalAlignment("TOP")
+                            .setHorizontalAlignment("LEFT")
+                            .setTextFormat(
+                                TextFormat()
+                                    .setForegroundColor(darkText)
+                                    .setBold(true)
+                                    .setFontSize(10)
+                            )
+                    )
+                )
+                .setFields(
+                    "userEnteredFormat.backgroundColor,userEnteredFormat.wrapStrategy," +
+                        "userEnteredFormat.verticalAlignment,userEnteredFormat.horizontalAlignment," +
+                        "userEnteredFormat.textFormat"
+                )
+        )
+        val formatStamp = Request().setRepeatCell(
+            RepeatCellRequest()
+                .setRange(
+                    GridRange()
+                        .setSheetId(sheetId)
+                        .setStartRowIndex(6)
+                        .setEndRowIndex(7)
+                        .setStartColumnIndex(colK)
+                        .setEndColumnIndex(colAfterQ)
+                )
+                .setCell(
+                    CellData().setUserEnteredFormat(
+                        CellFormat()
+                            .setBackgroundColor(stampBg)
+                            .setHorizontalAlignment("CENTER")
+                            .setVerticalAlignment("MIDDLE")
+                            .setWrapStrategy("WRAP")
+                            .setTextFormat(
+                                TextFormat()
+                                    .setForegroundColor(darkText)
+                                    .setBold(false)
+                                    .setFontSize(10)
+                            )
+                    )
+                )
+                .setFields(
+                    "userEnteredFormat.backgroundColor,userEnteredFormat.horizontalAlignment," +
+                        "userEnteredFormat.verticalAlignment,userEnteredFormat.wrapStrategy," +
+                        "userEnteredFormat.textFormat"
+                )
+        )
+
+        service.spreadsheets().batchUpdate(
+            spreadsheetId,
+            BatchUpdateSpreadsheetRequest()
+                .setRequests(listOf(mergeWarning, mergeStamp, formatWarning, formatStamp))
+        ).execute()
+
+        // Banner applied successfully; remember it for the rest of this
+        // process' lifetime so subsequent syncs skip the ~5 API calls above.
+        volunteerGuestBannerAppliedTabs.add(cacheKey)
     }
 
     /**
