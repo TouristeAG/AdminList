@@ -45,9 +45,10 @@ class FileLogger(private val context: Context, private val settingsManager: Sett
     }
 
     /**
-     * Log a message to file if debug mode is enabled
+     * Log a message to file if debug mode is enabled.
+     * [echoToLogcat] must be disabled for logcat-originated lines to avoid feedback loops.
      */
-    fun log(tag: String, message: String, level: String = "I") {
+    fun log(tag: String, message: String, level: String = "I", echoToLogcat: Boolean = true) {
         if (!settingsManager.getDebugMode()) return
 
         try {
@@ -67,13 +68,15 @@ class FileLogger(private val context: Context, private val settingsManager: Sett
                 writer.flush()
             }
             
-            // Also print to logcat
-            Log.println(when(level) {
-                "E" -> Log.ERROR
-                "W" -> Log.WARN
-                "D" -> Log.DEBUG
-                else -> Log.INFO
-            }, tag, message)
+            if (echoToLogcat) {
+                // Also print to logcat for regular app logs.
+                Log.println(when(level) {
+                    "E" -> Log.ERROR
+                    "W" -> Log.WARN
+                    "D" -> Log.DEBUG
+                    else -> Log.INFO
+                }, tag, message)
+            }
             
         } catch (e: Exception) {
             Log.e(TAG, "Failed to write log: ${e.message}")

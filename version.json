@@ -1,8 +1,8 @@
 {
-  "latestVersionCode": 18,
-  "latestVersionName": "0.9.9.8",
+  "latestVersionCode": 19,
+  "latestVersionName": "0.9.9.9",
   "minSupportedVersionCode": "18",
   "changelogShort": "New bug fixes",
-  "downloadUrl": "https://github.com/TouristeAG/AdminList/releases/download/0.9.9.8/app-release-0.9.9.8.apk",
+  "downloadUrl": "https://github.com/TouristeAG/AdminList/releases/download/0.9.9.9/app-release-0.9.9.9.apk",
   "storeUrl": "https://play.google.com/store/apps/details?id=com.eventmanager.app"
 }

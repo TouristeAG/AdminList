@@ -73,6 +73,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -102,6 +103,9 @@ import androidx.compose.animation.SizeTransform
 import androidx.compose.foundation.layout.BoxWithConstraints
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -2865,29 +2869,48 @@ fun WelcomeScreen(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     val logoPadding = if (isLandscape) 6.dp else 8.dp
-                                    val outlineWidth = if (isLandscape) 6.dp else 8.dp
+                                    val glowOuterRadius = if (isLandscape) 7.dp else 9.dp
+                                    val glowInnerRadius = if (isLandscape) 4.dp else 5.dp
 
                                     scaledLogoBitmap?.let { bitmap ->
-                                        for (dx in listOf(-outlineWidth, 0.dp, outlineWidth)) {
-                                            for (dy in listOf(-outlineWidth, 0.dp, outlineWidth)) {
-                                                if (dx != 0.dp || dy != 0.dp) {
-                                                    Image(
-                                                        bitmap = bitmap,
-                                                        contentDescription = null,
-                                                        modifier = Modifier
-                                                            .fillMaxSize()
-                                                            .padding(logoPadding)
-                                                            .graphicsLayer {
-                                                                translationX = with(density) { dx.toPx() }
-                                                                translationY = with(density) { dy.toPx() }
-                                                                alpha = 0.4f * logoFadeAlpha
-                                                            },
-                                                        colorFilter = ColorFilter.tint(
-                                                            colorScheme.primaryContainer.copy(alpha = 0.8f)
-                                                        )
-                                                    )
-                                                }
-                                            }
+                                        val outerRadiusPx = with(density) { glowOuterRadius.toPx() }
+                                        val innerRadiusPx = with(density) { glowInnerRadius.toPx() }
+                                        val glowColor = colorScheme.primaryContainer.copy(alpha = 0.85f)
+                                        val glowSamples = 16
+
+                                        // Draw radial glow samples around the PNG alpha edge for a smoother contour.
+                                        repeat(glowSamples) { sample ->
+                                            val angle = (2.0 * PI * sample) / glowSamples
+                                            val cosAngle = cos(angle).toFloat()
+                                            val sinAngle = sin(angle).toFloat()
+                                            Image(
+                                                bitmap = bitmap,
+                                                contentDescription = null,
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .padding(logoPadding)
+                                                    .graphicsLayer {
+                                                        translationX = cosAngle * outerRadiusPx
+                                                        translationY = sinAngle * outerRadiusPx
+                                                        alpha = 0.12f * logoFadeAlpha
+                                                    },
+                                                colorFilter = ColorFilter.tint(glowColor),
+                                                filterQuality = FilterQuality.High
+                                            )
+                                            Image(
+                                                bitmap = bitmap,
+                                                contentDescription = null,
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .padding(logoPadding)
+                                                    .graphicsLayer {
+                                                        translationX = cosAngle * innerRadiusPx
+                                                        translationY = sinAngle * innerRadiusPx
+                                                        alpha = 0.10f * logoFadeAlpha
+                                                    },
+                                                colorFilter = ColorFilter.tint(glowColor),
+                                                filterQuality = FilterQuality.High
+                                            )
                                         }
 
                                         Image(
@@ -2896,7 +2919,8 @@ fun WelcomeScreen(
                                             modifier = Modifier
                                                 .fillMaxSize()
                                                 .padding(logoPadding)
-                                                .graphicsLayer { alpha = logoFadeAlpha }
+                                                .graphicsLayer { alpha = logoFadeAlpha },
+                                            filterQuality = FilterQuality.High
                                         )
                                     }
                                 }
