@@ -97,18 +97,18 @@ class LogcatReader(private val context: Context, private val fileLogger: FileLog
                         else -> "I"
                     }
                     
-                    fileLogger.log(tag, message, logLevel)
+                    fileLogger.log(tag, message, logLevel, echoToLogcat = false)
                 } else {
                     // Fallback: log entire line
-                    fileLogger.log("logcat", logLine, "I")
+                    fileLogger.log("logcat", logLine, "I", echoToLogcat = false)
                 }
             } else {
                 // Fallback: log entire line if parsing fails
-                fileLogger.log("logcat", logLine, "I")
+                fileLogger.log("logcat", logLine, "I", echoToLogcat = false)
             }
         } catch (e: Exception) {
             // If parsing fails, just log the raw line
-            fileLogger.log("logcat", logLine, "I")
+            fileLogger.log("logcat", logLine, "I", echoToLogcat = false)
         }
     }
 }
