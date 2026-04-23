@@ -722,6 +722,7 @@ fun EventManagerApp(
         // State to track if device was sleeping when sync error occurred
         val wasDeviceSleeping = remember { mutableStateOf(false) }
         val wasInBackground = remember { mutableStateOf(false) }
+        val lastResumeUpdateCheckMs = remember { mutableStateOf(0L) }
         
         // Detect app lifecycle changes to track when app resumes from background/sleep
         val lifecycleOwner = LocalLifecycleOwner.current
@@ -735,6 +736,12 @@ fun EventManagerApp(
                         // App just resumed from background/sleep
                         if (wasInBackground.value) {
                             println("📱 App resumed from background/sleep")
+                            val now = SystemClock.elapsedRealtime()
+                            val canCheckUpdate = now - lastResumeUpdateCheckMs.value >= 15_000L
+                            if (canCheckUpdate) {
+                                lastResumeUpdateCheckMs.value = now
+                                viewModel.checkForAppUpdates()
+                            }
                             // If there's a sync error when resuming, mark that device was sleeping
                             if (syncError != null) {
                                 wasDeviceSleeping.value = true
