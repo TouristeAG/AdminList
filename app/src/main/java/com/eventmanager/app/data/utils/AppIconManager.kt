@@ -4,6 +4,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import com.eventmanager.app.BuildConfig
 
 /**
  * Manages application icon aliases for dynamic icon switching
@@ -101,6 +102,12 @@ class AppIconManager(private val context: Context) {
             println("   Disabling all other icon components...")
             ALL_ICON_STYLES.forEach { style ->
                 if (style != iconType) {
+                    // Keep the default white launcher alias enabled in debug builds.
+                    // Android Studio can cache this alias as launch target and fail with
+                    // "Activity class ... LauncherIconLight does not exist" if it gets disabled.
+                    if (BuildConfig.DEBUG && style == ICON_WHITE) {
+                        return@forEach
+                    }
                     val suffix = ICON_SUFFIX_MAP[style]
                     if (suffix != null) {
                         val component = ComponentName(packageName, "$packageName.$suffix")

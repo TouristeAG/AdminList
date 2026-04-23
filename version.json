@@ -1,8 +1,8 @@
 {
-  "latestVersionCode": 19,
-  "latestVersionName": "0.9.9.9",
-  "minSupportedVersionCode": "18",
-  "changelogShort": "New bug fixes",
-  "downloadUrl": "https://github.com/TouristeAG/AdminList/releases/download/0.9.9.9/app-release-0.9.9.9.apk",
+  "latestVersionCode": 20,
+  "latestVersionName": "1.0",
+  "minSupportedVersionCode": "20",
+  "changelogShort": "New support for bluetooth LBE NFC readers",
+  "downloadUrl": "https://github.com/TouristeAG/NoctuList/releases/download/1.0/app-release-1.0.apk",
   "storeUrl": "https://play.google.com/store/apps/details?id=com.eventmanager.app"
 }

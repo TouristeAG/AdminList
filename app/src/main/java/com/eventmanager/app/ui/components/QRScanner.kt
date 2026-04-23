@@ -56,6 +56,7 @@ import com.google.zxing.DecodeHintType
 import com.eventmanager.app.data.models.Volunteer
 import com.eventmanager.app.data.models.Guest
 import com.eventmanager.app.hardware.Acr122uUsbNfcReader
+import com.eventmanager.app.hardware.Acr1255uj1BleNfcReader
 import com.eventmanager.app.hardware.ExternalAcsUidReader
 import com.eventmanager.app.hardware.ExternalReaderPermissions
 import com.eventmanager.app.hardware.rememberUsbHardwareGeneration
@@ -210,6 +211,7 @@ fun QRScannerDialog(
     guests: List<Guest>
 ) {
     val context = LocalContext.current
+    val bleReaderFxScope = rememberCoroutineScope()
     val activity = remember(context) { context.findActivity() }
     val nfcAdapter = remember(context) { NfcAdapter.getDefaultAdapter(context) }
     val mainHandler = remember { Handler(Looper.getMainLooper()) }
@@ -279,8 +281,14 @@ fun QRScannerDialog(
             when {
                 allMatches.isEmpty() -> {
                     errorMessage = context.getString(R.string.nfc_uid_not_found, uid)
+                    bleReaderFxScope.launch {
+                        ExternalAcsUidReader.feedbackBleAccessOutcome(context, granted = false)
+                    }
                 }
                 allMatches.size == 1 -> {
+                    bleReaderFxScope.launch {
+                        ExternalAcsUidReader.feedbackBleAccessOutcome(context, granted = true)
+                    }
                     onMatchFound(allMatches.first().match)
                     onDismiss()
                 }
@@ -705,7 +713,7 @@ fun QRScannerDialog(
                                         }
                                     )
                                 }
-                                if (hasExternalReaderConnected) {
+                                if (Acr122uUsbNfcReader.isConnected(context)) {
                                     Text(
                                         text = if (isExternalReaderBusy) {
                                             context.getString(R.string.usb_reader_waiting_card_short)
@@ -715,6 +723,12 @@ fun QRScannerDialog(
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Medium,
                                         color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                if (Acr1255uj1BleNfcReader.isReaderAvailable(context)) {
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    BleReaderScannerStatusFooter(
+                                        isExternalReaderBusy = isExternalReaderBusy,
                                     )
                                 }
                             }

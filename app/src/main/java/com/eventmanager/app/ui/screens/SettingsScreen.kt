@@ -1145,6 +1145,13 @@ fun SettingsScreen(
     var showAnimationSettings by remember { mutableStateOf(settingsManager.isCategoryAnimationExpanded()) }
     var showDeveloperSettings by remember { mutableStateOf(settingsManager.isCategoryDeveloperExpanded()) }
     var showMaintenanceSettings by remember { mutableStateOf(settingsManager.isCategoryMaintenanceExpanded()) }
+    var showExternalReaderSettings by remember { mutableStateOf(settingsManager.isCategoryExternalReaderExpanded()) }
+    var showBleReaderPicker by remember { mutableStateOf(false) }
+    var externalBleReaderMac by remember { mutableStateOf(settingsManager.getExternalBleReaderMac()) }
+    var externalBleReaderName by remember { mutableStateOf(settingsManager.getExternalBleReaderName()) }
+    var externalReaderTestRunning by remember { mutableStateOf(false) }
+    var externalReaderTestDialogMessage by remember { mutableStateOf<String?>(null) }
+    var externalReaderTestDialogSuccess by remember { mutableStateOf(false) }
     var currentResolutionScale by remember { mutableStateOf(settingsManager.getResolutionScale()) }
     var pendingResolutionScale by remember { mutableStateOf(settingsManager.getResolutionScale()) }
     var hasUnsavedResolutionChanges by remember { mutableStateOf(false) }
@@ -1719,7 +1726,202 @@ fun SettingsScreen(
                 context = context
             )
         }
-        
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // External NFC reader (ACR1255U-J1 BLE) — visible in both admin and Billeterie settings.
+        // The reader is a BLE GATT accessory that does NOT show up reliably in the system
+        // Bluetooth pairing list, so we provide an in-app scan + pick + remember flow.
+        ExpandableSettingsCategory(
+            title = context.getString(R.string.settings_category_external_reader),
+            icon = Icons.Default.Bluetooth,
+            isExpanded = showExternalReaderSettings,
+            onToggleExpanded = {
+                showExternalReaderSettings = !showExternalReaderSettings
+                settingsManager.setCategoryExternalReaderExpanded(showExternalReaderSettings)
+            }
+        ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = context.getString(R.string.external_reader_description),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                if (externalBleReaderMac.isNotBlank()) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.Bluetooth,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = context.getString(R.string.external_reader_connected_label),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = externalBleReaderName.ifBlank {
+                                    context.getString(R.string.ble_reader_unnamed)
+                                },
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = externalBleReaderMac,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = { showBleReaderPicker = true },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.BluetoothSearching, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(context.getString(R.string.external_reader_change))
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                com.eventmanager.app.hardware.Acr1255uj1BleNfcReader.shutdown()
+                                settingsManager.clearExternalBleReader()
+                                externalBleReaderMac = ""
+                                externalBleReaderName = ""
+                                Toast.makeText(
+                                    context,
+                                    context.getString(R.string.external_reader_cleared_toast),
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.Clear, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(context.getString(R.string.external_reader_forget))
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    val testScope = rememberCoroutineScope()
+                    OutlinedButton(
+                        onClick = {
+                            if (externalReaderTestRunning) return@OutlinedButton
+                            externalReaderTestRunning = true
+                            testScope.launch {
+                                val result = com.eventmanager.app.hardware.Acr1255uj1BleNfcReader
+                                    .runDiagnostic(context)
+                                externalReaderTestDialogSuccess = result.success
+                                externalReaderTestDialogMessage = result.details
+                                externalReaderTestRunning = false
+                            }
+                        },
+                        enabled = !externalReaderTestRunning,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        if (externalReaderTestRunning) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(context.getString(R.string.external_reader_testing))
+                        } else {
+                            Icon(Icons.Default.Sync, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(context.getString(R.string.external_reader_test_button))
+                        }
+                    }
+                } else {
+                    Button(
+                        onClick = { showBleReaderPicker = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.BluetoothSearching, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(context.getString(R.string.external_reader_pick_button))
+                    }
+                }
+            }
+        }
+
+        if (showBleReaderPicker) {
+            com.eventmanager.app.ui.components.BleReaderPickerDialog(
+                onDismiss = { showBleReaderPicker = false },
+                onPicked = { mac, name ->
+                    settingsManager.saveExternalBleReaderMac(mac)
+                    settingsManager.saveExternalBleReaderName(name)
+                    externalBleReaderMac = mac
+                    externalBleReaderName = name
+                    showBleReaderPicker = false
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.external_reader_saved_toast, name),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            )
+        }
+
+        externalReaderTestDialogMessage?.let { message ->
+            AlertDialog(
+                onDismissRequest = { externalReaderTestDialogMessage = null },
+                icon = {
+                    Icon(
+                        imageVector = if (externalReaderTestDialogSuccess) {
+                            Icons.Default.CheckCircle
+                        } else {
+                            Icons.Default.Warning
+                        },
+                        contentDescription = null,
+                        tint = if (externalReaderTestDialogSuccess) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.error
+                        }
+                    )
+                },
+                title = {
+                    Text(
+                        context.getString(
+                            if (externalReaderTestDialogSuccess) {
+                                R.string.external_reader_test_success_title
+                            } else {
+                                R.string.external_reader_test_failure_title
+                            }
+                        ),
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                text = {
+                    Text(
+                        text = message,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                    )
+                },
+                confirmButton = {
+                    Button(onClick = { externalReaderTestDialogMessage = null }) {
+                        Text(context.getString(R.string.external_reader_test_close))
+                    }
+                }
+            )
+        }
+
         Spacer(modifier = Modifier.height(24.dp))
         
         // Appearance & Display Settings

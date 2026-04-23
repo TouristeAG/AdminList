@@ -66,6 +66,11 @@ class SettingsManager(context: Context) {
         private const val KEY_CATEGORY_MAINTENANCE_EXPANDED = "category_maintenance_expanded"
         private const val KEY_SETUP_WIZARD_COMPLETED = "setup_wizard_completed"
         private const val KEY_BIOMETRIC_ADMIN_LOGIN = "biometric_admin_login"
+
+        // External Bluetooth NFC reader (ACR1255U-J1) pairing
+        private const val KEY_EXTERNAL_BLE_READER_MAC = "external_ble_reader_mac"
+        private const val KEY_EXTERNAL_BLE_READER_NAME = "external_ble_reader_name"
+        private const val KEY_CATEGORY_EXTERNAL_READER_EXPANDED = "category_external_reader_expanded"
         
         // Announcements Settings Keys
         private const val KEY_ANNOUNCEMENTS_RECEPTION_ENABLED = "announcements_reception_enabled"
@@ -806,6 +811,41 @@ class SettingsManager(context: Context) {
     
     fun setCategoryMaintenanceExpanded(expanded: Boolean) {
         prefs.edit().putBoolean(KEY_CATEGORY_MAINTENANCE_EXPANDED, expanded).apply()
+    }
+
+    fun isCategoryExternalReaderExpanded(): Boolean {
+        return prefs.getBoolean(KEY_CATEGORY_EXTERNAL_READER_EXPANDED, false)
+    }
+
+    fun setCategoryExternalReaderExpanded(expanded: Boolean) {
+        prefs.edit().putBoolean(KEY_CATEGORY_EXTERNAL_READER_EXPANDED, expanded).apply()
+    }
+
+    /**
+     * MAC address of the BLE NFC reader (ACR1255U-J1) the user selected from the in-app scanner.
+     * Empty string means "no reader chosen yet" — fall back to bonded-device lookup.
+     */
+    fun getExternalBleReaderMac(): String {
+        return prefs.getString(KEY_EXTERNAL_BLE_READER_MAC, "") ?: ""
+    }
+
+    fun saveExternalBleReaderMac(mac: String) {
+        prefs.edit().putString(KEY_EXTERNAL_BLE_READER_MAC, mac).apply()
+    }
+
+    fun getExternalBleReaderName(): String {
+        return prefs.getString(KEY_EXTERNAL_BLE_READER_NAME, "") ?: ""
+    }
+
+    fun saveExternalBleReaderName(name: String) {
+        prefs.edit().putString(KEY_EXTERNAL_BLE_READER_NAME, name).apply()
+    }
+
+    fun clearExternalBleReader() {
+        prefs.edit()
+            .remove(KEY_EXTERNAL_BLE_READER_MAC)
+            .remove(KEY_EXTERNAL_BLE_READER_NAME)
+            .apply()
     }
     
     fun isSetupWizardCompleted(): Boolean {
