@@ -8,6 +8,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import java.io.File
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
@@ -35,6 +36,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.Image
@@ -51,6 +54,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import android.webkit.WebView
 import com.eventmanager.app.data.sync.GmailAuthService
 import kotlinx.coroutines.launch
@@ -81,9 +85,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.collectAsState
+import kotlin.math.roundToInt
 import com.eventmanager.app.R
 import com.eventmanager.app.BuildConfig
 import com.eventmanager.app.ui.theme.ThemeMode
+import com.eventmanager.app.ui.theme.ColorThemes
 import com.eventmanager.app.ui.components.ResolutionScaleSlider
 import com.eventmanager.app.ui.components.restartApp
 import com.eventmanager.app.ui.components.RetroSynthwaveGameDialog
@@ -113,6 +119,482 @@ private data class IconOption(
     val iconResId: Int,
     val backgroundColor: Color
 )
+
+private data class ColorThemeOption(
+    val key: String,
+    val label: String,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector
+)
+
+private data class CustomThemeRole(
+    val key: String,
+    val label: String
+)
+
+private fun customThemeRoleDescription(roleKey: String): String {
+    return when (roleKey) {
+        "primary" -> "Couleur principale des actions importantes."
+        "onPrimary" -> "Texte/icone affiches sur la couleur Primary."
+        "primaryContainer" -> "Fond secondaire base sur Primary."
+        "onPrimaryContainer" -> "Texte/icone sur Primary Container."
+        "secondary" -> "Couleur d'accent secondaire."
+        "onSecondary" -> "Texte/icone sur Secondary."
+        "secondaryContainer" -> "Fond secondaire lie a Secondary."
+        "onSecondaryContainer" -> "Texte/icone sur Secondary Container."
+        "tertiary" -> "Troisieme accent pour elements distincts."
+        "onTertiary" -> "Texte/icone sur Tertiary."
+        "tertiaryContainer" -> "Fond lie a Tertiary."
+        "onTertiaryContainer" -> "Texte/icone sur Tertiary Container."
+        "error" -> "Couleur des erreurs et alertes."
+        "onError" -> "Texte/icone sur Error."
+        "errorContainer" -> "Fond de messages d'erreur."
+        "onErrorContainer" -> "Texte/icone sur Error Container."
+        "background" -> "Fond general de l'application."
+        "onBackground" -> "Texte principal sur Background."
+        "surface" -> "Fond des cartes, feuilles et panneaux."
+        "onSurface" -> "Texte principal sur Surface."
+        "surfaceVariant" -> "Fond alternatif de surface."
+        "onSurfaceVariant" -> "Texte secondaire sur Surface Variant."
+        "outline" -> "Contours principaux."
+        "outlineVariant" -> "Contours secondaires discrets."
+        "scrim" -> "Voile d'assombrissement derriere dialogs."
+        "inverseSurface" -> "Surface utilisee en mode inverse."
+        "inverseOnSurface" -> "Texte sur Inverse Surface."
+        "inversePrimary" -> "Primary utilisee en contexte inverse."
+        "surfaceDim" -> "Version plus sombre de Surface."
+        "surfaceBright" -> "Version plus claire de Surface."
+        "surfaceContainerLowest" -> "Container surface le plus leger."
+        "surfaceContainerLow" -> "Container surface leger."
+        "surfaceContainer" -> "Container surface standard."
+        "surfaceContainerHigh" -> "Container surface marque."
+        "surfaceContainerHighest" -> "Container surface le plus marque."
+        else -> "Role de couleur Material."
+    }
+}
+
+private val customThemeRoles = listOf(
+    CustomThemeRole("primary", "Primary"),
+    CustomThemeRole("onPrimary", "On Primary"),
+    CustomThemeRole("primaryContainer", "Primary Container"),
+    CustomThemeRole("onPrimaryContainer", "On Primary Container"),
+    CustomThemeRole("secondary", "Secondary"),
+    CustomThemeRole("onSecondary", "On Secondary"),
+    CustomThemeRole("secondaryContainer", "Secondary Container"),
+    CustomThemeRole("onSecondaryContainer", "On Secondary Container"),
+    CustomThemeRole("tertiary", "Tertiary"),
+    CustomThemeRole("onTertiary", "On Tertiary"),
+    CustomThemeRole("tertiaryContainer", "Tertiary Container"),
+    CustomThemeRole("onTertiaryContainer", "On Tertiary Container"),
+    CustomThemeRole("error", "Error"),
+    CustomThemeRole("onError", "On Error"),
+    CustomThemeRole("errorContainer", "Error Container"),
+    CustomThemeRole("onErrorContainer", "On Error Container"),
+    CustomThemeRole("background", "Background"),
+    CustomThemeRole("onBackground", "On Background"),
+    CustomThemeRole("surface", "Surface"),
+    CustomThemeRole("onSurface", "On Surface"),
+    CustomThemeRole("surfaceVariant", "Surface Variant"),
+    CustomThemeRole("onSurfaceVariant", "On Surface Variant"),
+    CustomThemeRole("outline", "Outline"),
+    CustomThemeRole("outlineVariant", "Outline Variant"),
+    CustomThemeRole("scrim", "Scrim"),
+    CustomThemeRole("inverseSurface", "Inverse Surface"),
+    CustomThemeRole("inverseOnSurface", "Inverse On Surface"),
+    CustomThemeRole("inversePrimary", "Inverse Primary"),
+    CustomThemeRole("surfaceDim", "Surface Dim"),
+    CustomThemeRole("surfaceBright", "Surface Bright"),
+    CustomThemeRole("surfaceContainerLowest", "Surface Container Lowest"),
+    CustomThemeRole("surfaceContainerLow", "Surface Container Low"),
+    CustomThemeRole("surfaceContainer", "Surface Container"),
+    CustomThemeRole("surfaceContainerHigh", "Surface Container High"),
+    CustomThemeRole("surfaceContainerHighest", "Surface Container Highest")
+)
+
+private fun getBaseCustomThemeRoleColor(isDark: Boolean, role: String): Color {
+    val scheme = if (isDark) ColorThemes.SUNSET_MIST.darkColors else ColorThemes.SUNSET_MIST.lightColors
+    return when (role) {
+        "primary" -> scheme.primary
+        "onPrimary" -> scheme.onPrimary
+        "primaryContainer" -> scheme.primaryContainer
+        "onPrimaryContainer" -> scheme.onPrimaryContainer
+        "secondary" -> scheme.secondary
+        "onSecondary" -> scheme.onSecondary
+        "secondaryContainer" -> scheme.secondaryContainer
+        "onSecondaryContainer" -> scheme.onSecondaryContainer
+        "tertiary" -> scheme.tertiary
+        "onTertiary" -> scheme.onTertiary
+        "tertiaryContainer" -> scheme.tertiaryContainer
+        "onTertiaryContainer" -> scheme.onTertiaryContainer
+        "error" -> scheme.error
+        "onError" -> scheme.onError
+        "errorContainer" -> scheme.errorContainer
+        "onErrorContainer" -> scheme.onErrorContainer
+        "background" -> scheme.background
+        "onBackground" -> scheme.onBackground
+        "surface" -> scheme.surface
+        "onSurface" -> scheme.onSurface
+        "surfaceVariant" -> scheme.surfaceVariant
+        "onSurfaceVariant" -> scheme.onSurfaceVariant
+        "outline" -> scheme.outline
+        "outlineVariant" -> scheme.outlineVariant
+        "scrim" -> scheme.scrim
+        "inverseSurface" -> scheme.inverseSurface
+        "inverseOnSurface" -> scheme.inverseOnSurface
+        "inversePrimary" -> scheme.inversePrimary
+        "surfaceDim" -> scheme.surfaceDim
+        "surfaceBright" -> scheme.surfaceBright
+        "surfaceContainerLowest" -> scheme.surfaceContainerLowest
+        "surfaceContainerLow" -> scheme.surfaceContainerLow
+        "surfaceContainer" -> scheme.surfaceContainer
+        "surfaceContainerHigh" -> scheme.surfaceContainerHigh
+        "surfaceContainerHighest" -> scheme.surfaceContainerHighest
+        else -> scheme.primary
+    }
+}
+
+@Composable
+private fun ThemePalettePreview(
+    themeKey: String,
+    previewDark: Boolean,
+    settingsManager: SettingsManager,
+    refreshNonce: Int = 0,
+    modifier: Modifier = Modifier
+) {
+    val scheme = remember(themeKey, previewDark, refreshNonce) {
+        if (themeKey == "custom") {
+            val primary = Color(
+                settingsManager.getCustomThemeColor(
+                    previewDark,
+                    "primary",
+                    getBaseCustomThemeRoleColor(previewDark, "primary").toArgb()
+                )
+            )
+            val secondary = Color(
+                settingsManager.getCustomThemeColor(
+                    previewDark,
+                    "secondary",
+                    getBaseCustomThemeRoleColor(previewDark, "secondary").toArgb()
+                )
+            )
+            val tertiary = Color(
+                settingsManager.getCustomThemeColor(
+                    previewDark,
+                    "tertiary",
+                    getBaseCustomThemeRoleColor(previewDark, "tertiary").toArgb()
+                )
+            )
+            val surfaceContainerHigh = Color(
+                settingsManager.getCustomThemeColor(
+                    previewDark,
+                    "surfaceContainerHigh",
+                    getBaseCustomThemeRoleColor(previewDark, "surfaceContainerHigh").toArgb()
+                )
+            )
+            val background = Color(
+                settingsManager.getCustomThemeColor(
+                    previewDark,
+                    "background",
+                    getBaseCustomThemeRoleColor(previewDark, "background").toArgb()
+                )
+            )
+            listOf(primary, secondary, tertiary, surfaceContainerHigh, background)
+        } else {
+            val theme = ColorThemes.getThemeByName(themeKey)
+            val source = if (previewDark) theme.darkColors else theme.lightColors
+            listOf(
+                source.primary,
+                source.secondary,
+                source.tertiary,
+                source.surfaceContainerHigh,
+                source.background
+            )
+        }
+    }
+    val swatches = listOf(
+        scheme[0],
+        scheme[1],
+        scheme[2],
+        scheme[3],
+        scheme[4]
+    )
+
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = modifier
+    ) {
+        swatches.forEachIndexed { index, swatch ->
+            val priority = index + 1
+            val isPriorityColor = priority <= 3
+            val isSunsetMistGradient = themeKey == "sunset_mist" && priority == 3
+            Box(
+                modifier = Modifier
+                    .size(if (isPriorityColor) 24.dp else 18.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (isSunsetMistGradient) {
+                            Brush.linearGradient(listOf(swatches[0], swatches[1]))
+                        } else {
+                            Brush.linearGradient(listOf(swatch, swatch))
+                        }
+                    )
+                    .border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                if (isPriorityColor) {
+                    Text(
+                        text = priority.toString(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (isSunsetMistGradient) {
+                            paletteNumberColorForBackground(blendForContrast(swatches[0], swatches[1]))
+                        } else {
+                            paletteNumberColorForBackground(swatch)
+                        },
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun paletteNumberColorForBackground(background: Color): Color {
+    return if (background.luminance() < 0.45f) Color.White else Color(0xFF111111)
+}
+
+private fun blendForContrast(primary: Color, secondary: Color): Color {
+    return Color(
+        red = (primary.red + secondary.red) / 2f,
+        green = (primary.green + secondary.green) / 2f,
+        blue = (primary.blue + secondary.blue) / 2f,
+        alpha = 1f
+    )
+}
+
+@Composable
+private fun CustomThemeEditorDialog(
+    settingsManager: SettingsManager,
+    onColorChanged: () -> Unit = {},
+    onDismiss: () -> Unit
+) {
+    var editDark by remember { mutableStateOf(false) }
+    var selectedRoleKey by remember { mutableStateOf("primary") }
+    var editorVersion by remember { mutableIntStateOf(0) }
+
+    val currentColor = remember(editDark, selectedRoleKey, editorVersion) {
+        val fallback = getBaseCustomThemeRoleColor(editDark, selectedRoleKey).toArgb()
+        Color(settingsManager.getCustomThemeColor(editDark, selectedRoleKey, fallback))
+    }
+    val startHsv = remember(currentColor) {
+        val hsv = FloatArray(3)
+        android.graphics.Color.colorToHSV(currentColor.toArgb(), hsv)
+        hsv
+    }
+    var hue by remember(currentColor) { mutableFloatStateOf(startHsv[0]) }
+    var saturation by remember(currentColor) { mutableFloatStateOf(startHsv[1]) }
+    var value by remember(currentColor) { mutableFloatStateOf(startHsv[2]) }
+
+    val previewColor = remember(hue, saturation, value) {
+        Color(
+            android.graphics.Color.HSVToColor(
+                floatArrayOf(
+                    hue.coerceIn(0f, 360f),
+                    saturation.coerceIn(0f, 1f),
+                    value.coerceIn(0f, 1f)
+                )
+            )
+        )
+    }
+
+    fun persistColor() {
+        settingsManager.saveCustomThemeColor(editDark, selectedRoleKey, previewColor.toArgb())
+        editorVersion++
+        onColorChanged()
+    }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            shape = RoundedCornerShape(20.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Custom Theme Editor",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = { editDark = false },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (!editDark) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    ) { Text("Light") }
+                    Button(
+                        onClick = { editDark = true },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (editDark) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    ) { Text("Dark") }
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    customThemeRoles.forEach { role ->
+                        OutlinedButton(
+                            onClick = { selectedRoleKey = role.key },
+                            border = BorderStroke(
+                                1.dp,
+                                if (selectedRoleKey == role.key) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+                            )
+                        ) {
+                            Text(role.label, maxLines = 1)
+                        }
+                    }
+                }
+                Text(
+                    text = customThemeRoles.firstOrNull { it.key == selectedRoleKey }?.let {
+                        "${it.label}: ${customThemeRoleDescription(it.key)}"
+                    } ?: customThemeRoleDescription(selectedRoleKey),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(
+                            previewColor
+                        )
+                        .border(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                )
+
+                Text("Teinte (arc-en-ciel): ${hue.roundToInt()}°")
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(30.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(12.dp)
+                            .align(Alignment.Center)
+                            .clip(RoundedCornerShape(999.dp))
+                            .background(
+                                Brush.horizontalGradient(
+                                    listOf(
+                                        Color.Red,
+                                        Color(0xFFFFFF00),
+                                        Color.Green,
+                                        Color.Cyan,
+                                        Color.Blue,
+                                        Color.Magenta,
+                                        Color.Red
+                                    )
+                                )
+                            )
+                    )
+                    Slider(
+                        value = hue,
+                        onValueChange = { hue = it; persistColor() },
+                        valueRange = 0f..360f,
+                        colors = SliderDefaults.colors(
+                            activeTrackColor = Color.Transparent,
+                            inactiveTrackColor = Color.Transparent,
+                            thumbColor = MaterialTheme.colorScheme.onSurface
+                        )
+                    )
+                }
+
+                Text("Saturation: ${(saturation * 100f).roundToInt()}%")
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(30.dp)
+                ) {
+                    val vividHue = Color(android.graphics.Color.HSVToColor(floatArrayOf(hue, 1f, value.coerceIn(0.15f, 1f))))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(12.dp)
+                            .align(Alignment.Center)
+                            .clip(RoundedCornerShape(999.dp))
+                            .background(Brush.horizontalGradient(listOf(Color(0xFFB0B0B0), vividHue)))
+                    )
+                    Slider(
+                        value = saturation,
+                        onValueChange = { saturation = it; persistColor() },
+                        valueRange = 0f..1f,
+                        colors = SliderDefaults.colors(
+                            activeTrackColor = Color.Transparent,
+                            inactiveTrackColor = Color.Transparent,
+                            thumbColor = MaterialTheme.colorScheme.onSurface
+                        )
+                    )
+                }
+
+                Text("Luminosite: ${(value * 100f).roundToInt()}%")
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(30.dp)
+                ) {
+                    val fullColor = Color(android.graphics.Color.HSVToColor(floatArrayOf(hue, saturation.coerceIn(0f, 1f), 1f)))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(12.dp)
+                            .align(Alignment.Center)
+                            .clip(RoundedCornerShape(999.dp))
+                            .background(Brush.horizontalGradient(listOf(Color.Black, fullColor)))
+                    )
+                    Slider(
+                        value = value,
+                        onValueChange = { value = it; persistColor() },
+                        valueRange = 0f..1f,
+                        colors = SliderDefaults.colors(
+                            activeTrackColor = Color.Transparent,
+                            inactiveTrackColor = Color.Transparent,
+                            thumbColor = MaterialTheme.colorScheme.onSurface
+                        )
+                    )
+                }
+
+                Text(
+                    text = "Hex: #${String.format("%08X", previewColor.toArgb())}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
+                    Text("Done")
+                }
+            }
+        }
+    }
+}
 
 // Helper composable for expandable settings category
 @Composable
@@ -1936,7 +2418,15 @@ fun SettingsScreen(
         ) {
             // Theme Selection
             var selectedTheme by remember { mutableStateOf(ThemeMode.fromString(settingsManager.getThemeMode())) }
-            var showThemeMenu by remember { mutableStateOf(false) }
+            val applyVisualThemeRefresh = {
+                settingsManager.markSkipNextStartupSync()
+                (context as? android.app.Activity)?.recreate()
+            }
+            val themeModeOptions = listOf(
+                Triple(ThemeMode.LIGHT, Icons.Default.WbSunny, context.getString(R.string.theme_light)),
+                Triple(ThemeMode.DARK, Icons.Default.NightlightRound, context.getString(R.string.theme_dark)),
+                Triple(ThemeMode.DEFAULT, Icons.Default.AutoAwesome, context.getString(R.string.theme_default))
+            )
             
             Column(
                 modifier = Modifier.fillMaxWidth()
@@ -1952,66 +2442,86 @@ fun SettingsScreen(
                 )
                 
                 Spacer(modifier = Modifier.height(8.dp))
-                
-                Box(
-                    modifier = Modifier.fillMaxWidth()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    OutlinedButton(
-                        onClick = { showThemeMenu = true },
-                        modifier = Modifier.fillMaxWidth(),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
-                    ) {
-                        Text(
-                            text = when (selectedTheme) {
-                                ThemeMode.LIGHT -> context.getString(R.string.theme_light)
-                                ThemeMode.DARK -> context.getString(R.string.theme_dark)
-                                ThemeMode.DEFAULT -> context.getString(R.string.theme_default)
-                            },
-                            modifier = Modifier.weight(1f),
-                            textAlign = TextAlign.Start
-                        )
-                        Icon(
-                            Icons.Default.ArrowDropDown,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    
-                    DropdownMenu(
-                        expanded = showThemeMenu,
-                        onDismissRequest = { showThemeMenu = false },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text(context.getString(R.string.theme_light)) },
-                            onClick = {
-                                selectedTheme = ThemeMode.LIGHT
-                                settingsManager.saveThemeMode(ThemeMode.LIGHT.value)
-                                showThemeMenu = false
-                                // Trigger activity recreation to apply theme change
-                                (context as? android.app.Activity)?.recreate()
+                    themeModeOptions.forEach { (mode, icon, label) ->
+                        val isSelected = selectedTheme == mode
+                        Card(
+                            modifier = Modifier
+                                .width(150.dp)
+                                .clickable {
+                                    if (selectedTheme != mode) {
+                                        selectedTheme = mode
+                                        settingsManager.saveThemeMode(mode.value)
+                                        applyVisualThemeRefresh()
+                                    }
+                                },
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isSelected) {
+                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceContainerLow
+                                }
+                            ),
+                            border = BorderStroke(
+                                width = if (isSelected) 1.5.dp else 1.dp,
+                                color = if (isSelected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.75f)
+                            ),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(
+                                        imageVector = icon,
+                                        contentDescription = null,
+                                        tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        text = label,
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    if (isSelected) {
+                                        Icon(
+                                            imageVector = Icons.Default.CheckCircle,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(22.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(
+                                            if (mode == ThemeMode.DARK) Color(0xFF1C1B1F)
+                                            else if (mode == ThemeMode.LIGHT) Color(0xFFFFFBFE)
+                                            else MaterialTheme.colorScheme.surfaceVariant
+                                        )
+                                        .border(
+                                            width = 1.dp,
+                                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                                            shape = RoundedCornerShape(10.dp)
+                                        )
+                                )
                             }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(context.getString(R.string.theme_dark)) },
-                            onClick = {
-                                selectedTheme = ThemeMode.DARK
-                                settingsManager.saveThemeMode(ThemeMode.DARK.value)
-                                showThemeMenu = false
-                                // Trigger activity recreation to apply theme change
-                                (context as? android.app.Activity)?.recreate()
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(context.getString(R.string.theme_default)) },
-                            onClick = {
-                                selectedTheme = ThemeMode.DEFAULT
-                                settingsManager.saveThemeMode(ThemeMode.DEFAULT.value)
-                                showThemeMenu = false
-                                // Trigger activity recreation to apply theme change
-                                (context as? android.app.Activity)?.recreate()
-                            }
-                        )
+                        }
                     }
                 }
             }
@@ -2020,7 +2530,25 @@ fun SettingsScreen(
             
             // Color Theme Selection
             var selectedColorTheme by remember { mutableStateOf(settingsManager.getColorTheme()) }
-            var showColorThemeMenu by remember { mutableStateOf(false) }
+            var showCustomThemeEditor by remember { mutableStateOf(false) }
+            var customThemePreviewVersion by remember { mutableIntStateOf(0) }
+            val previewDarkMode = when (selectedTheme) {
+                ThemeMode.LIGHT -> false
+                ThemeMode.DARK -> true
+                ThemeMode.DEFAULT -> isSystemInDarkTheme()
+            }
+            val colorThemeOptions = remember(context) {
+                listOf(
+                    ColorThemeOption("system", context.getString(R.string.color_theme_system), Icons.Default.AutoAwesome),
+                    ColorThemeOption("professional_blue", context.getString(R.string.color_theme_professional_blue), Icons.Default.WaterDrop),
+                    ColorThemeOption("neutral_green", context.getString(R.string.color_theme_neutral_green), Icons.Default.Spa),
+                    ColorThemeOption("warm_gray", context.getString(R.string.color_theme_warm_gray), Icons.Default.WbShade),
+                    ColorThemeOption("neutral_purple", context.getString(R.string.color_theme_neutral_purple), Icons.Default.Interests),
+                    ColorThemeOption("rich_brown", context.getString(R.string.color_theme_rich_brown), Icons.Default.LocalCafe),
+                    ColorThemeOption("sunset_mist", context.getString(R.string.color_theme_sunset_mist), Icons.Default.BlurOn),
+                    ColorThemeOption("custom", context.getString(R.string.color_theme_custom), Icons.Default.Tune)
+                )
+            }
             
             Column(
                 modifier = Modifier.fillMaxWidth()
@@ -2036,121 +2564,103 @@ fun SettingsScreen(
                 )
                 
                 Spacer(modifier = Modifier.height(8.dp))
-                
-                Box(
+                Text(
+                    text = if (previewDarkMode) context.getString(R.string.theme_dark) else context.getString(R.string.theme_light),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    OutlinedButton(
-                        onClick = { showColorThemeMenu = true },
-                        modifier = Modifier.fillMaxWidth(),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
-                    ) {
-                        Text(
-                            text = when (selectedColorTheme) {
-                                "system" -> context.getString(R.string.color_theme_system)
-                                "professional_blue" -> context.getString(R.string.color_theme_professional_blue)
-                                "neutral_green" -> context.getString(R.string.color_theme_neutral_green)
-                                "warm_gray" -> context.getString(R.string.color_theme_warm_gray)
-                                "neutral_purple" -> context.getString(R.string.color_theme_neutral_purple)
-                                "rich_brown" -> context.getString(R.string.color_theme_rich_brown)
-                                else -> context.getString(R.string.color_theme_system)
-                            },
-                            modifier = Modifier.weight(1f),
-                            textAlign = TextAlign.Start
-                        )
-                        Icon(
-                            Icons.Default.ArrowDropDown,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    
-                    DropdownMenu(
-                        expanded = showColorThemeMenu,
-                        onDismissRequest = { showColorThemeMenu = false },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                                DropdownMenuItem(
-                                    text = { Text(context.getString(R.string.color_theme_system)) },
-                                    onClick = {
-                                        if (selectedColorTheme != "system") {
-                                            selectedColorTheme = "system"
-                                            settingsManager.saveColorTheme("system")
-                                            showColorThemeMenu = false
-                                            (context as? android.app.Activity)?.recreate()
-                                        } else {
-                                            showColorThemeMenu = false
+                    colorThemeOptions.forEach { option ->
+                        val isSelected = selectedColorTheme == option.key
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    when {
+                                        selectedColorTheme == option.key && option.key == "custom" -> {
+                                            // Re-open editor when tapping the selected custom theme.
+                                            showCustomThemeEditor = true
+                                        }
+                                        selectedColorTheme != option.key -> {
+                                            selectedColorTheme = option.key
+                                            settingsManager.saveColorTheme(option.key)
+                                            if (option.key == "custom") {
+                                                // Open editor immediately so the user can actually pick colors.
+                                                showCustomThemeEditor = true
+                                            } else {
+                                                applyVisualThemeRefresh()
+                                            }
                                         }
                                     }
+                                },
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isSelected) {
+                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceContainerLow
+                                }
+                            ),
+                            border = BorderStroke(
+                                width = if (isSelected) 1.5.dp else 1.dp,
+                                color = if (isSelected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.75f)
+                            )
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 14.dp, vertical = 12.dp)
+                            ) {
+                                Icon(
+                                    imageVector = option.icon,
+                                    contentDescription = null,
+                                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-                                DropdownMenuItem(
-                                    text = { Text(context.getString(R.string.color_theme_professional_blue)) },
-                                    onClick = {
-                                        if (selectedColorTheme != "professional_blue") {
-                                            selectedColorTheme = "professional_blue"
-                                            settingsManager.saveColorTheme("professional_blue")
-                                            showColorThemeMenu = false
-                                            (context as? android.app.Activity)?.recreate()
-                                        } else {
-                                            showColorThemeMenu = false
-                                        }
-                                    }
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text(
+                                    text = option.label,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.weight(1f)
                                 )
-                                DropdownMenuItem(
-                                    text = { Text(context.getString(R.string.color_theme_neutral_green)) },
-                                    onClick = {
-                                        if (selectedColorTheme != "neutral_green") {
-                                            selectedColorTheme = "neutral_green"
-                                            settingsManager.saveColorTheme("neutral_green")
-                                            showColorThemeMenu = false
-                                            (context as? android.app.Activity)?.recreate()
-                                        } else {
-                                            showColorThemeMenu = false
-                                        }
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(context.getString(R.string.color_theme_warm_gray)) },
-                                    onClick = {
-                                        if (selectedColorTheme != "warm_gray") {
-                                            selectedColorTheme = "warm_gray"
-                                            settingsManager.saveColorTheme("warm_gray")
-                                            showColorThemeMenu = false
-                                            (context as? android.app.Activity)?.recreate()
-                                        } else {
-                                            showColorThemeMenu = false
-                                        }
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(context.getString(R.string.color_theme_neutral_purple)) },
-                                    onClick = {
-                                        if (selectedColorTheme != "neutral_purple") {
-                                            selectedColorTheme = "neutral_purple"
-                                            settingsManager.saveColorTheme("neutral_purple")
-                                            showColorThemeMenu = false
-                                            (context as? android.app.Activity)?.recreate()
-                                        } else {
-                                            showColorThemeMenu = false
-                                        }
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(context.getString(R.string.color_theme_rich_brown)) },
-                                    onClick = {
-                                        if (selectedColorTheme != "rich_brown") {
-                                            selectedColorTheme = "rich_brown"
-                                            settingsManager.saveColorTheme("rich_brown")
-                                            showColorThemeMenu = false
-                                            (context as? android.app.Activity)?.recreate()
-                                        } else {
-                                            showColorThemeMenu = false
-                                        }
-                                    }
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.CheckCircle,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                }
+                                ThemePalettePreview(
+                                    themeKey = option.key,
+                                    previewDark = previewDarkMode,
+                                    settingsManager = settingsManager,
+                                    refreshNonce = customThemePreviewVersion
                                 )
                             }
                         }
                     }
+                }
+
+                if (selectedColorTheme == "custom") {
+                    OutlinedButton(
+                        onClick = { showCustomThemeEditor = true },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 6.dp)
+                    ) {
+                        Icon(Icons.Default.Palette, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(context.getString(R.string.color_theme_customize))
+                    }
+                }
                     
                     Spacer(modifier = Modifier.height(16.dp))
                     
@@ -2701,7 +3211,19 @@ fun SettingsScreen(
                         }
                     }
                     
+                    if (showCustomThemeEditor) {
+                        CustomThemeEditorDialog(
+                            settingsManager = settingsManager,
+                            onColorChanged = { customThemePreviewVersion++ },
+                            onDismiss = {
+                                showCustomThemeEditor = false
+                                customThemePreviewVersion++
+                                applyVisualThemeRefresh()
+                            }
+                        )
                     }
+                }
+            }
         
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -3601,8 +4123,7 @@ fun SettingsScreen(
                         }
                     }
                 }
-                
-                Spacer(modifier = Modifier.height(16.dp))
+
             }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))

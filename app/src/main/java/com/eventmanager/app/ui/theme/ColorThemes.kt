@@ -656,6 +656,95 @@ object ColorThemes {
             surfaceContainerHighest = Color(0xFF4A3185)
         )
     )
+
+    // Sunset Mist theme - inspired by coral and misty blue.
+    val SUNSET_MIST = ColorTheme(
+        name = "sunset_mist",
+        displayName = "Sunset Mist",
+        lightColors = ColorScheme(
+            primary = Color(0xFFE84A2A),
+            onPrimary = Color(0xFFFFFFFF),
+            primaryContainer = Color(0xFFFFDBD2),
+            onPrimaryContainer = Color(0xFF5C1205),
+            secondary = Color(0xFF4F7FA8),
+            onSecondary = Color(0xFFFFFFFF),
+            secondaryContainer = Color(0xFFD6E9FA),
+            onSecondaryContainer = Color(0xFF073351),
+            // Fallback tertiary tint sampled from the primary-secondary transition.
+            tertiary = Color(0xFFB35D4A),
+            onTertiary = Color(0xFFFFFFFF),
+            tertiaryContainer = Color(0xFFF2DED9),
+            onTertiaryContainer = Color(0xFF4D241A),
+            error = Color(0xFFBA1A1A),
+            onError = Color(0xFFFFFFFF),
+            errorContainer = Color(0xFFFFDAD6),
+            onErrorContainer = Color(0xFF410002),
+            background = Color(0xFFF4F7FB),
+            onBackground = Color(0xFF151B23),
+            surface = Color(0xFFF8FAFD),
+            onSurface = Color(0xFF151B23),
+            surfaceVariant = Color(0xFFDDE5EE),
+            onSurfaceVariant = Color(0xFF3D4A57),
+            outline = Color(0xFF667788),
+            outlineVariant = Color(0xFFBECBD8),
+            scrim = Color(0xFF000000),
+            inverseSurface = Color(0xFF232B35),
+            inverseOnSurface = Color(0xFFEAF1F8),
+            inversePrimary = Color(0xFFFFB4A3),
+            surfaceDim = Color(0xFFD9E0E8),
+            surfaceBright = Color(0xFFF8FAFD),
+            surfaceContainerLowest = Color(0xFFFFFFFF),
+            surfaceContainerLow = Color(0xFFF1F5F9),
+            surfaceContainer = Color(0xFFEBF0F6),
+            surfaceContainerHigh = Color(0xFFE4EAF1),
+            surfaceContainerHighest = Color(0xFFDEE5ED)
+        ),
+        darkColors = ColorScheme(
+            primary = Color(0xFFFFB59F),
+            onPrimary = Color(0xFF5D1508),
+            primaryContainer = Color(0xFF9B2F1B),
+            onPrimaryContainer = Color(0xFFFFDBD2),
+            secondary = Color(0xFFA8D2F3),
+            onSecondary = Color(0xFF003352),
+            secondaryContainer = Color(0xFF1E658F),
+            onSecondaryContainer = Color(0xFFD6E9FA),
+            // Fallback tertiary tint sampled from the primary-secondary transition.
+            tertiary = Color(0xFFE1B1A7),
+            onTertiary = Color(0xFF45201A),
+            tertiaryContainer = Color(0xFF77524A),
+            onTertiaryContainer = Color(0xFFFFDBD2),
+            error = Color(0xFFFFB4AB),
+            onError = Color(0xFF690005),
+            errorContainer = Color(0xFF93000A),
+            onErrorContainer = Color(0xFFFFDAD6),
+            background = Color(0xFF0A1018),
+            onBackground = Color(0xFFDCE7F3),
+            surface = Color(0xFF0D141D),
+            onSurface = Color(0xFFDCE7F3),
+            surfaceVariant = Color(0xFF334353),
+            onSurfaceVariant = Color(0xFFB9C9D9),
+            outline = Color(0xFF8799AB),
+            outlineVariant = Color(0xFF334353),
+            scrim = Color(0xFF000000),
+            inverseSurface = Color(0xFFDCE7F3),
+            inverseOnSurface = Color(0xFF1C2732),
+            inversePrimary = Color(0xFFE84A2A),
+            surfaceDim = Color(0xFF090F16),
+            surfaceBright = Color(0xFF293746),
+            surfaceContainerLowest = Color(0xFF050A10),
+            surfaceContainerLow = Color(0xFF101923),
+            surfaceContainer = Color(0xFF16212D),
+            surfaceContainerHigh = Color(0xFF1F2B38),
+            surfaceContainerHighest = Color(0xFF293746)
+        )
+    )
+
+    val CUSTOM = ColorTheme(
+        name = "custom",
+        displayName = "Custom",
+        lightColors = SUNSET_MIST.lightColors,
+        darkColors = SUNSET_MIST.darkColors
+    )
     
     // All available themes
     val allThemes = listOf(
@@ -665,7 +754,9 @@ object ColorThemes {
         WARM_GRAY,
         NEUTRAL_PURPLE,
         RICH_BROWN,
-        FEMINIST_VIOLET
+        FEMINIST_VIOLET,
+        SUNSET_MIST,
+        CUSTOM
     )
     
     fun getThemeByName(name: String): ColorTheme {
