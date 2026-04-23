@@ -127,8 +127,21 @@ configurations.all {
 }
 
 dependencies {
-    // ACS official Bluetooth LE reader library (ACR1255U-J1, etc.) — not on Maven Central; vendored from ACS sample.
-    implementation files('libs/acsbt-1.0.0preview8.jar')
+    // ACS official Bluetooth LE reader libraries — vendored AARs from the "Android BLE EVK (SmartCardIO)"
+    // (http://www.acs.com.hk/download-driver-unified/15195/acssmcio-0.6.2-android21-20251203.zip).
+    //  - smartcardio-0.1.7.aar: javax.smartcardio API (Card, CardChannel, CommandAPDU, TerminalFactory...).
+    //  - acssmcio-0.6.2.aar: BluetoothSmartCard / BluetoothTerminalManager that expose ACS's BLE
+    //    readers (ACR1255U-J1, ACR1255U-J1 V2 "SmartCardIO", ACR3901U-S1, AMR220-C, ACR1555U) as
+    //    javax.smartcardio.CardTerminal objects.
+    //
+    // The V2 terminal type covers the newer ACR1255U-J1 firmware that advertises the 128-bit
+    // 3C4AFFF0-... service instead of the legacy 0xFFF0; the old acsbt JAR did not know about it
+    // and rejected such units with "Bluetooth reader not supported".
+    implementation files('libs/smartcardio-0.1.7.aar')
+    implementation files('libs/acssmcio-0.6.2.aar')
+    // Keep AndroidX Startup explicit (not only transitive) to avoid runtime
+    // InitializationProvider ClassNotFound on some install/update paths.
+    implementation 'androidx.startup:startup-runtime:1.1.1'
     // 2.0.x can miss j$.util.* in the APK with newer Compose runtime (PersistentCompositionLocalHashMap → j$.util.Map).
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
     implementation 'androidx.core:core-ktx:1.12.0'

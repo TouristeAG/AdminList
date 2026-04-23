@@ -740,12 +740,17 @@
     <string name="scan_qr_subtitle_nfc_disabled">Camera QR scanner is active. NFC is disabled on this device.</string>
     <string name="scan_with_usb_reader">Scan with external reader</string>
     <string name="usb_reader_waiting_card_short">Waiting card...</string>
+    <string name="scanner_ble_reader_footer_label">Bluetooth reader (ACR1255U-J1)</string>
+    <string name="scanner_ble_reader_footer_connected">Active link — ready to scan</string>
+    <string name="scanner_ble_reader_footer_disconnected">No active link — wake the reader (button) or wait for reconnect</string>
+    <string name="scanner_ble_reader_footer_reading">Reading card…</string>
     <string name="nfc_not_supported_device">This device does not support NFC scanning.</string>
     <string name="nfc_unavailable_no_usb_hint">This device has no NFC, and no external reader is connected (USB or Bluetooth).</string>
     <string name="nfc_phone_unavailable_use_usb_reader">This device has no built-in NFC. Use the external reader option below (USB ACR122U or Bluetooth ACR1255U-J1).</string>
     <string name="nfc_disabled_enable">NFC is disabled. Enable NFC in your phone settings to scan cards.</string>
     <string name="nfc_uid_read_failed">Unable to read NFC card UID. Try again.</string>
     <string name="nfc_uid_not_found">No volunteer or permanent guest found for NFC UID: %s</string>
+    <string name="billeterie_nfc_no_match">No volunteer or permanent guest matches this card.</string>
     <string name="nfc_reader_error">NFC reader error: %s</string>
     <string name="external_reader_bt_blocked_hint">Bluetooth access for the external reader was denied. Tap below to open Android app settings, then allow Bluetooth / Nearby devices for this app. If you already chose \"Don\'t ask again\", you must enable it there.</string>
     <string name="open_app_settings_for_reader">Open app settings</string>
@@ -1234,4 +1239,40 @@
     <string name="announcement_popup_title">Announcement</string>
     <string name="announcement_popup_close">Close</string>
     <string name="announcement_popup_from">From: %s</string>
+
+    <!-- External Bluetooth NFC reader (ACR1255U-J1) -->
+    <string name="settings_category_external_reader">External NFC reader</string>
+    <string name="external_reader_description">Select your external NFC reader here. It may show in Android Bluetooth settings, but you cannot connect from there—use this screen to choose the reader for the app.</string>
+    <string name="external_reader_connected_label">Selected reader</string>
+    <string name="external_reader_pick_button">Scan for Bluetooth readers</string>
+    <string name="external_reader_change">Change reader</string>
+    <string name="external_reader_forget">Forget</string>
+    <string name="external_reader_saved_toast">Saved: %1$s</string>
+    <string name="external_reader_cleared_toast">External reader cleared</string>
+    <string name="external_reader_test_button">Test connection</string>
+    <string name="external_reader_testing">Testing\u2026</string>
+    <string name="external_reader_test_success_title">Reader OK</string>
+    <string name="external_reader_test_failure_title">Reader test failed</string>
+    <string name="external_reader_test_close">Close</string>
+
+    <string name="ble_reader_picker_title">Pick Bluetooth NFC reader</string>
+    <string name="ble_reader_picker_subtitle">Make sure the ACR1255U-J1 is powered on and nearby. ACR-class readers appear first.</string>
+    <string name="ble_reader_scanning">Scanning for Bluetooth devices…</string>
+    <string name="ble_reader_scanning_hint">Scan stays active while this dialog is open.</string>
+    <string name="ble_reader_show_all">Show all Bluetooth devices</string>
+    <string name="ble_reader_show_acr_only">Show ACR readers only</string>
+    <string name="ble_reader_unnamed">Unnamed device</string>
+    <string name="ble_reader_bonded_label">bonded</string>
+    <string name="ble_reader_row_subtitle">%1$s · %2$s</string>
+    <string name="ble_reader_row_subtitle_bonded">%1$s · %2$s · already paired</string>
+    <string name="ble_reader_bluetooth_off">Bluetooth is off. Turn it on to scan for readers.</string>
+    <string name="ble_reader_bluetooth_unavailable">Bluetooth is unavailable on this device.</string>
+    <string name="ble_reader_scan_permission_denied">Bluetooth scan permission is required.</string>
+    <string name="ble_reader_connect_permission_denied">Bluetooth connect permission is required.</string>
+    <string name="ble_reader_location_permission_denied">Location permission is required to scan for Bluetooth devices on this Android version.</string>
+    <string name="ble_reader_scanner_unavailable">Bluetooth Low Energy scanner is unavailable.</string>
+    <string name="ble_reader_low_level_error">Bluetooth scan failed. Toggle Bluetooth off and on, then retry.</string>
+    <string name="ble_reader_enable_bluetooth">Enable Bluetooth</string>
+    <string name="ble_reader_not_acr1255">Selected Bluetooth device is not an ACS ACR1255U-J1 reader.</string>
+    <string name="ble_reader_verification_inconclusive_saved">Reader check was inconclusive. Device saved anyway.</string>
 </resources>

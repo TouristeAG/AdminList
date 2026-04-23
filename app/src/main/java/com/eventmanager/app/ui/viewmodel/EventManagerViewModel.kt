@@ -100,6 +100,9 @@ class EventManagerViewModel(
     val peopleCounterUiHint: StateFlow<String?> = _peopleCounterUiHint.asStateFlow()
 
     private val peopleCounterUploadMutex = Mutex()
+    private val peopleCounterUserSelectionGraceMs = 8_000L
+    @Volatile private var peopleCounterLastUserSelectedVenueId: Long = 0L
+    @Volatile private var peopleCounterLastUserSelectionAtMs: Long = 0L
 
     private data class PeopleCounterThrottle(
         var lastUploadAtMs: Long = 0L,
@@ -4964,6 +4967,8 @@ class EventManagerViewModel(
     fun setPeopleCounterSelectedVenueId(venueId: Long) {
         val ctx = context ?: return
         val sm = SettingsManager(ctx)
+        peopleCounterLastUserSelectedVenueId = venueId
+        peopleCounterLastUserSelectionAtMs = System.currentTimeMillis()
         sm.setPeopleCounterSelectedVenueId(venueId)
         _peopleCounterSelectedVenueId.value = venueId
         _peopleCounterPriority.value = sm.isPeopleCounterPriority(venueId)
@@ -5063,14 +5068,19 @@ class EventManagerViewModel(
         val sm = SettingsManager(ctx)
         val active = _venues.value.filter { it.isActive }.sortedBy { it.name }
         if (active.isEmpty()) {
-            if (_peopleCounterSelectedVenueId.value != 0L) {
-                _peopleCounterSelectedVenueId.value = 0L
-                sm.setPeopleCounterSelectedVenueId(0L)
-            }
+            // During sync, venues can be transiently empty; keep current selection instead of
+            // snapping to 0 (which later falls back to the first venue unexpectedly).
             return
         }
         var sel = _peopleCounterSelectedVenueId.value
         if (sel == 0L || active.none { it.id == sel }) {
+            val now = System.currentTimeMillis()
+            val keepRecentUserSelection =
+                sel == peopleCounterLastUserSelectedVenueId &&
+                    now - peopleCounterLastUserSelectionAtMs <= peopleCounterUserSelectionGraceMs
+            if (keepRecentUserSelection) {
+                return
+            }
             sel = active.first().id
             _peopleCounterSelectedVenueId.value = sel
             sm.setPeopleCounterSelectedVenueId(sel)
