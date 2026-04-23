@@ -483,6 +483,7 @@ fun EventManagerApp(
 ) {
     val appContext = LocalContext.current
     val settingsManager = remember { SettingsManager(appContext) }
+    val skipStartupSync = remember { settingsManager.consumeSkipNextStartupSync() }
 
     // Use rememberSaveable to persist state across configuration changes
     // When Google Sheets is not configured, setup runs first; then the welcome screen on every launch.
@@ -566,6 +567,11 @@ fun EventManagerApp(
             // successfully do we decide whether to show first-admin setup — avoids the old race
             // where performFullSync() returned immediately while Room was still empty.
             LaunchedEffect(Unit) {
+                if (skipStartupSync) {
+                    adminPrecheckSucceeded = true
+                    adminPrecheckComplete = true
+                    return@LaunchedEffect
+                }
                 try {
                     val result = viewModel.performFullSyncAwait(suppressSyncErrorDialog = true)
                     adminPrecheckSucceeded = result.isSuccess
@@ -602,6 +608,7 @@ fun EventManagerApp(
                 val adminSetupVenues by viewModel.venues.collectAsState()
 
                 LaunchedEffect(Unit) {
+                    if (skipStartupSync) return@LaunchedEffect
                     delay(400)
                     try {
                         viewModel.performFullSyncAwait(suppressSyncErrorDialog = true)
@@ -775,6 +782,7 @@ fun EventManagerApp(
         // On app launch: defer sync to allow UI to render first, preventing ANR
         // Use Dispatchers.IO to ensure sync runs on background thread
         LaunchedEffect(Unit) {
+            if (skipStartupSync) return@LaunchedEffect
             // Give the window time to gain focus and run a few frames before heavy IO/network
             // (reduces "Input dispatching timed out" ANRs on slow tablets after cold start).
             kotlinx.coroutines.delay(1200)

@@ -115,14 +115,17 @@
     <!-- Color Theme Settings -->
     <string name="color_theme_title">Thème de couleur</string>
     <string name="color_theme_description">Choisissez un thème de couleur pour les appareils qui ne prennent pas en charge les couleurs dynamiques</string>
-    <string name="color_theme_system">Couleurs système</string>
-    <string name="color_theme_professional_blue">Bleu professionnel</string>
-    <string name="color_theme_neutral_green">Vert neutre</string>
-    <string name="color_theme_warm_gray">Gris chaud</string>
-    <string name="color_theme_neutral_purple">Violet neutre</string>
-    <string name="color_theme_rich_brown">Brun riche</string>
-    <string name="color_theme_feminist_violet">Violet féministe</string>
-    
+    <string name="color_theme_system">Système</string>
+    <string name="color_theme_professional_blue">Bleu</string>
+    <string name="color_theme_neutral_green">Vert</string>
+    <string name="color_theme_warm_gray">Gris</string>
+    <string name="color_theme_neutral_purple">Violet</string>
+    <string name="color_theme_rich_brown">Brun</string>
+    <string name="color_theme_sunset_mist">Brume</string>
+    <string name="color_theme_feminist_violet">Violet</string>
+
+    <string name="color_theme_custom">Personnalisé</string>
+    <string name="color_theme_customize">Personnaliser le thème personnalisé</string>    
     <!-- Restart Dialog -->
     <string name="restart_required_title">Redémarrage requis</string>
     <string name="restart_required_message">Le thème de couleur a été modifié. Veuillez redémarrer l\'application pour voir le nouveau thème appliqué.</string>

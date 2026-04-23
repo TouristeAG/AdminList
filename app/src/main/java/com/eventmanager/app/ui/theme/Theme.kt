@@ -82,6 +82,53 @@ private fun ColorTheme.toColorScheme(isDark: Boolean): androidx.compose.material
     )
 }
 
+private fun loadCustomThemeColorScheme(
+    settingsManager: SettingsManager,
+    isDark: Boolean
+): androidx.compose.material3.ColorScheme {
+    val base = if (isDark) ColorThemes.SUNSET_MIST.darkColors else ColorThemes.SUNSET_MIST.lightColors
+    fun c(role: String, default: Color): Color =
+        Color(settingsManager.getCustomThemeColor(isDark, role, default.toArgb()))
+
+    return androidx.compose.material3.lightColorScheme(
+        primary = c("primary", base.primary),
+        onPrimary = c("onPrimary", base.onPrimary),
+        primaryContainer = c("primaryContainer", base.primaryContainer),
+        onPrimaryContainer = c("onPrimaryContainer", base.onPrimaryContainer),
+        secondary = c("secondary", base.secondary),
+        onSecondary = c("onSecondary", base.onSecondary),
+        secondaryContainer = c("secondaryContainer", base.secondaryContainer),
+        onSecondaryContainer = c("onSecondaryContainer", base.onSecondaryContainer),
+        tertiary = c("tertiary", base.tertiary),
+        onTertiary = c("onTertiary", base.onTertiary),
+        tertiaryContainer = c("tertiaryContainer", base.tertiaryContainer),
+        onTertiaryContainer = c("onTertiaryContainer", base.onTertiaryContainer),
+        error = c("error", base.error),
+        onError = c("onError", base.onError),
+        errorContainer = c("errorContainer", base.errorContainer),
+        onErrorContainer = c("onErrorContainer", base.onErrorContainer),
+        background = c("background", base.background),
+        onBackground = c("onBackground", base.onBackground),
+        surface = c("surface", base.surface),
+        onSurface = c("onSurface", base.onSurface),
+        surfaceVariant = c("surfaceVariant", base.surfaceVariant),
+        onSurfaceVariant = c("onSurfaceVariant", base.onSurfaceVariant),
+        outline = c("outline", base.outline),
+        outlineVariant = c("outlineVariant", base.outlineVariant),
+        scrim = c("scrim", base.scrim),
+        inverseSurface = c("inverseSurface", base.inverseSurface),
+        inverseOnSurface = c("inverseOnSurface", base.inverseOnSurface),
+        inversePrimary = c("inversePrimary", base.inversePrimary),
+        surfaceDim = c("surfaceDim", base.surfaceDim),
+        surfaceBright = c("surfaceBright", base.surfaceBright),
+        surfaceContainerLowest = c("surfaceContainerLowest", base.surfaceContainerLowest),
+        surfaceContainerLow = c("surfaceContainerLow", base.surfaceContainerLow),
+        surfaceContainer = c("surfaceContainer", base.surfaceContainer),
+        surfaceContainerHigh = c("surfaceContainerHigh", base.surfaceContainerHigh),
+        surfaceContainerHighest = c("surfaceContainerHighest", base.surfaceContainerHighest)
+    )
+}
+
 @Composable
 fun EventManagerTheme(
     @Suppress("UNUSED_PARAMETER") darkTheme: Boolean = isSystemInDarkTheme(),
@@ -126,6 +173,9 @@ fun EventManagerTheme(
     }
     
     val colorScheme = when {
+        colorThemeName == "custom" -> {
+            loadCustomThemeColorScheme(settingsManager, darkTheme)
+        }
         // Use custom color theme if not system
         colorThemeName != "system" -> {
             val customTheme = ColorThemes.getThemeByName(colorThemeName)

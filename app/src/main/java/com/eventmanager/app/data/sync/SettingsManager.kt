@@ -35,6 +35,8 @@ class SettingsManager(context: Context) {
         private const val KEY_LANGUAGE = "language"
         private const val KEY_THEME_MODE = "theme_mode"
         private const val KEY_COLOR_THEME = "color_theme"
+        private const val KEY_CUSTOM_THEME_COLOR_PREFIX = "custom_theme_color"
+        private const val KEY_SKIP_NEXT_STARTUP_SYNC = "skip_next_startup_sync"
         private const val KEY_RESOLUTION_SCALE = "resolution_scale"
         private const val KEY_DATE_FORMAT = "date_format"
         private const val KEY_TIME_FORMAT = "time_format"
@@ -306,6 +308,37 @@ class SettingsManager(context: Context) {
     
     fun saveColorTheme(colorTheme: String) {
         prefs.edit().putString(KEY_COLOR_THEME, colorTheme).apply()
+    }
+
+    fun getCustomThemeColor(isDark: Boolean, role: String, defaultArgb: Int): Int {
+        val mode = if (isDark) "dark" else "light"
+        val key = "${KEY_CUSTOM_THEME_COLOR_PREFIX}_${mode}_${role}"
+        return prefs.getInt(key, defaultArgb)
+    }
+
+    fun saveCustomThemeColor(isDark: Boolean, role: String, argb: Int) {
+        val mode = if (isDark) "dark" else "light"
+        val key = "${KEY_CUSTOM_THEME_COLOR_PREFIX}_${mode}_${role}"
+        prefs.edit().putInt(key, argb).apply()
+    }
+
+    /**
+     * Mark that the next app recreation is visual-only (e.g. theme switch),
+     * so startup sync should be skipped once to avoid unnecessary API calls.
+     */
+    fun markSkipNextStartupSync() {
+        prefs.edit().putBoolean(KEY_SKIP_NEXT_STARTUP_SYNC, true).apply()
+    }
+
+    /**
+     * Consume and clear the one-shot "skip startup sync" marker.
+     */
+    fun consumeSkipNextStartupSync(): Boolean {
+        val shouldSkip = prefs.getBoolean(KEY_SKIP_NEXT_STARTUP_SYNC, false)
+        if (shouldSkip) {
+            prefs.edit().putBoolean(KEY_SKIP_NEXT_STARTUP_SYNC, false).apply()
+        }
+        return shouldSkip
     }
     
     // Resolution Scale Configuration
