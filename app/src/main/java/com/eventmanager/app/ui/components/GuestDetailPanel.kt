@@ -638,7 +638,9 @@ fun GuestDetailPanel(
                                     Toast.LENGTH_LONG
                                 ).show()
                             }
-                        } else if (e is com.eventmanager.app.data.sync.GmailNotConfiguredException) {
+                        } else if (e is com.eventmanager.app.data.sync.GmailNotConfiguredException ||
+                            e is com.eventmanager.app.data.sync.GmailPlayServicesUnavailableException
+                        ) {
                             Toast.makeText(
                                 emailContext,
                                 e.message,
@@ -1073,29 +1075,13 @@ private fun GuestInformationSection(
                                 text = guest.name,
                                 style = if (isPhone) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.headlineMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = if (easterEggEnabled) easterNameColor else MaterialTheme.colorScheme.onPrimaryContainer,
-                                modifier = if (easterEggEnabled) {
-                                    Modifier.graphicsLayer {
-                                        shadowElevation = 14.dp.toPx()
-                                        scaleX = 1.02f
-                                        scaleY = 1.02f
-                                    }
-                                } else {
-                                    Modifier
-                                }
+                                color = if (easterEggEnabled) easterNameColor else MaterialTheme.colorScheme.onPrimaryContainer
                             )
                             if (guest.lastNameAbbreviation.isNotEmpty()) {
                                 Text(
                                     text = guest.lastNameAbbreviation,
                                     style = if (isPhone) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge,
-                                    color = if (easterEggEnabled) easterSubtitleColor else MaterialTheme.colorScheme.onPrimaryContainer,
-                                    modifier = if (easterEggEnabled) {
-                                        Modifier.graphicsLayer {
-                                            shadowElevation = 10.dp.toPx()
-                                        }
-                                    } else {
-                                        Modifier
-                                    }
+                                    color = if (easterEggEnabled) easterSubtitleColor else MaterialTheme.colorScheme.onPrimaryContainer
                                 )
                             }
                         }
