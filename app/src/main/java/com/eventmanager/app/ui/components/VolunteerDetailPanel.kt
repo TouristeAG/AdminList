@@ -48,7 +48,7 @@ import com.eventmanager.app.data.models.*
 import com.eventmanager.app.data.utils.DateTimeUtils
 import com.eventmanager.app.data.utils.VolunteerActivityManager
 import com.eventmanager.app.ui.utils.*
-import com.eventmanager.app.ui.util.shiftTimeLabel
+import com.eventmanager.app.ui.util.shiftTimeLabelIfRelevant
 import com.eventmanager.app.utils.QRCodeUtils
 import com.eventmanager.app.R
 import java.text.SimpleDateFormat
@@ -319,7 +319,8 @@ fun VolunteerDetailPanel(
                         ShiftHistorySection(
                             jobs = sortedJobs,
                             isPhone = isPhone,
-                            venues = venues
+                            venues = venues,
+                            jobTypeConfigs = jobTypeConfigs
                         )
                     }
                     
@@ -1293,7 +1294,8 @@ private fun VolunteerSpecificSection(
 private fun ShiftHistorySection(
     jobs: List<Job>,
     isPhone: Boolean,
-    venues: List<VenueEntity>
+    venues: List<VenueEntity>,
+    jobTypeConfigs: List<JobTypeConfig>
 ) {
     val responsivePadding = if (isPhone) getPhonePortraitCardPadding() else getResponsiveCardPadding()
     
@@ -1344,7 +1346,8 @@ private fun ShiftHistorySection(
                     ShiftHistoryItem(
                         job = job,
                         isPhone = isPhone,
-                        venues = venues
+                        venues = venues,
+                        jobTypeConfigs = jobTypeConfigs
                     )
                     
                     if (job != recentJobs.last()) {
@@ -1370,9 +1373,11 @@ private fun ShiftHistorySection(
 private fun ShiftHistoryItem(
     job: Job,
     isPhone: Boolean,
-    venues: List<VenueEntity>
+    venues: List<VenueEntity>,
+    jobTypeConfigs: List<JobTypeConfig>
 ) {
     val context = LocalContext.current
+    val shiftTimeLabel = context.shiftTimeLabelIfRelevant(job, jobTypeConfigs)
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(if (isPhone) 8.dp else 12.dp),
@@ -1415,11 +1420,13 @@ private fun ShiftHistoryItem(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 
-                Text(
-                    text = context.shiftTimeLabel(job.shiftTime),
-                    style = if (isPhone) getPhonePortraitBodyTypography() else getResponsiveBodyTypography(),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                if (shiftTimeLabel != null) {
+                    Text(
+                        text = shiftTimeLabel,
+                        style = if (isPhone) getPhonePortraitBodyTypography() else getResponsiveBodyTypography(),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
             
             if (job.notes.isNotEmpty()) {

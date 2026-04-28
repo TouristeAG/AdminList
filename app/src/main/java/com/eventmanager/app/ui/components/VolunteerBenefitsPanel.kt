@@ -49,7 +49,7 @@ import com.eventmanager.app.data.utils.jobTypeSupportsTrackedFutureEntries
 import com.eventmanager.app.data.utils.DateTimeUtils
 import com.eventmanager.app.data.sync.DateFormatUtils
 import com.eventmanager.app.ui.utils.*
-import com.eventmanager.app.ui.util.shiftTimeLabel
+import com.eventmanager.app.ui.util.shiftTimeLabelIfRelevant
 import com.eventmanager.app.R
 import com.eventmanager.app.utils.QRCodeUtils
 import com.eventmanager.app.data.sync.SettingsManager
@@ -70,6 +70,7 @@ private fun FutureEntrySelectionBlock(
     context: android.content.Context,
     futureEntryGroupsByInvites: List<com.eventmanager.app.data.utils.FutureEntryGroup>,
     futureEntriesByShiftAndRank: List<ShiftEntryInfo>,
+    jobTypeConfigs: List<JobTypeConfig>,
     selectedFutureEntryGroupInvites: Int?,
     onSelectGroup: (Int) -> Unit,
     /** When false (e.g. Billeterie), hide per-shift breakdown under ticket-type cards. */
@@ -133,8 +134,14 @@ private fun FutureEntrySelectionBlock(
         ) {
             futureEntriesByShiftAndRank.forEach { entry ->
                 val invLabel = if (entry.invites > 0) "(+${entry.invites} inv.)" else "(solo)"
+                val shiftTimeLabel = context.shiftTimeLabelIfRelevant(entry.job, jobTypeConfigs)
+                val jobDescriptor = if (shiftTimeLabel != null) {
+                    "${entry.job.jobTypeName} • $shiftTimeLabel"
+                } else {
+                    entry.job.jobTypeName
+                }
                 Text(
-                    text = "${entry.job.jobTypeName} • ${context.shiftTimeLabel(entry.job.shiftTime)} • ${entry.rankLabel}: ${entry.remaining} $invLabel",
+                    text = "$jobDescriptor • ${entry.rankLabel}: ${entry.remaining} $invLabel",
                     style = if (isPhone) MaterialTheme.typography.labelSmall else MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -719,6 +726,7 @@ fun VolunteerBenefitsPanel(
                                             context = context,
                                             futureEntryGroupsByInvites = futureEntryGroupsByInvites,
                                             futureEntriesByShiftAndRank = futureEntriesByShiftAndRank,
+                                            jobTypeConfigs = jobTypeConfigs,
                                             selectedFutureEntryGroupInvites = selectedFutureEntryGroupInvites,
                                             onSelectGroup = { selectedFutureEntryGroupInvites = it },
                                             showShiftBreakdown = !readOnly
@@ -766,6 +774,7 @@ fun VolunteerBenefitsPanel(
                                                 context = context,
                                                 futureEntryGroupsByInvites = futureEntryGroupsByInvites,
                                                 futureEntriesByShiftAndRank = futureEntriesByShiftAndRank,
+                                                jobTypeConfigs = jobTypeConfigs,
                                                 selectedFutureEntryGroupInvites = selectedFutureEntryGroupInvites,
                                                 onSelectGroup = { selectedFutureEntryGroupInvites = it },
                                                 showShiftBreakdown = !readOnly
@@ -803,7 +812,8 @@ fun VolunteerBenefitsPanel(
                                 ShiftHistorySection(
                                     jobs = volunteerJobs.sortedByDescending { it.date },
                                     isPhone = isPhone,
-                                    venues = venues
+                                    venues = venues,
+                                    jobTypeConfigs = jobTypeConfigs
                                 )
                             }
                         }
@@ -1212,8 +1222,10 @@ fun VolunteerBenefitsPanel(
                                     Toast.LENGTH_LONG
                                 ).show()
                             }
-                        } else if (e is com.eventmanager.app.data.sync.GmailNotConfiguredException) {
-                            // Gmail API not configured - show user-friendly message
+                        } else if (e is com.eventmanager.app.data.sync.GmailNotConfiguredException ||
+                            e is com.eventmanager.app.data.sync.GmailPlayServicesUnavailableException
+                        ) {
+                            // Gmail API unavailable - show user-friendly message
                             Toast.makeText(
                                 emailContext,
                                 e.message,
@@ -1581,7 +1593,8 @@ fun VolunteerBenefitsPanel(
 private fun ShiftHistorySection(
     jobs: List<Job>,
     isPhone: Boolean,
-    venues: List<VenueEntity>
+    venues: List<VenueEntity>,
+    jobTypeConfigs: List<JobTypeConfig>
 ) {
     val context = LocalContext.current
     val responsivePadding = if (isPhone) getPhonePortraitCardPadding() else getResponsiveCardPadding()
@@ -1633,7 +1646,8 @@ private fun ShiftHistorySection(
                     ShiftHistoryItem(
                         job = job,
                         isPhone = isPhone,
-                        venues = venues
+                        venues = venues,
+                        jobTypeConfigs = jobTypeConfigs
                     )
                     
                     if (job != recentJobs.last()) {
@@ -1659,8 +1673,11 @@ private fun ShiftHistorySection(
 private fun ShiftHistoryItem(
     job: Job,
     isPhone: Boolean,
-    venues: List<VenueEntity>
+    venues: List<VenueEntity>,
+    jobTypeConfigs: List<JobTypeConfig>
 ) {
+    val context = LocalContext.current
+    val shiftTimeLabel = context.shiftTimeLabelIfRelevant(job, jobTypeConfigs)
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(if (isPhone) 8.dp else 12.dp),
@@ -1703,11 +1720,13 @@ private fun ShiftHistoryItem(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 
-                Text(
-                    text = LocalContext.current.shiftTimeLabel(job.shiftTime),
-                    style = if (isPhone) getPhonePortraitBodyTypography() else getResponsiveBodyTypography(),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                if (shiftTimeLabel != null) {
+                    Text(
+                        text = shiftTimeLabel,
+                        style = if (isPhone) getPhonePortraitBodyTypography() else getResponsiveBodyTypography(),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
             
             if (job.notes.isNotEmpty()) {

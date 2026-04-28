@@ -2949,14 +2949,6 @@ class EventManagerViewModel(
                 toUpdate.forEach { repository.updateGuest(it) }
             }
 
-            // Upload to Google Sheets (skipped on local-only recalculations to avoid redundant API work)
-            if (!skipSheetsUpload && isGoogleSheetsConfigured()) {
-                println("Uploading volunteer guest list to Google Sheets...")
-                googleSheetsService.initializeSheetsService()
-                googleSheetsService.syncVolunteerGuestListToSheets(newVolunteerGuests, _venues.value)
-                println("Successfully uploaded volunteer guest list to Google Sheets")
-            }
-
             // Apply targeted UI updates only if there were changes
             val hasChanges = toDelete.isNotEmpty() || toInsert.isNotEmpty() || toUpdate.isNotEmpty()
             if (hasChanges) {
@@ -2987,6 +2979,15 @@ class EventManagerViewModel(
                 }
             } else {
                 println("No volunteer benefit changes to apply to UI")
+            }
+
+            // Upload to Google Sheets only after local/UI state is updated so the guest list reacts
+            // immediately even if network sync is slow or rate-limited.
+            if (!skipSheetsUpload && isGoogleSheetsConfigured()) {
+                println("Uploading volunteer guest list to Google Sheets...")
+                googleSheetsService.initializeSheetsService()
+                googleSheetsService.syncVolunteerGuestListToSheets(newVolunteerGuests, _venues.value)
+                println("Successfully uploaded volunteer guest list to Google Sheets")
             }
             
             println("Volunteer guest list recalculation completed successfully")

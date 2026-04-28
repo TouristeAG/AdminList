@@ -638,7 +638,9 @@ fun GuestDetailPanel(
                                     Toast.LENGTH_LONG
                                 ).show()
                             }
-                        } else if (e is com.eventmanager.app.data.sync.GmailNotConfiguredException) {
+                        } else if (e is com.eventmanager.app.data.sync.GmailNotConfiguredException ||
+                            e is com.eventmanager.app.data.sync.GmailPlayServicesUnavailableException
+                        ) {
                             Toast.makeText(
                                 emailContext,
                                 e.message,

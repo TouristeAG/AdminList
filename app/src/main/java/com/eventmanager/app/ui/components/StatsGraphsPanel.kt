@@ -1231,13 +1231,13 @@ private fun calculateGenderDistribution(volunteers: List<Volunteer>): GenderDist
         genderCounts[volunteer.gender] = (genderCounts[volunteer.gender] ?: 0) + 1
     }
     
-    // Define colors for each gender
+    // Use a neutral categorical palette (no stereotypical gender colors)
     val genderColors = mapOf(
-        Gender.FEMALE to Color(0xFFFF6B9D), // Pink
-        Gender.MALE to Color(0xFF4ECDC4), // Teal
-        Gender.NON_BINARY to Color(0xFFFFE66D), // Yellow
-        Gender.OTHER to Color(0xFF95E1D3), // Light green
-        Gender.PREFER_NOT_TO_DISCLOSE to Color(0xFFC7CEEA), // Light purple
+        Gender.FEMALE to Color(0xFF5B8FF9), // Blue
+        Gender.MALE to Color(0xFFF6BD16), // Amber
+        Gender.NON_BINARY to Color(0xFF5AD8A6), // Mint green
+        Gender.OTHER to Color(0xFF9270CA), // Violet
+        Gender.PREFER_NOT_TO_DISCLOSE to Color(0xFF6DC8EC), // Cyan
         null to Color(0xFFB8B8B8) // Gray for unspecified
     )
     
