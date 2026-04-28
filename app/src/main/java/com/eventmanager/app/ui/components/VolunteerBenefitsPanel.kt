@@ -175,6 +175,8 @@ fun VolunteerBenefitsPanel(
             lastNameOrAbbreviation = volunteer.lastNameAbbreviation
         )
     }
+    val (easterNameColor, easterSubtitleColor) = leonardoEasterEggProfileNameColors()
+    val easterHeaderIconTint = leonardoEasterEggHeaderIconTint()
     val glowTransition = rememberInfiniteTransition(label = "benefits-glow")
     val glow by glowTransition.animateFloat(
         initialValue = 0.86f,
@@ -386,20 +388,13 @@ fun VolunteerBenefitsPanel(
                                         text = volunteer.name,
                                         style = if (isPhone) getPhonePortraitTypography() else getResponsiveTypography(),
                                         fontWeight = FontWeight.Bold,
-                                        color = if (leonardoEasterEggEnabled) Color(0xFFFFF3B0) else MaterialTheme.colorScheme.onPrimaryContainer,
-                                        modifier = if (leonardoEasterEggEnabled) {
-                                            Modifier.graphicsLayer {
-                                                shadowElevation = 14.dp.toPx()
-                                                scaleX = 1.02f
-                                                scaleY = 1.02f
-                                            }
-                                        } else Modifier
+                                        color = if (leonardoEasterEggEnabled) easterNameColor else MaterialTheme.colorScheme.onPrimaryContainer
                                     )
                                     
                                     Text(
                                         text = "${volunteer.lastNameAbbreviation} • ${volunteer.email}",
                                         style = if (isPhone) getPhonePortraitBodyTypography() else getResponsiveBodyTypography(),
-                                        color = if (leonardoEasterEggEnabled) Color(0xFFE3FFFB) else MaterialTheme.colorScheme.onPrimaryContainer
+                                        color = if (leonardoEasterEggEnabled) easterSubtitleColor else MaterialTheme.colorScheme.onPrimaryContainer
                                     )
                                 }
                             }
@@ -412,14 +407,14 @@ fun VolunteerBenefitsPanel(
                                     Icon(
                                         imageVector = Icons.Default.QrCode,
                                         contentDescription = context.getString(R.string.qr_code),
-                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                        tint = if (leonardoEasterEggEnabled) easterHeaderIconTint else MaterialTheme.colorScheme.onPrimaryContainer
                                     )
                                 }
                                 IconButton(onClick = onClose) {
                                     Icon(
                                         imageVector = Icons.Default.Close,
                                         contentDescription = "Close",
-                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                        tint = if (leonardoEasterEggEnabled) easterHeaderIconTint else MaterialTheme.colorScheme.onPrimaryContainer
                                     )
                                 }
                             }

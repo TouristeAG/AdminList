@@ -208,16 +208,7 @@ fun VolunteerDetailPanel(
                                     text = volunteer.name,
                                     style = if (isPhone) getPhonePortraitTypography() else getResponsiveTypography(),
                                     fontWeight = FontWeight.Bold,
-                                    color = if (leonardoEasterEggEnabled) easterNameColor else MaterialTheme.colorScheme.onPrimaryContainer,
-                                    modifier = if (leonardoEasterEggEnabled) {
-                                        Modifier.graphicsLayer {
-                                            shadowElevation = 14.dp.toPx()
-                                            scaleX = 1.02f
-                                            scaleY = 1.02f
-                                        }
-                                    } else {
-                                        Modifier
-                                    }
+                                    color = if (leonardoEasterEggEnabled) easterNameColor else MaterialTheme.colorScheme.onPrimaryContainer
                                 )
                                 
                                 Spacer(modifier = Modifier.height(if (isPhone) 2.dp else 4.dp))
@@ -225,14 +216,7 @@ fun VolunteerDetailPanel(
                                 Text(
                                     text = "${volunteer.lastNameAbbreviation} • ${volunteer.email}",
                                     style = if (isPhone) getPhonePortraitBodyTypography() else getResponsiveBodyTypography(),
-                                    color = if (leonardoEasterEggEnabled) easterSubtitleColor else MaterialTheme.colorScheme.onPrimaryContainer,
-                                    modifier = if (leonardoEasterEggEnabled) {
-                                        Modifier.graphicsLayer {
-                                            shadowElevation = 10.dp.toPx()
-                                        }
-                                    } else {
-                                        Modifier
-                                    }
+                                    color = if (leonardoEasterEggEnabled) easterSubtitleColor else MaterialTheme.colorScheme.onPrimaryContainer
                                 )
                             }
                             

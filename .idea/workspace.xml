@@ -10,108 +10,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a28c8016-bd3b-4c13-881a-57d40b7b89e1" name="Changes" comment="blablab">
-      <change beforePath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/file-system.probe" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/file-system.probe" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/generated/source/buildConfig/debug/com/eventmanager/app/BuildConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/generated/source/buildConfig/debug/com/eventmanager/app/BuildConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/dex/debug/mergeExtDexDebug/classes.dex" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/dex/debug/mergeExtDexDebug/classes.dex" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/dex/debug/mergeExtDexDebug/classes2.dex" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/dex/debug/mergeExtDexDebug/classes2.dex" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/dex/debug/mergeExtDexDebug/classes3.dex" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/dex/debug/mergeExtDexDebug/classes3.dex" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/dex/debug/mergeExtDexDebug/classes4.dex" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/dex/debug/mergeExtDexDebug/classes4.dex" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/dex/debug/mergeExtDexDebug/classes5.dex" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/dex/debug/mergeExtDexDebug/classes5.dex" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/dex/debug/mergeExtDexDebug/classes6.dex" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/dex/debug/mergeExtDexDebug/classes6.dex" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/dex/debug/mergeProjectDexDebug/0/classes.dex" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/dex/debug/mergeProjectDexDebug/0/classes.dex" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/dex/debug/mergeProjectDexDebug/1/classes.dex" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/dex/debug/mergeProjectDexDebug/1/classes.dex" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/dex/debug/mergeProjectDexDebug/12/classes.dex" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/dex/debug/mergeProjectDexDebug/12/classes.dex" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/dex/debug/mergeProjectDexDebug/2/classes.dex" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/dex/debug/mergeProjectDexDebug/2/classes.dex" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/dex/debug/mergeProjectDexDebug/3/classes.dex" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/dex/debug/mergeProjectDexDebug/3/classes.dex" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/dex/debug/mergeProjectDexDebug/5/classes.dex" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/dex/debug/mergeProjectDexDebug/5/classes.dex" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/dex/debug/mergeProjectDexDebug/6/classes.dex" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/dex/debug/mergeProjectDexDebug/6/classes.dex" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/incremental/packageDebug/tmp/debug/dex-renamer-state.txt" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/incremental/packageDebug/tmp/debug/dex-renamer-state.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/incremental/packageDebug/tmp/debug/zip-cache/androidResources" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/incremental/packageDebug/tmp/debug/zip-cache/androidResources" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/compileDebugJavaWithJavac/previous-compilation-data.bin" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/compileDebugJavaWithJavac/previous-compilation-data.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/data/update/UpdateChecker$checkForUpdates$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/data/update/UpdateChecker$checkForUpdates$2.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/ComposableSingletons$VolunteerBenefitsPanelKt$lambda-1$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/ComposableSingletons$VolunteerBenefitsPanelKt$lambda-1$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/ComposableSingletons$VolunteerBenefitsPanelKt$lambda-2$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/ComposableSingletons$VolunteerBenefitsPanelKt$lambda-2$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/ComposableSingletons$VolunteerBenefitsPanelKt$lambda-3$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/ComposableSingletons$VolunteerBenefitsPanelKt$lambda-3$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/ComposableSingletons$VolunteerBenefitsPanelKt$lambda-4$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/ComposableSingletons$VolunteerBenefitsPanelKt$lambda-4$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/ComposableSingletons$VolunteerBenefitsPanelKt$lambda-5$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/ComposableSingletons$VolunteerBenefitsPanelKt$lambda-5$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/ComposableSingletons$VolunteerBenefitsPanelKt.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/ComposableSingletons$VolunteerBenefitsPanelKt.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/ComposableSingletons$VolunteerDetailPanelKt$lambda-1$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/ComposableSingletons$VolunteerDetailPanelKt$lambda-1$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/ComposableSingletons$VolunteerDetailPanelKt$lambda-10$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/ComposableSingletons$VolunteerDetailPanelKt$lambda-10$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/ComposableSingletons$VolunteerDetailPanelKt$lambda-11$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/ComposableSingletons$VolunteerDetailPanelKt$lambda-11$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/ComposableSingletons$VolunteerDetailPanelKt$lambda-2$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/ComposableSingletons$VolunteerDetailPanelKt$lambda-2$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/ComposableSingletons$VolunteerDetailPanelKt$lambda-3$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/ComposableSingletons$VolunteerDetailPanelKt$lambda-3$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/ComposableSingletons$VolunteerDetailPanelKt$lambda-4$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/ComposableSingletons$VolunteerDetailPanelKt$lambda-4$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/ComposableSingletons$VolunteerDetailPanelKt$lambda-5$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/ComposableSingletons$VolunteerDetailPanelKt$lambda-5$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/ComposableSingletons$VolunteerDetailPanelKt$lambda-6$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/ComposableSingletons$VolunteerDetailPanelKt$lambda-6$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/ComposableSingletons$VolunteerDetailPanelKt$lambda-7$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/ComposableSingletons$VolunteerDetailPanelKt$lambda-7$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/ComposableSingletons$VolunteerDetailPanelKt$lambda-8$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/ComposableSingletons$VolunteerDetailPanelKt$lambda-8$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/ComposableSingletons$VolunteerDetailPanelKt$lambda-9$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/ComposableSingletons$VolunteerDetailPanelKt$lambda-9$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/ComposableSingletons$VolunteerDetailPanelKt.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/ComposableSingletons$VolunteerDetailPanelKt.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$AgeDistributionGraph$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$AgeDistributionGraph$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$AgeDistributionGraph$13$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$AgeDistributionGraph$13$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$AgeDistributionGraph$13.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$AgeDistributionGraph$13.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$AgeDistributionGraph$5.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$AgeDistributionGraph$5.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$ExportOptionsDialog$1$1$1$1$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$ExportOptionsDialog$1$1$1$1$2.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$ExportOptionsDialog$1$1$1$1$4.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$ExportOptionsDialog$1$1$1$1$4.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$ExportOptionsDialog$1$1$1$1$5.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$ExportOptionsDialog$1$1$1$1$5.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$ExportOptionsDialog$1$1$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$ExportOptionsDialog$1$1$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$ExportOptionsDialog$1$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$ExportOptionsDialog$1$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$ExportOptionsDialog$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$ExportOptionsDialog$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$GraphCard$3.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$GraphCard$3.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$InteractiveLineGraph$13$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$InteractiveLineGraph$13$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$InteractiveLineGraph$13.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$InteractiveLineGraph$13.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$InteractiveLineGraph$5.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$InteractiveLineGraph$5.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$MultiLineGraph$14$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$MultiLineGraph$14$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$MultiLineGraph$14.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$MultiLineGraph$14.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$MultiLineGraph$6.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$MultiLineGraph$6.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$PreviewDialog$1$1$1$1$1$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$PreviewDialog$1$1$1$1$1$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$PreviewDialog$1$1$1$1$2$1$1$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$PreviewDialog$1$1$1$1$2$1$1$2.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$PreviewDialog$1$1$1$1$2$2$1$2$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$PreviewDialog$1$1$1$1$2$2$1$2$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$PreviewDialog$1$1$1$1$2$2$2$2$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$PreviewDialog$1$1$1$1$2$2$2$2$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$PreviewDialog$1$1$1$1$2$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$PreviewDialog$1$1$1$1$2$2.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$PreviewDialog$1$1$1$1$3.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$PreviewDialog$1$1$1$1$3.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$PreviewDialog$1$1$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$PreviewDialog$1$1$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$PreviewDialog$1$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$PreviewDialog$1$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$PreviewDialog$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt$PreviewDialog$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/StatsGraphsPanelKt.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerBenefitsPanelKt$ShiftHistoryItem$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerBenefitsPanelKt$ShiftHistoryItem$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerBenefitsPanelKt$ShiftHistoryItem$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerBenefitsPanelKt$ShiftHistoryItem$2.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerBenefitsPanelKt$ShiftHistorySection$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerBenefitsPanelKt$ShiftHistorySection$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerBenefitsPanelKt$ShiftHistorySection$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerBenefitsPanelKt$ShiftHistorySection$2.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerBenefitsPanelKt.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerBenefitsPanelKt.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerDetailPanelKt$ActionButtonsSection$1$1$2$1$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerDetailPanelKt$ActionButtonsSection$1$1$2$1$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerDetailPanelKt$ActionButtonsSection$1$1$2$2$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerDetailPanelKt$ActionButtonsSection$1$1$2$2$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerDetailPanelKt$ActionButtonsSection$1$1$2$3$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerDetailPanelKt$ActionButtonsSection$1$1$2$3$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerDetailPanelKt$ActionButtonsSection$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerDetailPanelKt$ActionButtonsSection$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerDetailPanelKt$PersonalInformationSection$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerDetailPanelKt$PersonalInformationSection$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerDetailPanelKt$ShiftHistoryItem$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerDetailPanelKt$ShiftHistoryItem$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerDetailPanelKt$ShiftHistoryItem$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerDetailPanelKt$ShiftHistoryItem$2.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerDetailPanelKt$ShiftHistorySection$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerDetailPanelKt$ShiftHistorySection$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerDetailPanelKt$ShiftHistorySection$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerDetailPanelKt$ShiftHistorySection$2.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerDetailPanelKt$VolunteerDetailPanel$2$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerDetailPanelKt$VolunteerDetailPanel$2$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerDetailPanelKt$VolunteerDetailPanel$3.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerDetailPanelKt$VolunteerDetailPanel$3.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerDetailPanelKt$VolunteerDetailPanel$4.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerDetailPanelKt$VolunteerDetailPanel$4.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerDetailPanelKt$VolunteerDetailPanel$6.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerDetailPanelKt$VolunteerDetailPanel$6.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerDetailPanelKt$VolunteerSpecificSection$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerDetailPanelKt$VolunteerSpecificSection$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerDetailPanelKt.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/components/VolunteerDetailPanelKt.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/viewmodel/EventManagerViewModel$addJob$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/viewmodel/EventManagerViewModel$addJob$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/viewmodel/EventManagerViewModel$clearAppData$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/viewmodel/EventManagerViewModel$clearAppData$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/viewmodel/EventManagerViewModel$createOrFixSheetStructure$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/viewmodel/EventManagerViewModel$createOrFixSheetStructure$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/viewmodel/EventManagerViewModel$forceRefreshAllData$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/viewmodel/EventManagerViewModel$forceRefreshAllData$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/viewmodel/EventManagerViewModel$forceRefreshVolunteers$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/viewmodel/EventManagerViewModel$forceRefreshVolunteers$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/viewmodel/EventManagerViewModel$performBackupToSheets$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/viewmodel/EventManagerViewModel$performBackupToSheets$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/viewmodel/EventManagerViewModel$performPageChangeSync$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/viewmodel/EventManagerViewModel$performPageChangeSync$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/viewmodel/EventManagerViewModel$performSimplePageChangeSync$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/viewmodel/EventManagerViewModel$performSimplePageChangeSync$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/viewmodel/EventManagerViewModel$refreshAllData$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/viewmodel/EventManagerViewModel$refreshAllData$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/viewmodel/EventManagerViewModel$validateDataStructure$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/viewmodel/EventManagerViewModel$validateDataStructure$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/viewmodel/EventManagerViewModel$validateGoogleSheetsStructure$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/tmp/kotlin-classes/debug/com/eventmanager/app/ui/viewmodel/EventManagerViewModel$validateGoogleSheetsStructure$1.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/eventmanager/app/ui/components/GuestDetailPanel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/eventmanager/app/ui/components/GuestDetailPanel.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/eventmanager/app/ui/components/StatsGraphsPanel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/eventmanager/app/ui/components/StatsGraphsPanel.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/eventmanager/app/ui/components/VolunteerBenefitsPanel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/eventmanager/app/ui/components/VolunteerBenefitsPanel.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/eventmanager/app/ui/components/VolunteerDetailPanel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/eventmanager/app/ui/components/VolunteerDetailPanel.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/eventmanager/app/ui/viewmodel/EventManagerViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/eventmanager/app/ui/viewmodel/EventManagerViewModel.kt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -121,7 +22,7 @@
   <component name="ClangdSettings">
     <option name="formatViaClangd" value="false" />
   </component>
-  <component name="ExecutionTargetManager" SELECTED_TARGET="device_and_snapshot_combo_box_target[LocalEmulator::path=/Users/leonardomondada/.android/avd/Medium_Phone.avd]" />
+  <component name="ExecutionTargetManager" SELECTED_TARGET="device_and_snapshot_combo_box_target[PhysicalDevice::serial=57071FDCQ005CP]" />
   <component name="ExternalProjectsData">
     <projectState path="$PROJECT_DIR$">
       <ProjectState />
@@ -200,37 +101,37 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;AnalyzeApkAction.lastApkPath&quot;: &quot;/Users/leonardomondada/EventManagerApp/app/build/outputs/apk/debug/app-debug.apk&quot;,
-    &quot;Android App.app.executor&quot;: &quot;Run&quot;,
-    &quot;ApkExportedModule&quot;: &quot;Event_Manager.app&quot;,
-    &quot;BundleExportedModule&quot;: &quot;Event_Manager.app&quot;,
-    &quot;GradleDaemonJvmCriteriaMigrationNotification.isNotificationDisabled&quot;: &quot;true&quot;,
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;ResourceManagerPrefKey.ResourceType&quot;: &quot;DRAWABLE&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.cidr.known.project.marker&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.readMode.enableVisualFormatting&quot;: &quot;true&quot;,
-    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
-    &quot;cf.first.check.clang-format&quot;: &quot;false&quot;,
-    &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
-    &quot;com.google.services.firebase.aqiPopupShown&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;8f1a72fe&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/Users/leonardomondada/EventManagerApp&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;org.jetbrains.plugins.github.ui.GithubSettingsConfigurable&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "AnalyzeApkAction.lastApkPath": "/Users/leonardomondada/EventManagerApp/app/build/outputs/apk/debug/app-debug.apk",
+    "Android App.app.executor": "Run",
+    "ApkExportedModule": "Event_Manager.app",
+    "BundleExportedModule": "Event_Manager.app",
+    "GradleDaemonJvmCriteriaMigrationNotification.isNotificationDisabled": "true",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "ResourceManagerPrefKey.ResourceType": "DRAWABLE",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.cidr.known.project.marker": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.readMode.enableVisualFormatting": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "cf.first.check.clang-format": "false",
+    "cidr.known.project.marker": "true",
+    "com.google.services.firebase.aqiPopupShown": "true",
+    "git-widget-placeholder": "87977c75",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "/Users/leonardomondada/EventManagerApp",
+    "settings.editor.selected.configurable": "org.jetbrains.plugins.github.ui.GithubSettingsConfigurable"
   },
-  &quot;keyToStringList&quot;: {
-    &quot;ChangesTree.GroupingKeys&quot;: [
-      &quot;directory&quot;,
-      &quot;module&quot;,
-      &quot;repository&quot;
+  "keyToStringList": {
+    "ChangesTree.GroupingKeys": [
+      "directory",
+      "module",
+      "repository"
     ]
   }
-}</component>
+}]]></component>
   <component name="RunManager">
     <configuration name="app" type="AndroidRunConfigurationType" factoryName="Android App" activateToolWindowBeforeRun="false">
       <module name="Event_Manager.app" />
@@ -311,14 +212,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1756978617835</updated>
-    </task>
-    <task id="LOCAL-00002" summary="tt">
-      <option name="closed" value="true" />
-      <created>1765972744892</created>
-      <option name="number" value="00002" />
-      <option name="presentableId" value="LOCAL-00002" />
-      <option name="project" value="LOCAL" />
-      <updated>1765972744892</updated>
     </task>
     <task id="LOCAL-00003" summary="Bug fixes">
       <option name="closed" value="true" />
@@ -704,7 +597,15 @@
       <option name="project" value="LOCAL" />
       <updated>1776958603602</updated>
     </task>
-    <option name="localTasksCounter" value="51" />
+    <task id="LOCAL-00051" summary="blablab">
+      <option name="closed" value="true" />
+      <created>1777363048018</created>
+      <option name="number" value="00051" />
+      <option name="presentableId" value="LOCAL-00051" />
+      <option name="project" value="LOCAL" />
+      <updated>1777363048019</updated>
+    </task>
+    <option name="localTasksCounter" value="52" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
