@@ -1,0 +1,34 @@
+package com.eventmanager.app.platform
+
+import com.eventmanager.app.data.sync.GmailAuthService
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+actual fun createGmailAuth(context: PlatformContext): GmailAuth =
+    AndroidGmailAuth(context)
+
+private class AndroidGmailAuth(private val context: PlatformContext) : GmailAuth {
+    private val authService = GmailAuthService(context.androidContext)
+
+    override val isSignedIn: Boolean get() = authService.isAccountSelected()
+    override val accountEmail: String? get() = authService.getSelectedAccountEmail()
+
+    override suspend fun signIn(): Boolean {
+        authService.createGmailService()
+        return authService.isCredentialReady()
+    }
+
+    override suspend fun signOut() {
+        authService.clearSelectedAccount()
+        authService.clearCachedToken()
+    }
+
+    override suspend fun sendEmail(
+        to: String,
+        subject: String,
+        htmlBody: String,
+        attachments: List<EmailAttachment>
+    ): Boolean = withContext(Dispatchers.IO) {
+        authService.createGmailService() != null
+    }
+}

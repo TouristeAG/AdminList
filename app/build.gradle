@@ -4,8 +4,8 @@ import groovy.json.JsonOutput
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
     id 'kotlin-parcelize'
-    id 'com.google.devtools.ksp' version '1.9.22-1.0.17'
 }
 
 android {
@@ -14,7 +14,7 @@ android {
 
     defaultConfig {
         applicationId "com.eventmanager.app"
-        minSdk 21  // Android 5.0 (Lollipop) - supports older hardware while maintaining compatibility
+        minSdk 26
         targetSdk 34
         // Load version information from version.json so the app and settings screen
         // always reflect the same version as the update manifest.
@@ -56,12 +56,12 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
         coreLibraryDesugaringEnabled true
     }
     kotlinOptions {
-        jvmTarget = '1.8'
+        jvmTarget = '17'
     }
     buildFeatures {
         compose true
@@ -72,6 +72,7 @@ android {
     }
     packaging {
         resources {
+            excludes += '/META-INF/INDEX.LIST'
             excludes += '/META-INF/{AL2.0,LGPL2.1}'
             excludes += '/META-INF/DEPENDENCIES'
             excludes += '/META-INF/LICENSE'
@@ -127,6 +128,7 @@ configurations.all {
 }
 
 dependencies {
+    implementation project(':shared')
     // ACS official Bluetooth LE reader libraries — vendored AARs from the "Android BLE EVK (SmartCardIO)"
     // (http://www.acs.com.hk/download-driver-unified/15195/acssmcio-0.6.2-android21-20251203.zip).
     //  - smartcardio-0.1.7.aar: javax.smartcardio API (Card, CardChannel, CommandAPDU, TerminalFactory...).
@@ -156,16 +158,11 @@ dependencies {
     implementation 'androidx.compose.material:material-icons-extended'
     
     // Navigation
-    implementation 'androidx.navigation:navigation-compose:2.7.5'
-    
-    // Room database
-    implementation 'androidx.room:room-runtime:2.6.1'
-    implementation 'androidx.room:room-ktx:2.6.1'
-    ksp 'androidx.room:room-compiler:2.6.1'
+    implementation 'androidx.navigation:navigation-compose:2.8.5'
     
     // ViewModel and LiveData
-    implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0'
-    implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.7.0'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7'
+    implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.8.7'
     
     // Coroutines
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'

@@ -1,0 +1,2937 @@
+package com.eventmanager.app.ui
+
+import com.eventmanager.app.platform.PlatformContext
+import com.eventmanager.app.platform.createAppStorage
+import com.eventmanager.app.platform.createDatabase
+import android.app.Activity
+import android.content.Context
+import android.content.res.Configuration
+import android.os.Bundle
+import android.os.Vibrator
+import android.os.VibrationEffect
+import android.os.Build
+import androidx.core.content.ContextCompat
+import androidx.activity.compose.BackHandler
+import java.util.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.LocalBar
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.ConfirmationNumber
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material3.*
+import com.eventmanager.app.ui.components.QRScannerDialog
+import com.eventmanager.app.ui.components.ScannerMatch
+import com.eventmanager.app.ui.components.VolunteerBenefitsPanel
+import com.eventmanager.app.ui.components.GuestDetailPanel
+import com.eventmanager.app.ui.components.PeopleCounter
+import com.eventmanager.app.platform.getAdminSessionHost
+import com.eventmanager.app.ui.ADMIN_SESSION_IDLE_TIMEOUT_MS
+import com.eventmanager.app.ui.components.SendAnnouncementButton
+import com.eventmanager.app.ui.components.SendAnnouncementDialog
+import com.eventmanager.app.ui.components.AnnouncementPopup
+import com.eventmanager.app.ui.scaling.ResolutionScaler
+import com.eventmanager.app.data.models.Guest
+import com.eventmanager.app.data.models.Volunteer
+import com.eventmanager.app.data.models.Job
+import com.eventmanager.app.data.models.JobTypeConfig
+import com.eventmanager.app.data.models.VenueEntity
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.SizeTransform
+import androidx.compose.foundation.layout.BoxWithConstraints
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.eventmanager.app.data.database.EventManagerDatabase
+import com.eventmanager.app.data.repository.EventManagerRepository
+import com.eventmanager.app.data.sync.DateFormatUtils
+import com.eventmanager.app.data.sync.GoogleSheetsService
+import com.eventmanager.app.ui.screens.BenefitsScreen
+import com.eventmanager.app.ui.screens.GuestListScreen
+import com.eventmanager.app.ui.screens.JobTrackingScreen
+import com.eventmanager.app.ui.screens.JobTypeManagementScreen
+import com.eventmanager.app.ui.screens.SettingsScreen
+import com.eventmanager.app.ui.screens.SetupWizardScreen
+import com.eventmanager.app.ui.screens.AdminAuthScreen
+import com.eventmanager.app.ui.screens.AdminSetupScreen
+import com.eventmanager.app.ui.screens.AdminType
+import com.eventmanager.app.ui.screens.BilleterieHomeScreen
+import com.eventmanager.app.ui.screens.BilleterieScannerScreen
+import com.eventmanager.app.ui.screens.BilleterieSettingsScreen
+import com.eventmanager.app.ui.screens.SalesSheetItemManagementScreen
+import com.eventmanager.app.ui.screens.VenueManagementScreen
+import com.eventmanager.app.ui.screens.VolunteerScreen
+import com.eventmanager.app.ui.theme.EventManagerTheme
+import com.eventmanager.app.ui.theme.ThemeMode
+import com.eventmanager.app.ui.viewmodel.EventManagerViewModel
+import com.eventmanager.app.data.sync.SettingsManager
+import com.eventmanager.app.data.sync.settingsManagerFor
+import com.eventmanager.app.platform.createPlatformContext
+import com.eventmanager.app.ui.utils.*
+import com.eventmanager.app.ui.components.AnimatedBackground
+import com.eventmanager.app.ui.components.DashboardClockCard
+import com.eventmanager.app.ui.components.SnowAnimation
+import com.eventmanager.app.ui.components.FireworksAnimation
+import com.eventmanager.app.ui.components.ValentineAnimation
+import com.eventmanager.app.ui.components.WorkersDayAnimation
+import com.eventmanager.app.ui.components.PrideAnimation
+import com.eventmanager.app.ui.components.BeerAnimation
+import com.eventmanager.app.R
+import androidx.compose.ui.text.style.TextAlign
+import com.eventmanager.app.ui.components.StatsGraphsPanel
+import java.util.Calendar
+import com.eventmanager.app.ui.components.SyncErrorDialog
+import android.content.Intent
+import android.provider.Settings
+import com.eventmanager.app.ui.components.DeviceTimeErrorDialog
+import com.eventmanager.app.ui.components.SyncStatusDialog
+import com.eventmanager.app.utils.ImageUtils
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.graphics.ImageBitmap
+import com.eventmanager.app.data.update.UpdateCheckResult
+import com.eventmanager.app.data.update.DownloadState
+import androidx.compose.runtime.LaunchedEffect
+import android.net.Uri
+import android.content.BroadcastReceiver
+import android.content.IntentFilter
+import android.os.SystemClock
+import android.view.MotionEvent
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
+
+@Composable
+actual fun AppRootContent(
+    platformContext: PlatformContext,
+    onThemeModeChanged: (String) -> Unit
+) {
+    val appContext = platformContext.androidContext
+    val settingsManager = remember { SettingsManager(createAppStorage(platformContext)) }
+    val skipStartupSync = remember { settingsManager.consumeSkipNextStartupSync() }
+
+    // Use rememberSaveable to persist state across configuration changes
+    // When Google Sheets is not configured, setup runs first; then the welcome screen on every launch.
+    var showWelcome by rememberSaveable { mutableStateOf(true) }
+    var showSetupWizard by rememberSaveable { mutableStateOf(settingsManager.shouldShowSetupWizard()) }
+    var showAdminAuth by rememberSaveable { mutableStateOf(false) }
+    var showTicketCheck by rememberSaveable { mutableStateOf(false) }
+    var selectedTab by rememberSaveable { mutableStateOf(0) }
+    var previousTab by rememberSaveable { mutableStateOf(0) }
+    val pageAnimationsEnabled = settingsManager.isPageAnimationsEnabled()
+    var showJobTypeManagement by rememberSaveable { mutableStateOf(false) }
+    var showVenueManagement by rememberSaveable { mutableStateOf(false) }
+    var showSalesSheetItemManagement by rememberSaveable { mutableStateOf(false) }
+    var showQRScanner by rememberSaveable { mutableStateOf(false) }
+    var showVolunteerBenefits: Volunteer? by remember { mutableStateOf(null) }
+    var showScannedGuestDetail: Guest? by remember { mutableStateOf(null) }
+    
+    // Haptic feedback for page navigation - very subtle vibration
+    val vibrator = remember { ContextCompat.getSystemService(appContext, Vibrator::class.java) }
+
+    // Update check state - only show dialog if update is available
+    var showUpdateDialog by remember { mutableStateOf(false) }
+    var hasCheckedUpdate by remember { mutableStateOf(false) }
+    
+    if (showSetupWizard) {
+        SetupWizardScreen(
+            onSetupComplete = {
+                showSetupWizard = false
+                // Resolution scale is applied in attachBaseContext; recreate so layout size matches prefs.
+                (appContext as? Activity)?.recreate()
+            },
+            onThemeModeChanged = onThemeModeChanged
+        )
+    } else {
+        var database by remember { mutableStateOf<EventManagerDatabase?>(null) }
+        LaunchedEffect(Unit) {
+            database = withContext(Dispatchers.IO) {
+                createDatabase(platformContext)
+            }
+        }
+
+        if (database == null) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+        } else {
+            val db = database!!
+            val repository = remember(db) {
+                EventManagerRepository(
+                    db.guestDao(),
+                    db.volunteerDao(),
+                    db.jobDao(),
+                    db.jobTypeConfigDao(),
+                    db.venueDao(),
+                    db.salesSheetItemDao()
+                )
+            }
+            val googleSheetsService = remember { GoogleSheetsService(platformContext) }
+            val viewModel: EventManagerViewModel = viewModel {
+                EventManagerViewModel(repository, googleSheetsService, platformContext)
+            }
+
+            // ── First-admin setup gate ──────────────────────────────────────
+            var showAdminSetup by rememberSaveable { mutableStateOf(false) }
+            var adminCheckDone by rememberSaveable { mutableStateOf(false) }
+            var adminPrecheckComplete by remember { mutableStateOf(false) }
+            var adminPrecheckSucceeded by remember { mutableStateOf(false) }
+
+            val adminCheckGuests by viewModel.guests.collectAsState()
+            val adminCheckVolunteers by viewModel.volunteers.collectAsState()
+
+            // Full sync in the background (no launch blocking UI). Only after it finishes
+            // successfully do we decide whether to show first-admin setup — avoids the old race
+            // where performFullSync() returned immediately while Room was still empty.
+            LaunchedEffect(Unit) {
+                if (skipStartupSync) {
+                    adminPrecheckSucceeded = true
+                    adminPrecheckComplete = true
+                    return@LaunchedEffect
+                }
+                try {
+                    val result = viewModel.performFullSyncAwait(suppressSyncErrorDialog = true)
+                    adminPrecheckSucceeded = result.isSuccess
+                    if (adminPrecheckSucceeded) {
+                        delay(250)
+                    }
+                } catch (_: Exception) {
+                    adminPrecheckSucceeded = false
+                }
+                adminPrecheckComplete = true
+            }
+
+            // After background precheck: open first-admin setup only if sync succeeded and
+            // Sheets have no admin. If sync failed, do not offer the wizard (unsafe on empty data).
+            LaunchedEffect(
+                adminPrecheckComplete,
+                adminPrecheckSucceeded,
+                adminCheckGuests,
+                adminCheckVolunteers
+            ) {
+                if (!adminPrecheckComplete || adminCheckDone) return@LaunchedEffect
+                if (!adminPrecheckSucceeded) {
+                    adminCheckDone = true
+                    return@LaunchedEffect
+                }
+                val hasAdmin = adminCheckGuests.any { it.isAdmin } ||
+                    adminCheckVolunteers.any { it.isAdmin }
+                showAdminSetup = !hasAdmin
+                adminCheckDone = true
+            }
+
+            when {
+                showAdminSetup -> {
+                val adminSetupVenues by viewModel.venues.collectAsState()
+
+                LaunchedEffect(Unit) {
+                    if (skipStartupSync) return@LaunchedEffect
+                    delay(400)
+                    try {
+                        viewModel.performFullSyncAwait(suppressSyncErrorDialog = true)
+                    } catch (_: Exception) { }
+                }
+
+                AdminSetupScreen(
+                    venues = adminSetupVenues,
+                    onCreateAdminGuest = { guest, cb -> viewModel.createAdminGuest(guest, cb) },
+                    onCreateAdminVolunteer = { vol, cb -> viewModel.createAdminVolunteer(vol, cb) },
+                    onAssignNfcUid = { adminType, entityId, uid ->
+                        viewModel.assignNfcUidToAdmin(
+                            isGuest = adminType == AdminType.GUEST,
+                            entityId = entityId,
+                            uid = uid
+                        )
+                    },
+                    onComplete = { showAdminSetup = false },
+                    onSkip = { showAdminSetup = false }
+                )
+                }
+                showWelcome -> {
+                WelcomeScreen(
+                    onAdminSelected = {
+                        showWelcome = false
+                        showAdminAuth = true
+                    },
+                    onTicketCheckSelected = {
+                        showWelcome = false
+                        showTicketCheck = true
+                    },
+                    showAdminAccessSyncIndicator = !adminPrecheckComplete
+                )
+                }
+                else -> {
+
+        val updateCheckResult by viewModel.updateCheckState.collectAsState()
+        val updateDownloadState by viewModel.updateDownloadState.collectAsState()
+
+        LaunchedEffect(Unit) {
+            if (!hasCheckedUpdate) {
+                hasCheckedUpdate = true
+                viewModel.checkForAppUpdates()
+            }
+        }
+        LaunchedEffect(updateCheckResult) {
+            if (updateCheckResult is UpdateCheckResult.UpdateAvailable) {
+                showUpdateDialog = true
+            }
+        }
+
+        val context = LocalContext.current
+        
+        // Properly collect StateFlow values to avoid null pointer exceptions on Android 7
+        val guests by viewModel.guests.collectAsState()
+        val volunteers by viewModel.volunteers.collectAsState()
+        val jobs by viewModel.jobs.collectAsState()
+        val jobTypeConfigs by viewModel.jobTypeConfigs.collectAsState()
+        val venues by viewModel.venues.collectAsState()
+        
+        // Collect sync error state
+        val syncError by viewModel.syncError.collectAsState()
+        val showSyncErrorDialog by viewModel.showSyncErrorDialog.collectAsState()
+        val isSyncing by viewModel.isSyncing.collectAsState()
+        
+        // Collect sync status state
+        val syncStatusMessage by viewModel.syncStatusMessage.collectAsState()
+        val showSyncStatusDialog by viewModel.showSyncStatusDialog.collectAsState()
+
+        // Collect announcement state
+        val pendingAnnouncements by viewModel.pendingAnnouncements.collectAsState()
+        val showSendAnnouncementDialog by viewModel.showSendAnnouncementDialog.collectAsState()
+        val isAnnouncementSending by viewModel.isAnnouncementSending.collectAsState()
+
+        // Admin session: auto-return to welcome after idle timeout or after screen was turned off (sleep).
+        val adminSurfaceActive = !showWelcome && !showAdminAuth && !showTicketCheck
+        val endAdminSession by rememberUpdatedState {
+            showWelcome = true
+            showAdminAuth = false
+            showTicketCheck = false
+            selectedTab = 0
+            showJobTypeManagement = false
+            showVenueManagement = false
+            showSalesSheetItemManagement = false
+        }
+        val adminSessionHost = getAdminSessionHost(platformContext)
+        DisposableEffect(adminSurfaceActive, adminSessionHost) {
+            val host = adminSessionHost ?: return@DisposableEffect onDispose { }
+            if (adminSurfaceActive) {
+                host.adminSessionWatchdog.monitoring = true
+                host.adminSessionWatchdog.lastInteractionElapsedMs.set(SystemClock.elapsedRealtime())
+                host.adminSessionAutoLogout = { endAdminSession() }
+            } else {
+                host.adminSessionWatchdog.stopMonitoring()
+                host.adminSessionAutoLogout = null
+            }
+            onDispose {
+                host.adminSessionWatchdog.stopMonitoring()
+                host.adminSessionAutoLogout = null
+            }
+        }
+        LaunchedEffect(adminSurfaceActive, adminSessionHost) {
+            if (!adminSurfaceActive || adminSessionHost == null) return@LaunchedEffect
+            val host = adminSessionHost
+            while (true) {
+                delay(15_000L)
+                val idleMs = SystemClock.elapsedRealtime() - host.adminSessionWatchdog.lastInteractionElapsedMs.get()
+                if (host.adminSessionWatchdog.consumeLogoutAfterSleepIfPending() ||
+                    idleMs >= ADMIN_SESSION_IDLE_TIMEOUT_MS
+                ) {
+                    endAdminSession()
+                    break
+                }
+            }
+        }
+        
+        // State for device time error
+        val showDeviceTimeErrorDialog = remember { mutableStateOf(false) }
+        
+        // State to track if device was sleeping when sync error occurred
+        val wasDeviceSleeping = remember { mutableStateOf(false) }
+        val wasInBackground = remember { mutableStateOf(false) }
+        val lastResumeUpdateCheckMs = remember { mutableStateOf(0L) }
+        
+        // Detect app lifecycle changes to track when app resumes from background/sleep
+        val lifecycleOwner = LocalLifecycleOwner.current
+        DisposableEffect(lifecycleOwner) {
+            val observer = LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_PAUSE -> {
+                        wasInBackground.value = true
+                    }
+                    Lifecycle.Event.ON_RESUME -> {
+                        // App just resumed from background/sleep
+                        if (wasInBackground.value) {
+                            println("📱 App resumed from background/sleep")
+                            val now = SystemClock.elapsedRealtime()
+                            val canCheckUpdate = now - lastResumeUpdateCheckMs.value >= 15_000L
+                            if (canCheckUpdate) {
+                                lastResumeUpdateCheckMs.value = now
+                                viewModel.checkForAppUpdates()
+                            }
+                            // If there's a sync error when resuming, mark that device was sleeping
+                            if (syncError != null) {
+                                wasDeviceSleeping.value = true
+                            }
+                        }
+                        wasInBackground.value = false
+                    }
+                    else -> {}
+                }
+            }
+            lifecycleOwner.lifecycle.addObserver(observer)
+            onDispose {
+                lifecycleOwner.lifecycle.removeObserver(observer)
+            }
+        }
+        
+        // Reset wasDeviceSleeping when sync error is cleared
+        LaunchedEffect(syncError) {
+            if (syncError == null) {
+                wasDeviceSleeping.value = false
+            }
+        }
+        
+        // Detect device time errors
+        LaunchedEffect(syncError) {
+            if (syncError != null && com.eventmanager.app.ui.components.isDeviceTimeError(syncError)) {
+                showDeviceTimeErrorDialog.value = true
+            }
+        }
+        
+        // On app launch: defer sync to allow UI to render first, preventing ANR
+        // Use Dispatchers.IO to ensure sync runs on background thread
+        LaunchedEffect(Unit) {
+            if (skipStartupSync) return@LaunchedEffect
+            // Give the window time to gain focus and run a few frames before heavy IO/network
+            // (reduces "Input dispatching timed out" ANRs on slow tablets after cold start).
+            kotlinx.coroutines.delay(1200)
+
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                println("App started - triggering initial download-only full sync...")
+                try {
+                    viewModel.performFullSync()
+                } catch (e: Exception) {
+                    println("❌ Sync error: ${e.message}")
+                    e.printStackTrace()
+                }
+            }
+        }
+
+        // Repair sheet headers (e.g. Admin column) and re-sync before NFC/QR admin gate
+        LaunchedEffect(showAdminAuth) {
+            if (showAdminAuth) {
+                viewModel.prepareForAdminAuthentication()
+            }
+        }
+        
+        if (showAdminAuth) {
+            AdminAuthScreen(
+                viewModel = viewModel,
+                volunteers = volunteers,
+                guests = guests,
+                isSyncing = isSyncing,
+                onAuthSuccess = { showAdminAuth = false },
+                onBack = {
+                    showAdminAuth = false
+                    showWelcome = true
+                }
+            )
+        } else {
+        if (showTicketCheck) {
+            var billeterieSection by rememberSaveable { mutableStateOf("home") }
+            var showBilleterieSettings by rememberSaveable { mutableStateOf(false) }
+            val billeterieDashboardScrollState = rememberScrollState(0)
+            val billeterieListContext = LocalContext.current
+
+            LaunchedEffect(showTicketCheck) {
+                if (showTicketCheck) {
+                    kotlinx.coroutines.delay(250)
+                    // Same background auto-sync as admin (interval from Settings); ensure loop is running after Billeterie entry.
+                    viewModel.updateSyncInterval()
+                    viewModel.syncGuestsWithTargetedUpdates()
+                }
+            }
+
+            LaunchedEffect(billeterieSection) {
+                if (billeterieSection != "home") {
+                    showBilleterieSettings = false
+                }
+            }
+
+            BackHandler {
+                when {
+                    showBilleterieSettings -> showBilleterieSettings = false
+                    billeterieSection == "guests" || billeterieSection == "scanner" -> billeterieSection = "home"
+                    else -> {
+                        showTicketCheck = false
+                        showWelcome = true
+                    }
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.surface)
+            ) {
+                AnimatedBackground(
+                    enabled = settingsManager.isAnimatedBackgroundEnabled()
+                )
+
+                when (billeterieSection) {
+                    "home" -> {
+                        if (showBilleterieSettings) {
+                            BilleterieSettingsScreen(
+                                viewModel = viewModel,
+                                onBack = { showBilleterieSettings = false }
+                            )
+                        } else {
+                            BilleterieHomeScreen(
+                                guests = guests,
+                                repository = viewModel.repository,
+                                viewModel = viewModel,
+                                dashboardScrollState = billeterieDashboardScrollState,
+                                onBack = {
+                                    showTicketCheck = false
+                                    showWelcome = true
+                                },
+                                onOpenGuestList = { billeterieSection = "guests" },
+                                onOpenScanner = { billeterieSection = "scanner" },
+                                onOpenSettings = { showBilleterieSettings = true }
+                            )
+                        }
+                    }
+                    "scanner" -> {
+                        BilleterieScannerScreen(
+                            volunteers = volunteers,
+                            guests = guests,
+                            jobs = jobs,
+                            jobTypeConfigs = jobTypeConfigs,
+                            onBack = { billeterieSection = "home" },
+                            onConfirmEntry = { job, selectedInvites ->
+                                viewModel.markBenefitAsUsed(job, selectedInvites)
+                            }
+                        )
+                    }
+                    else -> {
+                        Scaffold(
+                            containerColor = if (settingsManager.isAnimatedBackgroundEnabled()) {
+                                Color.Transparent
+                            } else {
+                                MaterialTheme.colorScheme.surface
+                            },
+                            contentColor = MaterialTheme.colorScheme.onSurface,
+                            topBar = {
+                                CenterAlignedTopAppBar(
+                                    title = {
+                                        Text(
+                                            text = billeterieListContext.getString(R.string.nav_guests),
+                                            style = MaterialTheme.typography.titleLarge,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    },
+                                    navigationIcon = {
+                                        IconButton(onClick = { billeterieSection = "home" }) {
+                                            Icon(
+                                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                                contentDescription = billeterieListContext.getString(R.string.setup_back)
+                                            )
+                                        }
+                                    },
+                                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                                        containerColor = Color.Transparent,
+                                        scrolledContainerColor = Color.Transparent,
+                                        navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                                        actionIconContentColor = MaterialTheme.colorScheme.onSurface
+                                    )
+                                )
+                            }
+                        ) { innerPadding ->
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(innerPadding)
+                            ) {
+                                GuestListScreenWithViewModel(viewModel, readOnly = true)
+                            }
+                        }
+                    }
+                }
+
+                SyncStatusWidget(
+                    viewModel = viewModel,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(bottom = 8.dp, end = 8.dp)
+                )
+            }
+        } else {
+        // Defer sync operations on tab switch to allow instant UI response
+        // OPTIMIZED: Syncs are triggered 250ms after tab change to ensure animation completes first
+        LaunchedEffect(selectedTab) {
+            // Skip sync on initial load (handled by initial sync above)
+            if (selectedTab == previousTab) return@LaunchedEffect
+            
+            // Delay sync until after animation completes (180ms animation + buffer)
+            // This prevents sync-related state updates from causing jank during transition
+            kotlinx.coroutines.delay(250)
+            
+            println("Tab changed from $previousTab to $selectedTab - triggering deferred targeted sync")
+            when (selectedTab) {
+                0 -> {
+                    viewModel.syncGuestsWithTargetedUpdates() // Enter Dashboard
+                    if (settingsManager.isPeopleCounterVisible()) {
+                        viewModel.refreshVenuesForPeopleCounterQuietly()
+                    }
+                }
+                1 -> viewModel.syncGuestsWithTargetedUpdates() // Enter Guest List
+                2 -> viewModel.syncVolunteersWithTargetedUpdates() // Enter Volunteers
+                3 -> viewModel.syncJobsWithTargetedUpdates() // Enter Jobs
+                4 -> {
+                    // Benefits screen: stagger syncs slightly to reduce concurrent load
+                    viewModel.syncJobsWithTargetedUpdates()
+                    kotlinx.coroutines.delay(50)
+                    viewModel.syncVolunteersWithTargetedUpdates()
+                    kotlinx.coroutines.delay(50)
+                    viewModel.syncJobTypesWithTargetedUpdates()
+                } // Enter Benefits
+                5 -> {
+                    // Settings screen: keep management data fresh, including announcements on venues
+                    viewModel.syncJobTypesWithTargetedUpdates()
+                    kotlinx.coroutines.delay(50)
+                    viewModel.syncVenuesWithTargetedUpdates()
+                } // Enter Settings
+            }
+        }
+
+        Scaffold(
+                bottomBar = {
+                    // Modern bottom navigation bar with horizontal scrolling on phones
+                    if (!isTablet()) {
+                        // Horizontal scrolling navigation for phones
+                        val scrollState = rememberScrollState()
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(scrollState)
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                .background(
+                                    color = MaterialTheme.colorScheme.surface,
+                                    shape = RoundedCornerShape(16.dp)
+                                )
+                                .padding(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            val navContext = LocalContext.current
+                            val tabs = listOf(
+                                navContext.getString(R.string.nav_dashboard) to Icons.Default.Home,
+                                navContext.getString(R.string.nav_guests) to Icons.Default.Person,
+                                navContext.getString(R.string.nav_volunteers) to Icons.Default.Group,
+                                navContext.getString(R.string.nav_shifts) to Icons.Default.Build,
+                                navContext.getString(R.string.nav_benefits) to Icons.Default.Star,
+                                navContext.getString(R.string.nav_settings) to Icons.Default.Settings
+                            )
+                            
+                            tabs.forEachIndexed { index, (title, icon) ->
+                                Card(
+                                    modifier = Modifier
+                                        .width(100.dp)
+                                        .clickable {
+                                            if (selectedTab != index) {
+                                                // Close any open settings dialogs when switching tabs
+                                                showJobTypeManagement = false
+                                                showVenueManagement = false
+                                                showSalesSheetItemManagement = false
+                                                // Very subtle haptic feedback for page change
+                                                performSubtleHaptic(vibrator)
+                                            }
+                                            previousTab = selectedTab
+                                            selectedTab = index
+                                        },
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = if (selectedTab == index)
+                                            MaterialTheme.colorScheme.primaryContainer
+                                        else
+                                            MaterialTheme.colorScheme.surfaceVariant
+                                    ),
+                                    elevation = CardDefaults.cardElevation(
+                                        defaultElevation = if (selectedTab == index) 4.dp else 1.dp
+                                    )
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 8.dp, vertical = 8.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
+                                        val scale by animateFloatAsState(
+                                            targetValue = if (selectedTab == index && pageAnimationsEnabled) 1.1f else 1.0f,
+                                            animationSpec = if (pageAnimationsEnabled) spring(stiffness = Spring.StiffnessMedium) else spring(stiffness = Spring.StiffnessHigh),
+                                            label = "bottom_icon_scale"
+                                        )
+                                        Icon(
+                                            icon,
+                                            contentDescription = title,
+                                            modifier = Modifier.size(20.dp).graphicsLayer(scaleX = scale, scaleY = scale),
+                                            tint = if (selectedTab == index) 
+                                                MaterialTheme.colorScheme.onPrimaryContainer 
+                                            else 
+                                                MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = title,
+                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                            color = if (selectedTab == index) 
+                                                MaterialTheme.colorScheme.onPrimaryContainer 
+                                            else 
+                                                MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // Regular navigation bar for tablets
+                        NavigationBar(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            contentColor = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier
+                                .padding(horizontal = 12.dp, vertical = 2.dp)
+                                .height(62.dp)
+                        ) {
+                            val navContextTablet = LocalContext.current
+                            val tabs = listOf(
+                                navContextTablet.getString(R.string.nav_dashboard) to Icons.Default.Home,
+                                navContextTablet.getString(R.string.nav_guests) to Icons.Default.Person,
+                                navContextTablet.getString(R.string.nav_volunteers) to Icons.Default.Group,
+                                navContextTablet.getString(R.string.nav_shifts) to Icons.Default.Build,
+                                navContextTablet.getString(R.string.nav_benefits) to Icons.Default.Star,
+                                navContextTablet.getString(R.string.nav_settings) to Icons.Default.Settings
+                            )
+                            
+                            tabs.forEachIndexed { index, (title, icon) ->
+                                NavigationBarItem(
+                                    selected = selectedTab == index,
+                                    onClick = {
+                                        if (selectedTab != index) {
+                                            // Close any open settings dialogs when switching tabs
+                                            showJobTypeManagement = false
+                                            showVenueManagement = false
+                                            showSalesSheetItemManagement = false
+                                            // Very subtle haptic feedback for page change
+                                            performSubtleHaptic(vibrator)
+                                        }
+                                        previousTab = selectedTab
+                                        selectedTab = index
+                                    },
+                                    icon = {
+                                        val scale by animateFloatAsState(
+                                            targetValue = if (selectedTab == index && pageAnimationsEnabled) 1.1f else 1.0f,
+                                            animationSpec = if (pageAnimationsEnabled) spring(stiffness = Spring.StiffnessMedium) else spring(stiffness = Spring.StiffnessHigh),
+                                            label = "bottom_icon_scale_tablet"
+                                        )
+                                        Icon(
+                                            icon,
+                                            contentDescription = title,
+                                            modifier = Modifier.size(20.dp).graphicsLayer(scaleX = scale, scaleY = scale)
+                                        )
+                                    },
+                                    label = {
+                                        Text(
+                                            text = title,
+                                            style = MaterialTheme.typography.labelSmall
+                                        )
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            ) { innerPadding ->
+                // Main content with modern padding, sync widget, and swipe gestures
+                val isPhone = !isTablet()
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .padding(
+                            horizontal = if (isPhone) 8.dp else 16.dp, 
+                            vertical = if (isPhone) 4.dp else 8.dp
+                        )
+                ) {
+                    // Root admin: system back would otherwise finish the activity; return to welcome instead
+                    // (same as dashboard logout). Job/venue management screens register their own BackHandler
+                    // after this and take precedence; open dialogs compose later and dismiss first.
+                    BackHandler {
+                        showWelcome = true
+                        showAdminAuth = false
+                        showTicketCheck = false
+                        selectedTab = 0
+                        showJobTypeManagement = false
+                        showVenueManagement = false
+                        showSalesSheetItemManagement = false
+                    }
+                    // Animated background
+                    AnimatedBackground(
+                        enabled = settingsManager.isAnimatedBackgroundEnabled()
+                    )
+                    
+                    // Snow Animation (December 22-25)
+                    SnowAnimation(
+                        enabled = settingsManager.isSeasonalFunEnabled()
+                    )
+                    
+                    // Fireworks Animation (December 31 - January 1)
+                    FireworksAnimation(
+                        enabled = settingsManager.isSeasonalFunEnabled()
+                    )
+                    
+                    // Valentine's Day Animation (February 14)
+                    ValentineAnimation(
+                        enabled = settingsManager.isSeasonalFunEnabled()
+                    )
+                    
+                    // Workers' Day Animation (May 1)
+                    WorkersDayAnimation(
+                        enabled = settingsManager.isSeasonalFunEnabled()
+                    )
+                    
+                    // Pride Animation (June 27)
+                    PrideAnimation(
+                        enabled = settingsManager.isSeasonalFunEnabled()
+                    )
+                    
+                    // Pride Day Themed Square Overlay (June 28)
+                    run {
+                        val calendar = java.util.Calendar.getInstance()
+                        val month = calendar.get(java.util.Calendar.MONTH)
+                        val day = calendar.get(java.util.Calendar.DAY_OF_MONTH)
+                        val isPrideDay = month == java.util.Calendar.JUNE && day == 28 && settingsManager.isSeasonalFunEnabled()
+                        
+                        if (isPrideDay) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(3.dp)
+                                    .background(
+                                        color = MaterialTheme.colorScheme.surface,
+                                        shape = RoundedCornerShape(16.dp)
+                                    )
+                            )
+                        }
+                    }
+                    
+                    // Main content
+                    // Capture vibrator for use in suspend context
+                    val capturedVibrator = vibrator
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .pointerInput(Unit) {
+                        var startX = 0f
+                        var hasSwiped = false
+                        detectDragGestures(
+                            onDragStart = { offset ->
+                                startX = offset.x
+                                hasSwiped = false
+                            },
+                            onDragEnd = { 
+                                // Reset startX after gesture completes
+                                startX = 0f
+                                hasSwiped = false
+                            },
+                            onDrag = { change, _ ->
+                                val deltaX = change.position.x - startX
+                                val threshold = 100f
+                                
+                                if (!hasSwiped) {
+                                    when {
+                                        deltaX > threshold -> {
+                                        // Swipe right - go to previous tab
+                                        if (selectedTab > 0) {
+                                                // Close any open settings dialogs when swiping to a different tab
+                                                showJobTypeManagement = false
+                                                showVenueManagement = false
+                                                showSalesSheetItemManagement = false
+                                                // Very subtle haptic feedback for page change
+                                                performSubtleHaptic(capturedVibrator)
+                                                previousTab = selectedTab
+                                                selectedTab = selectedTab - 1
+                                                hasSwiped = true
+                                        }
+                                        }
+                                        deltaX < -threshold -> {
+                                        // Swipe left - go to next tab
+                                        if (selectedTab < 5) {
+                                                // Close any open settings dialogs when swiping to a different tab
+                                                showJobTypeManagement = false
+                                                showVenueManagement = false
+                                                showSalesSheetItemManagement = false
+                                                // Very subtle haptic feedback for page change
+                                                performSubtleHaptic(capturedVibrator)
+                                                previousTab = selectedTab
+                                                selectedTab = selectedTab + 1
+                                                hasSwiped = true
+                                        }
+                                        }
+                                    }
+                                }
+                            }
+                        )
+                    }
+            ) {
+                // Tab Content with optimized switching
+                // Use key() to maintain screen identity and prevent unnecessary recreation
+                val goingLeft = selectedTab > previousTab
+                
+                // Create a composite screen state for animations
+                // Format: "tab:{tabIndex}" for main tabs, "management:jobtype" or "management:venue" for management screens
+                val currentScreenState = when {
+                    showJobTypeManagement -> "management:jobtype"
+                    showVenueManagement -> "management:venue"
+                    showSalesSheetItemManagement -> "management:sales-items"
+                    else -> "tab:$selectedTab"
+                }
+                
+if (pageAnimationsEnabled) {
+                    AnimatedContent(
+                        targetState = currentScreenState,
+                        transitionSpec = {
+                            // OPTIMIZED: Shorter duration (180ms) feels snappier while remaining smooth
+                            // Fade starts faster (120ms) so content is visible sooner
+                            // Exit offset reduced to minimize visual complexity
+                            val slideDuration = 180
+                            val fadeDuration = 120
+                            when {
+                                // Opening management screen - slide in from right
+                                targetState.startsWith("management:") && initialState.startsWith("tab:") -> {
+                                    val enter = slideInHorizontally(
+                                        animationSpec = tween(durationMillis = slideDuration, easing = FastOutSlowInEasing),
+                                        initialOffsetX = { fullWidth -> fullWidth }
+                                    ) + fadeIn(animationSpec = tween(durationMillis = fadeDuration))
+                                    val exit = slideOutHorizontally(
+                                        animationSpec = tween(durationMillis = slideDuration, easing = FastOutSlowInEasing),
+                                        targetOffsetX = { fullWidth -> -fullWidth / 4 }
+                                    ) + fadeOut(animationSpec = tween(durationMillis = fadeDuration))
+                                    (enter togetherWith exit).using(SizeTransform(clip = false))
+                                }
+                                // Closing management screen - slide out to right
+                                targetState.startsWith("tab:") && initialState.startsWith("management:") -> {
+                                    val enter = slideInHorizontally(
+                                        animationSpec = tween(durationMillis = slideDuration, easing = FastOutSlowInEasing),
+                                        initialOffsetX = { fullWidth -> -fullWidth / 4 }
+                                    ) + fadeIn(animationSpec = tween(durationMillis = fadeDuration))
+                                    val exit = slideOutHorizontally(
+                                        animationSpec = tween(durationMillis = slideDuration, easing = FastOutSlowInEasing),
+                                        targetOffsetX = { fullWidth -> fullWidth }
+                                    ) + fadeOut(animationSpec = tween(durationMillis = fadeDuration))
+                                    (enter togetherWith exit).using(SizeTransform(clip = false))
+                                }
+                                // Regular tab transitions - optimized for smoothness
+                                else -> {
+                                    val enter = slideInHorizontally(
+                                        animationSpec = tween(durationMillis = slideDuration, easing = FastOutSlowInEasing),
+                                        initialOffsetX = { fullWidth -> if (goingLeft) fullWidth else -fullWidth }
+                                    ) + fadeIn(animationSpec = tween(durationMillis = fadeDuration))
+                                    val exit = slideOutHorizontally(
+                                        animationSpec = tween(durationMillis = slideDuration, easing = FastOutSlowInEasing),
+                                        targetOffsetX = { fullWidth -> if (goingLeft) -fullWidth / 4 else fullWidth / 4 }
+                                    ) + fadeOut(animationSpec = tween(durationMillis = fadeDuration))
+                                    (enter togetherWith exit).using(SizeTransform(clip = false))
+                                }
+                            }
+                        },
+                        label = "page_transition"
+                    ) { screenState: String ->
+                        // Use key() to maintain screen identity across recompositions
+                        when {
+                            screenState == "management:jobtype" -> key("job_type_management") {
+                                JobTypeManagementScreenWithViewModel(viewModel) {
+                                    println("Exiting Job Type Management - triggering job types sync")
+                                    viewModel.syncJobTypesOnly()
+                                    showJobTypeManagement = false
+                                }
+                            }
+                            screenState == "management:venue" -> key("venue_management") {
+                                VenueManagementScreenWithViewModel(viewModel) {
+                                    println("Exiting Venue Management")
+                                    showVenueManagement = false
+                                }
+                            }
+                            screenState == "management:sales-items" -> key("sales_sheet_item_management") {
+                                SalesSheetItemManagementScreenWithViewModel(viewModel) {
+                                    println("Exiting Sales Sheet Item Management")
+                                    showSalesSheetItemManagement = false
+                                }
+                            }
+                            screenState == "tab:0" -> key("dashboard") {
+                                DashboardScreenWithViewModel(
+                                    viewModel = viewModel,
+                                    onLogout = {
+                                        showWelcome = true
+                                        showAdminAuth = false
+                                        showTicketCheck = false
+                                        selectedTab = 0
+                                    }
+                                )
+                            }
+                            screenState == "tab:1" -> key("guest_list") { GuestListScreenWithViewModel(viewModel) }
+                            screenState == "tab:2" -> key("volunteers") { VolunteerScreenWithViewModel(viewModel) }
+                            screenState == "tab:3" -> key("jobs") { JobTrackingScreenWithViewModel(viewModel) }
+                            screenState == "tab:4" -> key("benefits") { BenefitsScreenWithViewModel(viewModel) }
+                            screenState == "tab:5" -> key("settings") {
+                                SettingsScreen(
+                                    viewModel = viewModel,
+                                    onNavigateToJobTypeManagement = { 
+                                        println("Navigating to Job Type Management - triggering job types sync")
+                                        viewModel.syncJobTypesOnly()
+                                        showJobTypeManagement = true 
+                                    },
+                                    onNavigateToVenueManagement = { 
+                                        println("Navigating to Venue Management")
+                                        viewModel.syncVenuesWithTargetedUpdates()
+                                        showVenueManagement = true 
+                                    },
+                                    onNavigateToSalesSheetItemManagement = {
+                                        println("Navigating to Sales Sheet Item Management")
+                                        viewModel.syncSalesSheetItemsWithTargetedUpdates()
+                                        showSalesSheetItemManagement = true
+                                    }
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    // Without animations, use key() for state preservation
+                    when {
+                        showJobTypeManagement -> key("job_type_management") {
+                            JobTypeManagementScreenWithViewModel(viewModel) {
+                                println("Exiting Job Type Management - triggering job types sync")
+                                viewModel.syncJobTypesOnly()
+                                showJobTypeManagement = false
+                            }
+                        }
+                        showVenueManagement -> key("venue_management") {
+                            VenueManagementScreenWithViewModel(viewModel) {
+                                println("Exiting Venue Management")
+                                showVenueManagement = false
+                            }
+                        }
+                        showSalesSheetItemManagement -> key("sales_sheet_item_management") {
+                            SalesSheetItemManagementScreenWithViewModel(viewModel) {
+                                println("Exiting Sales Sheet Item Management")
+                                showSalesSheetItemManagement = false
+                            }
+                        }
+                        selectedTab == 0 -> key("dashboard") {
+                            DashboardScreenWithViewModel(
+                                viewModel = viewModel,
+                                onLogout = {
+                                    showWelcome = true
+                                    showAdminAuth = false
+                                    showTicketCheck = false
+                                    selectedTab = 0
+                                }
+                            )
+                        }
+                        selectedTab == 1 -> key("guest_list") { GuestListScreenWithViewModel(viewModel) }
+                        selectedTab == 2 -> key("volunteers") { VolunteerScreenWithViewModel(viewModel) }
+                        selectedTab == 3 -> key("jobs") { JobTrackingScreenWithViewModel(viewModel) }
+                        selectedTab == 4 -> key("benefits") { BenefitsScreenWithViewModel(viewModel) }
+                        selectedTab == 5 -> key("settings") {
+                            SettingsScreen(
+                                viewModel = viewModel,
+                                onNavigateToJobTypeManagement = { 
+                                    println("Navigating to Job Type Management - triggering job types sync")
+                                    viewModel.syncJobTypesOnly()
+                                    showJobTypeManagement = true 
+                                },
+                                onNavigateToVenueManagement = { 
+                                    println("Navigating to Venue Management")
+                                    viewModel.syncVenuesWithTargetedUpdates()
+                                    showVenueManagement = true 
+                                },
+                                onNavigateToSalesSheetItemManagement = {
+                                    println("Navigating to Sales Sheet Item Management")
+                                    viewModel.syncSalesSheetItemsWithTargetedUpdates()
+                                    showSalesSheetItemManagement = true
+                                }
+                            )
+                        }
+                    }
+                }
+                
+                    // QR Scanner button in bottom left corner above navigation bar
+                    QRScannerButton(
+                        onClick = { showQRScanner = true },
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(bottom = 8.dp, start = 8.dp)
+                    )
+                    
+                    // Sync status widget in bottom right corner above navigation bar
+                    SyncStatusWidget(
+                        viewModel = viewModel,
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(bottom = 8.dp, end = 8.dp)
+                    )
+                }
+            }
+        }
+        }
+            
+        // QR Scanner Dialog
+        if (showQRScanner) {
+            QRScannerDialog(
+                platformContext = platformContext,
+                onDismiss = { showQRScanner = false },
+                onMatchFound = { match ->
+                    when (match) {
+                        is ScannerMatch.VolunteerMatch -> {
+                            showVolunteerBenefits = match.volunteer
+                            showScannedGuestDetail = null
+                        }
+                        is ScannerMatch.GuestMatch -> {
+                            showScannedGuestDetail = match.guest
+                            showVolunteerBenefits = null
+                        }
+                    }
+                    showQRScanner = false
+                },
+                volunteers = volunteers,
+                guests = guests
+            )
+        }
+        
+        // Volunteer Benefits Panel
+        showVolunteerBenefits?.let { volunteer ->
+            // Memoize to prevent unnecessary recompositions
+            val benefitSettingsManager = remember { settingsManagerFor(appContext) }
+            val offsetHours = remember { benefitSettingsManager.getDateChangeOffsetHours() }
+            val memoizedBenefitStatus = remember(volunteer.id, jobs, jobTypeConfigs, offsetHours) {
+                com.eventmanager.app.data.models.BenefitCalculator.calculateVolunteerBenefitStatus(
+                    volunteer = volunteer,
+                    jobs = jobs,
+                    jobTypeConfigs = jobTypeConfigs,
+                    offsetHours = offsetHours
+                )
+            }
+            val memoizedVolunteerJobs = remember(volunteer.id, jobs) {
+                jobs.filter { it.volunteerId == volunteer.id }
+            }
+
+            val scanFlowTablet = isTablet()
+            androidx.compose.ui.window.Dialog(
+                onDismissRequest = { showVolunteerBenefits = null },
+                properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .then(
+                            if (scanFlowTablet) Modifier.padding(getTabletDialogScreenEdgeInset())
+                            else Modifier
+                        )
+                ) {
+                    VolunteerBenefitsPanel(
+                        modifier = Modifier.fillMaxSize(),
+                        volunteer = volunteer,
+                        volunteerBenefitStatus = memoizedBenefitStatus,
+                        volunteerJobs = memoizedVolunteerJobs,
+                        venues = venues,
+                        jobTypeConfigs = jobTypeConfigs,
+                        onClose = { showVolunteerBenefits = null },
+                        onConfirmEntry = { job, selectedInvites -> viewModel.markBenefitAsUsed(job, selectedInvites) },
+                        onAssignNfcUid = { updatedVolunteer, uid ->
+                            viewModel.updateVolunteer(
+                                updatedVolunteer.copy(
+                                    nfcCardUid = uid,
+                                    lastModified = System.currentTimeMillis()
+                                )
+                            )
+                            showVolunteerBenefits = updatedVolunteer.copy(nfcCardUid = uid)
+                        }
+                    )
+                }
+            }
+        }
+
+        showScannedGuestDetail?.let { guest ->
+            val scanFlowTablet = isTablet()
+            androidx.compose.ui.window.Dialog(
+                onDismissRequest = { showScannedGuestDetail = null },
+                properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .then(
+                            if (scanFlowTablet) Modifier.padding(getTabletDialogScreenEdgeInset())
+                            else Modifier
+                        )
+                ) {
+                    GuestDetailPanel(
+                        modifier = Modifier.fillMaxSize(),
+                        guest = guest,
+                        venues = venues,
+                        onEdit = { updated ->
+                            viewModel.updateGuest(updated)
+                            showScannedGuestDetail = updated
+                        },
+                        onAssignNfcUid = { updatedGuest, uid ->
+                            val withUid = updatedGuest.copy(
+                                nfcCardUid = uid,
+                                lastModified = System.currentTimeMillis()
+                            )
+                            viewModel.updateGuest(withUid)
+                            showScannedGuestDetail = withUid
+                        },
+                        onDelete = { toDelete ->
+                            viewModel.deleteGuest(toDelete)
+                            showScannedGuestDetail = null
+                        },
+                        onClose = { showScannedGuestDetail = null }
+                    )
+                }
+            }
+        }
+        
+        // Sync Error Dialog
+        SyncErrorDialog(
+            isVisible = showSyncErrorDialog && !showDeviceTimeErrorDialog.value,
+            onDismiss = { viewModel.dismissSyncErrorDialog() },
+            onRetry = { viewModel.performFullSync() },
+            errorMessage = syncError ?: "",
+            onDontTellTodayChanged = { suppress ->
+                if (suppress) {
+                    viewModel.setSyncErrorSuppressedToday()
+                }
+                viewModel.dismissSyncErrorDialog()
+            },
+            isSyncing = isSyncing,
+            animationsEnabled = pageAnimationsEnabled,
+            wasDeviceSleeping = wasDeviceSleeping.value
+        )
+        
+        // Device Time Error Dialog
+        DeviceTimeErrorDialog(
+            isVisible = showDeviceTimeErrorDialog.value,
+            onDismiss = {
+                showDeviceTimeErrorDialog.value = false
+                viewModel.dismissSyncErrorDialog()
+            },
+            onOpenSettings = {
+                // Open system settings for date & time
+                val intent = Intent(Settings.ACTION_DATE_SETTINGS)
+                try {
+                    appContext.startActivity(intent)
+                } catch (e: Exception) {
+                    // Fallback to general settings if date settings not available
+                    val fallbackIntent = Intent(Settings.ACTION_SETTINGS)
+                    try {
+                        appContext.startActivity(fallbackIntent)
+                    } catch (ex: Exception) {
+                        println("Could not open settings: ${ex.message}")
+                    }
+                }
+            },
+            onDontTellTodayChanged = { suppress ->
+                if (suppress) {
+                    viewModel.setSyncErrorSuppressedToday()
+                }
+            }
+        )
+        
+        // Sync Status Dialog
+        SyncStatusDialog(
+            isVisible = showSyncStatusDialog,
+            onDismiss = { viewModel.dismissSyncStatusDialog() },
+            statusMessage = syncStatusMessage
+        )
+
+        // Send Announcement Dialog
+        if (showSendAnnouncementDialog) {
+            SendAnnouncementDialog(
+                venues = venues,
+                isSending = isAnnouncementSending,
+                onDismiss = { viewModel.closeSendAnnouncementDialog() },
+                onSend = { targetVenueIds, title, message ->
+                    viewModel.sendAnnouncement(targetVenueIds, title, message)
+                }
+            )
+        }
+
+        // Announcement Receive Popup
+        val currentAnnouncement = pendingAnnouncements.firstOrNull()
+        if (currentAnnouncement != null) {
+            AnnouncementPopup(
+                announcement = currentAnnouncement,
+                onDismiss = { viewModel.dismissCurrentAnnouncement() }
+            )
+        }
+        } // end of showAdminAuth else (main app content)
+
+        if (!showAdminAuth && showUpdateDialog && updateCheckResult is UpdateCheckResult.UpdateAvailable) {
+            val manifest = (updateCheckResult as UpdateCheckResult.UpdateAvailable).manifest
+            val isRequired = (updateCheckResult as UpdateCheckResult.UpdateAvailable).isRequired
+            val currentDownloadState = updateDownloadState
+
+            when (currentDownloadState) {
+                is DownloadState.Downloading -> {
+                    AlertDialog(
+                        onDismissRequest = { },
+                        title = {
+                            Text(text = appContext.getString(R.string.downloading_update))
+                        },
+                        text = {
+                            Column {
+                                LinearProgressIndicator(
+                                    progress = { currentDownloadState.progress / 100f },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = appContext.getString(R.string.download_progress, currentDownloadState.progress),
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        },
+                        confirmButton = {}
+                    )
+                }
+                is DownloadState.Downloaded -> {
+                    AlertDialog(
+                        onDismissRequest = if (isRequired) { {} } else { { showUpdateDialog = false } },
+                        properties = if (isRequired) {
+                            DialogProperties(
+                                dismissOnBackPress = false,
+                                dismissOnClickOutside = false
+                            )
+                        } else {
+                            DialogProperties()
+                        },
+                        title = {
+                            Text(text = appContext.getString(R.string.download_complete))
+                        },
+                        text = {
+                            Text(text = appContext.getString(R.string.update_available_message))
+                        },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                viewModel.installUpdate(currentDownloadState.filePath)
+                                showUpdateDialog = false
+                            }) {
+                                Text(appContext.getString(R.string.install_update))
+                            }
+                        },
+                        dismissButton = if (!isRequired) {
+                            {
+                                TextButton(onClick = { showUpdateDialog = false }) {
+                                    Text(appContext.getString(R.string.later))
+                                }
+                            }
+                        } else null
+                    )
+                }
+                is DownloadState.Error -> {
+                    AlertDialog(
+                        onDismissRequest = if (isRequired) { {} } else { { showUpdateDialog = false } },
+                        title = {
+                            Text(text = appContext.getString(R.string.download_error_title))
+                        },
+                        text = {
+                            Text(text = appContext.getString(R.string.download_error_message, currentDownloadState.message))
+                        },
+                        confirmButton = {
+                            TextButton(onClick = { showUpdateDialog = false }) {
+                                Text(appContext.getString(R.string.ok))
+                            }
+                        }
+                    )
+                }
+                else -> {
+                    AlertDialog(
+                        onDismissRequest = if (isRequired) { {} } else { { showUpdateDialog = false } },
+                        title = {
+                            Text(text = appContext.getString(R.string.update_available_title, manifest.latestVersionName))
+                        },
+                        text = {
+                            Text(
+                                text = manifest.changelogShort
+                                    ?: if (isRequired) {
+                                        appContext.getString(R.string.update_required_message)
+                                    } else {
+                                        appContext.getString(R.string.update_available_message)
+                                    }
+                            )
+                        },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                val downloadUrl = manifest.downloadUrl
+                                if (downloadUrl != null) {
+                                    viewModel.downloadUpdate(downloadUrl)
+                                } else {
+                                    val targetUrl = manifest.storeUrl
+                                        ?: settingsManager.getUpdateStoreUrl()
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(targetUrl))
+                                    appContext.startActivity(intent)
+                                    showUpdateDialog = false
+                                }
+                            }) {
+                                Text(appContext.getString(R.string.update_now))
+                            }
+                        },
+                        dismissButton = {
+                            if (!isRequired) {
+                                TextButton(onClick = { showUpdateDialog = false }) {
+                                    Text(appContext.getString(R.string.later))
+                                }
+                            }
+                        }
+                    )
+                }
+            }
+        }
+            }
+        }
+        }
+    }
+}
+
+// Sync Status Widget
+@Composable
+fun SyncStatusWidget(
+viewModel: EventManagerViewModel,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val lastSyncTime by viewModel.lastSyncTime.collectAsState()
+    val isSyncing by viewModel.isSyncing.collectAsState()
+
+    var syncPillTick by remember { mutableIntStateOf(0) }
+    LaunchedEffect(lastSyncTime) {
+        if (lastSyncTime <= 0L) return@LaunchedEffect
+        while (true) {
+            delay(30_000L)
+            syncPillTick++
+        }
+    }
+
+    val lastUpdateLabel = remember(lastSyncTime, syncPillTick) {
+        if (lastSyncTime <= 0L) {
+            context.getString(R.string.last_update_none_line)
+        } else {
+            context.getString(
+                R.string.last_update_line,
+                DateFormatUtils.formatSyncPillTimeAgo(createPlatformContext(context), lastSyncTime, System.currentTimeMillis())
+            )
+        }
+    }
+
+    // Interaction source for press feedback
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    
+    // Animate scale on press
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed && !isSyncing) 0.95f else 1f,
+        animationSpec = tween(100),
+        label = "sync_pill_scale"
+    )
+    
+    Card(
+        modifier = modifier
+            .padding(4.dp)
+            .clickable(
+                enabled = !isSyncing,
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = {
+                    // Trigger differential sync for efficient targeted updates
+                    // Only reloads changed items instead of the entire list
+                    viewModel.performDifferentialFullSync()
+                }
+            ),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSyncing) 
+                MaterialTheme.colorScheme.primaryContainer 
+            else 
+                MaterialTheme.colorScheme.surfaceVariant
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (isPressed && !isSyncing) 4.dp else 2.dp
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(horizontal = 12.dp, vertical = 6.dp)
+                .scale(scale),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            if (isSyncing) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = context.getString(R.string.syncing),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Sync,
+                    contentDescription = "Tap to sync",
+                    modifier = Modifier.size(16.dp),
+                    tint = if (lastSyncTime > 0)
+                        MaterialTheme.colorScheme.primary
+                    else
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = lastUpdateLabel,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (lastSyncTime > 0) 
+                        MaterialTheme.colorScheme.onPrimaryContainer 
+                    else 
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+// QR Scanner Button Widget
+@Composable
+fun QRScannerButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    // Interaction source for press feedback
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    
+    // Animate scale on press
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.95f else 1f,
+        animationSpec = tween(100),
+        label = "qr_button_scale"
+    )
+    
+    Card(
+        modifier = modifier
+            .padding(4.dp)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick
+            ),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (isPressed) 4.dp else 2.dp
+        )
+    ) {
+        Box(
+            modifier = Modifier
+                .padding(12.dp)
+                .scale(scale),
+            contentAlignment = Alignment.Center
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.qrscan_icon),
+                contentDescription = "Scan QR Code",
+                modifier = Modifier.size(20.dp),
+                colorFilter = ColorFilter.tint(
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            )
+        }
+    }
+}
+
+// Dashboard Screen
+@Composable
+fun DashboardScreenWithViewModel(
+    viewModel: EventManagerViewModel,
+    onLogout: () -> Unit = {}
+) {
+    val guests by viewModel.guests.collectAsState()
+    val volunteers by viewModel.volunteers.collectAsState()
+    val jobs by viewModel.jobs.collectAsState()
+    val jobTypeConfigs by viewModel.jobTypeConfigs.collectAsState()
+    val venues by viewModel.venues.collectAsState()
+    val isSyncing by viewModel.isSyncing.collectAsState()
+    val context = LocalContext.current
+    val settingsManager = remember { settingsManagerFor(context) }
+    
+    // OPTIMIZATION: Removed redundant sync triggers
+    // Initial sync is handled by LaunchedEffect(Unit) in EventManagerApp
+    // Tab-change sync is handled by LaunchedEffect(selectedTab) in EventManagerApp
+    // This reduces duplicate network calls and improves navigation smoothness
+
+    DashboardScreen(
+        guests = guests,
+        volunteers = volunteers,
+        jobs = jobs,
+        venues = venues,
+        jobTypeConfigs = jobTypeConfigs,
+        isSyncing = isSyncing,
+        lastSyncTime = settingsManager.getLastSyncTime(),
+        repository = viewModel.repository,
+        viewModel = viewModel,
+        onLogout = onLogout
+    )
+}
+
+@Composable
+fun DashboardScreen(
+    guests: List<Guest>,
+    volunteers: List<Volunteer>,
+    jobs: List<Job>,
+    venues: List<VenueEntity> = emptyList(),
+    jobTypeConfigs: List<JobTypeConfig> = emptyList(),
+    @Suppress("UNUSED_PARAMETER") isSyncing: Boolean = false,
+    @Suppress("UNUSED_PARAMETER") lastSyncTime: Long = 0L,
+    @Suppress("UNUSED_PARAMETER") repository: com.eventmanager.app.data.repository.EventManagerRepository? = null,
+    viewModel: com.eventmanager.app.ui.viewmodel.EventManagerViewModel? = null,
+    onLogout: () -> Unit = {}
+) {
+    val context = LocalContext.current
+    val platformContext = remember(context) { createPlatformContext(context) }
+    val isPhone = !isTablet()
+    val responsivePadding = if (isPhone) getPhonePortraitPadding() else getResponsivePadding()
+    val settingsManager = remember { settingsManagerFor(context) }
+    
+    // State for beer animation
+    var showBeerAnimation by remember { mutableStateOf(false) }
+    
+    // Memoize seasonal fun setting to avoid repeated reads
+    val seasonalFunEnabled = remember { settingsManager.isSeasonalFunEnabled() }
+    
+    // Auto-hide beer animation after short duration
+    LaunchedEffect(showBeerAnimation) {
+        if (showBeerAnimation) {
+            kotlinx.coroutines.delay(1500) // Show for 1.5 seconds
+            showBeerAnimation = false
+        }
+    }
+    
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(responsivePadding)
+        ) {
+        // Visibility settings
+        val isPeopleCounterVisible = remember { settingsManager.isPeopleCounterVisible() }
+        val isStatisticsVisible = remember { settingsManager.isStatisticsVisible() }
+        val dateChangeOffsetHours = remember { settingsManager.getDateChangeOffsetHours() }
+        val guestListZone = GuestListDefaultZoneId
+        val guestListEffectiveToday = rememberGuestListEffectiveToday(
+            zone = guestListZone,
+            offsetHours = dateChangeOffsetHours
+        )
+
+        DashboardClockCard(
+            settingsManager = settingsManager,
+            isPhone = isPhone
+        )
+        
+        Spacer(modifier = Modifier.height(if (isPhone) 16.dp else 24.dp))
+
+        // Permanent + temporary rows for the same "today" as the guest list (date-change offset + Zurich zone).
+        // Temporary rows for other event dates are hidden on the list and should not inflate the dashboard.
+        val (permanentGuestCount, temporaryGuestCount) = remember(guests, guestListEffectiveToday) {
+            var permanent = 0
+            var temporary = 0
+            guests.forEach { guest ->
+                when {
+                    guest.isTemporaryGuest -> {
+                        val ts = guest.temporaryEventDate ?: return@forEach
+                        val eventDate = java.time.Instant.ofEpochMilli(ts)
+                            .atZone(guestListZone)
+                            .toLocalDate()
+                        if (eventDate == guestListEffectiveToday) temporary++
+                    }
+                    guest.isVolunteerBenefit -> { /* not part of dashboard headcount */ }
+                    else -> permanent++
+                }
+            }
+            permanent to temporary
+        }
+        
+        // Volunteer stats: single pass through volunteers list
+        val (totalVolunteers, activeVolunteersCount, inactiveVolunteersCount) = remember(volunteers) {
+            var active = 0
+            var inactive = 0
+            volunteers.forEach { volunteer ->
+                if (volunteer.isActive) active++ else inactive++
+            }
+            Triple(volunteers.size, active, inactive)
+        }
+        
+        // Total list = permanent guest-list entries + temporary guest-list entries + all volunteers.
+        val totalPeople = permanentGuestCount + temporaryGuestCount + totalVolunteers
+        // Move expensive calculation to background if needed
+        val totalFreeDrinks = remember(volunteers, jobs, jobTypeConfigs, dateChangeOffsetHours) {
+            com.eventmanager.app.data.models.BenefitCalculator.calculateTotalFreeDrinks(
+                volunteers = volunteers,
+                jobs = jobs,
+                jobTypeConfigs = jobTypeConfigs,
+                offsetHours = dateChangeOffsetHours
+            )
+        }
+        
+        // Statistics Grid - 2 columns (always visible)
+        Column(
+            verticalArrangement = Arrangement.spacedBy(if (isPhone) 12.dp else 16.dp)
+        ) {
+            // Row 1: Permanent Guests, Total Volunteers
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(if (isPhone) 12.dp else 16.dp)
+            ) {
+                StatCardV2(
+                    title = context.getString(R.string.permanent_guests),
+                    value = permanentGuestCount.toString(),
+                    icon = Icons.Default.Person,
+                    modifier = Modifier.weight(1f),
+                    isPhone = isPhone
+                )
+                
+                StatCardV2(
+                    title = context.getString(R.string.volunteers_total),
+                    value = totalVolunteers.toString(),
+                    icon = Icons.Default.Group,
+                    modifier = Modifier.weight(1f),
+                    isPhone = isPhone
+                )
+            }
+            
+            // Row 2: Temporary guests (on guest list), Total People
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(if (isPhone) 12.dp else 16.dp)
+            ) {
+                StatCardV2(
+                    title = context.getString(R.string.filter_temporary_guests),
+                    value = temporaryGuestCount.toString(),
+                    icon = Icons.Default.Event,
+                    modifier = Modifier.weight(1f),
+                    isPhone = isPhone
+                )
+                
+                StatCardV2(
+                    title = context.getString(R.string.total_people),
+                    value = totalPeople.toString(),
+                    icon = Icons.Default.Star,
+                    modifier = Modifier.weight(1f),
+                    isPhone = isPhone
+                )
+            }
+            
+            // Row 3: Active Volunteers and Inactive Volunteers in same box
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(if (isPhone) 12.dp else 16.dp)
+            ) {
+                Card(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(if (isPhone) 140.dp else 160.dp),
+                    shape = RoundedCornerShape(if (isPhone) 12.dp else 16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    elevation = CardDefaults.cardElevation(
+                        defaultElevation = 2.dp,
+                        pressedElevation = 6.dp
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(if (isPhone) 14.dp else 16.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Active Volunteers (Left)
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(if (isPhone) 36.dp else 44.dp)
+                                    .background(
+                                        color = MaterialTheme.colorScheme.primaryContainer,
+                                        shape = RoundedCornerShape(if (isPhone) 8.dp else 12.dp)
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(if (isPhone) 18.dp else 22.dp),
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                            
+                            Spacer(modifier = Modifier.height(if (isPhone) 8.dp else 10.dp))
+                            
+                            Text(
+                                text = activeVolunteersCount.toString(),
+                                style = if (isPhone) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                textAlign = TextAlign.Center
+                            )
+                            
+                            Spacer(modifier = Modifier.height(if (isPhone) 4.dp else 6.dp))
+                            
+                            Text(
+                                text = context.getString(R.string.active_volunteers),
+                                style = if (isPhone) MaterialTheme.typography.labelSmall else MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        
+                        // Divider
+                        VerticalDivider(
+                            modifier = Modifier
+                                .height(if (isPhone) 80.dp else 100.dp)
+                                .width(1.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
+                        
+                        // Inactive Volunteers (Right)
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(if (isPhone) 36.dp else 44.dp)
+                                    .background(
+                                        color = MaterialTheme.colorScheme.primaryContainer,
+                                        shape = RoundedCornerShape(if (isPhone) 8.dp else 12.dp)
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Warning,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(if (isPhone) 18.dp else 22.dp),
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                            
+                            Spacer(modifier = Modifier.height(if (isPhone) 8.dp else 10.dp))
+                            
+                            Text(
+                                text = inactiveVolunteersCount.toString(),
+                                style = if (isPhone) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                textAlign = TextAlign.Center
+                            )
+                            
+                            Spacer(modifier = Modifier.height(if (isPhone) 4.dp else 6.dp))
+                            
+                            Text(
+                                text = context.getString(R.string.inactive_volunteers),
+                                style = if (isPhone) MaterialTheme.typography.labelSmall else MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+            }
+            
+            // Row 4: Free Drinks Today
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(if (isPhone) 12.dp else 16.dp)
+            ) {
+                StatCardV2(
+                    title = context.getString(R.string.free_drinks_today),
+                    value = totalFreeDrinks.toString(),
+                    icon = Icons.Default.LocalBar,
+                    modifier = Modifier.weight(1f),
+                    isPhone = isPhone,
+                    onTripleTap = { 
+                        // Only show animation if seasonal fun is enabled
+                        if (seasonalFunEnabled) {
+                            showBeerAnimation = true
+                        }
+                    }
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(if (isPhone) 16.dp else 24.dp))
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(if (isPhone) 14.dp else 16.dp),
+                verticalArrangement = Arrangement.spacedBy(if (isPhone) 10.dp else 12.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ExitToApp,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(if (isPhone) 22.dp else 24.dp)
+                    )
+                    Text(
+                        text = context.getString(R.string.settings_logout),
+                        style = if (isPhone) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                Text(
+                    text = context.getString(R.string.settings_logout_description),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Button(
+                    onClick = onLogout,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ExitToApp,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(context.getString(R.string.settings_logout))
+                }
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(if (isPhone) 16.dp else 24.dp))
+        
+        // People Counter Component - only show if enabled
+        if (isPeopleCounterVisible) {
+            Spacer(modifier = Modifier.height(if (isPhone) 16.dp else 24.dp))
+            viewModel?.let { vm ->
+                PeopleCounter(isPhone = isPhone, viewModel = vm)
+            }
+        }
+
+        // Announcement Button - always visible in Admin dashboard
+        viewModel?.let { vm ->
+            Spacer(modifier = Modifier.height(if (isPhone) 16.dp else 24.dp))
+            SendAnnouncementButton(
+                isPhone = isPhone,
+                onClick = { vm.openSendAnnouncementDialog() }
+            )
+        }
+        
+        // Stats Graphs Panel - only show if statistics are enabled
+        if (isStatisticsVisible) {
+            Spacer(modifier = Modifier.height(if (isPhone) 16.dp else 24.dp))
+            StatsGraphsPanel(
+                platformContext = platformContext,
+                guests = guests,
+                volunteers = volunteers,
+                jobs = jobs,
+                venues = venues,
+                jobTypeConfigs = jobTypeConfigs,
+                isPhone = isPhone
+            )
+        }
+        
+        // Bottom padding to ensure content is not cut off by navigation bar or sync widget
+        Spacer(modifier = Modifier.height(if (isPhone) 80.dp else 100.dp))
+        }
+        
+        // Beer Animation Overlay (only if seasonal fun is enabled)
+        if (showBeerAnimation && seasonalFunEnabled) {
+            BeerAnimation(
+                enabled = true,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+    }
+}
+
+@Composable
+fun StatCardV2(
+    title: String,
+    value: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    emoji: String? = null,
+    modifier: Modifier = Modifier,
+    isPhone: Boolean = !isTablet(),
+    onTripleTap: (() -> Unit)? = null
+) {
+    // Triple tap detection
+    var tapCount by remember { mutableStateOf(0) }
+    var lastTapTime by remember { mutableStateOf(0L) }
+    
+    // Reset tap count after timeout
+    LaunchedEffect(tapCount, lastTapTime) {
+        if (tapCount > 0 && tapCount < 3) {
+            kotlinx.coroutines.delay(500)
+            val currentTime = System.currentTimeMillis()
+            if (currentTime - lastTapTime >= 500) {
+                tapCount = 0
+            }
+        }
+    }
+    
+    Card(
+        modifier = modifier
+            .height(if (isPhone) 140.dp else 160.dp)
+            .then(
+                if (onTripleTap != null) {
+                    Modifier.pointerInput(Unit) {
+                        detectTapGestures { _ ->
+                            val currentTime = System.currentTimeMillis()
+                            if (currentTime - lastTapTime < 500) { // Within 500ms of last tap
+                                tapCount++
+                                if (tapCount >= 3) {
+                                    onTripleTap()
+                                    tapCount = 0
+                                }
+                            } else {
+                                tapCount = 1
+                            }
+                            lastTapTime = currentTime
+                        }
+                    }
+                } else {
+                    Modifier
+                }
+            ),
+        shape = RoundedCornerShape(if (isPhone) 12.dp else 16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 2.dp,
+            pressedElevation = 6.dp
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(if (isPhone) 14.dp else 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            // Icon or Emoji with background
+            Box(
+                modifier = Modifier
+                    .size(if (isPhone) 36.dp else 44.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        shape = RoundedCornerShape(if (isPhone) 8.dp else 12.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                if (emoji != null) {
+                    Text(
+                        text = emoji,
+                        style = if (isPhone) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge,
+                        fontSize = if (isPhone) 18.sp else 22.sp
+                    )
+                } else if (icon != null) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(if (isPhone) 18.dp else 22.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(if (isPhone) 8.dp else 10.dp))
+            
+            // Large value text
+            Text(
+                text = value,
+                style = if (isPhone) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center
+            )
+            
+            Spacer(modifier = Modifier.height(if (isPhone) 4.dp else 6.dp))
+            
+            // Title text - wrapped to handle long titles
+            Text(
+                text = title,
+                style = if (isPhone) MaterialTheme.typography.labelSmall else MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+// Wrapper composables that connect screens to ViewModel
+@Composable
+fun GuestListScreenWithViewModel(
+    viewModel: EventManagerViewModel,
+    readOnly: Boolean = false
+) {
+    val guests by viewModel.guests.collectAsState()
+    val volunteers by viewModel.volunteers.collectAsState()
+    val jobs by viewModel.jobs.collectAsState()
+    val jobTypeConfigs by viewModel.jobTypeConfigs.collectAsState()
+    val venues by viewModel.venues.collectAsState()
+    val isSyncing by viewModel.isSyncing.collectAsState()
+    val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val settingsManager = remember { settingsManagerFor(context) }
+    val scrollBehavior = remember { settingsManager.getScrollBehavior() }
+    
+    // OPTIMIZATION: Sync is now handled by the centralized LaunchedEffect(selectedTab) in EventManagerApp
+    // This prevents duplicate syncs and improves navigation smoothness
+    
+    GuestListScreen(
+        guests = guests,
+        volunteers = volunteers,
+        jobs = jobs,
+        jobTypeConfigs = jobTypeConfigs,
+        venues = venues,
+        isSyncing = isSyncing,
+        lastSyncTime = settingsManager.getLastSyncTime(),
+        scrollBehavior = scrollBehavior,
+        readOnly = readOnly,
+        onAddGuest = { 
+            coroutineScope.launch { 
+                try {
+                    viewModel.addGuest(it)
+                } catch (e: Exception) {
+                    // Exception is already handled in ViewModel and shown in syncError
+                    println("Guest addition failed: ${e.message}")
+                }
+            } 
+        },
+        onAddTemporaryGuests = { batch ->
+            coroutineScope.launch {
+                try {
+                    viewModel.addTemporaryGuestBatch(batch)
+                } catch (e: Exception) {
+                    println("Temporary guest addition failed: ${e.message}")
+                }
+            }
+        },
+        onUpdateGuest = { 
+            coroutineScope.launch { 
+                try {
+                    viewModel.updateGuest(it)
+                } catch (e: Exception) {
+                    println("Guest update failed: ${e.message}")
+                }
+            } 
+        },
+        onUpdateVolunteer = {
+            coroutineScope.launch {
+                try {
+                    viewModel.updateVolunteer(it)
+                } catch (e: Exception) {
+                    println("Volunteer update from guest list failed: ${e.message}")
+                }
+            }
+        },
+        onDeleteGuest = { 
+            coroutineScope.launch { 
+                try {
+                    viewModel.deleteGuest(it)
+                } catch (e: Exception) {
+                    println("Guest deletion failed: ${e.message}")
+                }
+            } 
+        },
+        onRefreshTemporaryGuests = {
+            viewModel.refreshTemporaryGuests()
+        },
+        onConfirmEntry = { job, selectedInvites ->
+            coroutineScope.launch {
+                try {
+                    viewModel.markBenefitAsUsed(job, selectedInvites)
+                } catch (e: Exception) {
+                    println("Benefit confirmation failed: ${e.message}")
+                }
+            }
+        }
+    )
+}
+
+@Composable
+fun VolunteerScreenWithViewModel(viewModel: EventManagerViewModel) {
+    val volunteers by viewModel.volunteers.collectAsState()
+    val jobs by viewModel.jobs.collectAsState()
+    val venues by viewModel.venues.collectAsState()
+    val jobTypeConfigs by viewModel.jobTypeConfigs.collectAsState()
+    val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val settingsManager = remember { settingsManagerFor(context) }
+    val scrollBehavior = remember { settingsManager.getScrollBehavior() }
+    
+    // OPTIMIZATION: Sync is handled by the centralized LaunchedEffect(selectedTab) in EventManagerApp
+    // Removing duplicate sync trigger improves navigation smoothness
+    
+    VolunteerScreen(
+        volunteers = volunteers,
+        volunteerJobs = jobs,
+        venues = venues,
+        jobTypeConfigs = jobTypeConfigs,
+        onConfirmFutureEntry = { job, selectedInvites -> viewModel.markBenefitAsUsed(job, selectedInvites) },
+        scrollBehavior = scrollBehavior,
+        onAddVolunteer = { 
+            coroutineScope.launch { 
+                try {
+                    viewModel.addVolunteer(it)
+                } catch (e: Exception) {
+                    println("Volunteer addition failed: ${e.message}")
+                }
+            } 
+        },
+        onUpdateVolunteer = { 
+            coroutineScope.launch { 
+                try {
+                    viewModel.updateVolunteer(it)
+                } catch (e: Exception) {
+                    println("Volunteer update failed: ${e.message}")
+                }
+            } 
+        },
+        onDeleteVolunteer = { volunteer, deleteShifts ->
+            coroutineScope.launch { 
+                try {
+                    viewModel.deleteVolunteer(volunteer, deleteShifts)
+                } catch (e: Exception) {
+                    println("Volunteer deletion failed: ${e.message}")
+                }
+            } 
+        }
+    )
+}
+
+@Composable
+fun JobTrackingScreenWithViewModel(viewModel: EventManagerViewModel) {
+    val jobs by viewModel.jobs.collectAsState()
+    val volunteers by viewModel.volunteers.collectAsState()
+    val jobTypeConfigs by viewModel.jobTypeConfigs.collectAsState()
+    val venues by viewModel.venues.collectAsState()
+    val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val settingsManager = remember { settingsManagerFor(context) }
+    val scrollBehavior = remember { settingsManager.getScrollBehavior() }
+    
+    // OPTIMIZATION: Sync is handled by the centralized LaunchedEffect(selectedTab) in EventManagerApp
+    // Removing duplicate sync trigger improves navigation smoothness
+
+    JobTrackingScreen(
+        jobs = jobs,
+        volunteers = volunteers,
+        jobTypeConfigs = jobTypeConfigs,
+        venues = venues,
+        scrollBehavior = scrollBehavior,
+        onAddJob = { 
+            coroutineScope.launch { 
+                try {
+                    viewModel.addJob(it)
+                } catch (e: Exception) {
+                    println("Job addition failed: ${e.message}")
+                }
+            }
+        },
+        onUpdateJob = { 
+            coroutineScope.launch { 
+                try {
+                    viewModel.updateJob(it)
+                } catch (e: Exception) {
+                    println("Job update failed: ${e.message}")
+                }
+            }
+        },
+        onDeleteJob = { 
+            coroutineScope.launch { 
+                try {
+                    viewModel.deleteJob(it)
+                } catch (e: Exception) {
+                    println("Job deletion failed: ${e.message}")
+                }
+            }
+        }
+    )
+}
+
+@Composable
+fun BenefitsScreenWithViewModel(viewModel: EventManagerViewModel) {
+    val volunteers by viewModel.volunteers.collectAsState()
+    val jobs by viewModel.jobs.collectAsState()
+    val jobTypeConfigs by viewModel.jobTypeConfigs.collectAsState()
+    val context = LocalContext.current
+    val settingsManager = remember { settingsManagerFor(context) }
+    val scrollBehavior = remember { settingsManager.getScrollBehavior() }
+    
+    // OPTIMIZATION: Sync is handled by the centralized LaunchedEffect(selectedTab) in EventManagerApp
+    // Removing duplicate sync trigger improves navigation smoothness
+    
+    BenefitsScreen(
+        volunteers = volunteers,
+        jobs = jobs,
+        jobTypeConfigs = jobTypeConfigs,
+        scrollBehavior = scrollBehavior
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun WelcomeScreen(
+    onAdminSelected: () -> Unit,
+    onTicketCheckSelected: () -> Unit,
+    showAdminAccessSyncIndicator: Boolean = false
+) {
+    val context = LocalContext.current
+    val settingsManager = remember { settingsManagerFor(context) }
+    val colorScheme = MaterialTheme.colorScheme
+
+    BackHandler {
+        (context as? Activity)?.finish()
+    }
+    
+    // Haptic feedback for start button
+    val vibrator = remember { ContextCompat.getSystemService(context, Vibrator::class.java) }
+    
+    // Determine if dark theme is active
+    val themeMode = ThemeMode.fromString(settingsManager.getThemeMode())
+    val systemInDarkTheme = isSystemInDarkTheme()
+    val isDarkTheme = when (themeMode) {
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+        ThemeMode.DEFAULT -> systemInDarkTheme
+    }
+    
+    // Check if it's Pride Day to customize the UI
+    val calendar = Calendar.getInstance()
+    val month = calendar.get(Calendar.MONTH)
+    val day = calendar.get(Calendar.DAY_OF_MONTH)
+    val isPrideDay = month == Calendar.JUNE && day == 28 && settingsManager.isSeasonalFunEnabled()
+    
+    Scaffold { innerPadding ->
+        // Full-bleed launch screen with custom background and bottom CTA
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .background(if (isPrideDay) Color.White else colorScheme.surface)
+        ) {
+            val logoName = remember(isDarkTheme) {
+                if (isDarkTheme) "launch_logo_dark" else "launch_logo_light"
+            }
+            val logoPlatformContext = remember(context) { createPlatformContext(context) }
+            val isLandscape = maxWidth > maxHeight
+            val welcomeMaxWidth = maxWidth
+            val welcomeMaxHeight = maxHeight
+
+            // Same animated circles as admin / Billeterie (AnimatedBackground); Pride day adds overlay on top.
+            AnimatedBackground(
+                enabled = settingsManager.isAnimatedBackgroundEnabled()
+            )
+            if (isPrideDay) {
+                PrideAnimation(enabled = true)
+            }
+
+            val buttonColor = if (isPrideDay) {
+                Color(0xFFE40303)
+            } else {
+                colorScheme.primary
+            }
+
+            // Logo + effects centered vertically in the band above the buttons (midpoint top → ticketing CTA)
+            Column(Modifier.fillMaxSize()) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            if (isPrideDay) {
+                                Text(
+                                    text = "Happy Pride! 🏳️‍🌈",
+                                    style = if (isLandscape) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.headlineLarge,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = colorScheme.onBackground,
+                                    modifier = Modifier.padding(bottom = 24.dp)
+                                )
+                            }
+
+                            if (logoName.isNotBlank()) {
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth(if (isLandscape) 0.5f else 0.85f)
+                                        .aspectRatio(1f)
+                                        .padding(if (isLandscape) 16.dp else 24.dp),
+                                    shape = RoundedCornerShape(if (isLandscape) 28.dp else 36.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = colorScheme.surface.copy(alpha = 0.95f)
+                                    ),
+                                    elevation = CardDefaults.cardElevation(
+                                        defaultElevation = 12.dp
+                                    ),
+                                    border = BorderStroke(
+                                        width = 1.5.dp,
+                                        color = colorScheme.primaryContainer.copy(alpha = 0.4f)
+                                    )
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(
+                                                brush = Brush.radialGradient(
+                                                    colors = listOf(
+                                                        colorScheme.primaryContainer.copy(alpha = 0.25f),
+                                                        colorScheme.surfaceVariant.copy(alpha = 0.1f)
+                                                    )
+                                                ),
+                                                shape = RoundedCornerShape(if (isLandscape) 28.dp else 36.dp)
+                                            )
+                                    )
+                                }
+                            } else {
+                                Text(
+                                    text = "CNL",
+                                    style = if (isLandscape) MaterialTheme.typography.titleLarge else MaterialTheme.typography.displayLarge,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = colorScheme.onBackground
+                                )
+                            }
+                        }
+                    }
+
+                    if (logoName.isNotBlank()) {
+                        val density = androidx.compose.ui.platform.LocalDensity.current
+                        val maxLogoSizeDp = with(density) {
+                            val maxScreenSize = max(welcomeMaxWidth.value, welcomeMaxHeight.value) * 1.2f
+                            // Keep decode budget modest — full-screen cap caused huge decodes and ANRs on slower devices.
+                            val maxAllowed = 640f
+                            min(maxScreenSize, maxAllowed).dp
+                        }
+
+                        var scaledLogoBitmap by remember(logoName, maxLogoSizeDp) {
+                            mutableStateOf<ImageBitmap?>(null)
+                        }
+                        LaunchedEffect(logoName, maxLogoSizeDp) {
+                            scaledLogoBitmap = null
+                            scaledLogoBitmap = withContext(Dispatchers.Default) {
+                                ImageUtils.loadScaledImageBitmap(
+                                    platformContext = logoPlatformContext,
+                                    resourceName = logoName,
+                                    maxWidthDp = maxLogoSizeDp,
+                                    maxHeightDp = maxLogoSizeDp
+                                )
+                            }
+                        }
+
+                        val logoFadeAlpha by animateFloatAsState(
+                            targetValue = if (scaledLogoBitmap != null) 1f else 0f,
+                            animationSpec = tween(
+                                durationMillis = 220,
+                                easing = FastOutSlowInEasing
+                            ),
+                            label = "welcomeLogoFadeIn"
+                        )
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                if (isPrideDay) {
+                                    Text(
+                                        text = "Happy Pride! 🏳️‍🌈",
+                                        style = if (isLandscape) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.headlineLarge,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color.Transparent,
+                                        modifier = Modifier.padding(bottom = 24.dp)
+                                    )
+                                }
+
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth(if (isLandscape) 0.5f else 0.85f)
+                                        .aspectRatio(1f)
+                                        .padding(if (isLandscape) 16.dp else 24.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    val logoPadding = if (isLandscape) 6.dp else 8.dp
+                                    val glowOuterRadius = if (isLandscape) 7.dp else 9.dp
+                                    val glowInnerRadius = if (isLandscape) 4.dp else 5.dp
+
+                                    scaledLogoBitmap?.let { bitmap ->
+                                        val outerRadiusPx = with(density) { glowOuterRadius.toPx() }
+                                        val innerRadiusPx = with(density) { glowInnerRadius.toPx() }
+                                        val glowColor = colorScheme.primaryContainer.copy(alpha = 0.85f)
+                                        val glowSamples = 16
+
+                                        // Draw radial glow samples around the PNG alpha edge for a smoother contour.
+                                        repeat(glowSamples) { sample ->
+                                            val angle = (2.0 * PI * sample) / glowSamples
+                                            val cosAngle = cos(angle).toFloat()
+                                            val sinAngle = sin(angle).toFloat()
+                                            Image(
+                                                bitmap = bitmap,
+                                                contentDescription = null,
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .padding(logoPadding)
+                                                    .graphicsLayer {
+                                                        translationX = cosAngle * outerRadiusPx
+                                                        translationY = sinAngle * outerRadiusPx
+                                                        alpha = 0.12f * logoFadeAlpha
+                                                    },
+                                                colorFilter = ColorFilter.tint(glowColor),
+                                                filterQuality = FilterQuality.High
+                                            )
+                                            Image(
+                                                bitmap = bitmap,
+                                                contentDescription = null,
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .padding(logoPadding)
+                                                    .graphicsLayer {
+                                                        translationX = cosAngle * innerRadiusPx
+                                                        translationY = sinAngle * innerRadiusPx
+                                                        alpha = 0.10f * logoFadeAlpha
+                                                    },
+                                                colorFilter = ColorFilter.tint(glowColor),
+                                                filterQuality = FilterQuality.High
+                                            )
+                                        }
+
+                                        Image(
+                                            bitmap = bitmap,
+                                            contentDescription = "App Logo",
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .padding(logoPadding)
+                                                .graphicsLayer { alpha = logoFadeAlpha },
+                                            filterQuality = FilterQuality.High
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth(if (isLandscape) 0.6f else 1f)
+                            .padding(horizontal = 24.dp, vertical = 24.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                performStrongHaptic(vibrator)
+                                onTicketCheckSelected()
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(if (isLandscape) 44.dp else 56.dp),
+                            shape = RoundedCornerShape(if (isLandscape) 22.dp else 28.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = buttonColor,
+                                contentColor = colorScheme.onPrimary
+                            )
+                        ) {
+                            Icon(
+                                Icons.Default.ConfirmationNumber,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = context.getString(R.string.ticket_check_mode),
+                                style = if (isLandscape) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        OutlinedButton(
+                            onClick = {
+                                performStrongHaptic(vibrator)
+                                onAdminSelected()
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(if (isLandscape) 44.dp else 56.dp),
+                            shape = RoundedCornerShape(if (isLandscape) 22.dp else 28.dp),
+                            border = BorderStroke(1.5.dp, buttonColor.copy(alpha = 0.6f))
+                        ) {
+                            Icon(
+                                Icons.Default.Lock,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = buttonColor
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = context.getString(R.string.admin_mode),
+                                style = if (isLandscape) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = buttonColor
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (showAdminAccessSyncIndicator) {
+                val syncIndicatorLabel =
+                    context.getString(R.string.welcome_background_sync_content_description)
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 6.dp, end = 10.dp),
+                    shape = CircleShape,
+                    color = colorScheme.surface.copy(alpha = 0.92f),
+                    shadowElevation = 3.dp
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .padding(8.dp)
+                            .size(22.dp)
+                            .semantics { contentDescription = syncIndicatorLabel },
+                        strokeWidth = 2.5.dp,
+                        color = colorScheme.primary
+                    )
+                }
+            }
+        }
+    }
+}
+
+// Job Type Management Screen
+@Composable
+fun JobTypeManagementScreenWithViewModel(
+    viewModel: EventManagerViewModel,
+    _onBack: () -> Unit
+) {
+    val jobTypeConfigs by viewModel.jobTypeConfigs.collectAsState()
+    val coroutineScope = rememberCoroutineScope()
+    
+    // Track if screen has been initialized to prevent re-syncing on every recomposition
+    var isInitialized by remember { mutableStateOf(false) }
+    
+    // Trigger TARGETED sync when screen loads - only changed job types are updated
+    // Use isInitialized flag to prevent re-execution on recomposition
+    LaunchedEffect(isInitialized) {
+        if (!isInitialized) {
+            println("Job Type Management screen loaded - triggering TARGETED job type sync")
+            viewModel.syncJobTypesWithTargetedUpdates()
+            isInitialized = true
+        }
+    }
+    
+    BackHandler {
+        _onBack()
+    }
+
+    JobTypeManagementScreen(
+        jobTypeConfigs = jobTypeConfigs,
+        onAddJobTypeConfig = { config ->
+            coroutineScope.launch {
+                try {
+                    viewModel.addJobTypeConfig(config)
+                } catch (e: Exception) {
+                    println("Job type config addition failed: ${e.message}")
+                }
+            }
+        },
+        onUpdateJobTypeConfig = { config ->
+            coroutineScope.launch {
+                try {
+                    viewModel.updateJobTypeConfig(config)
+                } catch (e: Exception) {
+                    println("Job type config update failed: ${e.message}")
+                }
+            }
+        },
+        onDeleteJobTypeConfig = { config ->
+            coroutineScope.launch {
+                try {
+                    viewModel.deleteJobTypeConfig(config)
+                } catch (e: Exception) {
+                    println("Job type config deletion failed: ${e.message}")
+                }
+            }
+        },
+        onUpdateJobTypeConfigStatus = { id, isActive ->
+            coroutineScope.launch {
+                try {
+                    val config = jobTypeConfigs.find { it.id == id }
+                    if (config != null) {
+                        viewModel.updateJobTypeConfig(config.copy(isActive = isActive))
+                    }
+                } catch (e: Exception) {
+                    println("Job type config status update failed: ${e.message}")
+                }
+            }
+        },
+        onBack = _onBack
+    )
+}
+
+@Composable
+fun VenueManagementScreenWithViewModel(
+    viewModel: EventManagerViewModel,
+    _onBack: () -> Unit
+) {
+    val venues by viewModel.venues.collectAsState()
+    val coroutineScope = rememberCoroutineScope()
+    
+    // Track if screen has been initialized to prevent re-syncing on every recomposition
+    var isInitialized by remember { mutableStateOf(false) }
+    
+    // Trigger TARGETED sync when screen loads - only changed venues are updated
+    // Use isInitialized flag to prevent re-execution on recomposition
+    LaunchedEffect(isInitialized) {
+        if (!isInitialized) {
+            println("Venue Management screen loaded - triggering TARGETED venue sync")
+            viewModel.syncVenuesWithTargetedUpdates()
+            isInitialized = true
+        }
+    }
+    
+    BackHandler {
+        _onBack()
+    }
+    
+    VenueManagementScreen(
+        venues = venues,
+        onAddVenue = { venue ->
+            coroutineScope.launch {
+                try {
+                    viewModel.addVenue(venue)
+                } catch (e: Exception) {
+                    println("Venue addition failed: ${e.message}")
+                }
+            }
+        },
+        onUpdateVenue = { venue ->
+            coroutineScope.launch {
+                try {
+                    viewModel.updateVenue(venue)
+                } catch (e: Exception) {
+                    println("Venue update failed: ${e.message}")
+                }
+            }
+        },
+        onDeleteVenue = { venue ->
+            coroutineScope.launch {
+                try {
+                    viewModel.deleteVenue(venue)
+                } catch (e: Exception) {
+                    println("Venue deletion failed: ${e.message}")
+                }
+            }
+        },
+        onUpdateVenueStatus = { id, isActive ->
+            coroutineScope.launch {
+                try {
+                    viewModel.updateVenueStatus(id, isActive)
+                } catch (e: Exception) {
+                    println("Venue status update failed: ${e.message}")
+                }
+            }
+        },
+        onBack = _onBack
+    )
+}
+
+@Composable
+fun SalesSheetItemManagementScreenWithViewModel(
+    viewModel: EventManagerViewModel,
+    _onBack: () -> Unit
+) {
+    val items by viewModel.salesSheetItems.collectAsState()
+    val coroutineScope = rememberCoroutineScope()
+    var isInitialized by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isInitialized) {
+        if (!isInitialized) {
+            println("Sales Sheet Item Management screen loaded - triggering TARGETED sales items sync")
+            viewModel.syncSalesSheetItemsWithTargetedUpdates()
+            isInitialized = true
+        }
+    }
+
+    BackHandler {
+        _onBack()
+    }
+
+    SalesSheetItemManagementScreen(
+        items = items,
+        onAddItem = { item ->
+            coroutineScope.launch {
+                try {
+                    viewModel.addSalesSheetItem(item)
+                } catch (e: Exception) {
+                    println("Sales sheet item addition failed: ${e.message}")
+                }
+            }
+        },
+        onUpdateItem = { item ->
+            coroutineScope.launch {
+                try {
+                    viewModel.updateSalesSheetItem(item)
+                } catch (e: Exception) {
+                    println("Sales sheet item update failed: ${e.message}")
+                }
+            }
+        },
+        onDeleteItem = { item ->
+            coroutineScope.launch {
+                try {
+                    viewModel.deleteSalesSheetItem(item)
+                } catch (e: Exception) {
+                    println("Sales sheet item deletion failed: ${e.message}")
+                }
+            }
+        },
+        onUpdateItemStatus = { id, isActive ->
+            coroutineScope.launch {
+                try {
+                    viewModel.updateSalesSheetItemStatus(id, isActive)
+                } catch (e: Exception) {
+                    println("Sales sheet item status update failed: ${e.message}")
+                }
+            }
+        },
+        onBack = _onBack
+    )
+}
