@@ -1,8 +1,8 @@
 {
-  "latestVersionCode": 22,
-  "latestVersionName": "1.0.2",
+  "latestVersionCode": 23,
+  "latestVersionName": "1.0.3",
   "minSupportedVersionCode": "20",
-  "changelogShort": "New colour and light/dark theme settings. New bug corrections.",
-  "downloadUrl": "https://github.com/TouristeAG/NoctuList/releases/download/1.0.2/app-release-1.0.2.apk",
+  "changelogShort": "Changed Nom to Prénom and Abréviation to Last name. Bug fixes and new options for the 10-tap feature.",
+  "downloadUrl": "https://github.com/TouristeAG/NoctuList/releases/download/1.0.3/app-release-1.0.3.apk",
   "storeUrl": "https://play.google.com/store/apps/details?id=com.eventmanager.app"
 }
