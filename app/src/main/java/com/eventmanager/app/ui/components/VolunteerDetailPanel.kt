@@ -1105,7 +1105,7 @@ private fun PersonalInformationSection(
             
             // Name and abbreviation
             InfoRow(
-                label = getStringResource(R.string.name),
+                label = getStringResource(R.string.full_name),
                 value = volunteer.name,
                 isPhone = isPhone
             )

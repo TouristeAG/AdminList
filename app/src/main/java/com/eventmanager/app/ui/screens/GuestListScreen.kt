@@ -1815,7 +1815,7 @@ fun AddGuestDialog(
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var phoneNumber by remember { mutableStateOf("") }
-    var invitations by remember { mutableStateOf("1") }
+    var invitations by remember { mutableStateOf("0") }
     var selectedVenueName by remember { mutableStateOf<String?>(null) }
     var notes by remember { mutableStateOf("") }
     var showVenueDropdown by remember { mutableStateOf(false) }
@@ -2100,7 +2100,7 @@ fun AddGuestDialog(
                         TextButton(
                             onClick = {
                                 if (selectedTab == 0) {
-                                    val invitationCount = invitations.toIntOrNull() ?: 1
+                                    val invitationCount = invitations.toIntOrNull() ?: 0
                                     val defaultVenue = activeVenues.firstOrNull()?.name ?: "GROOVE"
                                     onConfirmPermanent(
                                         name,

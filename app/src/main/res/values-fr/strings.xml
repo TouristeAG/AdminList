@@ -411,9 +411,9 @@
     <string name="active_status">Actif·ve</string>
     <string name="inactive_status">Inactif·ve</string>
     <string name="view_details">Voir les détails</string>
-    <string name="full_name">Nom complet</string>
-    <string name="last_name_abbreviation">Abréviation du nom</string>
-    <string name="last_name_abbreviation_placeholder">par ex., SMIT</string>
+    <string name="full_name">Prénom</string>
+    <string name="last_name_abbreviation">Nom de famille</string>
+    <string name="last_name_abbreviation_placeholder">par ex., Dupont</string>
     <string name="email">Email</string>
     <string name="email_placeholder">nom@exemple.com</string>
     <string name="phone_number">Numéro de téléphone</string>
@@ -881,7 +881,7 @@
     <string name="email_wallet_section_compatibility">Digital Wallet Pass (.pkpass) : Apple Wallet + applications Android compatibles.</string>
     <string name="personal_information">Informations personnelles</string>
     <string name="name">Nom</string>
-    <string name="abbreviation">Abréviation</string>
+    <string name="abbreviation">Nom de famille</string>
     <string name="female">Femme</string>
     <string name="male">Homme</string>
     <string name="non_binary">Non-binaire</string>
@@ -1134,9 +1134,21 @@
     <string name="settings_category_maintenance">Maintenance</string>
     
     <!-- Easter Egg Games -->
-    <string name="easter_egg_off_the_line">Off The Line</string>
+    <string name="easter_egg_hextris">Hextris</string>
     <string name="easter_egg_pizza_undelivery">Pizza Undelivery</string>
     <string name="easter_egg_scroll">Scroll!</string>
+    <string name="easter_egg_wendol_village">Wendol Village</string>
+    <string name="easter_egg_catculus">Catculus</string>
+    <string name="arcade_title">★ ARCADE ★</string>
+    <string name="arcade_subtitle">▶ INSÈRE DU FUN ◀</string>
+    <string name="arcade_pick_game">CHOISIS UN JEU !</string>
+    <string name="arcade_credits_title">★ CRÉDITS DES CRÉATEUR·ICES ★</string>
+    <string name="arcade_exit">[ ESC ] SORTIR</string>
+    <string name="arcade_credit_wendol_village">Wendol Village — a js13kGames 2024 game by @sanojian.</string>
+    <string name="arcade_credit_scroll">👆Scroll! — TypeScript game using Web Components for JS13K. © 2019 Zeev Katz. All rights reserved.</string>
+    <string name="arcade_credit_hextris">Hextris — An addictive puzzle game inspired by Tetris. hextris.io · By Logan Engstrom, Garrett Finucane, Noah Moroze &amp; Michael Yang.</string>
+    <string name="arcade_credit_pizza_undelivery">Pizza Undelivery — A game made for the 2019 js13kGames competition. nilsgawlik.github.io/js13k2019/ · @nikigawlik</string>
+    <string name="arcade_credit_catculus">Catculus — a js13kGames 2025 game by @anttihaavikko.</string>
     
     <!-- Entry Validation -->
     <string name="validate_entry">Valider une entrée</string>
@@ -1244,7 +1256,7 @@
     <string name="announcement_popup_from">De : %s</string>
 
     <!-- Lecteur NFC Bluetooth externe (ACR1255U-J1) -->
-    <string name="settings_category_external_reader">Lecteur NFC externe</string>
+    <string name="settings_category_external_reader">Lecteur NFC Bluetooth</string>
     <string name="external_reader_description">Sélectionnez le lecteur NFC externe ici. Il peut apparaître dans les paramètres Bluetooth d\'Android, mais il n\'est pas possible de s\'y connecter pour cette application.</string>
     <string name="external_reader_connected_label">Lecteur sélectionné</string>
     <string name="external_reader_pick_button">Rechercher un lecteur Bluetooth</string>
