@@ -20,6 +20,12 @@ actual class PlatformFileManager actual constructor(private val context: Platfor
 
     actual fun readServiceAccountJson(): String? = getServiceAccountFile()?.readText()
 
+    actual fun getGmailOAuthClientFile(): File? = null
+
+    actual fun saveGmailOAuthClientJson(json: String): Boolean = false
+
+    actual fun readGmailOAuthClientJson(): String? = null
+
     actual fun getLogsDirectory(): File =
         File(context.androidContext.filesDir, "logs").also { it.mkdirs() }
 
@@ -29,4 +35,25 @@ actual class PlatformFileManager actual constructor(private val context: Platfor
         File(context.androidContext.cacheDir, "updates").also { it.mkdirs() }
 
     actual suspend fun pickServiceAccountJsonFile(): String? = null
+
+    actual suspend fun pickGmailOAuthClientJsonFile(): String? = null
+
+    actual suspend fun pickEmailLogoImageFile(): String? = null
+
+    actual fun getEmailLogoFile(): File? = null
+
+    actual fun clearEmailLogoFile(): Boolean = false
+
+    private fun walletPassCertificatePath(): File =
+        File(context.androidContext.filesDir, "wallet_pass_certificate.p12")
+
+    actual fun getWalletPassCertificateFile(): File? =
+        walletPassCertificatePath().takeIf { it.exists() }
+
+    actual fun saveWalletPassCertificate(bytes: ByteArray): Boolean = runCatching {
+        walletPassCertificatePath().writeBytes(bytes)
+        true
+    }.getOrDefault(false)
+
+    actual suspend fun pickWalletPassCertificateFile(): ByteArray? = null
 }

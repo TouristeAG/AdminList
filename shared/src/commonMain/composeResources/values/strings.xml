@@ -43,10 +43,10 @@
     <string name="service_account_config_title">Service Account Configuration</string>
     <string name="service_account_key_found">Service Account Key Found</string>
     <string name="service_account_key_required">Service Account Key Required</string>
-    <string name="email_label">Email: %s</string>
-    <string name="project_label">Project: %s</string>
-    <string name="email_colon">Email: %s</string>
-    <string name="project_colon">Project: %s</string>
+    <string name="email_label">Email: %1$s</string>
+    <string name="project_label">Project: %1$s</string>
+    <string name="email_colon">Email: %1$s</string>
+    <string name="project_colon">Project: %1$s</string>
     <string name="upload_key_file_description">Upload your Google Service Account JSON key file</string>
     <string name="upload_key_description">Upload your Google Service Account JSON key file</string>
     <string name="replace_key_file">Replace Key File</string>
@@ -55,22 +55,23 @@
     <!-- Sync Configuration -->
     <string name="sync_config_title">Sync Configuration</string>
     <string name="sync_interval_label">Sync Interval (minutes)</string>
-    <string name="sync_interval_hint">How often to sync with Google Sheets (1-60 minutes)</string>
+    <string name="sync_interval_hint">How often to sync with Google Sheets (1-60 minutes). Changes apply automatically.</string>
+    <string name="save_sheets_config">Save Sheets Configuration</string>
     <string name="test_sync_status">Test Sync Status</string>
     <string name="sync_status_dialog_title">Synchronisation Status</string>
     <string name="sync_status_configured">Google Sheets is configured and ready for sync</string>
     <string name="sync_status_not_configured">Google Sheets is not configured. Please check your settings.</string>
-    <string name="sync_status_error">Error testing sync status: %s</string>
+    <string name="sync_status_error">Error testing sync status: %1$s</string>
     <string name="manual_sync_now">Manual Sync Now</string>
     <string name="view_active_volunteers">View Active Volunteers</string>
     <string name="cleanup_inactive_volunteers">Cleanup Inactive Volunteers</string>
     <string name="cleanup_choose_duration">Choose how long volunteers must be inactive to be deleted:</string>
     <string name="cleanup_inactive_for">Inactive for:</string>
-    <string name="cleanup_years_value">%d years</string>
+    <string name="cleanup_years_value">%1$d years</string>
     <string name="cleanup_hide_preview">Hide Preview</string>
-    <string name="cleanup_preview_to_delete">Preview Volunteers to Delete (%d)</string>
+    <string name="cleanup_preview_to_delete">Preview Volunteers to Delete (%1$d)</string>
     <string name="cleanup_volunteers_to_be_deleted">Volunteers to be deleted:</string>
-    <string name="cleanup_no_volunteers_found">No volunteers found that have been inactive for %d years or more.</string>
+    <string name="cleanup_no_volunteers_found">No volunteers found that have been inactive for %1$d years or more.</string>
     
     <!-- Advanced Settings -->
     <string name="advanced_settings_title">Advanced Settings</string>
@@ -79,7 +80,7 @@
     <string name="debug_mode_title">Debug Mode</string>
     <string name="debug_mode_description">Enable detailed logging for troubleshooting</string>
     <string name="debug_logs_title">Debug Logs</string>
-    <string name="debug_logs_location">Location: %s</string>
+    <string name="debug_logs_location">Location: %1$s</string>
     <string name="debug_logs_files_size">Files: %1$d | Size: %2$s MB</string>
     <string name="debug_logs_recent_files">Recent Log Files:</string>
     <string name="debug_logs_view">View</string>
@@ -88,17 +89,25 @@
     <string name="debug_logs_clear_all">Clear All</string>
     <string name="debug_logs_content">Log Content</string>
     <string name="debug_logs_no_content">No log content</string>
-    <string name="debug_logs_error_reading">Error reading log file: %s</string>
+    <string name="debug_logs_error_reading">Error reading log file: %1$s</string>
     <string name="debug_logs_error_reading_generic">Error reading log file</string>
     <string name="debug_logs_share_file">Share log file</string>
     <string name="animated_background_title">Animated Background</string>
-    <string name="animated_background_description">Disable animated arches for better performance on older devices</string>
+    <string name="animated_background_description">Choose a subtle animated background for welcome and admin screens</string>
+    <string name="background_animation_none">None</string>
+    <string name="background_animation_arches">Arches</string>
+    <string name="background_animation_topographic">Topographic lines</string>
+    <string name="background_animation_opacity_title">Background intensity</string>
+    <string name="background_animation_opacity_description">Lower the opacity to make animated lines more subtle</string>
+    <string name="background_animation_opacity_apply">Apply intensity</string>
+    <string name="billeterie_background_animation_title">Billeterie background</string>
+    <string name="billeterie_background_animation_description">Choose a background animation for the ticket check screens only</string>
     <string name="page_animations_title">Page Animations</string>
     <string name="page_animations_description">Enable slide animations when switching pages and tabs</string>
     <string name="clear_app_cache">Clear App Cache</string>
     <string name="app_cache_cleared">App data cache cleared. Settings and keys were kept.</string>
     <string name="check_for_updates">Check for updates</string>
-    <string name="update_available_title">Update available: %s</string>
+    <string name="update_available_title">Update available: %1$s</string>
     <string name="update_required_message">A newer version of this app is required to continue. Please update to the latest version.</string>
     <string name="update_available_message">A newer version of this app is available. Would you like to update now?</string>
     <string name="update_now">Update now</string>
@@ -106,15 +115,15 @@
     <string name="up_to_date_title">You’re up to date</string>
     <string name="up_to_date_message">You already have the latest version installed.</string>
     <string name="update_error_title">Update check failed</string>
-    <string name="update_error_message">Could not check for updates: %s</string>
+    <string name="update_error_message">Could not check for updates: %1$s</string>
     <string name="checking_for_updates_title">Checking for updates</string>
     <string name="checking_for_updates_message">Contacting update server…</string>
     <string name="downloading_update">Downloading update…</string>
-    <string name="download_progress">Downloading: %d%%</string>
+    <string name="download_progress">Downloading: %1$d%%</string>
     <string name="download_complete">Download complete</string>
     <string name="install_update">Install update</string>
     <string name="download_error_title">Download failed</string>
-    <string name="download_error_message">Could not download update: %s</string>
+    <string name="download_error_message">Could not download update: %1$s</string>
     <string name="change_update_sources">Change update sources</string>
     <string name="update_sources_title">Update Sources</string>
     <string name="update_sources_warning">The GitHub URL must point to a valid version.json file for update checks to work. Only modify these settings if you know what you are doing.</string>
@@ -141,7 +150,7 @@
     
     <!-- Color Theme Settings -->
     <string name="color_theme_title">Color Theme</string>
-    <string name="color_theme_description">Choose a color theme for devices that don\'t support dynamic colors</string>
+    <string name="color_theme_description">Choose a color theme for devices that don't support dynamic colors</string>
     <string name="color_theme_system">System</string>
     <string name="color_theme_professional_blue">Blue</string>
     <string name="color_theme_neutral_green">Green</string>
@@ -220,7 +229,7 @@
     <string name="manual_rewards_warning_nova_stellar_automatic_enabled">Automatic Nova / Galaxie (shift job) benefits are enabled! They stack with manual rewards—switch to Stellar and turn off Shift Job if that was not intended.</string>
     <string name="shift_job_label">Shift Job (Nova / Galaxie)</string>
     <string name="orion_job_label">Orion Job (Committee / Coordination)</string>
-    <string name="requires_shift_time_label">Required can/can\'t enjoy evening setting</string>
+    <string name="requires_shift_time_label">Required can/can't enjoy evening setting</string>
     <string name="duration_days_label">Duration (days)</string>
     <string name="free_drinks_label">Free Drinks</string>
     <string name="bar_discount_percent_label">Bar Discount (%)</string>
@@ -231,11 +240,11 @@
     <string name="future_entry_invites_label">Invites per future entry (friends)</string>
     <string name="future_entry_invites_helper">Used for the &quot;+n inv.&quot; shown on future single-use entries.</string>
     <string name="future_single_use_entries_with_invites_summary">Future single-use entries: %1$d (+%2$d inv.)</string>
-    <string name="future_event_entries_remaining_n">🎟️ %d Future event entries (single use)</string>
+    <string name="future_event_entries_remaining_n">🎟️ %1$d Future event entries (single use)</string>
     <string name="future_entry_remaining_with_invites">🎟️ %1$d entry left (+%2$d inv.)</string>
     <string name="future_entries_remaining_with_invites">🎟️ %1$d entries left (+%2$d inv.)</string>
-    <string name="future_entry_solo">🎟️ %d entry left (solo)</string>
-    <string name="future_entries_solo">🎟️ %d entries left (solo)</string>
+    <string name="future_entry_solo">🎟️ %1$d entry left (solo)</string>
+    <string name="future_entries_solo">🎟️ %1$d entries left (solo)</string>
     <string name="other_notes_label">Other Notes</string>
     <string name="other_notes_placeholder">Additional notes…</string>
     <string name="update_shift_type">Update Shift Type</string>
@@ -250,7 +259,7 @@
     <string name="benefits_help_tab_extras">Bonuses &amp; timing</string>
 
     <string name="benefits_help_app_stellar">Shift job on → pick a Nova type\nOrion job on → mandate year (Veteran the year after)\nDrinks, guest list, future entries → calculated for you</string>
-    <string name="benefits_help_app_manual">You enter days, drinks, bar \u0025, guests, extras\nFor one-offs outside the usual grid\nDon\'t double-count the same real shift if it\'s already Stellar</string>
+    <string name="benefits_help_app_manual">You enter days, drinks, bar \u0025, guests, extras\nFor one-offs outside the usual grid\nDon't double-count the same real shift if it's already Stellar</string>
 
     <string name="benefits_help_section_profité_title">Profité / non-profité</string>
     <string name="benefits_help_section_profité_body">Default shift only, when “enjoy evening” is on.\nNot about entry: it is whether the shift hours still let the person enjoy the night or not.\nOther Nova types: this toggle is hidden.</string>
@@ -269,7 +278,7 @@
     <string name="benefits_help_nova_photo_perks">Free entry + 1 guest - covered night\n50\u0025 bar - covered night\n2 free drinks (~10 CHF) - covered night\n1 seasonal free entry + 1 guest</string>
 
     <string name="benefits_help_nova_meeting_title">Meeting</string>
-    <string name="benefits_help_nova_meeting_rationale">3 meetings in a month still pump Galaxie - except Orion (meetings don\'t count).</string>
+    <string name="benefits_help_nova_meeting_rationale">3 meetings in a month still pump Galaxie - except Orion (meetings don't count).</string>
     <string name="benefits_help_nova_meeting_perks">1 seasonal free entry + 1 guest\n1 free drink (~5 CHF)</string>
 
     <string name="benefits_help_nova_gd_event_title">Graphic designer - one event</string>
@@ -281,7 +290,7 @@
     <string name="benefits_help_nova_gd_asso_perks">2 seasonal free entries + 1 guest each\n4 free drinks (~20 CHF)</string>
 
     <string name="benefits_help_section_galaxie_title">Galaxie</string>
-    <string name="benefits_help_section_galaxie_body">3 contributions in the same calendar month (shifts + meetings)\nOrion: meetings don\'t count toward the 3\nThat month: free entry everywhere + 50\u0025 bar + 1 extra drink\nStacks with normal shift perks</string>
+    <string name="benefits_help_section_galaxie_body">3 contributions in the same calendar month (shifts + meetings)\nOrion: meetings don't count toward the 3\nThat month: free entry everywhere + 50\u0025 bar + 1 extra drink\nStacks with normal shift perks</string>
 
     <string name="benefits_help_section_orion_title">Orion</string>
     <string name="benefits_help_section_orion_body">Tag the job type as Orion\n1 year from mandate start: free entry + 50\u0025 bar + 1 guest\n270 CHF wallet (shirt pot + drink budget)</string>
@@ -290,7 +299,7 @@
     <string name="benefits_help_section_veteran_body">Year after Orion\nStill: free entry + 50\u0025 bar\nWallet stops when the mandate ends</string>
 
     <string name="benefits_help_section_timing_title">When the app turns perks on</string>
-    <string name="benefits_help_section_timing_body">Night-of perks = that venue\'s event day (Settings → day-change time)\nFuture entries unlock from the same moment\nOrion / Galaxie / Veteran use longer windows</string>
+    <string name="benefits_help_section_timing_body">Night-of perks = that venue's event day (Settings → day-change time)\nFuture entries unlock from the same moment\nOrion / Galaxie / Veteran use longer windows</string>
 
     <string name="benefits_help_footer_title">Heads-up</string>
     <string name="benefits_help_footer_bullets">Profité / non-profité - whether shift hours let you enjoy the night or not (not about entry)\nThe 50\u0025 bar rate tracks Lightspeed prices\nGalaxie stacks with shift perks</string>
@@ -372,7 +381,7 @@
     <string name="app_designed_for">Designed for Collectif Nocturne venues</string>
     <!-- Single full sentence to avoid spacing issues across locales -->
     <string name="app_developed_full">Developed for the Collectif Nocturne by Leonardo Mondada</string>
-    <string name="last_sync">Last update: %s</string>
+    <string name="last_sync">Last update: %1$s</string>
     <string name="never">Never</string>
     
     <!-- Instructions Dialog -->
@@ -389,11 +398,11 @@
     <string name="step_3_title">Create Service Account</string>
     <string name="step_3_description">Create a service account in IAM &amp; Admin > Service Accounts. Download the JSON key file.</string>
     <string name="step_4_title">Add Key to App</string>
-    <string name="step_4_description">Use the \'Upload Key File\' button in Settings, or manually place the JSON file in app/src/main/assets/ as \'service_account_key.json\'</string>
+    <string name="step_4_description">Use the 'Upload Key File' button in Settings, or manually place the JSON file in app/src/main/assets/ as 'service_account_key.json'</string>
     <string name="step_5_title">Create Google Spreadsheet</string>
     <string name="step_5_description">Create a new Google Spreadsheet and copy its ID from the URL.</string>
     <string name="step_6_title">Create Required Sheets</string>
-    <string name="step_6_description">Create the sheets: \'Guest List\', \'Volunteers\', \'Shifts\', \'Shift Types\', \'Volunteer Guest List\', \'Venues\' and \'Temp Guest List\' (dates in \'Temp Guest List\' must use the YYYY-MM-DD format).</string>
+    <string name="step_6_description">Create the sheets: 'Guest List', 'Volunteers', 'Shifts', 'Shift Types', 'Volunteer Guest List', 'Venues' and 'Temp Guest List' (dates in 'Temp Guest List' must use the YYYY-MM-DD format).</string>
     <string name="step_7_title">Set Up Sheet Headers</string>
     <string name="step_7_description">Add headers to each sheet. The app will create them automatically, but you can set them up manually if needed.</string>
     <string name="step_8_title">Share with Service Account</string>
@@ -410,25 +419,25 @@
     
     <!-- Active Volunteers Dialog -->
     <string name="volunteer_activity_status">Volunteer Activity Status</string>
-    <string name="active_volunteers_count">Active Volunteers: %d</string>
-    <string name="inactive_volunteers_count">Inactive Volunteers: %d</string>
+    <string name="active_volunteers_count">Active Volunteers: %1$d</string>
+    <string name="inactive_volunteers_count">Inactive Volunteers: %1$d</string>
     <string name="inactive_volunteers_label">Inactive Volunteers:</string>
     <string name="active">Active</string>
     <string name="inactive">Inactive</string>
     
     <!-- Cleanup Dialog -->
     <string name="warning">⚠️ Warning:</string>
-    <string name="cleanup_warning" formatted="false">This action will permanently delete %d volunteer%s and all their associated job records. This cannot be undone!</string>
-    <string name="delete_volunteers" formatted="false">Delete %d Volunteer%s</string>
+    <string name="cleanup_warning" formatted="false">This action will permanently delete %1$d volunteer%2$s and all their associated job records. This cannot be undone!</string>
+    <string name="delete_volunteers" formatted="false">Delete %1$d Volunteer%2$s</string>
     <string name="cancel">Cancel</string>
     
     <!-- Delete Volunteer Dialog -->
     <string name="delete_volunteer_title">Delete Volunteer</string>
-    <string name="delete_volunteer_confirm">Are you sure you want to delete %s?</string>
-    <string name="delete_volunteer_shift_count_one">This volunteer has %d shift recorded.</string>
-    <string name="delete_volunteer_shift_count_other">This volunteer has %d shifts recorded.</string>
-    <string name="delete_volunteer_also_delete_shifts_one">Also delete the %d shift</string>
-    <string name="delete_volunteer_also_delete_shifts_other">Also delete all %d shifts</string>
+    <string name="delete_volunteer_confirm">Are you sure you want to delete %1$s?</string>
+    <string name="delete_volunteer_shift_count_one">This volunteer has %1$d shift recorded.</string>
+    <string name="delete_volunteer_shift_count_other">This volunteer has %1$d shifts recorded.</string>
+    <string name="delete_volunteer_also_delete_shifts_one">Also delete the %1$d shift</string>
+    <string name="delete_volunteer_also_delete_shifts_other">Also delete all %1$d shifts</string>
     <string name="delete_volunteer_warning">⚠️ Warning: This action cannot be undone!</string>
     <string name="delete_volunteer_graph_warning">Note: Suspending a volunteer will affect the home page statistics graphs. Deleting their shifts will have an even greater impact on the accuracy of the graphs.</string>
     
@@ -436,8 +445,8 @@
     <string name="validating_file">Validating file...</string>
     <string name="file_validated_uploading">File validated! Uploading...</string>
     <string name="file_uploaded_successfully">File uploaded successfully!</string>
-    <string name="upload_failed">Upload failed: %s</string>
-    <string name="validation_failed">Validation failed: %s</string>
+    <string name="upload_failed">Upload failed: %1$s</string>
+    <string name="validation_failed">Validation failed: %1$s</string>
     <string name="key_file_found">Key file found</string>
     <string name="unknown">Unknown</string>
     
@@ -477,12 +486,12 @@
     <string name="recent_guests">Recent Guests</string>
     <string name="recent_volunteers">Recent Volunteers</string>
     <string name="recent_shifts">Recent Shifts</string>
-    <string name="latest_guest_phone">Guest: %s</string>
-    <string name="latest_guest_tablet">Latest Guest: %s</string>
-    <string name="latest_volunteer_phone">Volunteer: %s</string>
-    <string name="latest_volunteer_tablet">Latest Volunteer: %s</string>
-    <string name="latest_job_phone">Job: %s</string>
-    <string name="latest_job_tablet">Latest Job: %s</string>
+    <string name="latest_guest_phone">Guest: %1$s</string>
+    <string name="latest_guest_tablet">Latest Guest: %1$s</string>
+    <string name="latest_volunteer_phone">Volunteer: %1$s</string>
+    <string name="latest_volunteer_tablet">Latest Volunteer: %1$s</string>
+    <string name="latest_job_phone">Job: %1$s</string>
+    <string name="latest_job_tablet">Latest Job: %1$s</string>
     
     <!-- Stats and Graphs -->
     <string name="stats_and_graphs">Statistics &amp; Trends</string>
@@ -491,16 +500,16 @@
     <string name="syncing">Syncing...</string>
     <string name="last_update_just_now">just now</string>
     <string name="last_update_never_brief">—</string>
-    <string name="last_update_seconds_ago">%d sec ago</string>
+    <string name="last_update_seconds_ago">%1$d sec ago</string>
     <string name="last_update_min_sec_ago">%1$dmin %2$ds ago</string>
     <string name="last_update_hour_min_ago">%1$dh %2$dm ago</string>
-    <string name="last_update_days_ago">%dd ago</string>
-    <string name="last_update_line">Update · %s</string>
+    <string name="last_update_days_ago">%1$dd ago</string>
+    <string name="last_update_line">Update · %1$s</string>
     <string name="last_update_none_line">Update · —</string>
-    <string name="sync_pill_minutes_ago">%dmin ago</string>
-    <string name="sync_pill_hours_ago">%dh ago</string>
+    <string name="sync_pill_minutes_ago">%1$dmin ago</string>
+    <string name="sync_pill_hours_ago">%1$dh ago</string>
     <string name="sync_pill_hours_minutes_ago">%1$dh %2$dmin ago</string>
-    <string name="sync_pill_days_ago">%dd ago</string>
+    <string name="sync_pill_days_ago">%1$dd ago</string>
     <string name="sync_pill_days_hours_ago">%1$dd %2$dh ago</string>
     <string name="sync_pill_days_minutes_ago">%1$dd %2$dmin ago</string>
     <string name="sync_pill_days_hours_minutes_ago">%1$dd %2$dh %3$dmin ago</string>
@@ -515,6 +524,12 @@
     <string name="admin_auth_title">Admin Authentication</string>
     <string name="admin_auth_description">Scan your badge or QR code to verify your admin access</string>
     <string name="admin_auth_syncing">Loading data from Google Sheets…</string>
+    <string name="admin_auth_syncing_title">Preparing admin access</string>
+    <string name="admin_auth_syncing_subtitle">We\'re syncing with Google Sheets so your badge or QR code can be verified accurately.</string>
+    <string name="admin_auth_sync_wait_hint">Do not scan yet — authentication will unlock when sync completes</string>
+    <string name="admin_auth_sync_step_sheet">Checking spreadsheet structure</string>
+    <string name="admin_auth_sync_step_download">Downloading latest guest and volunteer data</string>
+    <string name="admin_auth_sync_step_verify">Refreshing admin profiles</string>
     <!-- Admin pre-check: repair sheet + sync before NFC/QR gate -->
     <string name="admin_precheck_sync_loading">Preparing admin access: checking the sheet and syncing…</string>
     <string name="admin_precheck_sync_failed_title">Could not prepare admin access</string>
@@ -522,8 +537,8 @@
     <string name="admin_precheck_sync_retry">Retry</string>
     <string name="admin_auth_ready">Hold your NFC badge near the device or scan your QR code</string>
     <string name="admin_auth_scan_qr">Scan QR Code</string>
-    <string name="admin_auth_granted">Welcome, %s! Admin access granted</string>
-    <string name="admin_auth_denied">%s does not have admin access</string>
+    <string name="admin_auth_granted">Welcome, %1$s! Admin access granted</string>
+    <string name="admin_auth_denied">%1$s does not have admin access</string>
     <string name="admin_auth_not_found">No matching profile found</string>
     <string name="admin_auth_try_again">Try Again</string>
     <string name="admin_auth_use_fingerprint">Use Fingerprint</string>
@@ -531,11 +546,11 @@
     <string name="admin_auth_biometric_prompt_title">Admin Authentication</string>
     <string name="admin_auth_biometric_prompt_subtitle">Verify your identity with biometrics</string>
     <string name="admin_auth_biometric_cancel">Use QR / NFC instead</string>
-    <string name="admin_auth_biometric_error">Biometric authentication failed: %s</string>
+    <string name="admin_auth_biometric_error">Biometric authentication failed: %1$s</string>
 
     <!-- Biometric Admin Login Settings -->
     <string name="biometric_admin_login_title">Fingerprint Admin Login</string>
-    <string name="biometric_admin_login_description">Allow using this device\'s fingerprint sensor to access admin mode</string>
+    <string name="biometric_admin_login_description">Allow using this device's fingerprint sensor to access admin mode</string>
     <string name="biometric_admin_login_not_available">Biometric authentication is not available on this device</string>
     <string name="biometric_admin_login_none_enrolled">No fingerprints are enrolled on this device. Please add a fingerprint in your device settings first.</string>
     <string name="biometric_admin_login_enabled">Fingerprint admin login enabled</string>
@@ -566,8 +581,21 @@
     <string name="setup_back">Back</string>
     <string name="setup_skip">Skip Setup</string>
     <string name="setup_finish">Finish Setup</string>
+    <string name="setup_welcome_title">Welcome to NoctuList</string>
+    <string name="setup_welcome_description">Set up your event management app in a few quick steps. You can change everything later in Settings.</string>
+    <string name="setup_get_started">Get started</string>
+    <string name="setup_step_progress">Step %1$d of %2$d</string>
+    <string name="setup_phase_personalize">Personalize</string>
+    <string name="setup_phase_connect">Connect Google Sheets</string>
+    <string name="setup_phase_finish">Finish</string>
+    <string name="setup_google_sheets_title">Connect Google Sheets</string>
+    <string name="setup_google_sheets_description">Link your spreadsheet and upload your service account key so NoctuList can sync your event data.</string>
+    <string name="setup_sheets_defaults_hint">Default sheet names work for most events. Expand below only if your spreadsheet uses different tab names.</string>
+    <string name="setup_sheets_customize">Customize sheet names</string>
+    <string name="setup_start_sync">Start sync</string>
+    <string name="setup_first_sync_ready">Everything is ready. Tap below to download your data from Google Sheets.</string>
     <string name="setup_language_title">Choose Your Language</string>
-    <string name="setup_language_description">Select the language you\'d like to use in the app</string>
+    <string name="setup_language_description">Select the language you'd like to use in the app</string>
     <string name="setup_theme_title">Pick a Theme</string>
     <string name="setup_theme_description">Choose how the app looks — you can always change this later in Settings</string>
     <string name="setup_color_profile_title">Color profile</string>
@@ -623,7 +651,7 @@
     <!-- Guest List Screen -->
     <string name="guest_list_title">Guest List</string>
     <string name="guest_list_management">Guest List Management</string>
-    <string name="guest_list_description">Manage guests for Groove and Le Terreau venues</string>
+    <string name="guest_list_description">Manage guests across all configured venues</string>
     <string name="venue_groove">Groove</string>
     <string name="venue_le_terreau">Le Terreau</string>
     <string name="add_guest">Add Guest</string>
@@ -634,9 +662,9 @@
     <string name="add_guest_additional_name_label">Guest name (%1$d)</string>
     <string name="last_synced">Last update:</string>
     <string name="just_now">Just now</string>
-    <string name="minutes_ago">%d minutes ago</string>
-    <string name="hours_ago">%d hours ago</string>
-    <string name="days_ago">%d days ago</string>
+    <string name="minutes_ago">%1$d minutes ago</string>
+    <string name="hours_ago">%1$d hours ago</string>
+    <string name="days_ago">%1$d days ago</string>
     <string name="search_guests_placeholder">Search guests by name, email, or phone...</string>
     <string name="filter_volunteer_benefits">Volunteer Benefits</string>
     <string name="filter_permanent_guests">Permanent guests</string>
@@ -646,7 +674,7 @@
     <string name="invitations_count">Invitations</string>
     <string name="total_invitations_count">Total Invitations</string>
     <string name="volunteer_label">Volunteer</string>
-    <string name="invitations_text">%d invitations</string>
+    <string name="invitations_text">%1$d invitations</string>
     <string name="view_benefits">View Benefits</string>
     <string name="delete_guest">Delete guest</string>
     <string name="edit_guest">Edit Guest</string>
@@ -673,17 +701,17 @@
     <string name="benefits_overview_info_button">Guide</string>
     <string name="benefits_overview_totals_section">Totals</string>
     <string name="benefits_overview_ranks_section">By rank</string>
-    <string name="benefits_overview_line_50_bar">50%% bar: %d</string>
+    <string name="benefits_overview_line_50_bar">50%% bar: %1$d</string>
     <string name="benefits_overview_line_free_entry">Free entry: %1$d · %2$d inv.</string>
-    <string name="benefits_overview_line_extraordinary">Extra: %d</string>
+    <string name="benefits_overview_line_extraordinary">Extra: %1$d</string>
     <string name="benefits_overview_line_future_tickets">Tickets: %1$d · %2$d inv.</string>
     <string name="current_benefits">✨ Current Benefits</string>
-    <string name="days_left">%d days left</string>
+    <string name="days_left">%1$d days left</string>
     <string name="expires_soon">Expires soon</string>
     <string name="free_entry">✅ Free Entry</string>
     <string name="friend_invitation">👥 Friend Invitation</string>
-    <string name="drink_tokens">🍺 %d Drink Tokens</string>
-    <string name="bar_discount">💰 %d%% Bar Discount</string>
+    <string name="drink_tokens">🍺 %1$d Drink Tokens</string>
+    <string name="bar_discount">💰 %1$d%% Bar Discount</string>
     <string name="extraordinary_benefits">💎 Extraordinary Benefits</string>
     
     <!-- Shifts Screen -->
@@ -752,12 +780,12 @@
     <string name="nfc_phone_unavailable_use_usb_reader">This device has no built-in NFC. Use the external reader option below (USB ACR122U or Bluetooth ACR1255U-J1).</string>
     <string name="nfc_disabled_enable">NFC is disabled. Enable NFC in your phone settings to scan cards.</string>
     <string name="nfc_uid_read_failed">Unable to read NFC card UID. Try again.</string>
-    <string name="nfc_uid_not_found">No volunteer or permanent guest found for NFC UID: %s</string>
+    <string name="nfc_uid_not_found">No volunteer or permanent guest found for NFC UID: %1$s</string>
     <string name="billeterie_nfc_no_match">No volunteer or permanent guest matches this card.</string>
-    <string name="nfc_reader_error">NFC reader error: %s</string>
-    <string name="external_reader_bt_blocked_hint">Bluetooth access for the external reader was denied. Tap below to open Android app settings, then allow Bluetooth / Nearby devices for this app. If you already chose \"Don\'t ask again\", you must enable it there.</string>
+    <string name="nfc_reader_error">NFC reader error: %1$s</string>
+    <string name="external_reader_bt_blocked_hint">Bluetooth access for the external reader was denied. Tap below to open Android app settings, then allow Bluetooth / Nearby devices for this app. If you already chose \"Don't ask again\", you must enable it there.</string>
     <string name="open_app_settings_for_reader">Open app settings</string>
-    <string name="last_nfc_uid_scanned">Last NFC UID scanned: %s</string>
+    <string name="last_nfc_uid_scanned">Last NFC UID scanned: %1$s</string>
     <string name="invalid_qr_or_nfc_data">Invalid QR/NFC data.</string>
     <string name="permanent_guest_label">Permanent guest</string>
     <string name="nfc_uid_multiple_matches_title">Multiple profiles found</string>
@@ -767,13 +795,13 @@
     <string name="volunteer_id">Volunteer ID</string>
     <string name="find_volunteer">Find Volunteer</string>
     <string name="please_enter_valid_volunteer_id">Please enter a valid volunteer ID</string>
-    <string name="volunteer_id_not_found">Volunteer with ID \'%s\' not found</string>
+    <string name="volunteer_id_not_found">Volunteer with ID '%1$s' not found</string>
     <string name="available_volunteers">Available volunteers:</string>
-    <string name="error_processing_qr_code">Error processing QR code: %s</string>
-    <string name="invalid_qr_code_format">Invalid QR code format: %s</string>
-    <string name="volunteer_not_found">Volunteer \'%1$s\' (ID: %2$s) not found in database. Please check if the volunteer data has been synced from Google Sheets.</string>
-    <string name="qr_code_for_volunteer">QR Code for volunteer: %s</string>
-    <string name="qr_code_subject">Volunteer QR Code - %s</string>
+    <string name="error_processing_qr_code">Error processing QR code: %1$s</string>
+    <string name="invalid_qr_code_format">Invalid QR code format: %1$s</string>
+    <string name="volunteer_not_found">Volunteer '%1$s' (ID: %2$s) not found in database. Please check if the volunteer data has been synced from Google Sheets.</string>
+    <string name="qr_code_for_volunteer">QR Code for volunteer: %1$s</string>
+    <string name="qr_code_subject">Volunteer QR Code - %1$s</string>
     <string name="share_qr_code">Share QR Code</string>
     <string name="share">Share</string>
     <string name="send_by_mail">Send by mail</string>
@@ -781,19 +809,19 @@
     
     <!-- Guest QR Code Related -->
     <string name="guest_qr_code">Guest QR Code</string>
-    <string name="qr_code_for_guest">QR Code for guest: %s</string>
-    <string name="qr_code_subject_guest">Guest QR Code - %s</string>
+    <string name="qr_code_for_guest">QR Code for guest: %1$s</string>
+    <string name="qr_code_subject_guest">Guest QR Code - %1$s</string>
     <string name="scan_guest_qr_code">Scan Guest QR Code</string>
     <string name="invalid_guest_qr_code">Invalid QR code. This is not a guest QR code.</string>
-    <string name="guest_not_found">Guest \'%s\' not found in database.</string>
+    <string name="guest_not_found">Guest '%1$s' not found in database.</string>
     <string name="enter_guest_name_manually">Enter guest name manually:</string>
     <string name="manual_guest_input">Enter Guest Name</string>
     <string name="find_guest">Find Guest</string>
     <string name="available_guests">Available guests:</string>
     <string name="please_enter_guest_name">Please enter a valid guest name</string>
-    <string name="invalid_input">Invalid input: %s</string>
+    <string name="invalid_input">Invalid input: %1$s</string>
     <string name="guest_email_input_title">Enter Email Address</string>
-    <string name="guest_email_input_message">This guest doesn\'t have an email address in the database. Please enter an email address to send the QR code to:</string>
+    <string name="guest_email_input_message">This guest doesn't have an email address in the database. Please enter an email address to send the QR code to:</string>
     <string name="continue_button">Continue</string>
     <string name="grant_permission">Grant Permission</string>
     
@@ -830,9 +858,16 @@
     <string name="email_association_name_hint">Collectif Nocturne</string>
     <string name="email_association_name_description">Used as default signature for the Digital Wallet Pass branding and sender name.</string>
     <string name="email_include_digital_wallet_pass_label">Include Digital Wallet Pass</string>
-    <string name="email_include_digital_wallet_pass_description">Attach a Digital Wallet Pass (.pkpass) that works with Apple Wallet and compatible Android wallet apps</string>
+    <string name="email_include_digital_wallet_pass_description">Attach a signed Digital Wallet Pass (.pkpass) for Apple Wallet and Google Pay when a Pass Type ID certificate is configured</string>
+    <string name="email_wallet_pass_cert_title">Apple Wallet signing certificate</string>
+    <string name="email_wallet_pass_cert_description">Apple Wallet requires a Pass Type ID certificate (.p12) from your Apple Developer account. Google Pay works without it.</string>
+    <string name="email_wallet_pass_cert_upload">Upload Pass Type ID certificate (.p12)</string>
+    <string name="email_wallet_pass_cert_password_label">Certificate password</string>
+    <string name="email_wallet_pass_cert_password_hint">Password for the .p12 file</string>
+    <string name="email_wallet_pass_cert_configured">Apple Wallet signing is ready (%1$s · Team %2$s).</string>
+    <string name="email_wallet_pass_cert_missing">No certificate configured — passes work with Google Pay but will not open in Apple Wallet.</string>
     <string name="email_include_logo_label">Include Association Logo</string>
-    <string name="email_include_logo_description">Add your organization\'s logo to the email</string>
+    <string name="email_include_logo_description">Add your organization's logo to the email</string>
     <string name="email_logo_upload">Upload Logo</string>
     <string name="email_logo_change">Change Logo</string>
     <string name="email_logo_remove">Remove Logo</string>
@@ -844,29 +879,70 @@
     <!-- Gmail OAuth -->
     <string name="email_gmail_auth_title">Gmail API Authentication</string>
     <string name="email_gmail_auth_description">Connect your Gmail account to send emails automatically via Gmail API</string>
+    <string name="email_gmail_oauth_client_description">Desktop requires a Google OAuth client JSON (Desktop app type) with Gmail API enabled. Download it from Google Cloud Console, then upload it here before signing in.</string>
+    <string name="email_gmail_oauth_client_upload">Upload OAuth client JSON</string>
+    <string name="email_gmail_oauth_client_configured">OAuth client configured</string>
+    <string name="email_gmail_oauth_client_missing">OAuth client JSON missing — upload it before signing in with Google</string>
+    <string name="email_gmail_use_service_account">Use same service account as Google Sheets</string>
+    <string name="email_gmail_use_service_account_description">Uses the service account JSON from Sync settings. Requires Gmail API enabled and domain-wide delegation on Google Workspace.</string>
+    <string name="email_gmail_service_account_sender_label">Sender email address</string>
+    <string name="email_gmail_service_account_sender_description">The Gmail or Google Workspace address that sends emails on behalf of the service account.</string>
+    <string name="email_gmail_service_account_missing">Service account key missing — upload it in Sync settings first</string>
+    <string name="email_gmail_service_account_configured">Service account key found</string>
+    <string name="email_gmail_oauth_help_title">Gmail API Help</string>
+    <string name="email_gmail_help_tab_oauth">OAuth client</string>
+    <string name="email_gmail_help_tab_service_account">Service account</string>
+    <string name="email_gmail_oauth_help_intro">Follow these steps to obtain and configure the OAuth client JSON for sending emails via Gmail API on desktop.</string>
+    <string name="email_gmail_oauth_step_1_title">Open Google Cloud Console</string>
+    <string name="email_gmail_oauth_step_1_description">Go to console.cloud.google.com and select your project (or create a new one).</string>
+    <string name="email_gmail_oauth_step_2_title">Enable Gmail API</string>
+    <string name="email_gmail_oauth_step_2_description">In APIs &amp; Services &gt; Library, search for "Gmail API" and enable it.</string>
+    <string name="email_gmail_oauth_step_3_title">Configure OAuth consent screen</string>
+    <string name="email_gmail_oauth_step_3_description">In APIs &amp; Services &gt; OAuth consent screen, fill in the required fields. If the app is in Testing mode, add your Gmail address as a test user.</string>
+    <string name="email_gmail_oauth_step_4_title">Create a Desktop OAuth client</string>
+    <string name="email_gmail_oauth_step_4_description">In APIs &amp; Services &gt; Credentials, click Create Credentials &gt; OAuth client ID. Choose Application type: Desktop app, then create and download the JSON file.</string>
+    <string name="email_gmail_oauth_step_5_title">Upload the JSON file</string>
+    <string name="email_gmail_oauth_step_5_description">Use the "Upload OAuth client JSON" button in these settings to import the downloaded file.</string>
+    <string name="email_gmail_oauth_step_6_title">Sign in with Google</string>
+    <string name="email_gmail_oauth_step_6_description">Click "Sign in with Google". Your browser opens to authorize NoctuList. After approval, the app receives access automatically (local ports 8888, 8765 or 9090).</string>
+    <string name="email_gmail_service_account_help_intro">When "Use same service account as Google Sheets" is enabled, enter the real email address that should send messages. The service account impersonates this mailbox via Google Workspace domain-wide delegation.</string>
+    <string name="email_gmail_service_account_help_sender_title">What to enter</string>
+    <string name="email_gmail_service_account_help_sender_body">The visible sending address — a Gmail or Google Workspace mailbox on your domain, for example contact@your-association.org or no-reply@your-domain.org.</string>
+    <string name="email_gmail_service_account_help_not_title">Do not use</string>
+    <string name="email_gmail_service_account_help_not_body">The service account email shown in Sync settings (ending with .iam.gserviceaccount.com). That address is only for API authentication, not for sending.</string>
+    <string name="email_gmail_service_account_help_requirements_title">Requirements</string>
+    <string name="email_gmail_service_account_help_requirements_body">This mode only works with Google Workspace (not a personal @gmail.com account alone). Gmail API must be enabled on the same Google Cloud project, and domain-wide delegation must be configured.</string>
+    <string name="email_gmail_service_account_help_step_1_title">Enable Gmail API</string>
+    <string name="email_gmail_service_account_help_step_1_description">In Google Cloud Console, enable the Gmail API on the same project as your service account.</string>
+    <string name="email_gmail_service_account_help_step_2_title">Configure domain-wide delegation</string>
+    <string name="email_gmail_service_account_help_step_2_description">In Google Workspace Admin Console: Security &gt; API controls &gt; Domain-wide delegation. Add your service account Client ID with scope https://www.googleapis.com/auth/gmail.send</string>
+    <string name="email_gmail_service_account_help_step_3_title">Enter the sender address</string>
+    <string name="email_gmail_service_account_help_step_3_description">In Email settings, enable the service account toggle, enter the Workspace address that should send emails, then click Sign in with Google to validate.</string>
+    <string name="email_gmail_service_account_help_no_workspace">No Google Workspace? Disable the service account toggle and use the OAuth client tab instead.</string>
+    <string name="invalid_gmail_oauth_client_json">Invalid Gmail OAuth client JSON. Use a Desktop OAuth client file from Google Cloud Console.</string>
     <string name="email_gmail_sign_in">Sign in with Google</string>
     <string name="email_gmail_sign_out">Sign out</string>
-    <string name="email_gmail_signed_in_as">Signed in as: %s</string>
+    <string name="email_gmail_signed_in_as">Signed in as: %1$s</string>
     <string name="email_gmail_not_signed_in">Not signed in</string>
     <string name="email_gmail_auth_success">Successfully authenticated with Gmail</string>
-    <string name="email_gmail_auth_error">Failed to authenticate with Gmail: %s</string>
+    <string name="email_gmail_auth_error">Failed to authenticate with Gmail: %1$s</string>
     <string name="email_gmail_auth_revoked">Gmail access revoked</string>
     
     <!-- Email Send Dialog -->
     <string name="email_confirm_send_title">Send QR Code by Email</string>
-    <string name="email_confirm_send_message">Send QR code to %s?</string>
+    <string name="email_confirm_send_message">Send QR code to %1$s?</string>
     <string name="email_send_manual">Send Manually (HTML)</string>
     <string name="email_send_api">Send via Gmail API</string>
     <string name="email_send_manual_description">Open email app with HTML content and QR code attachment</string>
     <string name="email_send_api_description">Send automatically via Gmail API with embedded images</string>
     <string name="email_no_email_title">No Email Address</string>
-    <string name="email_no_email_message">This volunteer doesn\'t have an email address. Please add one first.</string>
+    <string name="email_no_email_message">This volunteer doesn't have an email address. Please add one first.</string>
     <string name="email_no_email_guest_staff_message">This guest has no email address on file. An administrator must add one before the QR can be sent from this screen.</string>
     <string name="email_send">Send</string>
     <string name="email_sending">Sending…</string>
     <string name="email_error_title">Email Error</string>
-    <string name="email_error_message">Could not open email app: %s</string>
-    <string name="email_api_error_message">Failed to send email via Gmail API: %s</string>
+    <string name="email_error_message">Could not open email app: %1$s</string>
+    <string name="email_api_error_message">Failed to send email via Gmail API: %1$s</string>
     <string name="email_api_success">Email sent successfully via Gmail API</string>
     <string name="email_api_not_authenticated">Gmail API not authenticated. Please sign in first in Settings.</string>
     <string name="email_open_settings">Configure Email</string>
@@ -896,7 +972,7 @@
     <string name="status">Status:</string>
     <string name="total_shifts">Total Shifts</string>
     <string name="last_shift">Last Shift</string>
-    <string name="shift_history">Shift History (%d shifts)</string>
+    <string name="shift_history">Shift History (%1$d shifts)</string>
     <string name="no_shifts_recorded">No shifts recorded</string>
     <string name="actions">Actions</string>
     <string name="not_provided">Not provided</string>
@@ -904,8 +980,8 @@
     <!-- Additional Volunteer Panel Strings -->
     <string name="expired">Expired</string>
     <string name="benefit_details">Benefit Details</string>
-    <string name="more_shifts">… and %d more shifts</string>
-    <string name="years_old">%d years old</string>
+    <string name="more_shifts">… and %1$d more shifts</string>
+    <string name="years_old">%1$d years old</string>
     
     <!-- Date & Time Format Settings -->
     <string name="date_time_format_title">Date &amp; Time Format</string>
@@ -920,10 +996,13 @@
     <string name="date_change_offset_description">Hours to add before the date changes (e.g., +3 hours = 03:00). Benefits and shifts will last until this time instead of midnight.</string>
     <string name="date_change_offset_hours">%1$d hours</string>
     <string name="date_change_offset_zero">0 hours (midnight)</string>
-    <string name="date_change_offset_time">%1$02d:00</string>
-    <string name="date_change_offset_previous_day">%1$02d:00 previous day</string>
+    <string name="date_change_offset_time">%1$s</string>
+    <string name="date_change_offset_previous_day">%1$s previous day</string>
     <string name="date_change_offset_increase">Increase hours</string>
     <string name="date_change_offset_decrease">Decrease hours</string>
+    <string name="dashboard_calculation_time_info">Calculation time: %1$s (date change offset: %2$s)</string>
+    <string name="dashboard_date_offset_hours">%1$s h</string>
+    <string name="dashboard_date_offset_zero">0 h (midnight)</string>
     
     <!-- Multiple Benefits -->
     <string name="active_benefits_multiple_ranks">Active Benefits from Multiple Ranks:</string>
@@ -995,14 +1074,14 @@
     <string name="sync_error_occurred">An error occurred during synchronization</string>
     <string name="sync_not_synced_title">App Not Synced</string>
     <string name="sync_not_synced_message">The application is no longer synchronized. Please use the resync button to update your data.</string>
-    <string name="sync_error_details">Error: %s</string>
+    <string name="sync_error_details">Error: %1$s</string>
     <string name="sync_error_retry">Retry Sync</string>
     <string name="sync_error_dismiss">Dismiss</string>
-    <string name="sync_error_dont_tell_today">Don\'t tell me again today</string>
+    <string name="sync_error_dont_tell_today">Don't tell me again today</string>
     
     <!-- Device Time/Date Error -->
     <string name="sync_error_device_time_title">⏰ Device Time/Date Incorrect</string>
-    <string name="sync_error_device_time_message">Your device\'s time or date is incorrect. Google Sheets API requires accurate time synchronization to work properly.</string>
+    <string name="sync_error_device_time_message">Your device's time or date is incorrect. Google Sheets API requires accurate time synchronization to work properly.</string>
     <string name="sync_error_device_time_solution">How to fix:\n\n1. Go to Settings\n2. Look for \"Date &amp; Time\" or \"System\"\n3. Enable \"Automatic date &amp; time\" or \"Set time automatically\"\n4. If not available, manually set the correct date and time\n5. Restart the app and try syncing again\n\nCommon on older tablets – please check your device settings!</string>
     <string name="sync_error_device_time_open_settings">Open Settings</string>
     
@@ -1045,7 +1124,7 @@
     <string name="sync_advice_rate_limit">• Wait 1–2 minutes before retrying\n• The app will automatically retry with backoff\n• Consider reducing sync frequency in settings</string>
     <string name="sync_advice_authentication">• Check your service account key file\n• Verify the key is uploaded in Settings\n• Re-upload the key if needed</string>
     <string name="sync_advice_permission">• Share your spreadsheet with the service account email\n• Grant Editor access to the service account\n• Check the account email in your service key file</string>
-    <string name="sync_advice_network">• Check your internet connection\n• Verify Wi-Fi or mobile data is enabled\n• Try again when connection is stable\n• Make sure you\'re not in airplane mode</string>
+    <string name="sync_advice_network">• Check your internet connection\n• Verify Wi-Fi or mobile data is enabled\n• Try again when connection is stable\n• Make sure you're not in airplane mode</string>
     <string name="sync_advice_not_found">• Check the Spreadsheet ID in Settings\n• Verify the sheet names exist\n• Ensure the spreadsheet is accessible</string>
     <string name="sync_advice_generic">• Try the sync again\n• Check your Google Sheets settings\n• Visit Settings to verify your configuration</string>
 
@@ -1111,7 +1190,7 @@
     <string name="xlsx_export_complete">XLSX Export Complete</string>
     <string name="xlsx_export_success_message">Your spreadsheet has been created successfully and is ready to share</string>
     <string name="file_name">File Name</string>
-    <string name="file_size">Size: %s</string>
+    <string name="file_size">Size: %1$s</string>
     <string name="graph_preview">Graph preview</string>
     <string name="share_graph">Share graph</string>
     <string name="open_with">Open with</string>
@@ -1127,7 +1206,7 @@
     <string name="nav_benefits_tablet">Benefits Overview</string>
     <string name="nav_settings_tablet">Settings &amp; Configuration</string>
     <string name="volunteer_manager_tablet">Comprehensive volunteer management system</string>
-    <string name="guest_list_management_tablet">Complete guest list management for both venues</string>
+    <string name="guest_list_management_tablet">Complete guest list management across all configured venues</string>
     <string name="volunteer_benefits_overview_tablet">Detailed volunteer benefits and status tracking</string>
     <string name="shift_tracking_tablet">Complete shift tracking and job management</string>
     <string name="shield_optimized">Optimized for NVIDIA Shield tablets</string>
@@ -1152,10 +1231,10 @@
     
     <!-- Entry Validation -->
     <string name="validate_entry">Validate Entry</string>
-    <string name="validate_entry_description">This volunteer has an unused free entry benefit from a can\'t enjoy evening shift. Slide to confirm their entry.</string>
+    <string name="validate_entry_description">This volunteer has an unused free entry benefit from a can't enjoy evening shift. Slide to confirm their entry.</string>
     <string name="validate_entry_description_one_future">This volunteer has one future event entry left (single use). Slide to confirm this entry.</string>
-    <string name="validate_entry_description_n_remaining">This volunteer has %d future event entries left (single use). Slide to confirm one entry.</string>
-    <string name="validate_entry_description_with_invites">Entry for the volunteer + %d guest(s). Slide to confirm.</string>
+    <string name="validate_entry_description_n_remaining">This volunteer has %1$d future event entries left (single use). Slide to confirm one entry.</string>
+    <string name="validate_entry_description_with_invites">Entry for the volunteer + %1$d guest(s). Slide to confirm.</string>
     <string name="validate_entry_description_solo">Solo entry (no guests). Slide to confirm.</string>
     <string name="slide_to_confirm">Slide to confirm entry</string>
     <string name="future_entry_group_label_invites">%1$d entry left (+%2$d inv.)</string>
@@ -1166,9 +1245,9 @@
     <!-- Activity Status -->
     <string name="activity_status_never_worked">Never worked</string>
     <string name="activity_status_active_today">Active (today)</string>
-    <string name="activity_status_active_days_ago">Active (%d days ago)</string>
-    <string name="activity_status_active_months_ago">Active (%d months ago)</string>
-    <string name="activity_status_inactive_years_ago">Inactive (%d years ago)</string>
+    <string name="activity_status_active_days_ago">Active (%1$d days ago)</string>
+    <string name="activity_status_active_months_ago">Active (%1$d months ago)</string>
+    <string name="activity_status_inactive_years_ago">Inactive (%1$d years ago)</string>
     <string name="legend_badge_label">Legend</string>
 
     <!-- Billeterie Scanner -->
@@ -1182,8 +1261,24 @@
     <string name="billeterie_scanner_guest_found">Guest Found</string>
     <string name="billeterie_scanner_validate_ticket">Validate Ticket</string>
     <string name="billeterie_scanner_ready">Ready to scan…</string>
-    <string name="billeterie_scanner_with_invites">+%d invitation(s)</string>
+    <string name="billeterie_scanner_with_invites">+%1$d invitation(s)</string>
     <string name="billeterie_scanner_error">Error</string>
+    <string name="desktop_billeterie_webcam_section">QR code (webcam)</string>
+    <string name="desktop_billeterie_nfc_section">NFC card reader</string>
+    <string name="desktop_billeterie_nfc_connected">Reader connected — ready to scan</string>
+    <string name="desktop_billeterie_nfc_disconnected">No NFC reader detected — connect a USB or Bluetooth reader in Settings</string>
+    <string name="desktop_billeterie_nfc_reading">Reading card…</string>
+    <string name="desktop_billeterie_scan_next_shortcut">Enter ↵ to scan next person</string>
+    <string name="desktop_billeterie_camera_stop">Stop webcam</string>
+    <string name="desktop_qr_start_webcam">Start webcam</string>
+    <string name="desktop_qr_open_image">Open QR image…</string>
+    <string name="desktop_qr_opening_camera">Opening camera…</string>
+    <string name="desktop_qr_point_at_code">Point the QR code at the camera</string>
+    <string name="desktop_qr_opening_file_picker">Choose an image file…</string>
+    <string name="desktop_qr_no_webcam_mac">No webcam detected. Grant camera access in System Settings, or open a QR image file.</string>
+    <string name="desktop_qr_no_webcam_linux">No webcam detected. Check camera permissions (V4L2/PipeWire) and that you are in the video group, or open a QR image file.</string>
+    <string name="desktop_qr_no_webcam_generic">No webcam detected. Check camera permissions, or open a QR image file.</string>
+    <string name="desktop_qr_no_frames">Camera opened but no video frames received. Check camera permissions.</string>
 
     <!-- Admin Setup (first admin creation) -->
     <string name="admin_setup_title">Create First Admin</string>
@@ -1202,7 +1297,7 @@
     <string name="admin_setup_access_desc">How would you like to log in as the first admin?</string>
     <string name="admin_setup_access_explained">Pick one option below.\n\n• QR code — shows a code you scan from the welcome screen. Good for sharing with another organizer or phone.\n\n• NFC card — links a card or tag you tap on this device for quick admin access.</string>
     <string name="admin_setup_created_line">%1$s was added as an administrator.</string>
-    <string name="admin_setup_done_title">You\'re all set</string>
+    <string name="admin_setup_done_title">You're all set</string>
     <string name="admin_setup_done_message">%1$s can open admin mode from the welcome screen using the option you chose. You can add or change methods later in the app.</string>
     <string name="admin_setup_btn_skip">Skip</string>
     <string name="admin_setup_btn_qr">QR code</string>
@@ -1214,13 +1309,13 @@
     <string name="admin_setup_use_nfc_desc">Assign an NFC card for admin login</string>
     <string name="admin_setup_creating">Creating admin…</string>
     <string name="admin_setup_success">Admin created successfully!</string>
-    <string name="admin_setup_error">Failed to create admin: %s</string>
+    <string name="admin_setup_error">Failed to create admin: %1$s</string>
     <string name="admin_setup_qr_title">Admin QR Code</string>
     <string name="admin_setup_qr_description">Share this QR code to use for admin login. You can share it via the button below or enter the email manually.</string>
     <string name="admin_setup_nfc_assigned">NFC card assigned! You can now use this card for admin login.</string>
     <string name="admin_setup_done">Done</string>
     <string name="admin_setup_skip">Skip for Now</string>
-    <string name="admin_setup_no_admin_warning">Warning: Without an admin, you won\'t be able to access admin mode.</string>
+    <string name="admin_setup_no_admin_warning">Warning: Without an admin, you won't be able to access admin mode.</string>
 
     <!-- Announcements -->
     <string name="settings_category_announcements">Announcements</string>
@@ -1253,10 +1348,16 @@
     <string name="announcement_sent_error">Failed to send announcement</string>
     <string name="announcement_popup_title">Announcement</string>
     <string name="announcement_popup_close">Close</string>
-    <string name="announcement_popup_from">From: %s</string>
+    <string name="announcement_popup_from">From: %1$s</string>
 
     <!-- External Bluetooth NFC reader (ACR1255U-J1) -->
     <string name="settings_category_external_reader">Bluetooth NFC reader</string>
+    <string name="settings_category_pcsc_reader">USB NFC reader</string>
+    <string name="pcsc_reader_description">Connect an ACS ACR122U or compatible USB NFC reader. macOS and Windows include PC/SC support automatically; on Linux install and start pcscd.</string>
+    <string name="desktop_external_reader_description">USB readers (ACR122U) work when plugged in. For Bluetooth (ACR1255U-J1), pair the reader in your computer's Bluetooth settings first, then select it below. Once configured, scanning works automatically.</string>
+    <string name="desktop_ble_reader_picker_subtitle">Pair the ACR1255U-J1 in system Bluetooth settings, then pick the reader here. Readers already visible to PC/SC are ready to use immediately.</string>
+    <string name="desktop_ble_reader_not_found">No ACR1255U-J1 reader found. Power it on, pair it in Bluetooth settings, and ensure the ACS PC/SC driver is installed.</string>
+    <string name="desktop_ble_reader_pcsc_ready">PC/SC ready · %1$s</string>
     <string name="external_reader_description">Select your external NFC reader here. It may show in Android Bluetooth settings, but you cannot connect from there—use this screen to choose the reader for the app.</string>
     <string name="external_reader_connected_label">Selected reader</string>
     <string name="external_reader_pick_button">Scan for Bluetooth readers</string>
@@ -1290,4 +1391,29 @@
     <string name="ble_reader_enable_bluetooth">Enable Bluetooth</string>
     <string name="ble_reader_not_acr1255">Selected Bluetooth device is not an ACS ACR1255U-J1 reader.</string>
     <string name="ble_reader_verification_inconclusive_saved">Reader check was inconclusive. Device saved anyway.</string>
+
+    <!-- UI strings (shared components / desktop) -->
+    <string name="noctulist_admin_title">NoctuList Admin</string>
+    <string name="download">Download</string>
+    <string name="download_complete_opening_installer">Download complete — opening installer…</string>
+    <string name="select_date">Select Date</string>
+    <string name="select_time">Select Time</string>
+    <string name="date_time_label">Date &amp; Time</string>
+    <string name="dropdown_no_volunteers_found">No volunteers found</string>
+    <string name="open_in_browser">Open in browser: %1$s</string>
+    <string name="desktop_app_icon_unavailable">App icon customization is not available on desktop.</string>
+    <string name="minutes_short">min</string>
+    <string name="selecting_file">Selecting file…</string>
+    <string name="action_cancelled">Cancelled</string>
+    <string name="invalid_service_account_json">Invalid service account JSON</string>
+    <string name="upload_failed_generic">Upload failed</string>
+
+    <!-- Desktop admin navigation -->
+    <string name="desktop_admin_nav_layout_title">Admin menu layout</string>
+    <string name="desktop_admin_nav_layout_description">Choose where the admin navigation appears on desktop</string>
+    <string name="desktop_admin_nav_layout_bottom">Bottom (tablet style)</string>
+    <string name="desktop_admin_nav_layout_left">Left sidebar</string>
+    <string name="desktop_admin_nav_layout_right">Right sidebar</string>
+    <string name="desktop_admin_nav_expand">Expand menu</string>
+    <string name="desktop_admin_nav_collapse">Collapse menu</string>
 </resources>

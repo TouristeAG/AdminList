@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.toArgb
 import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.platform.PlatformContext
 import com.eventmanager.app.platform.createAppStorage
+import com.eventmanager.app.platform.isDesktop
 import java.util.Calendar
 
 private val DarkColorScheme = darkColorScheme(
@@ -134,6 +135,7 @@ fun EventManagerTheme(
     themeMode: ThemeMode,
     platformContext: PlatformContext? = null,
     settingsManager: SettingsManager? = null,
+    themeRefreshNonce: Int = 0,
     content: @Composable () -> Unit
 ) {
     val sm = settingsManager ?: remember(platformContext) {
@@ -149,12 +151,17 @@ fun EventManagerTheme(
     val colorScheme = if (sm != null) {
         val calendar = Calendar.getInstance()
         val isWomensDay = calendar.get(Calendar.MONTH) == Calendar.MARCH && calendar.get(Calendar.DAY_OF_MONTH) == 8
-        val colorThemeName = if (isWomensDay && sm.isSeasonalFunEnabled()) "feminist_violet" else sm.getColorTheme()
-        when {
-            colorThemeName == "custom" -> loadCustomThemeColorScheme(sm, darkTheme)
-            colorThemeName != "system" -> ColorThemes.getThemeByName(colorThemeName).toColorScheme(darkTheme)
-            darkTheme -> DarkColorScheme
-            else -> LightColorScheme
+        val colorThemeName = remember(themeRefreshNonce, sm, platformContext) {
+            val raw = if (isWomensDay && sm.isSeasonalFunEnabled()) "feminist_violet" else sm.getColorTheme()
+            if (platformContext?.isDesktop == true && raw == "custom") "system" else raw
+        }
+        remember(themeMode, darkTheme, themeRefreshNonce, colorThemeName) {
+            when {
+                colorThemeName == "custom" -> loadCustomThemeColorScheme(sm, darkTheme)
+                colorThemeName != "system" -> ColorThemes.getThemeByName(colorThemeName).toColorScheme(darkTheme)
+                darkTheme -> DarkColorScheme
+                else -> LightColorScheme
+            }
         }
     } else {
         if (darkTheme) DarkColorScheme else LightColorScheme

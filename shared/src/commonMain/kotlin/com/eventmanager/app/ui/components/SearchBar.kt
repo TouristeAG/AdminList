@@ -128,7 +128,8 @@ fun SearchBarWithFilter(
     selectedFilter: String? = null,
     onFilterChange: (String?) -> Unit = {},
     modifier: Modifier = Modifier,
-    includeFilterAllMenuItem: Boolean = true
+    includeFilterAllMenuItem: Boolean = true,
+    requestFocusTrigger: Int = 0
 ) {
     BoxWithConstraints(modifier = modifier) {
         val isPhone = maxWidth < 600.dp
@@ -145,7 +146,8 @@ fun SearchBarWithFilter(
                 searchText = searchText,
                 onSearchTextChange = onSearchTextChange,
                 placeholder = placeholder,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                requestFocusTrigger = requestFocusTrigger
             )
 
             if (filterOptions.isNotEmpty()) {

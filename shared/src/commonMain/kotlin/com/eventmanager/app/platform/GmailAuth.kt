@@ -6,6 +6,7 @@ package com.eventmanager.app.platform
 interface GmailAuth {
     val isSignedIn: Boolean
     val accountEmail: String?
+    val lastSignInError: String?
     suspend fun signIn(): Boolean
     suspend fun signOut()
     suspend fun sendEmail(

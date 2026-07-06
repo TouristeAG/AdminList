@@ -54,6 +54,7 @@ import com.eventmanager.app.R
 import com.eventmanager.app.utils.QRCodeUtils
 import com.eventmanager.app.data.sync.formatDate
 import com.eventmanager.app.data.sync.settingsManagerFor
+import com.eventmanager.app.platform.createPlatformContext
 import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.data.sync.GmailAuthService
 import com.eventmanager.app.data.sync.GmailSendService
@@ -154,18 +155,17 @@ private fun FutureEntrySelectionBlock(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun VolunteerBenefitsPanel(
+actual fun VolunteerBenefitsPanel(
     volunteer: Volunteer,
     volunteerBenefitStatus: VolunteerBenefitStatus,
     volunteerJobs: List<Job>,
     venues: List<VenueEntity>,
-    jobTypeConfigs: List<JobTypeConfig> = emptyList(),
+    jobTypeConfigs: List<JobTypeConfig>,
     onClose: () -> Unit,
-    modifier: Modifier = Modifier,
-    onConfirmEntry: ((Job, Int) -> Unit)? = null,
-    onAssignNfcUid: ((Volunteer, String) -> Unit)? = null,
-    /** When true (e.g. Billeterie), hide NFC/QR, identifiers, shift history; future-entry UI stays (no shift breakdown). */
-    readOnly: Boolean = false
+    modifier: Modifier,
+    onConfirmEntry: ((Job, Int) -> Unit)?,
+    onAssignNfcUid: ((Volunteer, String) -> Unit)?,
+    readOnly: Boolean
 ) {
     val context = LocalContext.current
     val isPhone = !isTablet()
@@ -1018,7 +1018,9 @@ fun VolunteerBenefitsPanel(
     }
 
     if (showNfcDialog) {
+        val platformContext = remember { createPlatformContext(context) }
         AddNfcUidDialog(
+            platformContext = platformContext,
             onDismiss = { showNfcDialog = false },
             onConfirmUid = { uid ->
                 onAssignNfcUid?.invoke(volunteer, uid)

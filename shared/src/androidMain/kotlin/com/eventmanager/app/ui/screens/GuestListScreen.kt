@@ -86,7 +86,7 @@ private fun Modifier.readOnlyPhoneProfileScrimDismiss(enabled: Boolean, onDismis
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun GuestListScreen(
+actual fun GuestListScreen(
     guests: List<Guest>,
     volunteers: List<Volunteer>,
     jobs: List<Job>,
@@ -97,14 +97,14 @@ fun GuestListScreen(
     onUpdateGuest: (Guest) -> Unit,
     onUpdateVolunteer: (Volunteer) -> Unit,
     onDeleteGuest: (Guest) -> Unit,
-    onRefreshTemporaryGuests: () -> Unit = {},
-    onConfirmEntry: ((Job, Int) -> Unit)? = null,
-    @Suppress("UNUSED_PARAMETER") isSyncing: Boolean = false,
-    @Suppress("UNUSED_PARAMETER") lastSyncTime: Long = 0L,
-    scrollBehavior: String = SettingsManager.FULL_SCROLL,
+    onRefreshTemporaryGuests: () -> Unit,
+    onConfirmEntry: ((Job, Int) -> Unit)?,
+    @Suppress("UNUSED_PARAMETER") isSyncing: Boolean,
+    @Suppress("UNUSED_PARAMETER") lastSyncTime: Long,
+    scrollBehavior: String,
     /** Billeterie: view-only list and detail panels (no add/edit/delete/NFC/QR); history/future timeline and future-entry validate allowed. */
-    readOnly: Boolean = false
-) {
+    readOnly: Boolean,
+    @Suppress("UNUSED_PARAMETER") searchFocusTick: Int) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val settingsManager = remember { settingsManagerFor(context) }

@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.net.URI
 import java.util.Properties
 
 plugins {
@@ -47,6 +48,8 @@ kotlin {
                 implementation(libs.sqlite.bundled)
                 implementation("androidx.sqlite:sqlite:2.5.0")
                 implementation(libs.zxing.core)
+                implementation("org.bouncycastle:bcprov-jdk18on:1.78.1")
+                implementation("org.bouncycastle:bcpkix-jdk18on:1.78.1")
                 implementation("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose:2.8.4")
                 implementation("org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose:2.8.4")
                 implementation("org.jetbrains.androidx.navigation:navigation-compose:2.8.0-alpha10")
@@ -94,9 +97,13 @@ kotlin {
         val desktopMain by getting {
             dependencies {
                 implementation(compose.desktop.currentOs)
+                implementation(files("${rootProject.projectDir}/shared/libs/smartcardio-api-0.1.7.jar"))
+                implementation(libs.apdu4j.jnasmartcardio)
+                implementation(libs.jna)
                 implementation(libs.kotlinx.coroutines.swing)
                 implementation(libs.sqlite.bundled)
                 implementation(libs.webcam.capture)
+                implementation(libs.webcam.capture.driver.native)
                 implementation(libs.poi.ooxml)
                 implementation(libs.zxing.javase)
                 implementation("com.google.oauth-client:google-oauth-client-jetty:1.36.0")
@@ -161,6 +168,57 @@ dependencies {
 
 room {
     schemaDirectory("$projectDir/schemas")
+}
+
+val desktopBiometricResourcesDir = layout.projectDirectory.dir("src/desktopMain/resources")
+
+tasks.register("prepareDesktopBiometricNativeLibs") {
+    val biometrikJar = layout.buildDirectory.file("biometrik-native/biometrik-jvm-1.0.2.jar")
+    outputs.dir(desktopBiometricResourcesDir)
+
+    doLast {
+        desktopBiometricResourcesDir.asFile.mkdirs()
+        val jar = biometrikJar.get().asFile
+        if (!jar.exists()) {
+            jar.parentFile.mkdirs()
+            URI("https://repo1.maven.org/maven2/io/github/n7ghtm4r3/biometrik-jvm/1.0.2/biometrik-jvm-1.0.2.jar")
+                .toURL()
+                .openStream()
+                .use { input -> jar.outputStream().use { output -> input.copyTo(output) } }
+        }
+        copy {
+            from(zipTree(jar)) {
+                include("LocalAuthenticationEngine.dylib", "WindowsHelloEngine.dll", "LinuxPolkitEngine.so")
+            }
+            into(desktopBiometricResourcesDir)
+        }
+        val macSource = layout.projectDirectory.file("nativeengines/macos/LocalAuthenticationEngine.m").asFile
+        if (macSource.exists() && System.getProperty("os.name").startsWith("Mac OS")) {
+            val dylib = desktopBiometricResourcesDir.file("LocalAuthenticationEngine.dylib").asFile
+            project.exec {
+                commandLine(
+                    "clang",
+                    "-dynamiclib",
+                    "-framework", "LocalAuthentication",
+                    "-framework", "Foundation",
+                    "-o", dylib.absolutePath,
+                    macSource.absolutePath
+                )
+            }
+        }
+    }
+}
+
+tasks.named("compileKotlinDesktop") {
+    dependsOn("prepareDesktopBiometricNativeLibs")
+}
+
+tasks.matching { it.name == "desktopProcessResources" }.configureEach {
+    dependsOn("prepareDesktopBiometricNativeLibs")
+}
+
+configurations.matching { it.name.contains("desktop", ignoreCase = true) }.configureEach {
+    exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
 }
 
 compose.resources {

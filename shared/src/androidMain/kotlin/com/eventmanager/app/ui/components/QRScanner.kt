@@ -99,13 +99,6 @@ private fun resolveNanoidScannerMatch(
     return all.firstOrNull { it.hasAdminPrivileges() } ?: all.first()
 }
 
-data class NfcUidMatchOption(
-    val match: ScannerMatch,
-    val title: String,
-    val subtitle: String,
-    val typeLabel: String
-)
-
 /** Covers USB host-permission flow (~8s timeout in reader) with slack so the user can respond before we request camera. */
 private const val USB_HOST_PERMISSION_BEFORE_CAMERA_WAIT_MS = 15_000L
 

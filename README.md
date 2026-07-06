@@ -151,6 +151,80 @@ No `google-services.json` is required for Sheets in this project path; credentia
 
 ---
 
+## Desktop app (Kotlin Multiplatform)
+
+A **desktop** build (`desktopApp`) shares the same Room database, Google Sheets sync, and most admin workflows as Android. Supported on **macOS**, **Windows**, and **Linux**.
+
+Run locally (any desktop OS):
+
+```bash
+./gradlew :desktopApp:run
+```
+
+Package release installers (must be built **on the target OS** — Compose Desktop does not cross-compile):
+
+```bash
+./gradlew :desktopApp:packageReleaseDmg       # macOS → .dmg
+./gradlew :desktopApp:packageReleaseMsi     # Windows → .msi
+./gradlew :desktopApp:packageReleaseExe     # Windows → .exe
+./gradlew :desktopApp:packageReleaseDeb     # Linux → .deb
+./gradlew :desktopApp:packageReleaseAppImage # Linux → AppImage
+```
+
+Output binaries are under `desktopApp/build/compose/binaries/main-release/`.
+
+### Linux build prerequisites
+
+On Ubuntu/Debian before packaging:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y fakeroot binutils libfuse2
+```
+
+JDK 17+ is required. Linux package formats (`.deb`, AppImage) are enabled automatically when Gradle runs on Linux. A GitHub Actions workflow (`.github/workflows/desktop-linux.yml`) builds both artifacts when a GitHub Release is published.
+
+### Linux runtime setup (door / hardware)
+
+| Feature | Requirement |
+|---------|-------------|
+| USB NFC reader (ACR122U) | `pcscd` running, ACS driver, udev rules |
+| BLE NFC reader (ACR1255U-J1) | Pair in system Bluetooth; reader visible in PC/SC |
+| BLE reader discovery list | `bluez` + `bluetoothctl` in PATH |
+| Webcam QR scan | V4L2/PipeWire; user in `video` group or portal permission |
+| Biometric admin login | Polkit + enrolled fingerprint (`fprintd`) |
+
+### Release checklist (all platforms)
+
+1. Bump `packageVersion` in `desktopApp/build.gradle.kts` and `version.json`.
+2. Build and attach artifacts to the GitHub Release:
+   - APK (Android)
+   - DMG (macOS)
+   - MSI + EXE (Windows)
+   - DEB + AppImage (Linux CI or local Linux build)
+3. Update all download URLs in `version.json` and publish to the AdminList manifest repo (`TouristeAG/AdminList/main/version.json`).
+4. Smoke-test in-app update on each platform.
+
+### Platform differences (by design)
+
+| Feature | Android | Desktop |
+|---------|---------|---------|
+| NFC | Built-in phone NFC + optional BLE ACS reader | USB **PC/SC** card reader (+ BLE via PC/SC after pairing) |
+| QR scan | Camera preview | Webcam (ZXing) or file picker |
+| Admin auth | NFC, QR, optional biometrics | NFC (PC/SC), QR, optional biometrics (Touch ID / Windows Hello / Linux Polkit) |
+| BLE external reader | Supported | Supported via PC/SC + system Bluetooth pairing |
+| Dynamic app icon | 12 launcher icons | Not supported |
+| Resolution scale slider | Phone/tablet layout | Not used |
+| Seasonal animations / haptics | Optional | Not included |
+| Embedded WebView | In-app browser | Opens system browser |
+| Dashboard charts | Full Canvas graphs | Summary stats + XLSX/JPG export |
+| Debug logs UI | Settings → Developer | Settings → Developer (file logs in app data dir) |
+| In-app updates | APK download | Platform installer (DMG / MSI / EXE / DEB / AppImage) |
+
+Keyboard shortcuts on desktop: **Cmd+,** or **Ctrl+,** (Settings), **Cmd+F** or **Ctrl+F** (focus guest search), **Esc** (dismiss overlays).
+
+---
+
 ## Contributing
 
 When extending behavior:

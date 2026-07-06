@@ -63,17 +63,16 @@ private fun getStringResource(@StringRes stringRes: Int, vararg args: Any): Stri
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GuestDetailPanel(
+actual fun GuestDetailPanel(
     guest: Guest,
     venues: List<VenueEntity>,
     onEdit: (Guest) -> Unit,
     onAssignNfcUid: (Guest, String) -> Unit,
     onDelete: (Guest) -> Unit,
     onClose: () -> Unit,
-    modifier: Modifier = Modifier,
+    modifier: Modifier,
     /** When true (e.g. Billeterie guest list), hide identifiers and all mutation actions. */
-    readOnly: Boolean = false
-) {
+    readOnly: Boolean) {
     val context = LocalContext.current
     val isPhone = !isTablet()
     val responsivePadding = if (isPhone) getPhonePortraitPadding() else getResponsivePadding()
@@ -1006,7 +1005,9 @@ fun GuestDetailPanel(
     }
 
     if (showNfcDialog) {
+        val platformContext = remember { com.eventmanager.app.platform.createPlatformContext(context) }
         AddNfcUidDialog(
+            platformContext = platformContext,
             onDismiss = { showNfcDialog = false },
             onConfirmUid = { uid ->
                 onAssignNfcUid(guest, uid)

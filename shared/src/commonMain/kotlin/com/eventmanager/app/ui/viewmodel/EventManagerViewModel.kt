@@ -6,6 +6,8 @@ import com.eventmanager.app.data.models.*
 import com.eventmanager.app.data.repository.EventManagerRepository
 import com.eventmanager.app.data.sync.GoogleSheetsService
 import com.eventmanager.app.data.sync.SettingsManager
+import com.eventmanager.app.data.sync.BiometricAdminProfileLink
+import com.eventmanager.app.data.sync.BiometricAdminProfileType
 import com.eventmanager.app.data.sync.DeletionTracker
 import com.eventmanager.app.data.sync.TwoWaySyncService
 import com.eventmanager.app.data.sync.SyncManager
@@ -101,6 +103,7 @@ class EventManagerViewModel(
     val peopleCounterUiHint: StateFlow<String?> = _peopleCounterUiHint.asStateFlow()
 
     private val peopleCounterUploadMutex = Mutex()
+    private val peopleCounterQuietRefreshMutex = Mutex()
     private val peopleCounterUserSelectionGraceMs = 8_000L
     @Volatile private var peopleCounterLastUserSelectedVenueId: Long = 0L
     @Volatile private var peopleCounterLastUserSelectionAtMs: Long = 0L
@@ -768,6 +771,16 @@ class EventManagerViewModel(
             }
         }
     }
+
+    suspend fun resolveFreshBiometricAdminLink(link: BiometricAdminProfileLink): ScannerMatch? =
+        withContext(Dispatchers.IO) {
+            when (link.type) {
+                BiometricAdminProfileType.VOLUNTEER ->
+                    repository.getVolunteerById(link.profileId)?.let { ScannerMatch.VolunteerMatch(it) }
+                BiometricAdminProfileType.GUEST ->
+                    repository.getGuestByNanoId(link.profileId)?.let { ScannerMatch.GuestMatch(it) }
+            }
+        }
 
     private fun applyInitialBenefitFutureEntries(
         job: Job,
@@ -2685,8 +2698,12 @@ class EventManagerViewModel(
     }
     
     private suspend fun refreshVenueData() {
-        val updatedVenues = repository.getAllVenues().first()
-        _venues.value = removeDuplicateVenues(updatedVenues)
+        val updatedVenues = withContext(Dispatchers.IO) {
+            repository.getAllVenues().first()
+        }
+        withContext(Dispatchers.Main) {
+            _venues.value = removeDuplicateVenues(updatedVenues)
+        }
     }
 
     private suspend fun refreshSalesSheetItemData() {
@@ -4663,9 +4680,11 @@ class EventManagerViewModel(
                     println("📋 Venue changes: ${changes.new.size} new, ${changes.modified.size} modified, ${changes.deleted.size} deleted")
                     
                     // Apply targeted UI updates instead of full refresh
-                    applyVenueUIUpdates(changes)
-                    reconcilePeopleCounterAfterVenuesChangedInternal()
-                    checkForNewAnnouncements(_venues.value)
+                    withContext(Dispatchers.Main) {
+                        applyVenueUIUpdates(changes)
+                        reconcilePeopleCounterAfterVenuesChangedInternal()
+                        checkForNewAnnouncements(_venues.value)
+                    }
                     
                     // Update sync time
                     updateSyncTime()
@@ -4771,23 +4790,23 @@ class EventManagerViewModel(
     private suspend fun applyVenueUIUpdates(changes: DifferentialSyncService.SyncChanges<VenueEntity>) {
         try {
             val currentVenues = _venues.value.toMutableList()
-            
+
             // Helper to get matching key (same as DifferentialSyncService)
             fun venueKey(v: VenueEntity) = v.name
-            
+
             // Remove deleted venues by matching key
             changes.deleted.forEach { deletedVenue ->
                 val deleteKey = venueKey(deletedVenue)
                 currentVenues.removeAll { venueKey(it) == deleteKey }
                 println("🗑️ Removed deleted venue: ${deletedVenue.name}")
             }
-            
+
             // Add new venues
             changes.new.forEach { newVenue ->
                 currentVenues.add(newVenue)
                 println("➕ Added new venue: ${newVenue.name}")
             }
-            
+
             // Update modified venues by matching key
             changes.modified.forEach { modifiedVenue ->
                 val modifyKey = venueKey(modifiedVenue)
@@ -4797,12 +4816,13 @@ class EventManagerViewModel(
                     println("✏️ Updated venue: ${modifiedVenue.name}")
                 }
             }
-            
-            // Update UI state with deduplicated list
-            _venues.value = removeDuplicateVenues(currentVenues)
-            
+
+            withContext(Dispatchers.Main) {
+                _venues.value = removeDuplicateVenues(currentVenues)
+            }
+
             println("✅ Applied ${changes.totalChanges} targeted venue UI updates")
-            
+
         } catch (e: Exception) {
             println("❌ Failed to apply targeted venue UI updates: ${e.message}")
             e.printStackTrace()
@@ -4923,8 +4943,11 @@ class EventManagerViewModel(
         viewModelScope.launch {
             try {
                 pullVenuesDifferentialQuiet()
-            } catch (e: Exception) {
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Throwable) {
                 println("Quiet venue refresh failed: ${e.message}")
+                e.printStackTrace()
             }
         }
     }
@@ -4936,28 +4959,35 @@ class EventManagerViewModel(
     fun resyncPeopleCounterLastUpdatedLine() {
         val ctx = platformContext ?: return
         viewModelScope.launch {
-            if (!isGoogleSheetsConfigured()) return@launch
-            val sm = SettingsManager(ctx)
-            val vid = _peopleCounterSelectedVenueId.value
-            if (vid <= 0L) return@launch
-            if (sm.isPeopleCounterPriority(vid)) {
-                val venue = repository.getVenueById(vid) ?: return@launch
-                val row = venue.sheetsId?.toIntOrNull() ?: return@launch
-                val myId = sm.getOrCreatePersistentDeviceId()
-                val now = System.currentTimeMillis()
-                val count = venue.peopleCounterCount
-                peopleCounterUploadMutex.withLock {
-                    twoWaySyncService?.updateVenuePeopleCounterOnSheets(row, count, myId, now)
-                    val fresh = repository.getVenueById(vid) ?: return@withLock
-                    repository.updateVenue(
-                        fresh.copy(peopleCounterWriterDeviceId = myId, peopleCounterLastModified = now)
-                    )
-                    val t = peopleCounterThrottleByVenue.getOrPut(vid) { PeopleCounterThrottle() }
-                    t.lastUploadAtMs = now
-                    t.countAtLastUpload = count
+            try {
+                if (!isGoogleSheetsConfigured()) return@launch
+                val sm = SettingsManager(ctx)
+                val vid = _peopleCounterSelectedVenueId.value
+                if (vid <= 0L) return@launch
+                if (sm.isPeopleCounterPriority(vid)) {
+                    val venue = repository.getVenueById(vid) ?: return@launch
+                    val row = venue.sheetsId?.toIntOrNull() ?: return@launch
+                    val myId = sm.getOrCreatePersistentDeviceId()
+                    val now = System.currentTimeMillis()
+                    val count = venue.peopleCounterCount
+                    peopleCounterUploadMutex.withLock {
+                        twoWaySyncService?.updateVenuePeopleCounterOnSheets(row, count, myId, now)
+                        val fresh = repository.getVenueById(vid) ?: return@withLock
+                        repository.updateVenue(
+                            fresh.copy(peopleCounterWriterDeviceId = myId, peopleCounterLastModified = now)
+                        )
+                        val t = peopleCounterThrottleByVenue.getOrPut(vid) { PeopleCounterThrottle() }
+                        t.lastUploadAtMs = now
+                        t.countAtLastUpload = count
+                    }
+                } else {
+                    pullVenuesDifferentialQuiet()
                 }
-            } else {
-                pullVenuesDifferentialQuiet()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                println("People counter resync failed: ${e.message}")
+                e.printStackTrace()
             }
         }
     }
@@ -4995,7 +5025,14 @@ class EventManagerViewModel(
     fun forceTakePeopleCounterPriority() {
         val ctx = platformContext ?: return
         viewModelScope.launch {
-            claimPeopleCounterWriterForCurrentSelection(ctx, forceStealFromOtherDevice = true)
+            try {
+                claimPeopleCounterWriterForCurrentSelection(ctx, forceStealFromOtherDevice = true)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                println("Force take people counter priority failed: ${e.message}")
+                e.printStackTrace()
+            }
         }
     }
 
@@ -5057,7 +5094,16 @@ class EventManagerViewModel(
 
     fun reconcilePeopleCounterAfterVenuesChanged() {
         viewModelScope.launch {
-            reconcilePeopleCounterAfterVenuesChangedInternal()
+            try {
+                withContext(Dispatchers.Main) {
+                    reconcilePeopleCounterAfterVenuesChangedInternal()
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                println("People counter reconcile failed: ${e.message}")
+                e.printStackTrace()
+            }
         }
     }
 
@@ -5104,12 +5150,27 @@ class EventManagerViewModel(
 
     private suspend fun pullVenuesDifferentialQuiet() {
         if (!isGoogleSheetsConfigured()) return
-        googleSheetsService.initializeSheetsService()
-        val result = syncManager?.performVenueDifferentialSync()
-        if (result is VenueSyncResult.Success) {
-            applyVenueUIUpdates(result.changes)
+        if (!peopleCounterQuietRefreshMutex.tryLock()) {
+            println("Quiet venue refresh already in progress, skipping")
+            return
         }
-        reconcilePeopleCounterAfterVenuesChangedInternal()
+        try {
+            googleSheetsService.initializeSheetsService()
+            val result = syncManager?.performVenueDifferentialSync()
+            withContext(Dispatchers.Main) {
+                if (result is VenueSyncResult.Success) {
+                    applyVenueUIUpdates(result.changes)
+                }
+                reconcilePeopleCounterAfterVenuesChangedInternal()
+            }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            println("Quiet venue pull failed: ${e.message}")
+            e.printStackTrace()
+        } finally {
+            peopleCounterQuietRefreshMutex.unlock()
+        }
     }
 
     private suspend fun releasePeopleCounterWriterForCurrentVenue() {

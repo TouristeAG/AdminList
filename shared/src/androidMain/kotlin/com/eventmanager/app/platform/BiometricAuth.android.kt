@@ -18,8 +18,17 @@ private class AndroidBiometricAuth(private val context: PlatformContext) : Biome
                 BiometricManager.BIOMETRIC_SUCCESS
         }
 
+    override val isNoneEnrolled: Boolean
+        get() {
+            val manager = BiometricManager.from(context.androidContext)
+            return manager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) ==
+                BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED
+        }
+
     override suspend fun authenticate(title: String, subtitle: String): Boolean {
-        val activity = context.androidContext as? FragmentActivity ?: return false
+        val activity = context.androidContext as? FragmentActivity
+            ?: AndroidFragmentActivityProvider.current
+            ?: return false
         return suspendCoroutine { cont ->
             val executor = ContextCompat.getMainExecutor(activity)
             val prompt = BiometricPrompt(
@@ -33,7 +42,7 @@ private class AndroidBiometricAuth(private val context: PlatformContext) : Biome
                         cont.resume(false)
                     }
                     override fun onAuthenticationFailed() {
-                        cont.resume(false)
+                        // User can retry; only succeed/error callbacks should complete auth.
                     }
                 }
             )

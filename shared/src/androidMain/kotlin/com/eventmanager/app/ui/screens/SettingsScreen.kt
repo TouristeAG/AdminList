@@ -79,6 +79,12 @@ import com.eventmanager.app.data.utils.AppIconManager
 import com.eventmanager.app.data.models.Guest
 import com.eventmanager.app.data.models.Volunteer
 import com.eventmanager.app.ui.viewmodel.EventManagerViewModel
+import com.eventmanager.app.ui.platform.AppAppearanceState
+import com.eventmanager.app.ui.components.BackgroundAnimationSettingsSection
+import com.eventmanager.app.ui.components.BackgroundAnimationSettingsTarget
+import com.eventmanager.app.ui.components.ColorThemePicker
+import com.eventmanager.app.ui.components.ScrollBehaviorPicker
+import com.eventmanager.app.ui.components.ThemeModePicker
 import com.eventmanager.app.ui.components.CleanupInactiveVolunteersDialog
 import com.eventmanager.app.ui.components.SyncStatusDialog
 import kotlinx.coroutines.launch
@@ -108,26 +114,19 @@ import androidx.biometric.BiometricPrompt
 import androidx.fragment.app.FragmentActivity
 import com.eventmanager.app.ui.components.ScannerMatch
 import com.eventmanager.app.ui.components.QRScannerDialog
+import com.eventmanager.app.ui.components.BiometricAdminVerificationDialog
+import com.eventmanager.app.ui.components.toBiometricAdminProfileLink
 
 /** Full admin settings vs. Billeterie subset (appearance, localization, animations, app info). */
-enum class SettingsScreenVariant {
-    Full,
-    BilleterieBasic
-}
+// SettingsScreenVariant moved to commonMain SettingsScreenVariant.kt
 
-// Data class for icon options
+import com.eventmanager.app.ui.screens.SettingsScreenVariant
 private data class IconOption(
     val style: String,
     val nameResId: Int,
     val toastResId: Int,
     val iconResId: Int,
     val backgroundColor: Color
-)
-
-private data class ColorThemeOption(
-    val key: String,
-    val label: String,
-    val icon: androidx.compose.ui.graphics.vector.ImageVector
 )
 
 private data class CustomThemeRole(
@@ -254,128 +253,6 @@ private fun getBaseCustomThemeRoleColor(isDark: Boolean, role: String): Color {
         "surfaceContainerHighest" -> scheme.surfaceContainerHighest
         else -> scheme.primary
     }
-}
-
-@Composable
-private fun ThemePalettePreview(
-    themeKey: String,
-    previewDark: Boolean,
-    settingsManager: SettingsManager,
-    refreshNonce: Int = 0,
-    modifier: Modifier = Modifier
-) {
-    val scheme = remember(themeKey, previewDark, refreshNonce) {
-        if (themeKey == "custom") {
-            val primary = Color(
-                settingsManager.getCustomThemeColor(
-                    previewDark,
-                    "primary",
-                    getBaseCustomThemeRoleColor(previewDark, "primary").toArgb()
-                )
-            )
-            val secondary = Color(
-                settingsManager.getCustomThemeColor(
-                    previewDark,
-                    "secondary",
-                    getBaseCustomThemeRoleColor(previewDark, "secondary").toArgb()
-                )
-            )
-            val tertiary = Color(
-                settingsManager.getCustomThemeColor(
-                    previewDark,
-                    "tertiary",
-                    getBaseCustomThemeRoleColor(previewDark, "tertiary").toArgb()
-                )
-            )
-            val surfaceContainerHigh = Color(
-                settingsManager.getCustomThemeColor(
-                    previewDark,
-                    "surfaceContainerHigh",
-                    getBaseCustomThemeRoleColor(previewDark, "surfaceContainerHigh").toArgb()
-                )
-            )
-            val background = Color(
-                settingsManager.getCustomThemeColor(
-                    previewDark,
-                    "background",
-                    getBaseCustomThemeRoleColor(previewDark, "background").toArgb()
-                )
-            )
-            listOf(primary, secondary, tertiary, surfaceContainerHigh, background)
-        } else {
-            val theme = ColorThemes.getThemeByName(themeKey)
-            val source = if (previewDark) theme.darkColors else theme.lightColors
-            listOf(
-                source.primary,
-                source.secondary,
-                source.tertiary,
-                source.surfaceContainerHigh,
-                source.background
-            )
-        }
-    }
-    val swatches = listOf(
-        scheme[0],
-        scheme[1],
-        scheme[2],
-        scheme[3],
-        scheme[4]
-    )
-
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = modifier
-    ) {
-        swatches.forEachIndexed { index, swatch ->
-            val priority = index + 1
-            val isPriorityColor = priority <= 3
-            val isSunsetMistGradient = themeKey == "sunset_mist" && priority == 3
-            Box(
-                modifier = Modifier
-                    .size(if (isPriorityColor) 24.dp else 18.dp)
-                    .clip(CircleShape)
-                    .background(
-                        if (isSunsetMistGradient) {
-                            Brush.linearGradient(listOf(swatches[0], swatches[1]))
-                        } else {
-                            Brush.linearGradient(listOf(swatch, swatch))
-                        }
-                    )
-                    .border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
-                        shape = CircleShape
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                if (isPriorityColor) {
-                    Text(
-                        text = priority.toString(),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (isSunsetMistGradient) {
-                            paletteNumberColorForBackground(blendForContrast(swatches[0], swatches[1]))
-                        } else {
-                            paletteNumberColorForBackground(swatch)
-                        },
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-        }
-    }
-}
-
-private fun paletteNumberColorForBackground(background: Color): Color {
-    return if (background.luminance() < 0.45f) Color.White else Color(0xFF111111)
-}
-
-private fun blendForContrast(primary: Color, secondary: Color): Color {
-    return Color(
-        red = (primary.red + secondary.red) / 2f,
-        green = (primary.green + secondary.green) / 2f,
-        blue = (primary.blue + secondary.blue) / 2f,
-        alpha = 1f
-    )
 }
 
 @Composable
@@ -1593,13 +1470,14 @@ private data class EmailSettingsStrings(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(
+actual fun SettingsScreen(
     viewModel: EventManagerViewModel,
-    onNavigateToJobTypeManagement: () -> Unit = {},
-    onNavigateToVenueManagement: () -> Unit = {},
-    onNavigateToSalesSheetItemManagement: () -> Unit = {},
-    variant: SettingsScreenVariant = SettingsScreenVariant.Full,
-    modifier: Modifier = Modifier
+    onNavigateToJobTypeManagement: () -> Unit,
+    onNavigateToVenueManagement: () -> Unit,
+    onNavigateToSalesSheetItemManagement: () -> Unit,
+    variant: SettingsScreenVariant,
+    modifier: Modifier,
+    onDesktopAdminNavLayoutChanged: () -> Unit,
 ) {
     val context = LocalContext.current
     val settingsManager = remember { settingsManagerFor(context) }
@@ -1702,6 +1580,15 @@ fun SettingsScreen(
             .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
+        if (variant == SettingsScreenVariant.BilleterieBasic) {
+            BackgroundAnimationSettingsSection(
+                settingsManager = settingsManager,
+                isDesktop = false,
+                target = BackgroundAnimationSettingsTarget.Billeterie,
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+
         if (variant == SettingsScreenVariant.Full) {
         // Header
         Text(
@@ -2427,111 +2314,20 @@ fun SettingsScreen(
             var selectedTheme by remember { mutableStateOf(ThemeMode.fromString(settingsManager.getThemeMode())) }
             val applyVisualThemeRefresh = {
                 settingsManager.markSkipNextStartupSync()
+                AppAppearanceState.notifyThemeAppearanceChanged(settingsManager.getThemeMode())
                 (context as? android.app.Activity)?.recreate()
             }
-            val themeModeOptions = listOf(
-                Triple(ThemeMode.LIGHT, Icons.Default.WbSunny, context.getString(R.string.theme_light)),
-                Triple(ThemeMode.DARK, Icons.Default.NightlightRound, context.getString(R.string.theme_dark)),
-                Triple(ThemeMode.DEFAULT, Icons.Default.AutoAwesome, context.getString(R.string.theme_default))
-            )
             
-            Column(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = context.getString(R.string.theme_title),
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Text(
-                    text = context.getString(R.string.theme_description),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    themeModeOptions.forEach { (mode, icon, label) ->
-                        val isSelected = selectedTheme == mode
-                        Card(
-                            modifier = Modifier
-                                .width(150.dp)
-                                .clickable {
+            ThemeModePicker(
+                selectedMode = selectedTheme,
+                onSelect = { mode ->
                                     if (selectedTheme != mode) {
                                         selectedTheme = mode
                                         settingsManager.saveThemeMode(mode.value)
                                         applyVisualThemeRefresh()
                                     }
                                 },
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (isSelected) {
-                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
-                                } else {
-                                    MaterialTheme.colorScheme.surfaceContainerLow
-                                }
-                            ),
-                            border = BorderStroke(
-                                width = if (isSelected) 1.5.dp else 1.dp,
-                                color = if (isSelected) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.75f)
-                            ),
-                            shape = RoundedCornerShape(16.dp)
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Icon(
-                                        imageVector = icon,
-                                        contentDescription = null,
-                                        tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Text(
-                                        text = label,
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    if (isSelected) {
-                                        Icon(
-                                            imageVector = Icons.Default.CheckCircle,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    }
-                                }
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(22.dp)
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .background(
-                                            if (mode == ThemeMode.DARK) Color(0xFF1C1B1F)
-                                            else if (mode == ThemeMode.LIGHT) Color(0xFFFFFBFE)
-                                            else MaterialTheme.colorScheme.surfaceVariant
-                                        )
-                                        .border(
-                                            width = 1.dp,
-                                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                                            shape = RoundedCornerShape(10.dp)
-                                        )
-                                )
-                            }
-                        }
-                    }
-                }
-            }
+            )
             
             Spacer(modifier = Modifier.height(16.dp))
             
@@ -2544,117 +2340,23 @@ fun SettingsScreen(
                 ThemeMode.DARK -> true
                 ThemeMode.DEFAULT -> isSystemInDarkTheme()
             }
-            val colorThemeOptions = remember(context) {
-                listOf(
-                    ColorThemeOption("system", context.getString(R.string.color_theme_system), Icons.Default.AutoAwesome),
-                    ColorThemeOption("professional_blue", context.getString(R.string.color_theme_professional_blue), Icons.Default.WaterDrop),
-                    ColorThemeOption("neutral_green", context.getString(R.string.color_theme_neutral_green), Icons.Default.Spa),
-                    ColorThemeOption("warm_gray", context.getString(R.string.color_theme_warm_gray), Icons.Default.WbShade),
-                    ColorThemeOption("neutral_purple", context.getString(R.string.color_theme_neutral_purple), Icons.Default.Interests),
-                    ColorThemeOption("rich_brown", context.getString(R.string.color_theme_rich_brown), Icons.Default.LocalCafe),
-                    ColorThemeOption("sunset_mist", context.getString(R.string.color_theme_sunset_mist), Icons.Default.BlurOn),
-                    ColorThemeOption("custom", context.getString(R.string.color_theme_custom), Icons.Default.Tune)
-                )
-            }
-            
-            Column(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = context.getString(R.string.color_theme_title),
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Text(
-                    text = context.getString(R.string.color_theme_description),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = if (previewDarkMode) context.getString(R.string.theme_dark) else context.getString(R.string.theme_light),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    colorThemeOptions.forEach { option ->
-                        val isSelected = selectedColorTheme == option.key
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    when {
-                                        selectedColorTheme == option.key && option.key == "custom" -> {
-                                            // Re-open editor when tapping the selected custom theme.
-                                            showCustomThemeEditor = true
-                                        }
-                                        selectedColorTheme != option.key -> {
-                                            selectedColorTheme = option.key
-                                            settingsManager.saveColorTheme(option.key)
-                                            if (option.key == "custom") {
-                                                // Open editor immediately so the user can actually pick colors.
+            ColorThemePicker(
+                selectedThemeKey = selectedColorTheme,
+                previewDark = previewDarkMode,
+                settingsManager = settingsManager,
+                customThemeRefreshNonce = customThemePreviewVersion,
+                includeCustomTheme = true,
+                onSelect = { key ->
+                    selectedColorTheme = key
+                    settingsManager.saveColorTheme(key)
+                    if (key == "custom") {
                                                 showCustomThemeEditor = true
                                             } else {
                                                 applyVisualThemeRefresh()
-                                            }
-                                        }
-                                    }
-                                },
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (isSelected) {
-                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
-                                } else {
-                                    MaterialTheme.colorScheme.surfaceContainerLow
-                                }
-                            ),
-                            border = BorderStroke(
-                                width = if (isSelected) 1.5.dp else 1.dp,
-                                color = if (isSelected) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.75f)
-                            )
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 14.dp, vertical = 12.dp)
-                            ) {
-                                Icon(
-                                    imageVector = option.icon,
-                                    contentDescription = null,
-                                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Text(
-                                    text = option.label,
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                if (isSelected) {
-                                    Icon(
-                                        imageVector = Icons.Default.CheckCircle,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                }
-                                ThemePalettePreview(
-                                    themeKey = option.key,
-                                    previewDark = previewDarkMode,
-                                    settingsManager = settingsManager,
-                                    refreshNonce = customThemePreviewVersion
-                                )
-                            }
-                        }
                     }
-                }
+                },
+                onCustomThemeReselect = { showCustomThemeEditor = true },
+            )
 
                 if (selectedColorTheme == "custom") {
                     OutlinedButton(
@@ -3024,201 +2726,13 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                     }
                     
-                    // Scroll Behavior for Manager Pages - Card selector
-                    Column(
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = context.getString(R.string.scroll_behavior_title),
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Text(
-                            text = context.getString(R.string.scroll_behavior_description),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        
-                        Spacer(modifier = Modifier.height(12.dp))
-                        
-                        val isHeaderPinned = scrollBehavior == SettingsManager.HEADER_PINNED
-                        val isFullScroll = scrollBehavior == SettingsManager.FULL_SCROLL || scrollBehavior == SettingsManager.STICKY_FILTERS
-                        
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            // Option 1: Keep header fixed (only list scrolls)
-                            Card(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clickable {
-                                        if (!isHeaderPinned) {
-                                            scrollBehavior = SettingsManager.HEADER_PINNED
-                                            settingsManager.setScrollBehavior(SettingsManager.HEADER_PINNED)
-                                        }
-                                    },
-                                colors = CardDefaults.cardColors(
-                                    containerColor = if (isHeaderPinned)
-                                        MaterialTheme.colorScheme.primaryContainer
-                                    else
-                                        MaterialTheme.colorScheme.surface
-                                ),
-                                elevation = CardDefaults.cardElevation(
-                                    defaultElevation = if (isHeaderPinned) 8.dp else 2.dp
-                                ),
-                                border = BorderStroke(
-                                    width = if (isHeaderPinned) 2.dp else 1.dp,
-                                    color = if (isHeaderPinned)
-                                        MaterialTheme.colorScheme.primary
-                                    else
-                                        MaterialTheme.colorScheme.outline
-                                )
-                            ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(12.dp),
-                                    horizontalAlignment = Alignment.Start,
-                                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.ViewAgenda,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary
-                                        )
-                                        Text(
-                                            text = context.getString(R.string.scroll_behavior_list_only_title),
-                                            style = MaterialTheme.typography.titleSmall,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
-                                    }
-                                    Text(
-                                        text = context.getString(R.string.scroll_behavior_list_only_description),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                            
-                            // Option 2: Scroll whole page (header scrolls with list)
-                            Card(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clickable {
-                                        if (!isFullScroll) {
-                                            scrollBehavior = SettingsManager.FULL_SCROLL
-                                            settingsManager.setScrollBehavior(SettingsManager.FULL_SCROLL)
-                                        }
-                                    },
-                                colors = CardDefaults.cardColors(
-                                    containerColor = if (isFullScroll)
-                                        MaterialTheme.colorScheme.primaryContainer
-                                    else
-                                        MaterialTheme.colorScheme.surface
-                                ),
-                                elevation = CardDefaults.cardElevation(
-                                    defaultElevation = if (isFullScroll) 8.dp else 2.dp
-                                ),
-                                border = BorderStroke(
-                                    width = if (isFullScroll) 2.dp else 1.dp,
-                                    color = if (isFullScroll)
-                                        MaterialTheme.colorScheme.primary
-                                    else
-                                        MaterialTheme.colorScheme.outline
-                                )
-                            ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(12.dp),
-                                    horizontalAlignment = Alignment.Start,
-                                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.ViewDay,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary
-                                        )
-                                        Text(
-                                            text = context.getString(R.string.scroll_behavior_full_page_title),
-                                            style = MaterialTheme.typography.titleSmall,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
-                                    }
-                                    Text(
-                                        text = context.getString(R.string.scroll_behavior_full_page_description),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        }
-                        
-                        // Sub-option: Sticky filters (only visible when full scroll is selected)
-                        androidx.compose.animation.AnimatedVisibility(
-                            visible = isFullScroll,
-                            enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
-                            exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()
-                        ) {
-                            Column {
-                                Spacer(modifier = Modifier.height(12.dp))
-                                
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            val newBehavior = if (scrollBehavior == SettingsManager.STICKY_FILTERS) {
-                                                SettingsManager.FULL_SCROLL
-                                            } else {
-                                                SettingsManager.STICKY_FILTERS
-                                            }
-                                            scrollBehavior = newBehavior
-                                            settingsManager.setScrollBehavior(newBehavior)
-                                        }
-                                        .padding(vertical = 6.dp, horizontal = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Column(
-                                        modifier = Modifier.weight(1f)
-                                    ) {
-                                        Text(
-                                            text = context.getString(R.string.scroll_behavior_sticky_filters_option),
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                        Text(
-                                            text = context.getString(R.string.scroll_behavior_sticky_filters_description),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Switch(
-                                        checked = scrollBehavior == SettingsManager.STICKY_FILTERS,
-                                        onCheckedChange = { checked ->
-                                            val newBehavior = if (checked) {
-                                                SettingsManager.STICKY_FILTERS
-                                            } else {
-                                                SettingsManager.FULL_SCROLL
-                                            }
-                                            scrollBehavior = newBehavior
-                                            settingsManager.setScrollBehavior(newBehavior)
-                                        },
-                                        modifier = Modifier.scale(0.8f)
-                                    )
-                                }
-                            }
-                        }
-                    }
+                    ScrollBehaviorPicker(
+                        scrollBehavior = scrollBehavior,
+                        onScrollBehaviorChange = { behavior ->
+                            scrollBehavior = behavior
+                            settingsManager.setScrollBehavior(behavior)
+                        },
+                    )
                     
                     if (showCustomThemeEditor) {
                         CustomThemeEditorDialog(
@@ -3230,7 +2744,6 @@ fun SettingsScreen(
                                 applyVisualThemeRefresh()
                             }
                         )
-                    }
                 }
             }
         
@@ -3761,36 +3274,16 @@ fun SettingsScreen(
                 settingsManager.setCategoryAnimationExpanded(showAnimationSettings)
             }
         ) {
-            // Animated Background Toggle
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Start,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                var animatedEnabled by remember { mutableStateOf(settingsManager.isAnimatedBackgroundEnabled()) }
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        text = context.getString(R.string.animated_background_title),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        text = context.getString(R.string.animated_background_description),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Switch(
-                    checked = animatedEnabled,
-                    onCheckedChange = {
-                        animatedEnabled = it
-                        settingsManager.setAnimatedBackgroundEnabled(it)
-                    }
-                )
-            }
+            if (variant == SettingsScreenVariant.Full) {
+            // Background animation style (admin only — billeterie has its own section)
+            BackgroundAnimationSettingsSection(
+                settingsManager = settingsManager,
+                isDesktop = false,
+                target = BackgroundAnimationSettingsTarget.Admin,
+            )
             
             Spacer(modifier = Modifier.height(16.dp))
+            }
             
             // Page Animations Toggle
             Row(
@@ -4145,7 +3638,7 @@ fun SettingsScreen(
             var biometricEnabled by remember { mutableStateOf(settingsManager.isBiometricAdminLoginEnabled()) }
             var showBiometricWarningDialog by remember { mutableStateOf(false) }
             var showBiometricAdminVerifyDialog by remember { mutableStateOf(false) }
-            var biometricAdminVerified by remember { mutableStateOf(false) }
+            var pendingBiometricEnrollmentMatch by remember { mutableStateOf<ScannerMatch?>(null) }
 
             val biometricAvailable = canAuthenticate == BiometricManager.BIOMETRIC_SUCCESS
             val noneEnrolled = canAuthenticate == BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED
@@ -4215,20 +3708,22 @@ fun SettingsScreen(
             // Admin verification dialog (QR / NFC) before enrolling biometrics
             if (showBiometricAdminVerifyDialog) {
                 BiometricAdminVerificationDialog(
+                    platformContext = remember(context) { com.eventmanager.app.platform.createPlatformContext(context) },
                     viewModel = viewModel,
-                    onVerified = {
+                    onVerified = { match ->
                         showBiometricAdminVerifyDialog = false
-                        biometricAdminVerified = true
+                        pendingBiometricEnrollmentMatch = match
                     },
                     onDismiss = { showBiometricAdminVerifyDialog = false }
                 )
             }
 
             // Once admin is verified via QR/NFC, prompt for biometric enrollment
-            LaunchedEffect(biometricAdminVerified) {
-                if (biometricAdminVerified) {
-                    biometricAdminVerified = false
+            LaunchedEffect(pendingBiometricEnrollmentMatch) {
+                val match = pendingBiometricEnrollmentMatch ?: return@LaunchedEffect
+                pendingBiometricEnrollmentMatch = null
                     val fragmentActivity = context as? FragmentActivity ?: return@LaunchedEffect
+                val profileLink = match.toBiometricAdminProfileLink()
                     val promptInfo = BiometricPrompt.PromptInfo.Builder()
                         .setTitle(context.getString(R.string.biometric_enrollment_prompt_title))
                         .setSubtitle(context.getString(R.string.biometric_enrollment_prompt_subtitle))
@@ -4239,7 +3734,7 @@ fun SettingsScreen(
                         fragmentActivity,
                         object : BiometricPrompt.AuthenticationCallback() {
                             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                                settingsManager.setBiometricAdminLoginEnabled(true)
+                            settingsManager.setBiometricAdminProfileLink(profileLink)
                                 biometricEnabled = true
                                 Toast.makeText(context, context.getString(R.string.biometric_enrollment_success), Toast.LENGTH_LONG).show()
                             }
@@ -4251,7 +3746,6 @@ fun SettingsScreen(
                         }
                     )
                     biometricPrompt.authenticate(promptInfo)
-                }
             }
         }
         
@@ -5362,211 +4856,4 @@ fun UpdateSourcesDialog(
             }
         }
     )
-}
-
-@Composable
-private fun BiometricAdminVerificationDialog(
-    viewModel: EventManagerViewModel,
-    onVerified: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    val context = LocalContext.current
-    val verifyScope = rememberCoroutineScope()
-    val guests by viewModel.guests.collectAsState()
-    val volunteers by viewModel.volunteers.collectAsState()
-    var showQRScanner by remember { mutableStateOf(false) }
-    var verificationMessage by remember { mutableStateOf<String?>(null) }
-    var verificationSuccess by remember { mutableStateOf(false) }
-
-    val permanentGuests = remember(guests) { guests.filter { !it.isVolunteerBenefit && !it.isTemporaryGuest } }
-    val volunteersByNfcUid = remember(volunteers) {
-        volunteers.filter { it.nfcCardUid.isNotBlank() }
-            .groupBy { it.nfcCardUid.trim().replace(" ", "").replace(":", "").uppercase() }
-    }
-    val guestsByNfcUid = remember(permanentGuests) {
-        permanentGuests.filter { it.nfcCardUid.isNotBlank() }
-            .groupBy { it.nfcCardUid.trim().replace(" ", "").replace(":", "").uppercase() }
-    }
-
-    fun applyVerifiedAdminFromCandidates(candidates: List<ScannerMatch>) {
-        if (candidates.isEmpty()) {
-            verificationMessage = context.getString(R.string.admin_auth_not_found)
-            return
-        }
-        verifyScope.launch {
-            var granted = false
-            for (m in candidates) {
-                val fresh = try {
-                    viewModel.resolveFreshAdminScanMatch(m)
-                } catch (_: Exception) {
-                    m
-                }
-                when (fresh) {
-                    is ScannerMatch.VolunteerMatch -> if (fresh.volunteer.isAdmin) {
-                        granted = true
-                        break
-                    }
-                    is ScannerMatch.GuestMatch -> if (fresh.guest.isAdmin) {
-                        granted = true
-                        break
-                    }
-                }
-            }
-            withContext(Dispatchers.Main) {
-                if (granted) {
-                    verificationSuccess = true
-                } else {
-                    val name = when (val m = candidates.first()) {
-                        is ScannerMatch.VolunteerMatch -> m.volunteer.name
-                        is ScannerMatch.GuestMatch -> m.guest.name
-                    }
-                    verificationMessage = context.getString(R.string.admin_auth_denied, name)
-                }
-            }
-        }
-    }
-
-    fun resolveUidMatch(rawUid: String) {
-        val uid = rawUid.trim().replace(" ", "").replace(":", "").uppercase()
-        if (uid.isBlank()) return
-        val volunteerMatches = volunteersByNfcUid[uid].orEmpty()
-        val guestMatches = guestsByNfcUid[uid].orEmpty()
-        val allMatches: List<ScannerMatch> =
-            volunteerMatches.map { ScannerMatch.VolunteerMatch(it) } +
-                guestMatches.map { ScannerMatch.GuestMatch(it) }
-        // Try every profile sharing this UID with a DB refresh (UI list can be stale right after sync).
-        applyVerifiedAdminFromCandidates(allMatches)
-    }
-
-    LaunchedEffect(verificationSuccess) {
-        if (verificationSuccess) {
-            kotlinx.coroutines.delay(300)
-            onVerified()
-        }
-    }
-
-    val activity = remember(context) {
-        var ctx = context
-        while (ctx is android.content.ContextWrapper && ctx !is android.app.Activity) ctx = ctx.baseContext
-        ctx as? android.app.Activity
-    }
-    val nfcAdapter = remember(context) { android.nfc.NfcAdapter.getDefaultAdapter(context) }
-    val mainHandler = remember { android.os.Handler(android.os.Looper.getMainLooper()) }
-
-    DisposableEffect(activity, nfcAdapter) {
-        if (activity == null || nfcAdapter == null || !nfcAdapter.isEnabled) {
-            onDispose { }
-        } else {
-            val callback = android.nfc.NfcAdapter.ReaderCallback { tag ->
-                val uid = tag.id?.joinToString(separator = "") { "%02X".format(it) }.orEmpty()
-                mainHandler.post { resolveUidMatch(uid) }
-            }
-            try {
-                nfcAdapter.enableReaderMode(
-                    activity, callback,
-                    android.nfc.NfcAdapter.FLAG_READER_NFC_A or android.nfc.NfcAdapter.FLAG_READER_NFC_B or
-                        android.nfc.NfcAdapter.FLAG_READER_NFC_F or android.nfc.NfcAdapter.FLAG_READER_NFC_V or
-                        android.nfc.NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK,
-                    null
-                )
-            } catch (_: Exception) { }
-            onDispose {
-                try { nfcAdapter.disableReaderMode(activity) } catch (_: Exception) { }
-            }
-        }
-    }
-
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
-    ) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth(0.9f)
-                .padding(16.dp),
-            shape = RoundedCornerShape(24.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Icon(
-                    Icons.Default.Fingerprint,
-                    contentDescription = null,
-                    modifier = Modifier.size(48.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-
-                Text(
-                    text = context.getString(R.string.biometric_enrollment_verify_title),
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center
-                )
-
-                Text(
-                    text = context.getString(R.string.biometric_enrollment_verify_description),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
-
-                HorizontalDivider()
-
-                Icon(
-                    Icons.Default.Nfc,
-                    contentDescription = null,
-                    modifier = Modifier.size(40.dp),
-                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
-                )
-
-                Text(
-                    text = context.getString(R.string.admin_auth_ready),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
-
-                if (verificationMessage != null) {
-                    Text(
-                        text = verificationMessage!!,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error,
-                        textAlign = TextAlign.Center
-                    )
-                }
-
-                OutlinedButton(
-                    onClick = { showQRScanner = true },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp)
-                ) {
-                    Icon(Icons.Default.QrCodeScanner, contentDescription = null, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(context.getString(R.string.admin_auth_scan_qr), fontWeight = FontWeight.SemiBold)
-                }
-
-                TextButton(onClick = onDismiss) {
-                    Text(context.getString(R.string.biometric_warning_cancel))
-                }
-            }
-        }
-    }
-
-    if (showQRScanner) {
-        QRScannerDialog(
-            platformContext = remember(context) { com.eventmanager.app.platform.createPlatformContext(context) },
-            onDismiss = { showQRScanner = false },
-            onMatchFound = { match ->
-                showQRScanner = false
-                applyVerifiedAdminFromCandidates(listOf(match))
-            },
-            volunteers = volunteers,
-            guests = guests
-        )
-    }
 }

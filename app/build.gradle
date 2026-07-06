@@ -83,6 +83,7 @@ android {
             excludes += '/META-INF/NOTICE.txt'
             excludes += '/META-INF/notice.txt'
             excludes += '/META-INF/ASL2.0'
+            excludes += '/META-INF/versions/9/OSGI-INF/MANIFEST.MF'
         }
         // Ensure APK is properly aligned (helps with installation on some devices)
         jniLibs {

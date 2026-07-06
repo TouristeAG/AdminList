@@ -6,6 +6,7 @@ import com.eventmanager.app.platform.AppBuildInfo
 import com.eventmanager.app.platform.AppStorage
 import com.eventmanager.app.platform.PlatformContext
 import com.eventmanager.app.platform.createAppStorage
+import com.eventmanager.app.ui.components.BackgroundAnimationStyle
 
 /**
  * Manages app settings persistence using cross-platform key-value storage.
@@ -29,6 +30,10 @@ class SettingsManager(private val storage: AppStorage) {
         private const val KEY_SYNC_INTERVAL = "sync_interval"
         private const val KEY_DEBUG_MODE = "debug_mode"
         private const val KEY_ANIMATED_BACKGROUND = "animated_background"
+        private const val KEY_BACKGROUND_ANIMATION_STYLE = "background_animation_style"
+        private const val KEY_BACKGROUND_ANIMATION_OPACITY = "background_animation_opacity"
+        private const val KEY_BILLETTERIE_BACKGROUND_ANIMATION_STYLE = "billeterie_background_animation_style"
+        private const val KEY_BILLETTERIE_BACKGROUND_ANIMATION_OPACITY = "billeterie_background_animation_opacity"
         private const val KEY_PAGE_ANIMATIONS = "page_animations"
         /** Legacy: was also updated on upload-only paths; still read for migration. */
         private const val KEY_LAST_SYNC_TIME = "last_sync_time"
@@ -58,6 +63,8 @@ class SettingsManager(private val storage: AppStorage) {
         private const val KEY_PEOPLE_COUNTER_USER_READ_ONLY_LEGACY = "people_counter_user_read_only"
         private const val KEY_STATISTICS_VISIBLE = "statistics_visible"
         private const val KEY_PAGE_SCROLL_BEHAVIOR = "page_scroll_behavior"
+        private const val KEY_DESKTOP_ADMIN_NAV_LAYOUT = "desktop_admin_nav_layout"
+        private const val KEY_DESKTOP_ADMIN_NAV_RAIL_EXPANDED = "desktop_admin_nav_rail_expanded"
         private const val KEY_UPDATE_MANIFEST_URL = "update_manifest_url"
         private const val KEY_UPDATE_STORE_URL = "update_store_url"
         
@@ -70,6 +77,7 @@ class SettingsManager(private val storage: AppStorage) {
         private const val KEY_CATEGORY_MAINTENANCE_EXPANDED = "category_maintenance_expanded"
         private const val KEY_SETUP_WIZARD_COMPLETED = "setup_wizard_completed"
         private const val KEY_BIOMETRIC_ADMIN_LOGIN = "biometric_admin_login"
+        private const val KEY_BIOMETRIC_ADMIN_PROFILE_LINK = "biometric_admin_profile_link"
 
         // External Bluetooth NFC reader (ACR1255U-J1) pairing
         private const val KEY_EXTERNAL_BLE_READER_MAC = "external_ble_reader_mac"
@@ -92,10 +100,15 @@ class SettingsManager(private val storage: AppStorage) {
         private const val KEY_EMAIL_SIGNATURE = "email_signature"
         private const val KEY_EMAIL_INCLUDE_LOGO = "email_include_logo"
         private const val KEY_EMAIL_INCLUDE_DIGITAL_WALLET_PASS = "email_include_digital_wallet_pass"
+        private const val KEY_WALLET_PASS_CERT_PASSWORD = "wallet_pass_cert_password"
+        private const val KEY_WALLET_PASS_TYPE_IDENTIFIER = "wallet_pass_type_identifier"
+        private const val KEY_WALLET_PASS_TEAM_IDENTIFIER = "wallet_pass_team_identifier"
         private const val KEY_EMAIL_ASSOCIATION_NAME = "email_association_name"
         private const val KEY_EMAIL_LOGO_URI = "email_logo_uri"
         private const val KEY_EMAIL_GMAIL_ACCOUNT = "email_gmail_account"
         private const val KEY_EMAIL_GMAIL_AUTH_TOKEN = "email_gmail_auth_token"
+        private const val KEY_EMAIL_GMAIL_USE_SERVICE_ACCOUNT = "email_gmail_use_service_account"
+        private const val KEY_EMAIL_GMAIL_SERVICE_ACCOUNT_SENDER = "email_gmail_service_account_sender"
         private const val KEY_CATEGORY_EMAIL_EXPANDED = "category_email_expanded"
         
         // Guest Email Settings Keys
@@ -247,12 +260,81 @@ class SettingsManager(private val storage: AppStorage) {
         storage.putBoolean(KEY_DEBUG_MODE, enabled)
     }
     
-    fun isAnimatedBackgroundEnabled(): Boolean {
-        return storage.getBoolean(KEY_ANIMATED_BACKGROUND, true) // On by default; users can turn off in settings
+    fun getBackgroundAnimationStyle(): String {
+        val stored = storage.getString(KEY_BACKGROUND_ANIMATION_STYLE, "")
+        if (stored.isNotEmpty()) {
+            return normalizeBackgroundAnimationStyle(stored, default = "topographic")
+        }
+        if (storage.contains(KEY_ANIMATED_BACKGROUND)) {
+            return if (storage.getBoolean(KEY_ANIMATED_BACKGROUND, true)) {
+                "arches"
+            } else {
+                "none"
+            }
+        }
+        return "topographic"
     }
-    
+
+    fun setBackgroundAnimationStyle(style: String) {
+        val normalized = normalizeBackgroundAnimationStyle(style, default = "topographic")
+        storage.putString(KEY_BACKGROUND_ANIMATION_STYLE, normalized)
+        storage.putBoolean(KEY_ANIMATED_BACKGROUND, normalized != "none")
+    }
+
+    fun getBackgroundAnimationOpacity(): Float {
+        val default = BackgroundAnimationStyle.defaultOpacity(getBackgroundAnimationStyle())
+        if (!storage.contains(KEY_BACKGROUND_ANIMATION_OPACITY)) {
+            return default
+        }
+        return storage.getFloat(KEY_BACKGROUND_ANIMATION_OPACITY, default).coerceIn(0.05f, 1.0f)
+    }
+
+    fun setBackgroundAnimationOpacity(opacity: Float) {
+        storage.putFloat(
+            KEY_BACKGROUND_ANIMATION_OPACITY,
+            opacity.coerceIn(0.05f, 1.0f),
+        )
+    }
+
+    fun getBilleterieBackgroundAnimationStyle(): String {
+        val stored = storage.getString(KEY_BILLETTERIE_BACKGROUND_ANIMATION_STYLE, "")
+        if (stored.isNotEmpty()) {
+            return normalizeBackgroundAnimationStyle(stored, default = "none")
+        }
+        return "none"
+    }
+
+    fun setBilleterieBackgroundAnimationStyle(style: String) {
+        val normalized = normalizeBackgroundAnimationStyle(style, default = "none")
+        storage.putString(KEY_BILLETTERIE_BACKGROUND_ANIMATION_STYLE, normalized)
+    }
+
+    fun getBilleterieBackgroundAnimationOpacity(): Float {
+        val default = BackgroundAnimationStyle.defaultOpacity(getBilleterieBackgroundAnimationStyle())
+        if (!storage.contains(KEY_BILLETTERIE_BACKGROUND_ANIMATION_OPACITY)) {
+            return default
+        }
+        return storage.getFloat(KEY_BILLETTERIE_BACKGROUND_ANIMATION_OPACITY, default).coerceIn(0.05f, 1.0f)
+    }
+
+    fun setBilleterieBackgroundAnimationOpacity(opacity: Float) {
+        storage.putFloat(
+            KEY_BILLETTERIE_BACKGROUND_ANIMATION_OPACITY,
+            opacity.coerceIn(0.05f, 1.0f),
+        )
+    }
+
+    private fun normalizeBackgroundAnimationStyle(style: String, default: String): String {
+        return when (style) {
+            "none", "arches", "topographic" -> style
+            else -> default
+        }
+    }
+
+    fun isAnimatedBackgroundEnabled(): Boolean = getBackgroundAnimationStyle() != "none"
+
     fun setAnimatedBackgroundEnabled(enabled: Boolean) {
-        storage.putBoolean(KEY_ANIMATED_BACKGROUND, enabled)
+        setBackgroundAnimationStyle(if (enabled) "arches" else "none")
     }
     
     // UI Page Animations Configuration
@@ -600,6 +682,22 @@ class SettingsManager(private val storage: AppStorage) {
     fun setScrollBehavior(behavior: String) {
         storage.putString("${KEY_PAGE_SCROLL_BEHAVIOR}_mode", behavior)
     }
+
+    /** Desktop only: admin navigation placement (bottom, left, or right). */
+    fun getDesktopAdminNavLayout(): String =
+        storage.getString(KEY_DESKTOP_ADMIN_NAV_LAYOUT, "left") ?: "left"
+
+    fun setDesktopAdminNavLayout(layout: String) {
+        storage.putString(KEY_DESKTOP_ADMIN_NAV_LAYOUT, layout)
+    }
+
+    /** Desktop only: whether the side navigation rail shows labels (expanded) or icons only. */
+    fun isDesktopAdminNavRailExpanded(): Boolean =
+        storage.getBoolean(KEY_DESKTOP_ADMIN_NAV_RAIL_EXPANDED, true)
+
+    fun setDesktopAdminNavRailExpanded(expanded: Boolean) {
+        storage.putBoolean(KEY_DESKTOP_ADMIN_NAV_RAIL_EXPANDED, expanded)
+    }
     
     // Update Manifest URL Configuration
     fun getUpdateManifestUrl(): String {
@@ -687,6 +785,30 @@ class SettingsManager(private val storage: AppStorage) {
         storage.putBoolean(KEY_EMAIL_INCLUDE_DIGITAL_WALLET_PASS, enabled)
     }
 
+    fun getWalletPassCertificatePassword(): String {
+        return storage.getString(KEY_WALLET_PASS_CERT_PASSWORD, "") ?: ""
+    }
+
+    fun saveWalletPassCertificatePassword(password: String) {
+        storage.putString(KEY_WALLET_PASS_CERT_PASSWORD, password)
+    }
+
+    fun getWalletPassTypeIdentifier(): String {
+        return storage.getString(KEY_WALLET_PASS_TYPE_IDENTIFIER, "") ?: ""
+    }
+
+    fun saveWalletPassTypeIdentifier(identifier: String) {
+        storage.putString(KEY_WALLET_PASS_TYPE_IDENTIFIER, identifier)
+    }
+
+    fun getWalletPassTeamIdentifier(): String {
+        return storage.getString(KEY_WALLET_PASS_TEAM_IDENTIFIER, "") ?: ""
+    }
+
+    fun saveWalletPassTeamIdentifier(teamId: String) {
+        storage.putString(KEY_WALLET_PASS_TEAM_IDENTIFIER, teamId)
+    }
+
     fun getEmailAssociationName(): String {
         return storage.getString(KEY_EMAIL_ASSOCIATION_NAME, "Collectif Nocturne") ?: "Collectif Nocturne"
     }
@@ -722,6 +844,22 @@ class SettingsManager(private val storage: AppStorage) {
     fun clearGmailAuth() {
         storage.remove(KEY_EMAIL_GMAIL_ACCOUNT)
         storage.remove(KEY_EMAIL_GMAIL_AUTH_TOKEN)
+    }
+
+    fun isGmailUseServiceAccount(): Boolean {
+        return storage.getBoolean(KEY_EMAIL_GMAIL_USE_SERVICE_ACCOUNT, false)
+    }
+
+    fun setGmailUseServiceAccount(enabled: Boolean) {
+        storage.putBoolean(KEY_EMAIL_GMAIL_USE_SERVICE_ACCOUNT, enabled)
+    }
+
+    fun getGmailServiceAccountSenderEmail(): String {
+        return storage.getString(KEY_EMAIL_GMAIL_SERVICE_ACCOUNT_SENDER, "") ?: ""
+    }
+
+    fun saveGmailServiceAccountSenderEmail(email: String) {
+        storage.putString(KEY_EMAIL_GMAIL_SERVICE_ACCOUNT_SENDER, email.trim())
     }
     
     fun isCategoryEmailExpanded(): Boolean {
@@ -775,11 +913,25 @@ class SettingsManager(private val storage: AppStorage) {
     
     // Biometric Admin Login Configuration
     fun isBiometricAdminLoginEnabled(): Boolean {
-        return storage.getBoolean(KEY_BIOMETRIC_ADMIN_LOGIN, false)
+        if (!storage.getBoolean(KEY_BIOMETRIC_ADMIN_LOGIN, false)) return false
+        return getBiometricAdminProfileLink() != null
     }
-    
+
+    fun getBiometricAdminProfileLink(): BiometricAdminProfileLink? {
+        val raw = storage.getString(KEY_BIOMETRIC_ADMIN_PROFILE_LINK, "")
+        return BiometricAdminProfileLink.decode(raw.takeIf { it.isNotBlank() })
+    }
+
     fun setBiometricAdminLoginEnabled(enabled: Boolean) {
         storage.putBoolean(KEY_BIOMETRIC_ADMIN_LOGIN, enabled)
+        if (!enabled) {
+            storage.remove(KEY_BIOMETRIC_ADMIN_PROFILE_LINK)
+        }
+    }
+
+    fun setBiometricAdminProfileLink(link: BiometricAdminProfileLink) {
+        storage.putString(KEY_BIOMETRIC_ADMIN_PROFILE_LINK, link.encode())
+        storage.putBoolean(KEY_BIOMETRIC_ADMIN_LOGIN, true)
     }
     
     // Clear all settings

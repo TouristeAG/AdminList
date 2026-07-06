@@ -1,18 +1,22 @@
 package com.eventmanager.app.platform
 
-import com.eventmanager.app.platform.hardware.DesktopPcscCardReader
+import com.eventmanager.app.data.sync.SettingsManager
+import com.eventmanager.app.platform.createAppStorage
+import com.eventmanager.app.platform.hardware.DesktopExternalNfcReader
 
 actual fun createCardReaderService(context: PlatformContext): CardReaderService =
-    DesktopCardReaderService()
+    DesktopCardReaderService(context)
 
-private class DesktopCardReaderService : CardReaderService {
-    private val reader = DesktopPcscCardReader()
+private class DesktopCardReaderService(private val context: PlatformContext) : CardReaderService {
+    private val settings: SettingsManager by lazy {
+        SettingsManager(createAppStorage(context))
+    }
 
-    override fun isReaderConnected(): Boolean = reader.isReaderAvailable()
+    override fun isReaderConnected(): Boolean = DesktopExternalNfcReader.isConnected(settings)
 
     override fun shouldSuppressBuiltInNfc(): Boolean = false
 
-    override suspend fun readUid(): UidReadResult = reader.readUid()
+    override suspend fun readUid(): UidReadResult = DesktopExternalNfcReader.readUid(settings)
 
-    override fun readerDescription(): String = reader.readerName()
+    override fun readerDescription(): String = DesktopExternalNfcReader.readerDescription(settings)
 }

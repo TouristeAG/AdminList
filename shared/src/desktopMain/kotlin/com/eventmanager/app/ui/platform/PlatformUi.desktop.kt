@@ -9,10 +9,12 @@ import com.eventmanager.app.platform.appDataDir
 import com.eventmanager.app.platform.openUrl
 import java.awt.Desktop
 import java.net.URI
-import javax.swing.JOptionPane
+import com.eventmanager.app.resources.Res
+import com.eventmanager.app.resources.open_in_browser
+import org.jetbrains.compose.resources.stringResource
 
 actual fun showToast(platformContext: PlatformContext, message: String) {
-    JOptionPane.showMessageDialog(null, message, "NoctuList", JOptionPane.INFORMATION_MESSAGE)
+    DesktopToastBus.show(message)
 }
 
 actual fun openEmailClient(platformContext: PlatformContext, to: String, subject: String, body: String) {
@@ -29,7 +31,7 @@ actual fun openAppSettings(platformContext: PlatformContext) {
 @Composable
 actual fun PlatformWebView(url: String, modifier: Modifier) {
     Box(modifier) {
-        Text("Open in browser: $url")
+        Text(stringResource(Res.string.open_in_browser, url))
     }
 }
 

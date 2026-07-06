@@ -44,6 +44,7 @@ import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.LocalBar
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.ConfirmationNumber
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material3.*
@@ -118,10 +119,12 @@ import com.eventmanager.app.data.sync.GoogleSheetsService
 import com.eventmanager.app.ui.screens.BenefitsScreen
 import com.eventmanager.app.ui.screens.GuestListScreen
 import com.eventmanager.app.ui.screens.JobTrackingScreen
+import com.eventmanager.app.ui.screens.LogoutCard
 import com.eventmanager.app.ui.screens.JobTypeManagementScreen
 import com.eventmanager.app.ui.screens.SettingsScreen
 import com.eventmanager.app.ui.screens.SetupWizardScreen
 import com.eventmanager.app.ui.screens.AdminAuthScreen
+import com.eventmanager.app.ui.screens.AdminStartupSyncBanner
 import com.eventmanager.app.ui.screens.AdminSetupScreen
 import com.eventmanager.app.ui.screens.AdminType
 import com.eventmanager.app.ui.screens.BilleterieHomeScreen
@@ -137,7 +140,10 @@ import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.data.sync.settingsManagerFor
 import com.eventmanager.app.platform.createPlatformContext
 import com.eventmanager.app.ui.utils.*
-import com.eventmanager.app.ui.components.AnimatedBackground
+import com.eventmanager.app.ui.components.AppBackgroundAnimation
+import com.eventmanager.app.ui.components.BackgroundAnimationStyle
+import com.eventmanager.app.ui.components.WelcomeForegroundPanel
+import com.eventmanager.app.ui.components.WelcomeSecondaryButton
 import com.eventmanager.app.ui.components.DashboardClockCard
 import com.eventmanager.app.ui.components.SnowAnimation
 import com.eventmanager.app.ui.components.FireworksAnimation
@@ -179,6 +185,11 @@ actual fun AppRootContent(
     val appContext = platformContext.androidContext
     val settingsManager = remember { SettingsManager(createAppStorage(platformContext)) }
     val skipStartupSync = remember { settingsManager.consumeSkipNextStartupSync() }
+    val uiRefreshNonce by com.eventmanager.app.ui.platform.AppAppearanceState::refreshNonce
+    val backgroundAnimationStyle = uiRefreshNonce.let { settingsManager.getBackgroundAnimationStyle() }
+    val backgroundAnimationOpacity = uiRefreshNonce.let { settingsManager.getBackgroundAnimationOpacity() }
+    val billeterieBackgroundAnimationStyle = uiRefreshNonce.let { settingsManager.getBilleterieBackgroundAnimationStyle() }
+    val billeterieBackgroundAnimationOpacity = uiRefreshNonce.let { settingsManager.getBilleterieBackgroundAnimationOpacity() }
 
     // Use rememberSaveable to persist state across configuration changes
     // When Google Sheets is not configured, setup runs first; then the welcome screen on every launch.
@@ -205,6 +216,7 @@ actual fun AppRootContent(
     
     if (showSetupWizard) {
         SetupWizardScreen(
+            platformContext = platformContext,
             onSetupComplete = {
                 showSetupWizard = false
                 // Resolution scale is applied in attachBaseContext; recreate so layout size matches prefs.
@@ -311,6 +323,7 @@ actual fun AppRootContent(
                 }
 
                 AdminSetupScreen(
+                    platformContext = platformContext,
                     venues = adminSetupVenues,
                     onCreateAdminGuest = { guest, cb -> viewModel.createAdminGuest(guest, cb) },
                     onCreateAdminVolunteer = { vol, cb -> viewModel.createAdminVolunteer(vol, cb) },
@@ -504,6 +517,7 @@ actual fun AppRootContent(
         
         if (showAdminAuth) {
             AdminAuthScreen(
+                platformContext = platformContext,
                 viewModel = viewModel,
                 volunteers = volunteers,
                 guests = guests,
@@ -517,6 +531,7 @@ actual fun AppRootContent(
         } else {
         if (showTicketCheck) {
             var billeterieSection by rememberSaveable { mutableStateOf("home") }
+            var billeterieScannerReturnSection by rememberSaveable { mutableStateOf("home") }
             var showBilleterieSettings by rememberSaveable { mutableStateOf(false) }
             val billeterieDashboardScrollState = rememberScrollState(0)
             val billeterieListContext = LocalContext.current
@@ -539,7 +554,8 @@ actual fun AppRootContent(
             BackHandler {
                 when {
                     showBilleterieSettings -> showBilleterieSettings = false
-                    billeterieSection == "guests" || billeterieSection == "scanner" -> billeterieSection = "home"
+                    billeterieSection == "scanner" -> billeterieSection = billeterieScannerReturnSection
+                    billeterieSection == "guests" -> billeterieSection = "home"
                     else -> {
                         showTicketCheck = false
                         showWelcome = true
@@ -552,8 +568,10 @@ actual fun AppRootContent(
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.surface)
             ) {
-                AnimatedBackground(
-                    enabled = settingsManager.isAnimatedBackgroundEnabled()
+                AppBackgroundAnimation(
+                    style = billeterieBackgroundAnimationStyle,
+                    opacity = billeterieBackgroundAnimationOpacity,
+                    settingsManager = settingsManager,
                 )
 
                 when (billeterieSection) {
@@ -574,7 +592,10 @@ actual fun AppRootContent(
                                     showWelcome = true
                                 },
                                 onOpenGuestList = { billeterieSection = "guests" },
-                                onOpenScanner = { billeterieSection = "scanner" },
+                                onOpenScanner = {
+                                    billeterieScannerReturnSection = "home"
+                                    billeterieSection = "scanner"
+                                },
                                 onOpenSettings = { showBilleterieSettings = true }
                             )
                         }
@@ -585,7 +606,7 @@ actual fun AppRootContent(
                             guests = guests,
                             jobs = jobs,
                             jobTypeConfigs = jobTypeConfigs,
-                            onBack = { billeterieSection = "home" },
+                            onBack = { billeterieSection = billeterieScannerReturnSection },
                             onConfirmEntry = { job, selectedInvites ->
                                 viewModel.markBenefitAsUsed(job, selectedInvites)
                             }
@@ -593,7 +614,7 @@ actual fun AppRootContent(
                     }
                     else -> {
                         Scaffold(
-                            containerColor = if (settingsManager.isAnimatedBackgroundEnabled()) {
+                            containerColor = if (BackgroundAnimationStyle.isEnabled(billeterieBackgroundAnimationStyle)) {
                                 Color.Transparent
                             } else {
                                 MaterialTheme.colorScheme.surface
@@ -632,6 +653,20 @@ actual fun AppRootContent(
                                     .padding(innerPadding)
                             ) {
                                 GuestListScreenWithViewModel(viewModel, readOnly = true)
+                                FloatingActionButton(
+                                    onClick = {
+                                        billeterieScannerReturnSection = "guests"
+                                        billeterieSection = "scanner"
+                                    },
+                                    modifier = Modifier
+                                        .align(Alignment.BottomStart)
+                                        .padding(16.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.QrCodeScanner,
+                                        contentDescription = billeterieListContext.getString(R.string.billeterie_button_scanner)
+                                    )
+                                }
                             }
                         }
                     }
@@ -856,8 +891,10 @@ actual fun AppRootContent(
                         showSalesSheetItemManagement = false
                     }
                     // Animated background
-                    AnimatedBackground(
-                        enabled = settingsManager.isAnimatedBackgroundEnabled()
+                    AppBackgroundAnimation(
+                        style = backgroundAnimationStyle,
+                        opacity = backgroundAnimationOpacity,
+                        settingsManager = settingsManager,
                     )
                     
                     // Snow Animation (December 22-25)
@@ -1969,57 +2006,8 @@ fun DashboardScreen(
 
         Spacer(modifier = Modifier.height(if (isPhone) 16.dp else 24.dp))
 
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(if (isPhone) 14.dp else 16.dp),
-                verticalArrangement = Arrangement.spacedBy(if (isPhone) 10.dp else 12.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ExitToApp,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(if (isPhone) 22.dp else 24.dp)
-                    )
-                    Text(
-                        text = context.getString(R.string.settings_logout),
-                        style = if (isPhone) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-                Text(
-                    text = context.getString(R.string.settings_logout_description),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Button(
-                    onClick = onLogout,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError
-                    )
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ExitToApp,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(context.getString(R.string.settings_logout))
-                }
-            }
-        }
-        
+        LogoutCard(isPhone = isPhone, onLogout = onLogout)
+
         Spacer(modifier = Modifier.height(if (isPhone) 16.dp else 24.dp))
         
         // People Counter Component - only show if enabled
@@ -2405,6 +2393,9 @@ fun WelcomeScreen(
 ) {
     val context = LocalContext.current
     val settingsManager = remember { settingsManagerFor(context) }
+    val uiRefreshNonce by com.eventmanager.app.ui.platform.AppAppearanceState::refreshNonce
+    val backgroundAnimationStyle = uiRefreshNonce.let { settingsManager.getBackgroundAnimationStyle() }
+    val backgroundAnimationOpacity = uiRefreshNonce.let { settingsManager.getBackgroundAnimationOpacity() }
     val colorScheme = MaterialTheme.colorScheme
 
     BackHandler {
@@ -2445,9 +2436,11 @@ fun WelcomeScreen(
             val welcomeMaxWidth = maxWidth
             val welcomeMaxHeight = maxHeight
 
-            // Same animated circles as admin / Billeterie (AnimatedBackground); Pride day adds overlay on top.
-            AnimatedBackground(
-                enabled = settingsManager.isAnimatedBackgroundEnabled()
+            // Animated background (arches or topographic lines).
+            AppBackgroundAnimation(
+                style = backgroundAnimationStyle,
+                opacity = backgroundAnimationOpacity,
+                settingsManager = settingsManager,
             )
             if (isPrideDay) {
                 PrideAnimation(enabled = true)
@@ -2648,12 +2641,16 @@ fun WelcomeScreen(
                     modifier = Modifier.fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(
+                    WelcomeForegroundPanel(
                         modifier = Modifier
-                            .fillMaxWidth(if (isLandscape) 0.6f else 1f)
+                            .fillMaxWidth(if (isLandscape) 0.62f else 0.92f)
                             .padding(horizontal = 24.dp, vertical = 24.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
+                        if (showAdminAccessSyncIndicator) {
+                            AdminStartupSyncBanner(Modifier.fillMaxWidth())
+                            Spacer(Modifier.height(12.dp))
+                        }
+
                         Button(
                             onClick = {
                                 performStrongHaptic(vibrator)
@@ -2681,7 +2678,9 @@ fun WelcomeScreen(
                             )
                         }
 
-                        OutlinedButton(
+                        Spacer(Modifier.height(12.dp))
+
+                        WelcomeSecondaryButton(
                             onClick = {
                                 performStrongHaptic(vibrator)
                                 onAdminSelected()
@@ -2689,46 +2688,20 @@ fun WelcomeScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(if (isLandscape) 44.dp else 56.dp),
-                            shape = RoundedCornerShape(if (isLandscape) 22.dp else 28.dp),
-                            border = BorderStroke(1.5.dp, buttonColor.copy(alpha = 0.6f))
                         ) {
                             Icon(
                                 Icons.Default.Lock,
                                 contentDescription = null,
-                                modifier = Modifier.size(20.dp),
-                                tint = buttonColor
+                                modifier = Modifier.size(20.dp)
                             )
                             Spacer(Modifier.width(8.dp))
                             Text(
                                 text = context.getString(R.string.admin_mode),
                                 style = if (isLandscape) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = buttonColor
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
-                }
-            }
-
-            if (showAdminAccessSyncIndicator) {
-                val syncIndicatorLabel =
-                    context.getString(R.string.welcome_background_sync_content_description)
-                Surface(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(top = 6.dp, end = 10.dp),
-                    shape = CircleShape,
-                    color = colorScheme.surface.copy(alpha = 0.92f),
-                    shadowElevation = 3.dp
-                ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier
-                            .padding(8.dp)
-                            .size(22.dp)
-                            .semantics { contentDescription = syncIndicatorLabel },
-                        strokeWidth = 2.5.dp,
-                        color = colorScheme.primary
-                    )
                 }
             }
         }

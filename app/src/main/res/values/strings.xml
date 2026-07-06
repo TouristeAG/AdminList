@@ -92,7 +92,10 @@
     <string name="debug_logs_error_reading_generic">Error reading log file</string>
     <string name="debug_logs_share_file">Share log file</string>
     <string name="animated_background_title">Animated Background</string>
-    <string name="animated_background_description">Disable animated arches for better performance on older devices</string>
+    <string name="animated_background_description">Choose a subtle animated background for welcome and admin screens</string>
+    <string name="background_animation_none">None</string>
+    <string name="background_animation_arches">Arches</string>
+    <string name="background_animation_topographic">Topographic lines</string>
     <string name="page_animations_title">Page Animations</string>
     <string name="page_animations_description">Enable slide animations when switching pages and tabs</string>
     <string name="clear_app_cache">Clear App Cache</string>
@@ -623,7 +626,7 @@
     <!-- Guest List Screen -->
     <string name="guest_list_title">Guest List</string>
     <string name="guest_list_management">Guest List Management</string>
-    <string name="guest_list_description">Manage guests for Groove and Le Terreau venues</string>
+    <string name="guest_list_description">Manage guests across all configured venues</string>
     <string name="venue_groove">Groove</string>
     <string name="venue_le_terreau">Le Terreau</string>
     <string name="add_guest">Add Guest</string>
@@ -1127,7 +1130,7 @@
     <string name="nav_benefits_tablet">Benefits Overview</string>
     <string name="nav_settings_tablet">Settings &amp; Configuration</string>
     <string name="volunteer_manager_tablet">Comprehensive volunteer management system</string>
-    <string name="guest_list_management_tablet">Complete guest list management for both venues</string>
+    <string name="guest_list_management_tablet">Complete guest list management across all configured venues</string>
     <string name="volunteer_benefits_overview_tablet">Detailed volunteer benefits and status tracking</string>
     <string name="shift_tracking_tablet">Complete shift tracking and job management</string>
     <string name="shield_optimized">Optimized for NVIDIA Shield tablets</string>

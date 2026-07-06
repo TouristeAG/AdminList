@@ -5,6 +5,7 @@ package com.eventmanager.app.platform
  */
 interface BiometricAuth {
     val isAvailable: Boolean
+    val isNoneEnrolled: Boolean get() = false
     suspend fun authenticate(title: String, subtitle: String): Boolean
 }
 

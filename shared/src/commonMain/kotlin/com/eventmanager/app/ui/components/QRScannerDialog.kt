@@ -10,6 +10,13 @@ sealed class ScannerMatch {
     data class GuestMatch(val guest: Guest) : ScannerMatch()
 }
 
+data class NfcUidMatchOption(
+    val match: ScannerMatch,
+    val title: String,
+    val subtitle: String,
+    val typeLabel: String,
+)
+
 @Composable
 expect fun QRScannerDialog(
     platformContext: PlatformContext,

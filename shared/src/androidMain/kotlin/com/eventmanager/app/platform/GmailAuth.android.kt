@@ -1,6 +1,7 @@
 package com.eventmanager.app.platform
 
 import com.eventmanager.app.data.sync.GmailAuthService
+import com.eventmanager.app.data.sync.GmailSendService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -12,6 +13,7 @@ private class AndroidGmailAuth(private val context: PlatformContext) : GmailAuth
 
     override val isSignedIn: Boolean get() = authService.isAccountSelected()
     override val accountEmail: String? get() = authService.getSelectedAccountEmail()
+    override val lastSignInError: String? get() = null
 
     override suspend fun signIn(): Boolean {
         authService.createGmailService()
@@ -29,6 +31,16 @@ private class AndroidGmailAuth(private val context: PlatformContext) : GmailAuth
         htmlBody: String,
         attachments: List<EmailAttachment>
     ): Boolean = withContext(Dispatchers.IO) {
-        authService.createGmailService() != null
+        val service = authService.createGmailService() ?: return@withContext false
+        GmailSendService(context.androidContext).sendEmail(
+            gmailService = service,
+            to = to,
+            subject = subject,
+            htmlContent = htmlBody,
+            plainText = htmlBody,
+            qrFile = null,
+            logoFile = null,
+            digitalWalletPassFile = null
+        ).isSuccess
     }
 }

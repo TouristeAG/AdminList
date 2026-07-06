@@ -2,45 +2,58 @@ package com.eventmanager.app.data.update
 
 import com.eventmanager.app.platform.AppBuildInfo
 import com.eventmanager.app.platform.PlatformContext
+import com.eventmanager.app.platform.PlatformFileManager
 import com.eventmanager.app.platform.openUrl
+import com.eventmanager.app.data.sync.settingsManagerFor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
+import java.awt.Desktop
+import java.io.BufferedReader
 import java.io.File
 import java.io.FileOutputStream
+import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
 
 actual class UpdateChecker actual constructor(private val platformContext: PlatformContext) {
     actual suspend fun checkForUpdates(): UpdateCheckResult = withContext(Dispatchers.IO) {
-        runCatching {
-            val conn = URL(AppBuildInfo.UPDATE_MANIFEST_URL).openConnection() as HttpURLConnection
-            conn.connectTimeout = 10_000
-            val body = conn.inputStream.bufferedReader().readText()
-            val versionMatch = Regex(""""latestVersionName"\s*:\s*"([^"]+)"""").find(body)
-            val urlMatch = Regex(""""downloadUrl"\s*:\s*"([^"]+)"""").find(body)
-            val codeMatch = Regex(""""latestVersionCode"\s*:\s*(\d+)"""").find(body)
-            val latestName = versionMatch?.groupValues?.get(1) ?: AppBuildInfo.VERSION_NAME
-            val latestCode = codeMatch?.groupValues?.get(1)?.toIntOrNull() ?: AppBuildInfo.VERSION_CODE
-            val url = urlMatch?.groupValues?.get(1)
-            if (latestCode <= AppBuildInfo.VERSION_CODE || url.isNullOrBlank()) {
-                UpdateCheckResult.NoUpdate
-            } else {
-                UpdateCheckResult.UpdateAvailable(
-                    manifest = UpdateManifest(
-                        latestVersionCode = latestCode,
-                        latestVersionName = latestName,
-                        downloadUrl = url
-                    )
+        try {
+            val settingsManager = settingsManagerFor(platformContext)
+            val manifestUrl = settingsManager.getUpdateManifestUrl()
+            val connection = (URL(manifestUrl).openConnection() as HttpURLConnection).apply {
+                connectTimeout = 10_000
+                readTimeout = 10_000
+                requestMethod = "GET"
+            }
+
+            connection.inputStream.use { inputStream ->
+                val reader = BufferedReader(InputStreamReader(inputStream))
+                val response = buildString {
+                    var line: String?
+                    while (reader.readLine().also { line = it } != null) {
+                        append(line)
+                    }
+                }
+
+                val manifest = UpdateManifestEvaluator.parseManifest(response)
+                UpdateManifestEvaluator.evaluate(
+                    manifest = manifest,
+                    currentVersionCode = AppBuildInfo.VERSION_CODE,
+                    preferDesktopArtifact = true,
                 )
             }
-        }.getOrElse { UpdateCheckResult.Error(it.message ?: "Update check failed") }
+        } catch (e: Exception) {
+            UpdateCheckResult.Error(e.message ?: "Unknown error while checking for updates")
+        }
     }
 }
 
 actual class UpdateDownloader actual constructor(private val platformContext: PlatformContext) {
+    private val updatesDir = PlatformFileManager(platformContext).getUpdatesDirectory()
+
     actual suspend fun downloadUpdate(downloadUrl: String): Flow<DownloadState> = flow {
         emit(DownloadState.Idle)
         try {
@@ -48,28 +61,62 @@ actual class UpdateDownloader actual constructor(private val platformContext: Pl
             val connection = (url.openConnection() as HttpURLConnection).apply {
                 connectTimeout = 30_000
                 readTimeout = 30_000
+                requestMethod = "GET"
+                doInput = true
             }
+            connection.connect()
+            if (connection.responseCode != HttpURLConnection.HTTP_OK) {
+                emit(DownloadState.Error("Server returned HTTP ${connection.responseCode}"))
+                return@flow
+            }
+
             val fileLength = connection.contentLength
-            val outputFile = File(System.getProperty("java.io.tmpdir"), "noctulist-update.bin")
+            val extension = url.path.substringAfterLast('.', "").ifBlank { "bin" }
+            val outputFile = File(updatesDir, "noctulist-update.$extension")
+            if (outputFile.exists()) {
+                outputFile.delete()
+            }
+
             connection.inputStream.use { input ->
                 FileOutputStream(outputFile).use { output ->
                     val buffer = ByteArray(8192)
-                    var total = 0L
-                    var read: Int
-                    while (input.read(buffer).also { read = it } != -1) {
-                        output.write(buffer, 0, read)
-                        total += read
-                        if (fileLength > 0) emit(DownloadState.Downloading(((total * 100) / fileLength).toInt()))
+                    var totalBytesRead = 0L
+                    var bytesRead: Int
+                    while (input.read(buffer).also { bytesRead = it } != -1) {
+                        output.write(buffer, 0, bytesRead)
+                        totalBytesRead += bytesRead
+                        if (fileLength > 0) {
+                            emit(DownloadState.Downloading(((totalBytesRead * 100) / fileLength).toInt()))
+                        }
                     }
+                    output.flush()
                 }
             }
             emit(DownloadState.Downloaded(outputFile.absolutePath))
         } catch (e: Exception) {
-            emit(DownloadState.Error(e.message ?: "Download failed"))
+            emit(DownloadState.Error(e.message ?: "Unknown download error"))
         }
     }.flowOn(Dispatchers.IO)
 
     actual fun installUpdate(filePath: String) {
-        openUrl("file://$filePath")
+        val file = File(filePath)
+        if (!file.exists()) return
+
+        if (file.name.endsWith(".AppImage", ignoreCase = true)) {
+            file.setExecutable(true)
+        }
+
+        if (Desktop.isDesktopSupported()) {
+            val desktop = Desktop.getDesktop()
+            if (desktop.isSupported(Desktop.Action.OPEN)) {
+                desktop.open(file)
+                return
+            }
+            if (desktop.isSupported(Desktop.Action.BROWSE)) {
+                desktop.browse(file.parentFile?.toURI() ?: file.toURI())
+                return
+            }
+        }
+        openUrl(file.toURI().toString())
     }
 }

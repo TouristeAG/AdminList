@@ -85,7 +85,7 @@ private fun getRankDisplayName(rank: VolunteerRank?): String {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun VolunteerDetailPanel(
+actual fun VolunteerDetailPanel(
     volunteer: Volunteer,
     volunteerJobs: List<Job>,
     venues: List<VenueEntity>,
@@ -93,9 +93,9 @@ fun VolunteerDetailPanel(
     onAssignNfcUid: (Volunteer, String) -> Unit,
     onDelete: (Volunteer) -> Unit,
     onClose: () -> Unit,
-    modifier: Modifier = Modifier,
-    jobTypeConfigs: List<JobTypeConfig> = emptyList(),
-    onConfirmFutureEntry: ((Job, Int) -> Unit)? = null
+    modifier: Modifier,
+    jobTypeConfigs: List<JobTypeConfig>,
+    onConfirmFutureEntry: ((Job, Int) -> Unit)?
 ) {
     val context = LocalContext.current
     val isPhone = !isTablet()
@@ -1053,7 +1053,9 @@ fun VolunteerDetailPanel(
     }
 
     if (showNfcDialog) {
+        val platformContext = remember { com.eventmanager.app.platform.createPlatformContext(context) }
         AddNfcUidDialog(
+            platformContext = platformContext,
             onDismiss = { showNfcDialog = false },
             onConfirmUid = { uid ->
                 onAssignNfcUid(

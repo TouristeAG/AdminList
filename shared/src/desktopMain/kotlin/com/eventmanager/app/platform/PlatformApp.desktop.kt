@@ -20,8 +20,63 @@ actual fun finishApplication(platformContext: PlatformContext) {
 }
 
 actual fun openDateSettings(platformContext: PlatformContext) {
-    openUrl("x-apple.systempreferences:com.apple.preference.datetime")
+    when {
+        isMacOs() -> openMacDateSettings()
+        isWindows() -> openWindowsDateSettings()
+        else -> openLinuxDateSettings()
+    }
 }
+
+private fun isMacOs(): Boolean {
+    val os = System.getProperty("os.name").orEmpty().lowercase()
+    return "mac" in os || "darwin" in os
+}
+
+private fun isWindows(): Boolean = "win" in System.getProperty("os.name").orEmpty().lowercase()
+
+private fun openMacDateSettings() {
+    val url = "x-apple.systempreferences:com.apple.preference.datetime"
+    if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+        try {
+            Desktop.getDesktop().browse(URI(url))
+            return
+        } catch (_: Exception) { }
+    }
+    try {
+        Runtime.getRuntime().exec(arrayOf("open", url))
+    } catch (_: Exception) { }
+}
+
+private fun openWindowsDateSettings() {
+    try {
+        Runtime.getRuntime().exec(arrayOf("cmd", "/c", "start", "", "ms-settings:dateandtime"))
+    } catch (_: Exception) {
+        try {
+            if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+                Desktop.getDesktop().browse(URI("ms-settings:dateandtime"))
+            }
+        } catch (_: Exception) { }
+    }
+}
+
+private fun openLinuxDateSettings() {
+    val commands = listOf(
+        arrayOf("gnome-control-center", "datetime"),
+        arrayOf("xdg-open", "settings://system/date-time"),
+        arrayOf("kcmshell5", "kcm_clock")
+    )
+    for (command in commands) {
+        if (runDetached(command)) return
+    }
+}
+
+private fun runDetached(command: Array<String>): Boolean =
+    try {
+        ProcessBuilder(*command).start()
+        true
+    } catch (_: Exception) {
+        false
+    }
 
 actual fun openExternalUrl(platformContext: PlatformContext, url: String) {
     openUrl(url)

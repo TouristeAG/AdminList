@@ -15,6 +15,7 @@ import androidx.lifecycle.lifecycleScope
 import com.eventmanager.app.data.sync.FileAppLogger
 import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.data.utils.AppIconManager
+import com.eventmanager.app.platform.AndroidFragmentActivityProvider
 import com.eventmanager.app.platform.createAppStorage
 import com.eventmanager.app.platform.createPlatformContext
 import com.eventmanager.app.ui.AppRoot
@@ -22,10 +23,12 @@ import com.eventmanager.app.ui.AdminSessionHost
 import com.eventmanager.app.ui.AdminSessionWatchdog
 import com.eventmanager.app.ui.theme.EventManagerTheme
 import com.eventmanager.app.ui.theme.ThemeMode
+import com.eventmanager.app.ui.platform.AppAppearanceState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -51,7 +54,7 @@ class MainActivity : FragmentActivity(), AdminSessionHost {
         super.onCreate(savedInstanceState)
         applyLanguageSettings()
         applyResolutionScaling()
-
+        
         val platformContext = createPlatformContext(this)
         val settingsManager = SettingsManager(createAppStorage(platformContext))
         FileAppLogger.init(this, settingsManager)
@@ -73,7 +76,18 @@ class MainActivity : FragmentActivity(), AdminSessionHost {
 
         setContent {
             var themeModeString by remember { mutableStateOf(settingsManager.getThemeMode()) }
-            EventManagerTheme(themeMode = ThemeMode.fromString(themeModeString)) {
+            val themeRefreshNonce by AppAppearanceState::themeRefreshNonce
+
+            LaunchedEffect(themeRefreshNonce) {
+                themeModeString = settingsManager.getThemeMode()
+            }
+
+            EventManagerTheme(
+                themeMode = ThemeMode.fromString(themeModeString),
+                platformContext = platformContext,
+                settingsManager = settingsManager,
+                themeRefreshNonce = themeRefreshNonce,
+            ) {
                 AppRoot(
                     platformContext = platformContext,
                     onThemeModeChanged = { themeModeString = it }
@@ -92,9 +106,15 @@ class MainActivity : FragmentActivity(), AdminSessionHost {
 
     override fun onResume() {
         super.onResume()
+        AndroidFragmentActivityProvider.current = this
         if (adminSessionWatchdog.consumeLogoutAfterSleepIfPending()) {
             adminSessionAutoLogout?.invoke()
         }
+    }
+
+    override fun onPause() {
+        AndroidFragmentActivityProvider.current = null
+        super.onPause()
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
@@ -112,7 +132,7 @@ class MainActivity : FragmentActivity(), AdminSessionHost {
     override fun attachBaseContext(newBase: Context?) {
         super.attachBaseContext(applyLanguageToContext(applyResolutionScalingToContext(newBase)))
     }
-
+    
     @Suppress("DEPRECATION")
     private fun applyLanguageSettings() {
         val settingsManager = SettingsManager(createAppStorage(createPlatformContext(this)))
@@ -122,14 +142,14 @@ class MainActivity : FragmentActivity(), AdminSessionHost {
         config.setLocale(locale)
         resources.updateConfiguration(config, resources.displayMetrics)
     }
-
+    
     private fun createLocaleFromLanguageCode(languageCode: String): Locale = when {
-        languageCode.equals("en", ignoreCase = true) -> Locale("en", "GB")
+            languageCode.equals("en", ignoreCase = true) -> Locale("en", "GB")
         languageCode.contains("-") -> languageCode.split("-").let { Locale(it[0], it[1]) }
         languageCode.contains("_") -> languageCode.split("_").let { Locale(it[0], it[1]) }
-        else -> Locale(languageCode)
+            else -> Locale(languageCode)
     }
-
+    
     @Suppress("DEPRECATION")
     private fun applyResolutionScaling() {
         val settingsManager = SettingsManager(createAppStorage(createPlatformContext(this)))
@@ -158,7 +178,7 @@ class MainActivity : FragmentActivity(), AdminSessionHost {
         config.setLocale(locale)
         return base.createConfigurationContext(config)
     }
-
+    
     private fun applyAppIconSettings() {
         val appIconManager = AppIconManager(this)
         val settingsManager = SettingsManager(createAppStorage(createPlatformContext(this)))

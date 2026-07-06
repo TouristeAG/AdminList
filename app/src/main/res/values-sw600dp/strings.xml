@@ -13,7 +13,7 @@
     <string name="nav_benefits_tablet">Benefits Overview</string>
     <string name="nav_settings_tablet">Settings &amp; Configuration</string>
     <string name="volunteer_manager_tablet">Comprehensive volunteer management system</string>
-    <string name="guest_list_management_tablet">Complete guest list management for both venues</string>
+    <string name="guest_list_management_tablet">Complete guest list management across all configured venues</string>
     <string name="volunteer_benefits_overview_tablet">Detailed volunteer benefits and status tracking</string>
     <string name="shift_tracking_tablet">Complete shift tracking and job management</string>
 </resources>
