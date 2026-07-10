@@ -1,0 +1,62 @@
+package com.eventmanager.app.data.dao
+
+import androidx.room.*
+import com.eventmanager.app.data.models.Job
+import com.eventmanager.app.data.models.VolunteerRank
+import kotlinx.coroutines.flow.Flow
+
+@Dao
+interface JobDao {
+    @Query("SELECT * FROM jobs ORDER BY date DESC")
+    fun getAllJobs(): Flow<List<Job>>
+
+    @Query("SELECT * FROM jobs WHERE volunteerId = :volunteerId ORDER BY date DESC")
+    fun getJobsByVolunteer(volunteerId: String): Flow<List<Job>>
+
+    @Query("SELECT * FROM jobs WHERE venueName = :venueName ORDER BY date DESC")
+    fun getJobsByVenue(venueName: String): Flow<List<Job>>
+
+    @Query("SELECT * FROM jobs WHERE id = :id")
+    suspend fun getJobById(id: Long): Job?
+
+    @Query("SELECT * FROM jobs WHERE date BETWEEN :startDate AND :endDate ORDER BY date DESC")
+    fun getJobsByDateRange(startDate: Long, endDate: Long): Flow<List<Job>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertJob(job: Job): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertJobsAll(jobs: List<Job>): List<Long>
+
+    @Update
+    suspend fun updateJob(job: Job)
+
+    @Update
+    suspend fun updateJobsAll(jobs: List<Job>)
+
+    @Delete
+    suspend fun deleteJob(job: Job)
+
+    @Delete
+    suspend fun deleteJobsAll(jobs: List<Job>)
+
+    @Query("DELETE FROM jobs WHERE id = :id")
+    suspend fun deleteJobById(id: Long)
+
+    @Query("SELECT * FROM jobs WHERE lastModified > :timestamp")
+    suspend fun getJobsModifiedAfter(timestamp: Long): List<Job>
+    
+    @Query("SELECT * FROM jobs WHERE sheetsId = :sheetsId")
+    suspend fun getJobBySheetsId(sheetsId: String): Job?
+    
+    @Query("DELETE FROM jobs")
+    suspend fun deleteAllJobs()
+    
+    /**
+     * Updates all jobs referencing an old volunteer ID to use a new volunteer ID.
+     * Used when a volunteer's NanoID changes during sync (Google Sheets is source of truth).
+     */
+    @Query("UPDATE jobs SET volunteerId = :newVolunteerId WHERE volunteerId = :oldVolunteerId")
+    suspend fun updateJobsVolunteerId(oldVolunteerId: String, newVolunteerId: String)
+}
+

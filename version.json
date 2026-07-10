@@ -1,0 +1,13 @@
+{
+  "latestVersionCode": 24,
+  "latestVersionName": "1.1.0",
+  "minSupportedVersionCode": "24",
+  "changelogShort": "New graphics, redesigned Settings, POS mode and account credits, desktop app for macOS/Windows/Linux, billeterie improvements, PDF reports, and many fixes.",
+  "downloadUrl": "https://github.com/TouristeAG/NoctuList/releases/download/1.1.0/app-release-1.1.0.apk",
+  "desktopDownloadUrlDmg": "https://github.com/TouristeAG/NoctuList/releases/download/1.1.0/NoctuList-1.1.0.dmg",
+  "desktopDownloadUrlMsi": "https://github.com/TouristeAG/NoctuList/releases/download/1.1.0/NoctuList-1.1.0.msi",
+  "desktopDownloadUrlExe": "https://github.com/TouristeAG/NoctuList/releases/download/1.1.0/NoctuList-1.1.0.exe",
+  "desktopDownloadUrlDeb": "https://github.com/TouristeAG/NoctuList/releases/download/1.1.0/NoctuList-1.1.0.deb",
+  "desktopDownloadUrlAppImage": "https://github.com/TouristeAG/NoctuList/releases/download/1.1.0/NoctuList-1.1.0.AppImage",
+  "storeUrl": "https://play.google.com/store/apps/details?id=com.eventmanager.app"
+}

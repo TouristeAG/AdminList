@@ -1,0 +1,26 @@
+# Build outputs
+**/build/
+.gradle/
+.kotlin/
+
+# IDE
+.idea/
+*.iml
+.DS_Store
+
+# Local config (secrets)
+local.properties
+
+# Android
+*.apk
+*.aab
+*.dex
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Desktop packaging
+desktopApp/build/
+
+# Logs
+*.log

@@ -1,0 +1,314 @@
+import groovy.json.JsonSlurper
+import groovy.json.JsonOutput
+
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
+    id 'kotlin-parcelize'
+}
+
+android {
+    namespace 'com.eventmanager.app'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.eventmanager.app"
+        minSdk 26
+        targetSdk 34
+        // Load version information from version.json so the app and settings screen
+        // always reflect the same version as the update manifest.
+        def versionFile = file("$rootDir/version.json")
+        if (versionFile.exists()) {
+            def versionConfig = new JsonSlurper().parse(versionFile)
+            versionCode versionConfig.latestVersionCode as Integer
+            versionName versionConfig.latestVersionName as String
+        } else {
+            // Fallback values if version.json is missing
+            versionCode 1
+            versionName "1.0"
+        }
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        vectorDrawables {
+            useSupportLibrary true
+        }
+    }
+    
+    buildTypes {
+        debug {
+            // Explicitly use debug signing (Gradle will create keystore if needed)
+            signingConfig signingConfigs.debug
+            // Disable minification for faster debug builds
+            minifyEnabled false
+            shrinkResources false
+        }
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.debug
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+        coreLibraryDesugaringEnabled true
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+    buildFeatures {
+        compose true
+        // BuildConfig lives in :shared (same namespace); generating it here duplicates the class and breaks R8.
+        buildConfig false
+    }
+    composeOptions {
+        kotlinCompilerExtensionVersion '1.5.8'
+    }
+    packaging {
+        resources {
+            excludes += '/META-INF/INDEX.LIST'
+            excludes += '/META-INF/{AL2.0,LGPL2.1}'
+            excludes += '/META-INF/DEPENDENCIES'
+            excludes += '/META-INF/LICENSE'
+            excludes += '/META-INF/LICENSE.txt'
+            excludes += '/META-INF/LICENSE.md'
+            excludes += '/META-INF/license.txt'
+            excludes += '/META-INF/NOTICE'
+            excludes += '/META-INF/NOTICE.txt'
+            excludes += '/META-INF/notice.txt'
+            excludes += '/META-INF/ASL2.0'
+            excludes += '/META-INF/versions/9/OSGI-INF/MANIFEST.MF'
+        }
+        // Ensure APK is properly aligned (helps with installation on some devices)
+        jniLibs {
+            useLegacyPackaging = false
+        }
+    }
+    
+    lint {
+        // Disable duplicate platform classes check - these are from dependencies
+        // and are handled by excluding the problematic libraries
+        disable 'DuplicatePlatformClasses'
+        // Allow extra translations - tablet-specific strings are intentional
+        disable 'ExtraTranslation'
+    }
+}
+
+// Disable duplicate class check - poi-ooxml-schemas bundles xmlbeans classes
+// which causes false positives in the duplicate class check
+tasks.matching { it.name.startsWith('check') && it.name.contains('DuplicateClasses') }.configureEach {
+    enabled = false
+}
+
+configurations.all {
+    // commons-logging 1.2 bytecode breaks D8 when coreLibraryDesugaring is enabled (invalid stack maps).
+    exclude group: 'commons-logging', module: 'commons-logging'
+    resolutionStrategy {
+        // Force a single version of xmlbeans and prevent duplicates
+        force 'org.apache.xmlbeans:xmlbeans:2.5.0'
+        // Force a single version of stax-api to prevent duplicates
+        force 'javax.xml.stream:stax-api:1.0-2'
+        // Ensure xmlbeans is only resolved once
+        eachDependency { DependencyResolveDetails details ->
+            if (details.requested.group == 'org.apache.xmlbeans' && details.requested.name == 'xmlbeans') {
+                // Use the forced version
+                details.useVersion '2.5.0'
+            }
+            // Force stax-api to use 1.0-2 version
+            if (details.requested.group == 'javax.xml.stream' && details.requested.name == 'stax-api') {
+                details.useVersion '1.0-2'
+            }
+        }
+    }
+}
+
+dependencies {
+    implementation project(':shared')
+    // ACS official Bluetooth LE reader libraries — vendored AARs from the "Android BLE EVK (SmartCardIO)"
+    // (http://www.acs.com.hk/download-driver-unified/15195/acssmcio-0.6.2-android21-20251203.zip).
+    //  - smartcardio-0.1.7.aar: javax.smartcardio API (Card, CardChannel, CommandAPDU, TerminalFactory...).
+    //  - acssmcio-0.6.2.aar: BluetoothSmartCard / BluetoothTerminalManager that expose ACS's BLE
+    //    readers (ACR1255U-J1, ACR1255U-J1 V2 "SmartCardIO", ACR3901U-S1, AMR220-C, ACR1555U) as
+    //    javax.smartcardio.CardTerminal objects.
+    //
+    // The V2 terminal type covers the newer ACR1255U-J1 firmware that advertises the 128-bit
+    // 3C4AFFF0-... service instead of the legacy 0xFFF0; the old acsbt JAR did not know about it
+    // and rejected such units with "Bluetooth reader not supported".
+    implementation files('libs/smartcardio-0.1.7.aar')
+    implementation files('libs/acssmcio-0.6.2.aar')
+    // Keep AndroidX Startup explicit (not only transitive) to avoid runtime
+    // InitializationProvider ClassNotFound on some install/update paths.
+    implementation 'androidx.startup:startup-runtime:1.1.1'
+    // 2.0.x can miss j$.util.* in the APK with newer Compose runtime (PersistentCompositionLocalHashMap → j$.util.Map).
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
+    implementation 'androidx.webkit:webkit:1.11.0'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.7.0'
+    implementation 'androidx.activity:activity-compose:1.8.2'
+    implementation platform('androidx.compose:compose-bom:2024.02.00')
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.ui:ui-graphics'
+    implementation 'androidx.compose.ui:ui-tooling-preview'
+    implementation 'androidx.compose.material3:material3'
+    implementation 'androidx.compose.material:material-icons-extended'
+    
+    // Navigation
+    implementation 'androidx.navigation:navigation-compose:2.8.5'
+    
+    // ViewModel and LiveData
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7'
+    implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.8.7'
+    
+    // Coroutines
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+    
+    // Google Sheets API
+    implementation('com.google.api-client:google-api-client-android:2.2.0') {
+        exclude group: 'org.apache.xmlbeans', module: 'xmlbeans'
+    }
+    // Gson factory for Google API client
+    implementation('com.google.api-client:google-api-client-gson:2.2.0') {
+        exclude group: 'org.apache.xmlbeans', module: 'xmlbeans'
+    }
+    implementation('com.google.apis:google-api-services-sheets:v4-rev20220927-2.0.0') {
+        exclude group: 'org.apache.xmlbeans', module: 'xmlbeans'
+    }
+    implementation('com.google.auth:google-auth-library-oauth2-http:1.19.0') {
+        exclude group: 'org.apache.xmlbeans', module: 'xmlbeans'
+    }
+    implementation('com.google.auth:google-auth-library-credentials:1.19.0') {
+        exclude group: 'org.apache.xmlbeans', module: 'xmlbeans'
+    }
+    
+    // Gmail API
+    implementation('com.google.apis:google-api-services-gmail:v1-rev20220404-2.0.0') {
+        exclude group: 'org.apache.xmlbeans', module: 'xmlbeans'
+    }
+    
+    // Google Sign-In for OAuth
+    implementation 'com.google.android.gms:play-services-auth:20.7.0'
+    
+    // JSON parsing
+    implementation 'com.google.code.gson:gson:2.10.1'
+    
+    // Date handling
+    implementation 'org.jetbrains.kotlinx:kotlinx-datetime:0.4.1'
+    
+    // Work Manager for background sync
+    implementation 'androidx.work:work-runtime-ktx:2.9.0'
+    
+    // File picker
+    implementation 'androidx.activity:activity-compose:1.8.2'
+    implementation 'androidx.compose.ui:ui'
+    
+    // QR code generation
+    implementation 'com.google.zxing:core:3.5.1'
+    
+    // QR code scanning
+    implementation 'com.journeyapps:zxing-android-embedded:4.3.0'
+    
+    // Coil for image loading in Compose
+    implementation 'io.coil-kt:coil-compose:2.5.0'
+    
+    // NanoID for globally unique ID generation
+    implementation 'com.aventrix.jnanoid:jnanoid:2.0.0'
+    
+    // Biometric authentication (fingerprint / face unlock)
+    implementation 'androidx.biometric:biometric:1.1.0'
+    
+    // Vico Compose Charts
+    implementation 'com.patrykandpatrick.vico:compose:2.0.0-alpha.20'
+    implementation 'com.patrykandpatrick.vico:compose-m3:2.0.0-alpha.20'
+    
+    // Apache POI for XLSX export (using 3.15 for API 21+ compatibility - safe version without MethodHandle)
+    implementation('org.apache.poi:poi:3.15') {
+        exclude group: 'org.apache.logging.log4j', module: 'log4j-api'
+        exclude group: 'org.apache.xmlbeans', module: 'xmlbeans'
+    }
+    // Use transitive = false to manually control dependencies and avoid xmlbeans duplicates
+    implementation('org.apache.poi:poi-ooxml:3.15') {
+        exclude group: 'org.apache.logging.log4j', module: 'log4j-api'
+        exclude group: 'org.apache.xmlbeans', module: 'xmlbeans'
+        transitive = false
+    }
+    // Manually include required transitive dependencies
+    // poi-ooxml-schemas is needed for POI but bundles xmlbeans classes
+    // We'll add it but the duplicate check is disabled to handle conflicts
+    implementation('org.apache.poi:poi-ooxml-schemas:3.15') {
+        exclude group: 'org.apache.xmlbeans', module: 'xmlbeans'
+    }
+    // Add stax-api for javax.xml.stream classes (required by POI on Android)
+    // This provides the javax.xml.stream API that POI needs at runtime
+    implementation 'javax.xml.stream:stax-api:1.0-2'
+    // Add woodstox-core as the implementation provider for stax-api
+    // This is needed because Android doesn't include a stax implementation
+    implementation('com.fasterxml.woodstox:woodstox-core:6.5.1') {
+        exclude group: 'javax.xml.stream', module: 'stax-api'
+        // Exclude any transitive stax-api dependencies
+        exclude group: 'stax', module: 'stax-api'
+    }
+    // Add xmlbeans explicitly - poi-ooxml-schemas bundles some classes but not all
+    // We need the full xmlbeans library for POI to work properly
+    // Note: Some xmlbeans versions have duplicate classes in the JAR
+    // Using 2.5.0 which should work better with Android
+    implementation('org.apache.xmlbeans:xmlbeans:2.5.0') {
+        exclude group: 'javax.xml.stream', module: 'stax-api'
+        exclude group: 'stax', module: 'stax-api'
+    }
+    
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+    androidTestImplementation platform('androidx.compose:compose-bom:2024.02.00')
+    androidTestImplementation 'androidx.compose.ui:ui-test-junit4'
+    debugImplementation 'androidx.compose.ui:ui-tooling'
+    debugImplementation 'androidx.compose.ui:ui-test-manifest'
+}
+
+// When javaPreCompile* is satisfied from the build cache, annotationProcessors.json can be missing locally while
+// compile*JavaWithJavac still expects it (Gradle 8.10 + AGP 8.1). Recreate the Room/KSP marker file if absent.
+afterEvaluate {
+    def roomCompiler = configurations.findByName("ksp")?.dependencies?.find {
+        it.group == "androidx.room" && it.name == "room-compiler"
+    }
+    def roomVer = roomCompiler?.version ?: "2.6.1"
+    def processorKey = "room-compiler-${roomVer}.jar (androidx.room:room-compiler:${roomVer})"
+    def processorJson = JsonOutput.toJson([(processorKey): "KSP_PROCESSOR"])
+
+    ["Debug", "Release"].each { variant ->
+        def slug = variant.toLowerCase()
+        def preCompileTask = "javaPreCompile${variant}"
+        def compileTask = "compile${variant}JavaWithJavac"
+        def ensureTaskName = "ensure${variant}AnnotationProcessorsList"
+        if (tasks.findByName(compileTask) == null) return
+
+        tasks.register(ensureTaskName) {
+            dependsOn(tasks.named(preCompileTask))
+            doLast {
+                def f = file("${layout.buildDirectory.get().asFile}/intermediates/annotation_processor_list/${slug}/annotationProcessors.json")
+                if (!f.exists()) {
+                    f.parentFile.mkdirs()
+                    f.text = processorJson
+                }
+            }
+        }
+        tasks.named(compileTask).configure { dependsOn(tasks.named(ensureTaskName)) }
+    }
+
+    // KSP incremental shadow can throw FileAlreadyExistsException when the destination already exists
+    // (e.g. multiple Kotlin daemons, build cache restore, IDE + CLI). Clear variant output first.
+    ['Debug', 'Release'].each { variant ->
+        def kspTask = tasks.findByName("ksp${variant}Kotlin")
+        if (kspTask != null) {
+            kspTask.doFirst {
+                def slug = variant.toLowerCase()
+                def dir = file("${layout.buildDirectory.get().asFile}/generated/ksp/$slug")
+                if (dir.exists()) {
+                    project.delete(dir)
+                }
+            }
+        }
+    }
+}

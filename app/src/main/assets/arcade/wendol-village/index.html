@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>Wendol Village</title>
+	<meta name="viewport" content="width=device-width,height=device-height,initial-scale=1,maximum-scale=1,user-scalable=no">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="mobile-web-app-capable" content="yes">
+	<style>
+		html, body {
+			margin: 0;
+			padding: 0;
+			width: 100%;
+			height: 100%;
+			position: fixed;
+			top: 0;
+			left: 0;
+			overflow: hidden;
+			background: #5b6ee1;
+			touch-action: none;
+		}
+	</style>
+	<script>
+		window.wendolTextureSrc = function () {
+			if (window.__WENDOL_TEXTURE_DATA_URL) {
+				return window.__WENDOL_TEXTURE_DATA_URL;
+			}
+			return new URL('t.png', document.baseURI || window.location.href).href;
+		};
+	</script>
+	<script src="./lib/littlejs.trimmed.js"></script>
+	<script src="./index.js"></script>
+</head>
+<body></body>
+</html>

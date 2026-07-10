@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Advanced Card Systems Ltd. USB readers (e.g. ACR122U). Lets the user choose "Always open this app"
+         when the reader is plugged in, and improves USB permission / launch association. -->
+    <usb-device vendor-id="1839" />
+</resources>

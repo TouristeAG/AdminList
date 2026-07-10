@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="style.css">
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+    <title>Pizza Undelivery</title>
+    <script type="module" src="modules/game.js"></script>
+    <template id="game-over-template">
+        <div class="game-overlay">
+            <h2>CONGRATULATIONS!!!</h2>
+            <p>You made it to</p>
+            <h2>LEVEL <span id=lnum></span></h2>
+            <button>restart</button>
+        </div>
+    </template>
+    <template id="title-template">
+        <div class="game-overlay">
+            <h2>PIZZA UNDELIVERY</h2>
+            <p>In this game you have to pick up the pizzas and bring them <em>back</em> to the pizzeria!</p>
+            <p>Drive with the <em>arrow keys</em>, <em>WASD</em>, or the <em>on-screen buttons</em>.</p>
+            <h2>LEVEL: <input type="number" value="1" name="level" min="1" max="15"></h2>
+            <p><button>generate new map</button></p>
+            <p><button><b>GO!!!</b></button></p>
+        </div>
+    </template>
+</head>
+<body>
+    <main>
+        <canvas width="192" height="108" class="game"></canvas>
+    </main>
+    <div id="touch-controls" aria-hidden="true">
+        <button type="button" class="touch-btn touch-up" data-key="up">▲</button>
+        <button type="button" class="touch-btn touch-left" data-key="left">◀</button>
+        <button type="button" class="touch-btn touch-right" data-key="right">▶</button>
+        <button type="button" class="touch-btn touch-down" data-key="down">▼</button>
+    </div>
+</body>
+</html>

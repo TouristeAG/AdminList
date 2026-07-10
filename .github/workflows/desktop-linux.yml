@@ -1,0 +1,51 @@
+name: Desktop Linux release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+
+      - name: Install packaging dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fakeroot binutils libfuse2
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build Linux packages
+        run: |
+          ./gradlew :desktopApp:packageReleaseDeb :desktopApp:packageReleaseAppImage --no-daemon
+
+      - name: Upload workflow artifacts
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: noctulist-linux-desktop
+          path: |
+            desktopApp/build/compose/binaries/main-release/deb/*.deb
+            desktopApp/build/compose/binaries/main-release/appImage/*.AppImage
+
+      - name: Upload release assets
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            desktopApp/build/compose/binaries/main-release/deb/*.deb
+            desktopApp/build/compose/binaries/main-release/appImage/*.AppImage

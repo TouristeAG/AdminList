@@ -1,0 +1,1614 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App Name -->
+    <string name="app_name">NoctuList</string>
+    
+    <!-- Settings Screen -->
+    <string name="settings_title">Optiones &amp; configuratio</string>
+    <string name="settings_subtitle">Configura synchronizationem Google Sheets et optioes applicationis</string>
+    <string name="settings_logout">Exi</string>
+    <string name="settings_logout_description">Redi ad domum screen. Opus est re-authenticare ut admin ad administrationem accessum.</string>
+
+    <!-- Google Sheets Configuration -->
+    <string name="google_sheets_config_title">Configuratio Google Sheets</string>
+    <string name="view_setup_instructions">Vide instructiones configuration</string>
+    <string name="spreadsheet_id_label">ID schedae computensis</string>
+    <string name="spreadsheet_id_hint">Accipe hoc ex schedae Google URL: https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit</string>
+    <string name="guest_list_sheet_label">Scheda indici hospitum</string>
+    <string name="volunteer_sheet_label">Scheda voluntariorum</string>
+    <string name="shifts_sheet_label">Scheda ex Munera</string>
+    <string name="volunteer_guest_list_sheet_label">Scheda indici hospitum voluntariorum</string>
+    <!-- Read-only banner written to the volunteer benefit guest list Google Sheet (K1:M5, K6:M6); language follows app setting -->
+    <string name="volunteer_guest_sheet_banner_title">NE MUTA — Index hospitum beneficia voluntariorum</string>
+    <string name="volunteer_guest_sheet_banner_l2">Haec pagina non mutanda est.</string>
+    <string name="volunteer_guest_sheet_banner_l3">Omnis mutatio huius paginae non servabitur ab applicatione.</string>
+    <string name="volunteer_guest_sheet_banner_l4">Haec scheda est eventus impositionis applicationis, post calculum commodorum voluntariorum. Haec scheda non mutanda est.</string>
+    <string name="volunteer_guest_sheet_banner_l5"></string>
+    <string name="volunteer_guest_sheet_last_updated">Ultima renovatio: %1$s</string>
+    <!-- Epoch helper panel written to Google Sheets (formulas + titles); language follows app setting -->
+    <string name="sheet_epoch_calc_title_ms_to_date">Timestamp (ms) → dies/hora</string>
+    <string name="sheet_epoch_calc_title_date_to_ms">Dies/hora → timestamp (ms)</string>
+    <string name="sheet_epoch_calc_hint_ms">Saisir ms (ex. 1776711088094)</string>
+    <string name="sheet_epoch_calc_hint_datetime">Elige vel inscribe dies/horam</string>
+    <string name="temp_guest_list_sheet_label">Scheda index-hospitum temporaire</string>
+    <string name="shift_types_sheet_label">Scheda typorum munerum</string>
+    <string name="venues_sheet_label">Scheda Loci</string>
+    <string name="admin_label">Administrator</string>
+    <string name="admin_yes">Ita</string>
+    <string name="admin_no">Non</string>
+    <string name="save_settings">Serva optioes</string>
+    <string name="test_connection">Proba connexionem</string>
+    
+    <!-- Service Account Configuration -->
+    <string name="service_account_config_title">Configuratio ex ratio ministerii</string>
+    <string name="service_account_key_found">Clavis rationis ministerii inventa</string>
+    <string name="service_account_key_required">Clavis rationis ministerii requiriture</string>
+    <string name="email_label">Epistula: %1$s</string>
+    <string name="project_label">Projectum: %1$s</string>
+    <string name="email_colon">Epistula: %1$s</string>
+    <string name="project_colon">Projectum: %1$s</string>
+    <string name="upload_key_file_description">Deprome fasciculum clavis JSON rationis ministerii Google tuum</string>
+    <string name="upload_key_description">Deprome fasciculum clavis JSON rationis ministerii Google tuum</string>
+    <string name="replace_key_file">Substitue fasciculum clavis</string>
+    <string name="upload_key_file">Deprome fasciculum clavis</string>
+    
+    <!-- Sync Configuration -->
+    <string name="sync_config_title">Configuratio synchronizationis</string>
+    <string name="sync_interval_label">Intervallum synchronizationis (minuta)</string>
+    <string name="sync_interval_hint">Synchronisation frequentia cum Google schedae (1-60 minutae). Mutationes automatice salvae sunt.</string>
+    <string name="save_sheets_config">Serva configuration Sheets</string>
+    <string name="test_sync_status">Proba status synchronizationis</string>
+    <string name="sync_status_dialog_title">Status synchronizationis</string>
+    <string name="sync_status_configured">Google schedae ad syncm erecta et parata sunt</string>
+    <string name="sync_status_not_configured">Google Sheets non configuratum est. Quaeso optiones tuas inspice.</string>
+    <string name="sync_status_error">Error sync probatio status: %1$s</string>
+    <string name="manual_sync_now">Synchroniza manu nunc</string>
+    <string name="view_active_volunteers">Vide voluntarii actifves</string>
+    <string name="cleanup_inactive_volunteers">Nettoyer voluntarii inactifves</string>
+    <string name="cleanup_choose_duration">Elige quam diu voluntarii torpescere debent deleri:</string>
+    <string name="cleanup_inactive_for">Inactivusve ex:</string>
+    <string name="cleanup_years_value">%1$d ans</string>
+    <string name="cleanup_hide_preview">Masquerprospectus</string>
+    <string name="cleanup_preview_to_delete">Prospectus ex voluntarii ad supprimer (%1$d)</string>
+    <string name="cleanup_volunteers_to_be_deleted">Voluntarii qui seront deletums:</string>
+    <string name="cleanup_no_volunteers_found">Nullus voluntarius inactivus ex %1$d annis vel plus inventus est.</string>
+    
+    <!-- Advanced Settings -->
+    <string name="advanced_settings_title">Provectus occasus</string>
+    <string name="show_advanced_settings">Monstra provectus occasus</string>
+    <string name="hide_advanced_settings">Provectus celare occasus</string>
+    <string name="debug_mode_title">Modus debug</string>
+    <string name="debug_mode_description">Activa diarium detaillatum ad problemata solvenda</string>
+    <string name="debug_logs_title">Journaux debug</string>
+    <string name="debug_logs_location">Emplacement: %1$s</string>
+    <string name="debug_logs_files_size">Fasciculi: %1$d | Taille: %2$s Mo</string>
+    <string name="debug_logs_recent_files">Recentes stipes lima:</string>
+    <string name="debug_logs_view">Vide</string>
+    <string name="debug_logs_share">Communica</string>
+    <string name="debug_logs_view_latest">View recentissimus</string>
+    <string name="debug_logs_clear_all">Omnia Dele</string>
+    <string name="debug_logs_content">Log content</string>
+    <string name="debug_logs_no_content">Non contentus iniuriarum</string>
+    <string name="debug_logs_error_reading">Error legere stipes lima: %1$s</string>
+    <string name="debug_logs_error_reading_generic">Error legere stipes lima</string>
+    <string name="debug_logs_share_file">Share stipes lima</string>
+    <string name="animated_background_title">Fons animatus</string>
+    <string name="animated_background_description">Elige prudentem animatum background ad\'receptio and *\'administratio</string>
+    <string name="background_animation_none">Nullus</string>
+    <string name="background_animation_arches">Arcs</string>
+    <string name="background_animation_topographic">Lignes topographicums</string>
+    <string name="background_animation_opacity_title">Intensionem\'background</string>
+    <string name="background_animation_opacity_description">Redigendum the\'opacitas discre- animata lineas</string>
+    <string name="background_animation_opacity_apply">Applicare\'intensio</string>
+    <string name="billeterie_background_animation_title">Fons billetariae</string>
+    <string name="billeterie_background_animation_description">Elige animatum background ad ticketing tegumenta tantum</string>
+    <string name="page_animations_title">Animations paginas</string>
+    <string name="page_animations_description">Admitte ungunt animationes cum commutatione paginas et tabs</string>
+    <string name="clear_app_cache">Vider cache applicationis</string>
+    <string name="app_cache_cleared">Cache applicationem data purgare. Obitus et claves conservatae sunt.</string>
+    <string name="check_for_updates">Quaere ex mises ad dies</string>
+    <string name="update_available_title">Mise ad dies praesto: %1$s</string>
+    <string name="update_required_message">Recentior versio app pergere requiritur. Quaeso renovatio ad recentissimam versionem.</string>
+    <string name="update_available_message">Nova versio huius applicationis praesto est. Visne nunc renovare?</string>
+    <string name="update_now">Mettre ad dies</string>
+    <string name="later">Plus tard</string>
+    <string name="up_to_date_title">Applicatio ad dies</string>
+    <string name="up_to_date_message">Iam habes novam versionem installed.</string>
+    <string name="update_error_title">Non reprehendo pro updates</string>
+    <string name="update_error_message">Impossibile verifica mises ad dies: %1$s</string>
+    <string name="checking_for_updates_title">Reprehendo pro updates</string>
+    <string name="checking_for_updates_message">Connexio au serveur renovatio…</string>
+    <string name="downloading_update">Download update ...</string>
+    <string name="download_progress">Download: %1$d%%</string>
+    <string name="download_complete">Download complebitur</string>
+    <string name="install_update">Installer renovatio</string>
+    <string name="download_error_title">Download defecit</string>
+    <string name="download_error_message">Non update download: %1$s</string>
+    <string name="change_update_sources">Modifier fontes renovatio</string>
+    <string name="update_sources_title">Sources renovatio</string>
+    <string name="update_sources_warning">Domicilium GitHub ad validam versionem indicandum est.json fasciculum renovationis ad operandum. Tantum muta hos occasus si quid agas scis.</string>
+    <string name="update_sources_github_label">URL ex manifestum GitHub</string>
+    <string name="update_sources_store_label">URL ex store (secours)</string>
+    <string name="update_sources_reset">Restitue ex consuetudine</string>
+    <string name="update_sources_custom_url">URL proprium</string>
+
+    <!-- Language Settings -->
+    <string name="language_title">Lingua</string>
+    <string name="language_description">Msgstr</string>
+    <string name="language_english">English</string>
+    <string name="language_french">Français</string>
+    <string name="language_spanish">Español</string>
+    <string name="language_chinese">繁體中文</string>
+    <string name="language_chinese_simplified">简体中文</string>
+    <string name="language_latin">Latina</string>
+    <string name="language_hindi">हिन्दी</string>
+    
+    <!-- Theme Settings -->
+    <string name="theme_title">Thema</string>
+    <string name="theme_description">Elige vultus tui ventus theme</string>
+    <string name="theme_light">Clarum</string>
+    <string name="theme_dark">Obscurum</string>
+    <string name="theme_default">Systema</string>
+    
+    <!-- Color Theme Settings -->
+    <string name="color_theme_title">Thema couleur</string>
+    <string name="color_theme_description">Eligamus colorem argumenti adinventiones quae dynamicam colores non sustinent</string>
+    <string name="color_theme_system">Systema</string>
+    <string name="color_theme_professional_blue">Caeruleum</string>
+    <string name="color_theme_neutral_green">Viride</string>
+    <string name="color_theme_warm_gray">Cinereum</string>
+    <string name="color_theme_neutral_purple">Violaceum</string>
+    <string name="color_theme_rich_brown">Brun</string>
+    <string name="color_theme_sunset_mist">Brume</string>
+    <string name="color_theme_feminist_violet">Violaceum</string>
+    <string name="color_theme_custom">Consuetudinem</string>
+    <string name="color_theme_customize">Mos thematis mos</string>
+    
+    <!-- Restart Dialog -->
+    <string name="restart_required_title">Sileo requiratur</string>
+    <string name="restart_required_message">Color thematis mutatus est. Quaeso sileo applicationis ad novum propositum applicatum.</string>
+    <string name="restart_now">Reincipe nunc</string>
+    <string name="restart_later">Plus tard</string>
+    
+    <!-- UI Size Settings -->
+    <string name="resolution_scale_title">Consilium scalae</string>
+    <string name="resolution_scale_description" formatted="false">Ajustezscala resolutio pro rendreinterface utilisateur plus petite vel plus grande. Faites glisser curseur pro modifierscala 80% (GRAND) ad 120% (PETIT).</string>
+    <string name="resolution_small">Grand</string>
+    <string name="resolution_medium_small">Moyen petit</string>
+    <string name="resolution_normal">Normal</string>
+    <string name="resolution_medium_large">Moyen grand</string>
+    <string name="resolution_large">Petit</string>
+    <string name="save_resolution_scale">Servascala resolutio</string>
+    <string name="system_is_in_dark_mode">Ratio in tenebris modus</string>
+    <string name="system_is_in_light_mode">Patet modus est ratio</string>
+    <string name="people_counter_visibility_title">Afficher compteur personususnes</string>
+    <string name="people_counter_visibility_description">Afficher vel Cela compteur personususnes in paginade accueil</string>
+    <string name="statistics_visibility_title">Afficher graphicums statistica</string>
+    <string name="statistics_visibility_description">Afficher vel Cela section ex graphicums statistica in paginade accueil</string>
+    <string name="scroll_behavior_title">Scrolling mores pro administratione paginarum</string>
+    <string name="scroll_behavior_description">Moderare quomodo caput (addendi, filtrae, quaerendi) agit cum per voluntariorum, Guest-List et Shifts paginas librum habes.</string>
+    <string name="scroll_behavior_list_only_title">Ut header fixum</string>
+    <string name="scroll_behavior_list_only_description">Catalogus cartis tantum. Actiones supremae (addendi, Filtra, quaere) in summo visibilia manent.</string>
+    <string name="scroll_behavior_full_page_title">Totam paginam librum</string>
+    <string name="scroll_behavior_full_page_description">Librum cum indice titulorum titulorum. Actiones in summo evanescant cum librum deieceris.</string>
+    <string name="scroll_behavior_sticky_filters_option">Filtra visibilia cum scrolling</string>
+    <string name="scroll_behavior_sticky_filters_description">Talea colum in summo fixa manet semel in summo veli, cum titulus et volumen bullam adde.</string>
+
+    <!-- Shift Type Management -->
+    <string name="shift_type_management_title">Gestion ex typi Munera</string>
+    <string name="shift_type_management_description">Configurare trabea genera et gradum eligibility</string>
+    <string name="manage_shift_types">Curo Shift Genera</string>
+    <string name="shift_types_title">Types Munera</string>
+    <string name="add_shift_type">Ajouter typus Munus</string>
+    <string name="search_shift_types_placeholder">Quaere ex typi shifts...</string>
+    <string name="filter_shift_types">Types Munera</string>
+    <string name="filter_orion_types">Types Orion</string>
+    <string name="shift_types_count">%1$d in %2$d typi shifts</string>
+    <string name="shift_job">Munus Job</string>
+    <string name="orion_job">Orion Job</string>
+    <string name="requires_time">Tempus requirit</string>
+    <string name="stellar_benefits">Avantages Stellar</string>
+    <string name="manual_rewards">Manual praemia</string>
+    <string name="manual_rewards_details">Manual Praemia Details</string>
+    <string name="days_n">%1$d dies</string>
+    <string name="free_drinks_n">%1$d boissonususs gratuites</string>
+    <string name="bar_discount_n">%1$d%% discountio ad bar</string>
+    <string name="invites_n">%1$d invitations</string>
+    <string name="no_rewards_configured">Nulla felis pretium</string>
+    <!-- Shift Type Dialog -->
+    <string name="add_shift_type_title_compact">Ajouter typus shift</string>
+    <string name="add_shift_type_title_full">Ajouter novus typus shift</string>
+    <string name="edit_shift_type_title_compact">Modifier typus shift</string>
+    <string name="edit_shift_type_title_full">Modifier configuration ex typus shift</string>
+    <string name="shift_type_name_label">Nomenen ex typus shift</string>
+    <string name="shift_type_name_placeholder">ex.: Personususnel ex bar</string>
+    <string name="description_label">Descriptio</string>
+    <string name="description_placeholder">Descriptio facultative</string>
+    <string name="benefit_system_label">Systemade commoda</string>
+    <string name="stellar_config_label">Configuratio ex typus shift</string>
+    <string name="manual_rewards_config_label">Configuratio ex praemia manualiss</string>
+    <string name="manual_rewards_warning_orion_automatic_enabled">Orion latae sententiae reducitur ad hoc genus mutationis! Cum praemiis manualibus ACERVUS - switch ad modum stellare et deactivate "Orion Iob" si noluistis.</string>
+    <string name="manual_rewards_warning_nova_stellar_automatic_enabled">Automatic Nova / Galaxia commoda (shift numerata) reducitur! Stack cum praemiis manualibus - switch ad modum stellare et deactivate "Shift Job" si noluerunt.</string>
+    <string name="shift_job_label">Munus Job (Nova / Galaxie)</string>
+    <string name="orion_job_label">Orion Job (Committee / Coordination)</string>
+    <string name="requires_shift_time_label">Requiritur parameter: potest / frui non potest ad vesperam</string>
+    <string name="duration_days_label">Duratio (dies)</string>
+    <string name="free_drinks_label">Boissonususs gratuites</string>
+    <string name="bar_discount_percent_label">Bar reductionem (%)</string>
+    <string name="free_entry_label">Introitus gratuite</string>
+    <string name="number_of_invites_label">Nomenenbrede invitations</string>
+    <string name="duration_invites_label">Invitationes in praemio tempore</string>
+    <string name="future_single_use_entries_label">Introituss futures ad usage unique</string>
+    <string name="future_entry_invites_label">Invitatioes per introitus future (amis)</string>
+    <string name="future_entry_invites_helper">Adhibitum ad &quot;+n inv.&quot; in futuris introitibus semel usurpandis ostendendum.</string>
+    <string name="future_single_use_entries_with_invites_summary">Introituss futures ad usage unique: %1$d (+%2$d inv.)</string>
+    <string name="future_event_entries_remaining_n">🎟️ %1$d Introituss eventus (usage unique)</string>
+    <string name="future_entry_remaining_with_invites">🎟️ %1$d introitus restante (+%2$d inv.)</string>
+    <string name="future_entries_remaining_with_invites">🎟️ %1$d introituss restantes (+%2$d inv.)</string>
+    <string name="future_entry_solo">🎟️ %1$d introitus restante (seul)</string>
+    <string name="future_entries_solo">🎟️ %1$d introituss restantes (seul)</string>
+    <string name="other_notes_label">Aliuds remarques</string>
+    <string name="other_notes_placeholder">Additae notae…</string>
+    <string name="update_shift_type">Mettre ad dies typus shift</string>
+    <string name="stellar_benefits_info_title">Guide ex commoda voluntarii</string>
+
+    <string name="benefits_help_dialog_title">Guide ex commoda voluntarii</string>
+    <string name="benefits_help_dialog_subtitle">Collectif Nocturne · 2026-27</string>
+    <string name="benefits_help_intro">Trabea indicat genus, quod correspondet operi actu peracto. In stellare modo applicatio commoda computat; in modo Manualis, tu eas ipse definis.</string>
+
+    <string name="benefits_help_tab_modes">Modes</string>
+    <string name="benefits_help_tab_nova">Types shift</string>
+    <string name="benefits_help_tab_extras">Praemia &amp; tempora</string>
+
+    <string name="benefits_help_app_stellar">Activate "officium Shift", deinde opportunum elige Novae typum\nActive "officium Orionis" unius mandati (Orionis annus, deinde veteranus status sequentis anni)\nBibit, hospes index et viscus futuri: latae calculi</string>
+    <string name="benefits_help_app_manual">Tu ipse inscribis dies, potiones, bar \u0025, hospitae, extras\nAdhibe pro casibus singularibus extra consuetam tabulam\nCave ne idem munus bis numeres si iam in modo Stellaire captum est</string>
+
+    <string name="benefits_help_section_profité_title">Profité / non-profité</string>
+    <string name="benefits_help_section_profité_body">Solum munus ex consuetudine, cum "frui vespera" activum est.\nNon de introitu: utrum horae muneris adhuc permittant homini noctem frui necne.\nAlia genera Nova: haec optio latet.</string>
+
+    <string name="benefits_help_section_nova_title">Avantages per typus Nova (shift job)</string>
+    <string name="benefits_help_nova_profité_title">Shift vesperum - circumveniamur</string>
+    <string name="benefits_help_nova_profité_rationale">Tantum ad vesperum eventum pertinet.</string>
+    <string name="benefits_help_nova_profité_perks">Introitus gratuite + 1 amie - vespera deeventus\n50\u0025 ad bar - vespera deeventus\n2 boissonususs offertes (~10 CHF) - vespera deeventus</string>
+
+    <string name="benefits_help_nova_non_profité_title">Vespera subcinctus - non circumveniamur</string>
+    <string name="benefits_help_nova_non_profité_rationale">Eadem beneficia ad eventum noctis, plus gratis temporis ingressum (+ amicus +1).</string>
+    <string name="benefits_help_nova_non_profité_perks">Eadem sarcina ut beneficium rei noctis\n+ 1 temporis viscus + 1 amicus (vestigatum in app)</string>
+
+    <string name="benefits_help_nova_photo_title">Author/videographer (vesper)</string>
+    <string name="benefits_help_nova_photo_rationale">Idem principium cum defalta trabea lucri non-.</string>
+    <string name="benefits_help_nova_photo_perks">Free ingressum + I friend - operto noctis\n50\u0025 apud bar - subobscurum noctis\nII free drinks (~ X CHF) - nox operta\n1 temporis viscus + 1 amicus</string>
+
+    <string name="benefits_help_nova_meeting_title">Conventus</string>
+    <string name="benefits_help_nova_meeting_rationale">Tres conventus eodem mense computant pro Galaxia, excepto Orione: conventus in tota sua computantur.</string>
+    <string name="benefits_help_nova_meeting_perks">1 temporis viscus + 1 amicus\nI free drink (~5 CHF)</string>
+
+    <string name="benefits_help_nova_gd_event_title">Graphic excogitatoris - pro certo eventu</string>
+    <string name="benefits_help_nova_gd_event_rationale">Eadem ratione ac photo vel video huic vesperi.</string>
+    <string name="benefits_help_nova_gd_event_perks">Free entry + 1 friend - vespere of the event\n50\u0025 apud bar - vesperum eventu\nII bibit honorifice (~ X CHF) - vespere eventu\n1 temporis viscus + 1 amicus</string>
+
+    <string name="benefits_help_nova_gd_asso_title">Graphiste - proassociation (hors seule vespera)</string>
+    <string name="benefits_help_nova_gd_asso_rationale">Travail non limitatum ad vespera: dcommodum boissonususs offertes, sine 50\u0025 ad bar.</string>
+    <string name="benefits_help_nova_gd_asso_perks">2 temporis entries + 1 amicus uterque\n4 free drinks (~20 CHF)</string>
+
+    <string name="benefits_help_section_galaxie_title">Galaxie</string>
+    <string name="benefits_help_section_galaxie_body">Tres contributiones in eodem mense calendario (accessiones et conventus)\nOrion enim conventus in his tribus contributionibus non numeratur\nMensis ille: liber introitus ad omnes eventus, 50\u0025 ad fora, addito potu\nHaec beneficia praeter eas cuiusque mutationis sunt</string>
+
+    <string name="benefits_help_section_orion_title">Orion</string>
+    <string name="benefits_help_section_orion_body">Genus officium Orionis situm esse indicat\nPro uno anno ab initio mandati: libero ingressu, 50\u0025 apud bar, I guest\n270 CHF in pera interna (subucula et budget bibit)</string>
+
+    <string name="benefits_help_section_veteran_title">Veteran</string>
+    <string name="benefits_help_section_veteran_body">L'annus sequens Orion\nIntroitus gratuite et 50\u0025 ad bar sonusust maintenus\nLe porte-monnaie internum prend fin cum mandat</string>
+
+    <string name="benefits_help_section_timing_title">Quand commoda s'activent inapplication</string>
+    <string name="benefits_help_section_timing_body">The "res nox" beneficia sequuntur diei vespertini loci ("diem mutationem" occasus in occasus)\nViscus futuri eodem momento utibile facti sunt\nOrion, Galaxy et Veteran longiora tempora sequuntur</string>
+
+    <string name="benefits_help_footer_title">Notae utiles</string>
+    <string name="benefits_help_footer_bullets">Profité / non-profité — utrum horae muneris permiserint frui vespera necne (non de introitu)\n50\u0025 ad bar sequitur pretia Lightspeed\nGalaxie cum commodis per munus componitur</string>
+
+    <string name="nova_job_type_label">Typus commodi Nova</string>
+    <string name="nova_type_default_shift">Munus ex consuetudine</string>
+    <string name="nova_type_meeting">Conventus</string>
+    <string name="nova_type_graphic_designer_event">Graphista (pro eventu)</string>
+    <string name="nova_type_photographer_videographer">Photographe / cadreur</string>
+    <string name="nova_type_graphic_designer_association">Graphista (pro associatione)</string>
+
+    <!-- Venue Management -->
+    <string name="venue_management_title">Gestion ex lieux</string>
+    <string name="venue_management_description">Configura lieux et leurs optioes</string>
+    <string name="manage_venues">Curo locis</string>
+    <string name="venues_title">Loci</string>
+    <string name="add_venue">Adde locum</string>
+    <string name="sales_items_sheet_label">Scheda ex res vente</string>
+    <string name="sales_items_management_title">Gestion ex res vente</string>
+    <string name="sales_items_management_description">Configura res vente et leurs optioes</string>
+    <string name="manage_sales_items">Curo venditio items</string>
+    <string name="sales_items_title">Articles vente</string>
+    <string name="add_sales_item">Ajouter res vente</string>
+    <string name="edit_sales_item">Modifier l’res vente</string>
+    <string name="sales_update_item">Mettre ad dies l’res vente</string>
+    <string name="search_sales_items_placeholder">Quaere ex res vente...</string>
+    <string name="sales_items_count">Articles vente: %1$d/%2$d</string>
+    <string name="sales_price_label">Prix (CHF)</string>
+    <string name="sales_discount_label">Discountio applicatur</string>
+    <string name="sales_required_rank_label">Rang minimum requiritur</string>
+    <string name="sales_rank_none_required">Nullus ordo requiratur</string>
+    <string name="sales_item_summary_line">CHF %1$.2f • Reductio: %2$s • Rank min. : %3$s</string>
+    <string name="sales_categories_label">Categoriae</string>
+    <string name="sales_emoji_label">Emoji</string>
+    <string name="sales_category_merch">Merch</string>
+    <string name="sales_category_entry">Introitus</string>
+    <string name="sales_category_bar">Bar</string>
+    <string name="sales_category_other">Aliud</string>
+
+    <!-- Account / POS -->
+    <string name="transfers_sheet_label">Scheda ex translationes</string>
+    <string name="account_amount_label">Summa rationis</string>
+    <string name="recent_transfers_label">Recentes translationes</string>
+    <string name="show_all_transfers">Montrer omnes translationes</string>
+    <string name="show_fewer_transfers">Montrer minus translationes</string>
+    <string name="adjust_account_button">Compone rationem</string>
+    <string name="adjust_account_title">Compone stateram rationis</string>
+    <string name="account_add_money">Adde pecuniam</string>
+    <string name="account_remove_money">Remove pecuniam</string>
+    <string name="amount_label">Summa</string>
+    <string name="note_label">Nota</string>
+    <string name="continue_label">Perge</string>
+    <string name="manual_adjustment_default_note">Compositio manualis</string>
+    <string name="currency_setting_label">Moneta</string>
+    <string name="currency_setting_description">Currency ostendi venditionesque et POS</string>
+    <string name="pos_title">POS</string>
+    <string name="pos_welcome_button">POS internum</string>
+    <string name="pos_background_animation_title">POS background</string>
+    <string name="pos_background_animation_description">Elige animatum background ad POS screens solum</string>
+    <string name="pos_scan_customer">Scande chartam vel QR</string>
+    <string name="pos_category_all">Omnia</string>
+    <string name="pos_manual_amount">Summa manualis</string>
+    <string name="pos_cart_title">Cistella</string>
+    <string name="pos_validate_sale">Confirma venditionem</string>
+    <string name="pos_sale_success">Venditio perfecta!</string>
+    <string name="pos_sale_remaining_credit">Creditum reliquum: %1$s</string>
+    <string name="pos_remaining_credit_label">Creditum reliquum</string>
+    <string name="pos_sale_next">Suivant</string>
+    <string name="pos_sale_next_hint">Scannez proxima carte</string>
+    <string name="pos_sale_next_shortcut">Introitus ↵</string>
+    <string name="pos_insufficient_funds">Creditum insufficient</string>
+    <string name="pos_cash_payment_title">Creditum insufficient</string>
+    <string name="pos_cash_payment_message">Ratio %1$s tegit. Solve %2$s pecunia vel charta ut venditionem perficias?</string>
+    <string name="pos_cash_payment_credit_covers">compte couvre %1$s.</string>
+    <string name="pos_cash_payment_due_label">Stipendium in cash vel card</string>
+    <string name="pos_cash_payment_bar_discount_applied">Bar discount -%1$d\u0025 ad differentiam</string>
+    <string name="pos_cash_payment_confirm">Payer et validumr</string>
+    <string name="pos_cash_payment_cancel">Abroga venditionem</string>
+    <string name="pos_pay_cash_card">Payer %1$s en pecunia vel carte</string>
+    <string name="pos_customer_balance">Statera: %1$s</string>
+    <string name="pos_total">Summa: %1$s</string>
+    <string name="pos_clear_cart">Vider</string>
+    <string name="pos_use_qr">Utiliser QR</string>
+    <string name="pos_manual_default_label">Manualis</string>
+    <string name="pos_step_scan">Scande chartam</string>
+    <string name="pos_step_add">Ajouter res</string>
+    <string name="pos_step_validate">Valider</string>
+    <string name="pos_waiting_card">Approchez carte ex lecteur</string>
+    <string name="pos_reader_active">Lector actif</string>
+    <string name="pos_reader_not_connected">Nulla coegi connected</string>
+    <string name="pos_reader_waiting">Exspectans chartam</string>
+    <string name="pos_unknown_card">Charta non reconnue</string>
+    <string name="pos_customer_recognized">%1$s reconnue</string>
+    <string name="pos_clear_customer">Mutatio profile</string>
+    <string name="pos_profile_switch_title">Mutatio profile?</string>
+    <string name="pos_profile_switch_message">%1$s lustrata est, sed ordo current in nomine Domini est %2$s.</string>
+    <string name="pos_profile_switch_keep_cart">Mutatio profile - custodi cart</string>
+    <string name="pos_profile_switch_clear_cart">Mutatio profile - inanis cart</string>
+    <string name="pos_profile_switch_keep_current">Cancel - ut current profile et plaustrum</string>
+    <string name="pos_reader_scanning">Lecture NFC in progressu</string>
+    <string name="pos_bar_discount_badge">-%1$d\u0025 ad bar</string>
+    <string name="pos_bar_discount_at_bar">ad bar</string>
+    <string name="pos_bar_discount_cash_hint">Sur solutio pecuniae vel carte</string>
+    <string name="pos_scan_next">Scannez proxima carte</string>
+    <string name="pos_cart_empty">Cistella vacua — touchez producta pro ajouter</string>
+    <string name="pos_select_customer_first">Scan\'primum profile</string>
+    <string name="pos_customer_guest_label">Hospes</string>
+    <string name="pos_items_count">%1$d res</string>
+    <string name="numpad_clear">Effacer</string>
+    <string name="numpad_backspace">Backspace</string>
+    <string name="numpad_add_to_cart">Ajouter au panier</string>
+    <string name="emoji_picker_title">Choisir emoji</string>
+    <string name="emoji_picker_choose">Choisir</string>
+    <string name="account_credit_tooltip">Ajouter ex creditum</string>
+    <string name="account_debit_tooltip">Retirer ex creditum</string>
+
+    <string name="search_venues_placeholder">Quaere ex lieux...</string>
+    <string name="venues_count">%1$d in %2$d lieux</string>
+    <string name="venue_name">Nomenen ex lieu</string>
+    <string name="venue_description">Descriptio</string>
+    <string name="venue_active">Activus</string>
+    <string name="venue_inactive">Inactivus</string>
+    <string name="update_venue">Mettre ad dies lieu</string>
+    <string name="venue_name_placeholder">par ex., Groove</string>
+    <string name="venue_description_placeholder">Descriptio optioelle</string>
+    <string name="add_new_venue">Ajouter novus lieu</string>
+    <string name="edit_venue_configuration">Modifier configuration ex lieu</string>
+    <string name="venue_all">TOUS</string>
+    <string name="venue_both">DEUX</string>
+
+    <!-- Temporary Guest List -->
+    <string name="temp_guest_artist_label">Artiste / Groupe</string>
+    <string name="temp_guest_event_date_label">Dies l’eventus</string>
+    <string name="temp_guest_contact_phone_label">Subitis telephone numerus</string>
+    <string name="temp_guest_chip_label">Temp</string>
+    <string name="temp_guest_timeline_button">Futurs / Historique</string>
+    <string name="temp_guest_timeline_title">Guest list temporaire</string>
+    <string name="temp_guest_tab_temp">Temporaire</string>
+    <string name="temp_guest_tab_volunteer">Voluntarius</string>
+    <string name="temp_guest_range_label">Tempus</string>
+    <string name="temp_guest_range_three_days">+/- 3 dies</string>
+    <string name="temp_guest_range_three_days_short">±3j</string>
+    <string name="temp_guest_range_one_week">1 hebdomas</string>
+    <string name="temp_guest_range_one_week_short">1sem</string>
+    <string name="temp_guest_range_two_weeks">2 hebdomades</string>
+    <string name="temp_guest_range_two_weeks_short">2sem</string>
+    <string name="temp_guest_range_one_month">1 menses</string>
+    <string name="temp_guest_range_one_month_short">1m</string>
+    <string name="temp_guest_range_six_months">6 menses</string>
+    <string name="temp_guest_range_six_months_short">6m</string>
+    <string name="temp_guest_range_one_year">1 an</string>
+    <string name="temp_guest_range_one_year_short">1a</string>
+    <string name="temp_guest_range_all_time">semper</string>
+    <string name="temp_guest_range_all_time_short">Omnes</string>
+    <string name="temp_guest_section_upcoming">Futurs hospitum</string>
+    <string name="temp_guest_section_past">Historique</string>
+    <string name="temp_guest_none_upcoming">Nulli hospites futuri hoc Colum.</string>
+    <string name="temp_guest_none_past">Non hospites ad hanc sparguntur.</string>
+    
+    <!-- App Information -->
+    <string name="app_info_title">Informations inapplication</string>
+    <string name="app_version">NoctuList 0.9</string>
+    <string name="app_designed_for">Nocturne Collective locis disposito</string>
+    <!-- Single full sentence to avoid spacing issues across locales -->
+    <string name="app_developed_full">Developed for Nocturne Collective by Leonardo Mondada</string>
+    <string name="last_sync">Ultima renovatio: %1$s</string>
+    <string name="never">Jamais</string>
+    
+    <!-- Instructions Dialog -->
+    <string name="google_sheets_setup_instructions">Instructions configuration Google Sheets</string>
+    <string name="setup_instructions_intro">Hos gradus sequere ut Google schedae sync:</string>
+    <string name="open_google_cloud_console">Aperi Console Google Cloud</string>
+    <string name="got_it">Compris!</string>
+    
+    <!-- Instruction Steps -->
+    <string name="step_1_title">Creare in Google Cloudem project</string>
+    <string name="step_1_description">Vade ad Google Cloud Console et novum consilium crea vel unum exsistens eligere.</string>
+    <string name="step_2_title">ActivusrAPI Google Sheets</string>
+    <string name="step_2_description">In tuo consilio, Google plagulas API ex sectione APIs excita &amp; Officia.</string>
+    <string name="step_3_title">Creare rationem muneris</string>
+    <string name="step_3_description">Crea rationem ministerii in IAM &amp; Admin > Service Accounts. Deprome fasciculum clavis JSON.</string>
+    <string name="step_4_title">Clavem ad applicationem addere</string>
+    <string name="step_4_description">"Download key file" puga pyga in fundis, vel manually lima in app/src/main/res/ sub nomine 'service_account_key.json' pone.</string>
+    <string name="step_5_title">Creare Google Spreadsheet</string>
+    <string name="step_5_description">Novam Google Sheet et id eius ex domicilio effingo.</string>
+    <string name="step_6_title">Creare requiritur iaculis</string>
+    <string name="step_6_description">Partum schedae: 'Guest List', 'Voluntatores', 'Shifts', 'Shift Types', 'Voluntator Guest List', 'Venues' et 'Tempus Guest List' (dies in 'Temp Guest List' forma uti debet YYYY-MM-DD).</string>
+    <string name="step_7_title">Configurare sheet capitis</string>
+    <string name="step_7_description">Add to singula capita capitis. App creabit automatice, sed manually si opus est, configurare potes.</string>
+    <string name="step_8_title">Communica cum ratio ministerii</string>
+    <string name="step_8_description">Expansionem cum servitio tuo rationem electronicae electronicae (inventus in JSON file inventa) communica cum accessu Editor.</string>
+    <string name="step_9_title">Configura optioes applicationis</string>
+    <string name="step_9_description">SaisissezID schedae computensis et noms ex feuilles in optioes ci-dessus.</string>
+    
+    <!-- Test Connection Dialog -->
+    <string name="test_google_sheets_connection">Proba connexionemem Google Sheets</string>
+    <string name="testing_connection">Test connexio in progressu...</string>
+    <string name="test_connection_description">Cela testera connexio ad tuum Google Sheets en utilisant optioes actualiss.</string>
+    <string name="test">Proba</string>
+    <string name="close">Claude</string>
+    
+    <!-- Active Volunteers Dialog -->
+    <string name="volunteer_activity_status">Voluntarius status actio</string>
+    <string name="active_volunteers_count">Voluntarii actifves: %1$d</string>
+    <string name="inactive_volunteers_count">Voluntarii inactifves: %1$d</string>
+    <string name="inactive_volunteers_label">Voluntarii inactifves:</string>
+    <string name="active">Activus</string>
+    <string name="inactive">Inactivusve</string>
+    
+    <!-- Cleanup Dialog -->
+    <string name="warning">⚠️ Attention:</string>
+    <string name="cleanup_warning" formatted="false">Haec actio in perpetuum remove %1$d Voluntarius%2$s omnibusque suis adiuncti operis monumentis. Haec actio infectum fieri non potest!</string>
+    <string name="delete_volunteers" formatted="false">Dele %1$d voluntarius%2$s</string>
+    <string name="cancel">Abrogare</string>
+    
+    <!-- Delete Volunteer Dialog -->
+    <string name="delete_volunteer_title">Dele lela voluntarius</string>
+    <string name="delete_volunteer_confirm">Visne vero delere %1$s  ?</string>
+    <string name="delete_volunteer_shift_count_one">Haec voluntarius a %1$d shift servatum.</string>
+    <string name="delete_volunteer_shift_count_other">Haec voluntarius a %1$d shifts servatums.</string>
+    <string name="delete_volunteer_also_delete_shifts_one">Etiam delere %1$d trabea</string>
+    <string name="delete_volunteer_also_delete_shifts_other">Etiam delere %1$d redolentque thymo fragrantia</string>
+    <string name="delete_volunteer_warning">⚠️ Admonitio: Haec actio cassari non potest!</string>
+    <string name="delete_volunteer_graph_warning">Nota: Suspensus voluntarius graphas statisticas in paginam domesticam convertet. Mutationes removentes maiorem etiam momentum in graphorum subtilitate habebunt.</string>
+    
+    <!-- Upload Status Messages -->
+    <string name="validating_file">Validating tabella...</string>
+    <string name="file_validated_uploading">Fasciculus convalescit! Download...</string>
+    <string name="file_uploaded_successfully">File downloaded feliciter!</string>
+    <string name="upload_failed">Download defecit: %1$s</string>
+    <string name="validation_failed">Defecit sanatio: %1$s</string>
+    <string name="key_file_found">Clavis file inventae</string>
+    <string name="unknown">Inconnu</string>
+    
+    <!-- Common Actions -->
+    <string name="save">Serva</string>
+    <string name="delete">Dele</string>
+    <string name="edit">Modifier</string>
+    <string name="add">Ajouter</string>
+    <string name="remove">Retirer</string>
+    <string name="confirm">Confirmer</string>
+    <string name="ok">OK</string>
+    <string name="yes">Ita</string>
+    <string name="no">Non</string>
+    
+    <!-- Navigation -->
+    <string name="nav_dashboard">Tableau bord</string>
+    <string name="nav_guests">Index hospitum</string>
+    <string name="nav_volunteers">Voluntarii</string>
+    <string name="nav_shifts">Munera</string>
+    <string name="nav_benefits">Avantages</string>
+    <string name="nav_settings">Optiones</string>
+    
+    <!-- Dashboard -->
+    <string name="dashboard_title">Tableau bord</string>
+    <string name="dashboard_subtitle_phone">Prospectus gestionde eventus</string>
+    <string name="dashboard_subtitle_tablet">Overview tui rei administratione ratio</string>
+    <string name="active_volunteers">Voluntarii actifves</string>
+    <string name="jobs_this_month">Jobs ce menses</string>
+    <string name="venues">Loci</string>
+    <string name="volunteers_total">Summa voluntarii</string>
+    <string name="plus_one_invites">Invitatioes +1</string>
+    <string name="total_people">Liste totale</string>
+    <string name="shifts_past_month">Munera menses novissimus</string>
+    <string name="inactive_volunteers">Voluntarii inactifves</string>
+    <string name="free_drinks_today">Boissonususs gratuites hodie</string>
+    <string name="recent_activity">Recent operatio</string>
+    <string name="recent_guests">Recentes hospites</string>
+    <string name="recent_volunteers">Recent volunteers</string>
+    <string name="recent_shifts">Recent Shifts</string>
+    <string name="latest_guest_phone">Hospes: %1$s</string>
+    <string name="latest_guest_tablet">Derniere hospese: %1$s</string>
+    <string name="latest_volunteer_phone">Voluntarius: %1$s</string>
+    <string name="latest_volunteer_tablet">Derniere voluntarius: %1$s</string>
+    <string name="latest_job_phone">Job: %1$s</string>
+    <string name="latest_job_tablet">Dernier job: %1$s</string>
+    
+    <!-- Stats and Graphs -->
+    <string name="stats_and_graphs">Statistiques &amp; Tendances</string>
+    
+    <!-- Sync Status -->
+    <string name="syncing">Synchronizatio...</string>
+    <string name="last_update_just_now">nunc</string>
+    <string name="last_update_never_brief">—</string>
+    <string name="last_update_seconds_ago">il y a %1$d s</string>
+    <string name="last_update_min_sec_ago">il y a %1$d min %2$d s</string>
+    <string name="last_update_hour_min_ago">il y a %1$d h %2$d min</string>
+    <string name="last_update_days_ago">il y a %1$d j</string>
+    <string name="last_update_line">Mise ad dies %1$s</string>
+    <string name="last_update_none_line">Mise ad dies —</string>
+    <string name="sync_pill_minutes_ago">il y a %1$d min</string>
+    <string name="sync_pill_hours_ago">il y a %1$d h</string>
+    <string name="sync_pill_hours_minutes_ago">il y a %1$d h %2$d min</string>
+    <string name="sync_pill_days_ago">il y a %1$d j</string>
+    <string name="sync_pill_days_hours_ago">il y a %1$d j %2$d h</string>
+    <string name="sync_pill_days_minutes_ago">il y a %1$d j %2$d min</string>
+    <string name="sync_pill_days_hours_minutes_ago">il y a %1$d j %2$d h %3$d min</string>
+    
+    <!-- Welcome Screen -->
+    <string name="start_admin">Initium Admin</string>
+    <string name="admin_mode">Administrator</string>
+    <string name="ticket_check_mode">Billeterie</string>
+    <string name="welcome_background_sync_content_description">Sync cum Google schedae ut quin admin accessum</string>
+
+    <!-- Admin Auth Screen -->
+    <string name="admin_auth_title">Authenticatio administratoris</string>
+    <string name="admin_auth_description">Scan tuum signum vel QR code ut quin admin accessum</string>
+    <string name="admin_auth_syncing">Loading notitia ex Google rudentis...</string>
+    <string name="admin_auth_syncing_title">Praeparans admin accessum</string>
+    <string name="admin_auth_syncing_subtitle">Synchronizatio cum Google Sheets pro verifica correctement tuum badge vel codex QR.</string>
+    <string name="admin_auth_sync_wait_hint">Ne scannez pas encore —authentification sera praesto ad fin synchronizatio</string>
+    <string name="admin_auth_sync_step_sheet">Reprehendo structuram sheet</string>
+    <string name="admin_auth_sync_step_download">Download tardus hospitis et voluntarius data</string>
+    <string name="admin_auth_sync_step_verify">Adaequationis administrator profile</string>
+    <!-- Admin pre-check: repair sheet + sync before NFC/QR gate -->
+    <string name="admin_precheck_sync_loading">Praeparans admin accessum: annotando schedam et synchronum ...</string>
+    <string name="admin_precheck_sync_failed_title">Admin possit parare accessum</string>
+    <string name="admin_precheck_sync_failed_message">Linteamen reparari non potuit vel synchronised. Compesce nexum et occasus workbook, deinde iterum conare.</string>
+    <string name="admin_precheck_sync_retry">Iterum conare</string>
+    <string name="admin_auth_ready">Ostende tibi NFC signum vel scan vestri QR code</string>
+    <string name="admin_auth_scan_qr">Scanner codex QR</string>
+    <string name="admin_auth_granted">salve, %1$s ! Fusce ut obvius dedit</string>
+    <string name="admin_auth_denied">%1$s non habet accessum admin</string>
+    <string name="admin_auth_not_found">Non matching profiles invenerunt</string>
+    <string name="admin_auth_try_again">Iterum conare</string>
+    <string name="admin_auth_use_fingerprint">Utere impressione digitali</string>
+    <string name="admin_auth_fingerprint_description">Authenticare cum fingerprints accedere admin modus</string>
+    <string name="admin_auth_biometric_prompt_title">Authenticatio administratoris</string>
+    <string name="admin_auth_biometric_prompt_subtitle">Quin identitatem tuam cum biometricis</string>
+    <string name="admin_auth_biometric_cancel">Utere QR / NFC potius</string>
+    <string name="admin_auth_biometric_error">Defecit biometric authenticas: %1$s</string>
+
+    <!-- Biometric Admin Login Settings -->
+    <string name="biometric_admin_login_title">Aditus administratoris per impressionem</string>
+    <string name="biometric_admin_login_description">Patitur usum huius fabrica sensorem fingerprints accedere admin modus</string>
+    <string name="biometric_admin_login_not_available">Biometric authenticas is not available in hac fabrica</string>
+    <string name="biometric_admin_login_none_enrolled">Nulla fingerprints reponuntur in hac arte. Quaeso addere primum occasus fingerprints in fabrica.</string>
+    <string name="biometric_admin_login_enabled">Aditus administratoris per impressionem activata</string>
+    <string name="biometric_admin_login_disabled">Aditus administratoris per impressionem deactivata</string>
+    <string name="biometric_warning_title">Monitio securitatis</string>
+    <string name="biometric_warning_message">Quilibet cum codice clausurae huius instrumenti impressionem digitalem addere potest et ita ad paginam Administratoris accedere.\n\nHoc vehementer vetitum est in instrumentis publico patentibus vel apud homines qui privata haec non debent videre.\n\nHaec functio TANTUM pro usoribus qui pericula intellegunt et accipiunt.\n\nUt procedas, identitas tua administratoris primum per codicem QR vel insignia NFC confirmabitur.</string>
+    <string name="biometric_warning_accept">Intellego pericula</string>
+    <string name="biometric_warning_cancel">Abrogare</string>
+    <string name="biometric_enrollment_verify_title">Verifica aditum administratoris</string>
+    <string name="biometric_enrollment_verify_description">Scan tuum admin insigne vel QR code confirmare identitatem ante activum biometric login</string>
+    <string name="biometric_enrollment_success">Fingerprint login datum est admin accessum</string>
+    <string name="biometric_enrollment_prompt_title">Registra biometriam</string>
+    <string name="biometric_enrollment_prompt_subtitle">Confirmez tuum empreinte pro activer connexio admin</string>
+
+    <!-- Ticketing (Billeterie) hub -->
+    <string name="ticket_check_title">Billeterie</string>
+    <string name="ticket_check_coming_soon">Hoc pluma venit mox</string>
+    <string name="ticket_check_description">Celeriter accessus ad album hospitum et scanner ad ostium.</string>
+    <string name="billeterie_stat_permanent_guests">Hospess permanents</string>
+    <string name="billeterie_stat_temporary_guests_today">Hospess temporaires (hodie)</string>
+    <string name="billeterie_stat_volunteers_on_list">Voluntarii in index</string>
+    <string name="billeterie_stat_total_without_invites">Sur index (sans +1)</string>
+    <string name="billeterie_button_guest_list">Index hospitum</string>
+    <string name="billeterie_button_scanner">Scanner</string>
+
+    <!-- Setup Wizard -->
+    <string name="setup_continue">Perge</string>
+    <string name="setup_back">Retour</string>
+    <string name="setup_skip">Passer configuration</string>
+    <string name="setup_finish">Terminer configuration</string>
+    <string name="setup_welcome_title">Bienvenue in NoctuList</string>
+    <string name="setup_welcome_description">Configurare applicationis administrationis eventum in paucis gradibus. Omnia postea in Occasus mutare potes.</string>
+    <string name="setup_get_started">Commencer</string>
+    <string name="setup_step_progress">Scaena %1$d on %2$d</string>
+    <string name="setup_phase_personalize">Personususnalisation</string>
+    <string name="setup_phase_connect">Connexio Google Sheets</string>
+    <string name="setup_phase_finish">Terminer</string>
+    <string name="setup_google_sheets_title">Connecter Google Sheets</string>
+    <string name="setup_google_sheets_description">Spermatophyta et nexum tuum ligabis ad rationem muneris clavis ad sync data tua.</string>
+    <string name="setup_sheets_defaults_hint">Nomina tab defalta maxime eventibus apta sunt. Infra Expande solum si aliis nominibus in rete expansum utitur.</string>
+    <string name="setup_sheets_customize">Personususaliza nomsde onglets</string>
+    <string name="setup_start_sync">Lancer synchronizatio</string>
+    <string name="setup_first_sync_ready">Omnia parata sunt. Tap infra ut notitias tuas ex Google schedulis depone.</string>
+    <string name="setup_language_title">Elige tibi lingua</string>
+    <string name="setup_language_description">Linguam eligere velis uti in app</string>
+    <string name="setup_theme_title">Elige thema</string>
+    <string name="setup_theme_description">Elige speciem app - semper mutare potes hoc in Occasus</string>
+    <string name="setup_color_profile_title">Profil couleur</string>
+    <string name="setup_color_profile_description">Elige accentu colore. Systema indagat tuum wallpaper in compatible machinis.</string>
+    <string name="setup_layout_size_title">Taille mise en pagina</string>
+    <string name="setup_layout_size_description">Ajustez magnitudo deinterface — tu pourrezaffiner ad omnia moment in Optiones.</string>
+    <string name="setup_layout_nvidia_hint">Sur tablettes NVIDIA, 107% convient souvent mieux ad cet tabula.</string>
+    <string name="setup_layout_use_recommended">Utiliser 107%</string>
+    <string name="setup_spreadsheet_title">Google Sheets ID</string>
+    <string name="setup_spreadsheet_description">Intra Google Spreadsheet ID ad sync vestri eventus notitia</string>
+    <string name="setup_spreadsheet_hint">TrouvezID inURL tuum Google Sheets:\nhttps://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit</string>
+    <string name="setup_json_key_title">Clavis rationis ministerii</string>
+    <string name="setup_json_key_description">Download JSON clavem fasciculi ex Google muneris ratione ut syncing enable</string>
+    <string name="setup_sheets_title">Nomenens ex feuilles</string>
+    <string name="setup_sheets_description">Configurare nomina cuiusque schedae in Google Spreadsheet - default bona prae hominum</string>
+    <string name="setup_wizard_first_sync_title">Primum synchronisation</string>
+    <string name="setup_wizard_first_sync_message">Res ex notitia eventu Download Google schedae...</string>
+    <string name="setup_wizard_first_sync_error_title">Primum synchronisation defecit</string>
+    <string name="setup_wizard_first_sync_error_generic">Non sync cum Google rudentis. Compesce libri ID, JSON clavem, et connexionem, et iterum conare.</string>
+    
+    <!-- Volunteer Screen -->
+    <string name="volunteers_title">Voluntarii</string>
+    <string name="volunteer_manager">Gestion ex voluntarii</string>
+    <string name="add_volunteer">Ajouter voluntarius</string>
+    <string name="add_new_volunteer">Ajouter novuselle voluntarius</string>
+    <string name="refresh">Actualiser</string>
+    <string name="search_volunteers_placeholder">Quaere ex voluntarii per nom vel email...</string>
+    <string name="filter_all">Omnestes</string>
+    <string name="filter_active">Activusves</string>
+    <string name="filter_inactive">Inactivusves</string>
+    <string name="active_status">Activus</string>
+    <string name="inactive_status">Inactivusve</string>
+    <string name="view_details">View details</string>
+    <string name="full_name">Primum nomen</string>
+    <string name="last_name_abbreviation">Nomenen famille</string>
+    <string name="last_name_abbreviation_placeholder">par ex., Dupont</string>
+    <string name="email">Epistula</string>
+    <string name="email_placeholder">name@example.com</string>
+    <string name="phone_number">Numerus telephonicus</string>
+    <string name="date_of_birth">Dies naissance</string>
+    <string name="date_of_birth_placeholder">dd.mm.yyyy</string>
+    <string name="gender">Genre</string>
+    <string name="select_gender">Lego genus</string>
+    <string name="gender_female">Femme</string>
+    <string name="gender_male">Homme</string>
+    <string name="gender_non_binary">Non-binaire</string>
+    <string name="gender_other">Aliud</string>
+    <string name="gender_prefer_not_to_disclose">Malo non detegere</string>
+    <string name="update_volunteer">Mettre ad dies lela voluntarius</string>
+    <string name="edit_volunteer">Modifier lela voluntarius</string>
+    <string name="edit_volunteer_details">Recensere Voluntarius details</string>
+    
+    <!-- Guest List Screen -->
+    <string name="guest_list_title">Index hospitum</string>
+    <string name="guest_list_management">Gestion index ex hospitum</string>
+    <string name="guest_list_description">Curo convivis omnibus felis locis</string>
+    <string name="venue_groove">Groove</string>
+    <string name="venue_le_terreau">Le Terreau</string>
+    <string name="add_guest">Ajouter hospese</string>
+    <string name="add_new_guest">Ajouter novuselle hospese</string>
+    <string name="add_guest_tab_permanent">Permanent</string>
+    <string name="add_guest_tab_temporary">Temporaire</string>
+    <string name="add_guest_add_another_name">Ajouter aliud nom d’hospese</string>
+    <string name="add_guest_additional_name_label">Nomenen d’hospese (%1$d)</string>
+    <string name="last_synced">Ultima renovatio:</string>
+    <string name="just_now">Nunc</string>
+    <string name="minutes_ago">Il y a %1$d minuta</string>
+    <string name="hours_ago">Il y a %1$d horae</string>
+    <string name="days_ago">Il y a %1$d dies</string>
+    <string name="search_guests_placeholder">Quaere nominatim vel email vel telephonum...</string>
+    <string name="filter_volunteer_benefits">Avantages voluntarii</string>
+    <string name="filter_permanent_guests">Hospess permanents</string>
+    <string name="filter_temporary_guests">Hospess temporaires</string>
+    <string name="guests_count">Hospess</string>
+    <string name="total_guests_count">Summade hospitum</string>
+    <string name="invitations_count">Invitatioes</string>
+    <string name="total_invitations_count">Summade invitations</string>
+    <string name="volunteer_label">Voluntarius</string>
+    <string name="invitations_text">%1$d invitations</string>
+    <string name="view_benefits">Vide commoda</string>
+    <string name="delete_guest">Delehospese</string>
+    <string name="edit_guest">Modifierhospese</string>
+    <string name="edit_guest_details">Recensere hospitem details</string>
+    <string name="update_guest">Mettre ad dieshospese</string>
+    <string name="guest_information">Informations inhospese</string>
+    <string name="guest_name">Nomenen dehospese</string>
+    <string name="guest_email">Epistula</string>
+    <string name="guest_email_placeholder">email@example.com</string>
+    <string name="guest_phone_number">Numerus telephonicus</string>
+    <string name="guest_phone_placeholder">+33 6 12 34 56 78</string>
+    <string name="number_of_invitations">Nomenenbrede invitations</string>
+    <string name="venue">Locus</string>
+    <string name="notes">Notae</string>
+    
+    <!-- Benefits Screen -->
+    <string name="benefits_title">Avantages</string>
+    <string name="volunteer_benefits_overview">Prospectus ex commoda voluntarii</string>
+    <string name="benefits_description">Staff ad cognoscere beneficia Voluntarius</string>
+    <string name="search_volunteers_benefits_placeholder">Quaere ex voluntarii per nom vel email...</string>
+    <string name="no_rank">Pas gradus</string>
+    <string name="high_rank">Rang altum</string>
+    <string name="active_benefits">Avantages actifs</string>
+    <string name="benefits_overview_info_button">Aide</string>
+    <string name="benefits_overview_totals_section">Totaux</string>
+    <string name="benefits_overview_ranks_section">Par gradus</string>
+    <string name="benefits_overview_line_50_bar">Bar 50%%: %1$d</string>
+    <string name="benefits_overview_line_free_entry">Introitus: %1$d %2$d inv.</string>
+    <string name="benefits_overview_line_extraordinary">Extra: %1$d</string>
+    <string name="benefits_overview_line_future_tickets">Billets: %1$d %2$d inv.</string>
+    <string name="current_benefits">✨ Avantages actualiss</string>
+    <string name="days_left">%1$d dies restants</string>
+    <string name="expires_soon">Exspirat mox</string>
+    <string name="free_entry">✅ Introitus gratuite</string>
+    <string name="friend_invitation">👥 Invitatiode amie</string>
+    <string name="drink_tokens">🍺 %1$d jetons boissonusus</string>
+    <string name="bar_discount">💰 %1$d%% discountio ad bar</string>
+    <string name="extraordinary_benefits">💎 Avantages extraordinaires</string>
+    
+    <!-- Shifts Screen -->
+    <string name="shifts_title">Munera</string>
+    <string name="shift_tracking">Suivi ex Munera</string>
+    <string name="add_shift">Ajouter Munus</string>
+    <string name="add_new_shift">Adde novum munus</string>
+    <string name="search_shifts_placeholder">Quaere ex shifts per nom voluntarius vel notes...</string>
+    <string name="unknown_volunteer">Voluntarius ignota</string>
+    <string name="volunteer">Voluntarius</string>
+    <string name="search_volunteers_shift_placeholder">Quaere ex voluntarii...</string>
+    <string name="shift_type">Type Munus</string>
+    <string name="select_shift_type">Subcinctus genus eligere ...</string>
+    <string name="no_shift_types_available">Nulla subcinctus genus activae. Addere vel movere genera in subcinctus genus procuratio.</string>
+    <string name="shift_time">Hora ex Munus</string>
+    <string name="shift_time_evening_profited">Prod</string>
+    <string name="shift_time_evening_non_profited">Non circumveniamur</string>
+    <string name="shift_date_time">Date &amp; tempus mutare</string>
+    <string name="notes_optional">Notae (optioel)</string>
+    <string name="add_job">Ajouter job</string>
+    <string name="edit_shift">Modifier Munus</string>
+    <string name="edit_shift_details">Recensere Shift Details</string>
+    <string name="update_job">Mettre ad dies job</string>
+    
+    <!-- QR Code Related -->
+    <string name="qr_code">QR Code</string>
+    <string name="volunteer_qr_code">QR Code voluntarius</string>
+    <string name="qr_code_anonymized_label">anonymized</string>
+    <string name="edit_volunteer_button">Modifier lela voluntarius</string>
+    <string name="delete_volunteer_button">Dele lela voluntarius</string>
+    <string name="camera_permission_required">Camera licentia requiritur ad scan QR codes</string>
+    <string name="camera_permission_title">Camera licentia requiratur</string>
+    <string name="camera_permission_qr_nfc_body">Camera permissio requiritur ad scan QR codes. NFC intuens activa in parallelis cum praesto manet.</string>
+    <string name="camera_error">Camera error</string>
+    <string name="enter_id_manually">EntrerID manu</string>
+    <string name="add_nfc_card">Ajouter carte NFC</string>
+    <string name="add_nfc_card_uid_title">AjouterUID carte NFC</string>
+    <string name="enter_uid_manually">EntrerUID manu</string>
+    <string name="read_uid_with_phone_nfc">Legere UID cum telephono (NFC)</string>
+    <string name="read_uid_with_usb_reader">LireUID cum lector externus (ACR122U USB vel ACR1255U-J1 Bluetooth)</string>
+    <string name="usb_reader_not_connected">Nullus externus USB NFC lectorem deprehendit.</string>
+    <string name="usb_reader_waiting_card">En attentede carte NFC in lector externus (USB vel Bluetooth)…</string>
+    <string name="enter_nfc_uid_title">EntrerUID NFC</string>
+    <string name="uid_label">UID</string>
+    <string name="scan_nfc_card_title">Scanner carte NFC</string>
+    <string name="place_nfc_card_on_phone">NFC card pone tergum telephonum.</string>
+    <string name="nfc_card_detected">Deprehensa est Card.</string>
+    <string name="use_this_uid">Utiliser cet UID</string>
+    <string name="nfc_uid_label">NFC UID</string>
+    <string name="nfc_uid_copied">Exscriptus NFC UID</string>
+    <string name="copy_nfc_uid">CopierUID NFC</string>
+    <string name="back">Retour</string>
+    <string name="scan_qr_or_nfc_title">Scanner Codex QR vel carte NFC</string>
+    <string name="scan_qr_or_nfc_subtitle_enabled">QR camera scanner et NFC card scanner sunt activae. Etiam vel aliquam quam.</string>
+    <string name="scan_qr_or_nfc_subtitle_phone_and_usb">QR scanner, telephonicus NFC et lector externus NFC (USB vel Bluetooth) praesto sunt.</string>
+    <string name="scan_qr_or_nfc_subtitle_usb_only">QR scanner et lector externus NFC (USB vel Bluetooth) praesto sunt. The phone's NFC is not active.</string>
+    <string name="scan_qr_subtitle_nfc_disabled">QR camera scanner agit. NFC est erret in hac fabrica.</string>
+    <string name="scan_with_usb_reader">Scanner cum lector externus</string>
+    <string name="usb_reader_waiting_card_short">Charta en attente...</string>
+    <string name="scanner_ble_reader_footer_label">Lector Bluetooth (ACR1255U-J1)</string>
+    <string name="scanner_ble_reader_footer_connected">Active link - parati ad scan</string>
+    <string name="scanner_ble_reader_footer_disconnected">Nulla activa link - excitare ludio (button) vel exspecta reconnection</string>
+    <string name="scanner_ble_reader_footer_reading">Lecture carte…</string>
+    <string name="nfc_not_supported_device">Cet instrumentum ne prend pas en charge scan NFC.</string>
+    <string name="nfc_unavailable_no_usb_hint">Cet instrumentum n'a pas NFC et nullus lector externus n'est coniunctum (USB vel Bluetooth).</string>
+    <string name="nfc_phone_unavailable_use_usb_reader">Quae res in NFC non aedificavit. Utere optione coegi externo infra (ACR122U USB vel ACR1255U-J1 Bluetooth).</string>
+    <string name="nfc_disabled_enable">NFC est erret. Admitte NFC in phone occasus ut scan pecto.</string>
+    <string name="nfc_uid_read_failed">Posset legere NFC UID. Iterum tenta.</string>
+    <string name="nfc_uid_not_found">Nullae voluntates vel hospites permanentes pro UID NFC inveniuntur; %1$s</string>
+    <string name="billeterie_nfc_no_match">Nullae voluntates permanentes vel hospites huic chartae congruit.</string>
+    <string name="nfc_reader_error">Error ex lector NFC: %1$s</string>
+    <string name="external_reader_bt_blocked_hint">Bluetooth accessum ad coegi externi negatum est. Infra tange ut occasus MASCULINUS applationis aperias, deinde Bluetooth vel prope machinas huius appi permitte. Si velles "Noli iterum interrogare", necesse est ut in his fundis id possit.</string>
+    <string name="open_app_settings_for_reader">Aperi optioes applicationis</string>
+    <string name="last_nfc_uid_scanned">Last NFC UID scanned: %1$s</string>
+    <string name="invalid_qr_or_nfc_data">Aliquam QR / NFC data.</string>
+    <string name="permanent_guest_label">Hospes permanente</string>
+    <string name="nfc_uid_multiple_matches_title">Plures profiles invenerunt</string>
+    <string name="nfc_uid_multiple_matches_message">UID %1$s correspondet %2$d profiles. Recta profile eligere.</string>
+    <string name="manual_volunteer_input">EntrerID dude voluntarius</string>
+    <string name="enter_volunteer_id_manually">EntrezID dude voluntarius manu:</string>
+    <string name="volunteer_id">ID dude voluntarius</string>
+    <string name="find_volunteer">Trouver voluntarius</string>
+    <string name="please_enter_valid_volunteer_id">Quaeso entrer ID voluntarius validum</string>
+    <string name="volunteer_id_not_found">Voluntarius cumID \"%1$s\" introuvable</string>
+    <string name="available_volunteers">Voluntarii praestos:</string>
+    <string name="error_processing_qr_code">Error traitement ex Codex QR: %1$s</string>
+    <string name="invalid_qr_code_format">Forma codicis QR invalida: %1$s</string>
+    <string name="volunteer_not_found">Voluntarius'%1$s' (ID: %2$s) not found in database. Quaeso reprehendo si notitia voluntarii e schedae Google synced est.</string>
+    <string name="qr_code_for_volunteer">QR Code pro lela voluntarius: %1$s</string>
+    <string name="qr_code_subject">QR Code voluntarius - %1$s</string>
+    <string name="share_qr_code">Communica QR Code</string>
+    <string name="share">Communica</string>
+    <string name="send_by_mail">Envoyer per email</string>
+    <string name="failed_to_generate_qr_code">Deficio ad generate QR code</string>
+    
+    <!-- Guest QR Code Related -->
+    <string name="guest_qr_code">QR Code Hospes</string>
+    <string name="qr_code_for_guest">QR Code prohospese: %1$s</string>
+    <string name="qr_code_subject_guest">QR Code hospese - %1$s</string>
+    <string name="scan_guest_qr_code">Scanner QR Code Hospes</string>
+    <string name="invalid_guest_qr_code">Codex QR invalidum. Hic n'est pas Codex QRde hospese.</string>
+    <string name="guest_not_found">Hospes'%1$s'Non inveni in database.</string>
+    <string name="enter_guest_name_manually">Entrez nom dehospese manu:</string>
+    <string name="manual_guest_input">Entrer Nomenen deHospes</string>
+    <string name="find_guest">Trouver hospese</string>
+    <string name="available_guests">Hospess praestos:</string>
+    <string name="please_enter_guest_name">Quaeso entrer nomde hospese validum</string>
+    <string name="invalid_input">Introitus invalidum: %1$s</string>
+    <string name="guest_email_input_title">EntrerAdresse Epistula</string>
+    <string name="guest_email_input_message">Hospes inscriptionem electronicam datorum non habet. Please enter inscriptionem electronicam mittere QR code</string>
+    <string name="continue_button">Perge</string>
+    <string name="grant_permission">Autoriser</string>
+    
+    <!-- Guest Email Settings -->
+    <string name="guest_email_subject_default">Votre QR Code Hospes</string>
+    <string name="guest_email_content_before_default">Salve!\n\nHic est QR code personale pro hospite viscus. Serva eam habilem et praesentes in ostio adventus.</string>
+    <string name="guest_email_content_after_default">Si quas quaestiones habes, quaeso ne nos attingere dubitas. Expectamus cum te!</string>
+    <string name="guest_email_html_header">Votre QR Code Hospes</string>
+    <string name="guest_email_html_footer">Haec epistula statim missa est. QR code incolumem serva.</string>
+    
+    <!-- Email QR Code Settings -->
+    <string name="settings_category_email">Optiones Epistula</string>
+    <string name="email_qr_settings_title">Optiones Epistula QR Code</string>
+    <string name="email_qr_settings_description">Configurare inscriptio content mittens QR codes</string>
+    <string name="email_tab_volunteer">Voluntarii</string>
+    <string name="email_tab_guest">Hospess</string>
+    <string name="email_shared_settings_title">Shared occasus</string>
+    <string name="email_shared_settings_description">Hae occasus ad offerres et hospites applicant emails</string>
+    <string name="email_subject_label">Objet deemail</string>
+    <string name="email_subject_hint">Lignede res proemail Codex QR</string>
+    <string name="email_subject_default">Votre QR Code Profil Voluntarius</string>
+    <string name="email_content_before_label">Message Avant QR Code</string>
+    <string name="email_content_before_hint">Salutation vel introduction optioelle</string>
+    <string name="email_content_before_default">salve! \n\nHic est QR code personale pro profile voluntario tuo. Hoc QR codicem pro omnibus certe facit, sic eum habilem serva et praesentes cum ad introitum perveneris. Hoc adiuvat nos processus ingressum tuum cito.</string>
+    <string name="email_include_qr_label">Inclure QR Code inEpistula</string>
+    <string name="email_include_qr_description">QR code affigere ad imaginem inscriptio</string>
+    <string name="email_content_after_label">Nuntius post QR code</string>
+    <string name="email_content_after_hint">Ad libitum informationis</string>
+    <string name="email_content_after_default">Si quas quaestiones habes, quaeso ne nos attingere dubitas. :) </string>
+    <string name="email_signature_label">Signature</string>
+    <string name="email_signature_hint">Votre formule politesse (ex: Cordialement, L'Turma)</string>
+    <string name="email_signature_default">Collectif Nocturne</string>
+    <string name="email_association_name_label">Nomenen deassociation</string>
+    <string name="email_association_name_hint">Collectif Nocturne</string>
+    <string name="email_association_name_description">Adhibetur ut subscriptio default pro Digital Wallet Transi notans et mittens nomen.</string>
+    <string name="email_include_digital_wallet_pass_label">Inclure Digital Wallet Pass</string>
+    <string name="email_include_digital_wallet_pass_description">Affigere signati Wallet Tempus (.pkpass) pro Apple Wallet Google Redde cum Est Type ID libellum configuratur</string>
+    <string name="email_wallet_pass_cert_title">Certificat subscriptio Apple Wallet</string>
+    <string name="email_wallet_pass_cert_description">Apple Wallet exige certificat Pass Type ID (.p12) ex tuum compte Apple Developer. Google Pay fonctionne sine certificat.</string>
+    <string name="email_wallet_pass_cert_upload">Imponere certificat Pass Type ID (.p12)</string>
+    <string name="email_wallet_pass_cert_password_label">Mot passe ex certificat</string>
+    <string name="email_wallet_pass_cert_password_hint">.p12 file password</string>
+    <string name="email_wallet_pass_cert_configured">Lacus Wallet signature paratus (%1$s · Team %2$s).</string>
+    <string name="email_wallet_pass_cert_missing">Nullae testimoniales configurantur — transit opus cum Google Redde sed non Apple Wallet.</string>
+    <string name="email_include_logo_label">Inclure Logo deAssociation</string>
+    <string name="email_include_logo_description">Addere tuam organization logo in inscriptio</string>
+    <string name="email_logo_upload">Deprome Logo</string>
+    <string name="email_logo_change">Changer Logo</string>
+    <string name="email_logo_remove">Dele Logo</string>
+    <string name="email_logo_preview">Prospectus ex Logo</string>
+    <string name="email_settings_saved">Optiones email servatums</string>
+    <string name="email_reset_to_defaults">Reset ad Defalte</string>
+    <string name="email_preview">Prospectus deEpistula</string>
+    
+    <!-- Gmail OAuth -->
+    <string name="email_gmail_auth_title">Authentification API Gmail</string>
+    <string name="email_gmail_auth_description">Connectez tuum compte Gmail pro envoyer ex emails automatico viaAPI Gmail</string>
+    <string name="email_gmail_oauth_client_description">In escritorio, fasciculus Google OAuth JSON (type schedula schedula) cum Gmail API enabled requiritur. Exprime eam ex Google Cloud Console, tum importa hic ante signationem in.</string>
+    <string name="email_gmail_oauth_client_upload">Importer JSON OAuth</string>
+    <string name="email_gmail_oauth_client_configured">OAuth client felis</string>
+    <string name="email_gmail_oauth_client_missing">Fasciculus OAuth emptor manquant — importez- avant tu connecter cum Google</string>
+    <string name="email_gmail_use_service_account">Eadem opera uti Google Sheets</string>
+    <string name="email_gmail_use_service_account_description">Utitur JSON a synchronisation occasus muneris ratio. Gmail API facultatem ac dominium delegationis requirit (Google Workspace).</string>
+    <string name="email_gmail_service_account_sender_label">Adresse e-mail mittens</string>
+    <string name="email_gmail_service_account_sender_description">L'adresse Gmail vel Google Workspace qui envoie e-mails au nom ex ratio ministerii.</string>
+    <string name="email_gmail_service_account_missing">Clavis rationis ministerii manquante — importez-lade abord in optioes Synchronizatio</string>
+    <string name="email_gmail_service_account_configured">Clavis rationis ministerii inventa</string>
+    <string name="email_gmail_oauth_help_title">Aide API Gmail</string>
+    <string name="email_gmail_help_tab_oauth">Client OAuth</string>
+    <string name="email_gmail_help_tab_service_account">Ratio service</string>
+    <string name="email_gmail_oauth_help_intro">Hos gradus sequere ut OAuth JSON lima obtine et configurare tabellas mittendis per Gmail API in escritorio.</string>
+    <string name="email_gmail_oauth_step_1_title">Aperi Google Cloud Console</string>
+    <string name="email_gmail_oauth_step_1_description">Ite ad consolandum.cloud.google.com et eligite consilium vestrum (vel novum crea unum).</string>
+    <string name="email_gmail_oauth_step_2_title">ActivusrAPI Gmail</string>
+    <string name="email_gmail_oauth_step_2_description">In APIs &amp; Services &gt; Library, quaere "Gmail API" et activa.</string>
+    <string name="email_gmail_oauth_step_3_title">Configurertabula consentement OAuth</string>
+    <string name="email_gmail_oauth_step_3_description">In APIs &amp; Services &gt; OAuth consent screen, reple campum necessaria. Si applicatio in modo Testing est, adde epistulam Gmail tuam ut usor probationis.</string>
+    <string name="email_gmail_oauth_step_4_title">Creare Desktop OAuth client</string>
+    <string name="email_gmail_oauth_step_4_description">In APIs &amp; Services &gt; Credentials, preme Create Credentials &gt; OAuth client ID. Elige Application type Desktop app, deinde crea.</string>
+    <string name="email_gmail_oauth_step_5_title">Importare JSON file</string>
+    <string name="email_gmail_oauth_step_5_description">Utere "Import OAuth JSON" conjunctionem in his uncinis ad importare fasciculum receptaculum.</string>
+    <string name="email_gmail_oauth_step_6_title">Se connecter cum Google</string>
+    <string name="email_gmail_oauth_step_6_description">Preme "Inire cum Google". Navigatorium tuum aperitur ut NoctuList. Post sanationem, applicatio accessum sponte recipit (portus locales 8888, 8765 vel 9090).</string>
+    <string name="email_gmail_service_account_help_intro">Cum "idem muneris rationi ac Google schedae utere" datur, ipsam inscriptionem electronicam inire quae nuntia mittere debet. Ratio muneris pro hac capsa agit per delegationem Google Workspace.</string>
+    <string name="email_gmail_service_account_help_sender_title">Que saisir</string>
+    <string name="email_gmail_service_account_help_sender_body">Visibilis electronica missio — arca Gmail vel Google Workspace pro dominio tuo, exempli gratia contact@yourassociation.org vel non-reply@your-domain.org.</string>
+    <string name="email_gmail_service_account_help_not_title">Noli uti</string>
+    <string name="email_gmail_service_account_help_not_body">Munus rationis inscriptio in Synchronisation exhibitum (cum .iam.gserviceaccount.com ending). Haec inscriptio tantum pro API authenticas, non ad mittendum.</string>
+    <string name="email_gmail_service_account_help_requirements_title">PRAEREQUISITIS</string>
+    <string name="email_gmail_service_account_help_requirements_body">Hic modus tantum cum Google Workspace operatur (non personale @gmail.com propter solam). Grex API de Google Cloud eodem incepto permittere debet, et delegatio late regio configurari debet.</string>
+    <string name="email_gmail_service_account_help_step_1_title">ActivusrAPI Gmail</string>
+    <string name="email_gmail_service_account_help_step_1_description">In Google Cloud Console, da Gmail API in eodem incepto ac ratione muneris tui.</string>
+    <string name="email_gmail_service_account_help_step_2_title">Configurare domain-magnam legationem</string>
+    <string name="email_gmail_service_account_help_step_2_description">In Google Workspace Admin console: Securitatis &gt; API controls &gt; Domain-late legatio. Client ID officii rationem cum ambitu https://www.googleapis.com/auth/gmail.send addere</string>
+    <string name="email_gmail_service_account_help_step_3_title">Saisiradresse mittens</string>
+    <string name="email_gmail_service_account_help_step_3_description">In optionibus E-mail, activa toggle rationis ministerii, inscribe adresse Workspace quae epistulas mittere debet, deinde preme Sign in with Google ad validandum.</string>
+    <string name="email_gmail_service_account_help_no_workspace">Nec Google Workspace? Inactivare Service Rationem toggle et uti OAuth Client tab.</string>
+    <string name="invalid_gmail_oauth_client_json">JSON OAuth Gmail invalidum. Utilisez emptor OAuth typus application bureau ex Google Cloud Console.</string>
+    <string name="email_gmail_sign_in">Se connecter cum Google</string>
+    <string name="email_gmail_sign_out">Log sicco</string>
+    <string name="email_gmail_signed_in_as">Initium est: %1$s</string>
+    <string name="email_gmail_not_signed_in">Non coniunctum</string>
+    <string name="email_gmail_auth_success">Authentification Gmail successume</string>
+    <string name="email_gmail_auth_error">Ascripticios Gmail authenticas defecit: %1$s</string>
+    <string name="email_gmail_auth_revoked">Ascripticios Gmail accessum revocandum</string>
+    
+    <!-- Email Send Dialog -->
+    <string name="email_confirm_send_title">Envoyer QR Code per Epistula</string>
+    <string name="email_confirm_send_message">Envoyer Codex QR ad %1$s?</string>
+    <string name="email_send_manual">Envoyer Manualislement (HTML)</string>
+    <string name="email_send_api">Envoyer via Gmail API</string>
+    <string name="email_send_manual_description">Aperiapplication email cum contentum HTML et Codex QR en adnexum</string>
+    <string name="email_send_api_description">Automatice mitte per Gmail API cum imaginibus embedded</string>
+    <string name="email_no_email_title">Nulla Email Address</string>
+    <string name="email_no_email_message">Haec voluntarius n'a pasde adresse email. Quaeso en ajouterde abord.</string>
+    <string name="email_no_email_guest_staff_message">Haec hospese n'a pasde adresse e-mail servatume. Une administrateurrice doit en ajouter avantenvoi ex QR ex cet tabula.</string>
+    <string name="email_send">Envoyer</string>
+    <string name="email_sending">Envoi in progressu…</string>
+    <string name="email_error_title">Error Epistula</string>
+    <string name="email_error_message">Impossibilede ouvrirapplication email: %1$s</string>
+    <string name="email_api_error_message">Defecit mittere email per Gmail API: %1$s</string>
+    <string name="email_api_success">Inscriptio feliciter per Gmail API misit</string>
+    <string name="email_api_not_authenticated">Grex API sine fide. Quaeso ini primo in Occasus.</string>
+    <string name="email_open_settings">ConfigurerEpistula</string>
+    
+    <!-- Email HTML Template -->
+    <string name="email_html_header">Votre QR Code Voluntarius</string>
+    <string name="email_html_footer">Haec inscriptio statim missa est. Quaeso custodi QR code in locum tutum.</string>
+    <string name="email_qr_attachment_text">QR Code\nen adnexum</string>
+    <string name="email_qr_attachment_note">Codex QR est praesto en adnexum</string>
+    <string name="email_wallet_section_title">Ajouter au crumena</string>
+    <string name="email_wallet_section_description">Votre Digital Wallet Pass est joint ad cet e-mail. Enregistrez- in Apple Wallet vel application crumena Android compatible pro check-in plus celer.</string>
+    <string name="email_wallet_section_compatibility">Digital Wallet Pass (.pkpass): Apple Wallet + applications Android compatibles.</string>
+    <string name="personal_information">Informations personususnelles</string>
+    <string name="name">Nomenen</string>
+    <string name="abbreviation">Nomenen famille</string>
+    <string name="female">Femme</string>
+    <string name="male">Homme</string>
+    <string name="non_binary">Non-binaire</string>
+    <string name="other">Aliud</string>
+    <string name="prefer_not_to_disclose">Malo non detegere</string>
+    <string name="not_specified">Non certa</string>
+    <string name="birthday">Anniversaire</string>
+    <string name="age">Aevum</string>
+    <string name="phone">Telephonum</string>
+    <string name="volunteer_information">Informations in lela voluntarius</string>
+    <string name="current_rank">Rang actualis</string>
+    <string name="status">Statut:</string>
+    <string name="total_shifts">Summa Munera</string>
+    <string name="last_shift">Dernier Munus</string>
+    <string name="shift_history">Historique ex Munera (%1$d shifts)</string>
+    <string name="no_shifts_recorded">Nulla vices salvus</string>
+    <string name="actions">Actiones</string>
+    <string name="not_provided">Non fourni</string>
+    
+    <!-- Additional Volunteer Panel Strings -->
+    <string name="expired">Expiratus</string>
+    <string name="benefit_details">Beneficium Details</string>
+    <string name="more_shifts">... et %1$d shifts plus</string>
+    <string name="years_old">%1$d ans</string>
+    
+    <!-- Date & Time Format Settings -->
+    <string name="date_time_format_title">Forma diei &amp; temporis</string>
+    <string name="date_time_format_description">Elige quomodo tempora et tempora monstrantur in app</string>
+    <string name="date_format_dd_mm_yyyy">25/12/2025 (dd/MM/yyyy)</string>
+    <string name="date_format_mm_dd_yyyy">12/25/2025 (MM/dd/yyyy)</string>
+    <string name="date_format_yyyy_mm_dd">2025–12–25 (yyyy–MM–dd)</string>
+    <string name="time_format_hh_mm">14:30 (HH:mm)</string>
+    <string name="time_format_hh_mm_ss">14:30:45 (HH:mm:ss)</string>
+    <string name="time_format_hh_mm_ss_sss">14:30:45.123 (HH:mm:ss.SSS)</string>
+    <string name="date_change_offset_title">Date mutationem offset</string>
+    <string name="date_change_offset_description">Horae addere ante vices (exampla, +3 horae = 03:00). Beneficia et vices durabunt usque ad hoc tempus pro media nocte.</string>
+    <string name="date_change_offset_hours">%1$d horae</string>
+    <string name="date_change_offset_zero">0 horae (media nox)</string>
+    <string name="date_change_offset_time">%1$s</string>
+    <string name="date_change_offset_previous_day">%1$s dies prior</string>
+    <string name="date_change_offset_increase">Augmenter horae</string>
+    <string name="date_change_offset_decrease">Diminuer horae</string>
+    <string name="dashboard_calculation_time_info">Calculi tempus: %1$s (Date mutationem offset: %2$s)</string>
+    <string name="dashboard_date_offset_hours">%1$s h</string>
+    <string name="dashboard_date_offset_zero">0 h (media nox)</string>
+    
+    <!-- Multiple Benefits -->
+    <string name="active_benefits_multiple_ranks">Avantages actifs plusieurs graduss:</string>
+    
+    <!-- People Counter -->
+    <string name="people_counter_title">Ratiour personususnes</string>
+    <string name="people_counter_hint">Semita hospitum frequentia</string>
+    <string name="people_counter_hint_tap_plus_minus">Appuyez in +/- pro ajuster compte</string>
+    <string name="people_counter_hint_long_press">Appui long ±10 personususnes</string>
+    <string name="people_counter_reset">Restitue compteur</string>
+    <string name="people_counter_priority">Prioritas</string>
+    <string name="people_counter_sheet_synced">Ultima renovatio ex compteur</string>
+    <string name="people_counter_priority_lost">Alia fabrica est prioritas. Tua debilitata est. Ad prioritatem in hac arte repetendam, prioritatem transibit pro 3 secundis.</string>
+    <string name="people_counter_another_device">Alia fabrica iam prioritatem huius loci habet. Ad prioritatem in hac arte repetendam, prioritatem transibit pro 3 secundis.</string>
+    <string name="people_counter_no_sheet_row">Hic lieu n'a pas encore ligne in feuille. Synchronisez lieux in optioes.</string>
+    <string name="people_counter_need_sheets">Connectere Google rudentis priusquam metrum reprehendo.</string>
+    <string name="people_counter_select_venue">Locum eligere semel locis oneratis.</string>
+    <string name="people_counter_no_venues">Ajoutez ex lieux actifs in optioes pro utiliser compteur.</string>
+    
+    <!-- QR Code Scanner -->
+    <string name="camera_not_available">Camera hardware est unavailable vel non opus in hac fabrica</string>
+    
+    <!-- Statistics and Graphs Labels -->
+    <string name="terreau_average">Moyenne Terreau</string>
+    <string name="groove_average">Moyenne Groove</string>
+    <string name="total_average">Moyenne totale</string>
+    <string name="guest_metrics">Hospes metrics</string>
+    <string name="invitations">Invitatioes</string>
+    <string name="volunteers">Voluntarii</string>
+    <string name="permanent_guests">Hospess permanents</string>
+    <string name="count">Ratio</string>
+    <string name="shift_statistics">Statistiques ex Munera</string>
+    <string name="guest_list_statistics">Statistiques index ex hospitum</string>
+    <string name="free_drinks_statistics">Statistiques ex boissonususs gratuites</string>
+    <string name="free_drinks">Boissonususs gratuites</string>
+    
+    <!-- Graph Descriptions -->
+    <string name="active_volunteers_description">Nomenenbre voluntarii qui ont eu shift au cours novissima annus ad chaque moment</string>
+    <string name="active_volunteers_graph_description">Ostendit quot voluntarios activos habitos (habuit mutationem proximo anno) in singulos dies?</string>
+    <string name="shift_statistics_description">Numerus mutationum voluntariorum per tempus peragitur, a locatione constituto</string>
+    <string name="venue_shifts_description">Numerus arte cucurrit vestibus extentis %1$s in tempore</string>
+    <string name="total_shifts_description">Numerus vices perficitur in omnibus locis in tempore</string>
+    <string name="guest_list_statistics_description">Hospes album statistics ostendens voluntarios cum accessu et eorum praesto invitationes</string>
+    <string name="volunteer_guests_description">Numerus voluntariorum qui ad album hospitem singulis diebus accesserunt</string>
+    <string name="volunteer_invites_description">Numerus invitationum voluntariorum cum indice hospitum accessum dare potest singulis diebus</string>
+    <string name="total_guests_description">Numerus hominum in hospite (voluntarii cum accessu + suas invitationes available) singulis diebus</string>
+    <string name="free_drinks_statistics_description">Nomenenbre boissonususs gratuites praestos au fil ex temps</string>
+    <string name="gender_parity">Gender pari</string>
+    <string name="gender_parity_description">Gentem distributionem inter voluntarios activae</string>
+    <string name="gender_distribution">Genus distribution</string>
+    <string name="unspecified">Non certa</string>
+    <string name="no_gender_data">Nulla genera notitia available</string>
+    <string name="age_distribution">Age distribution</string>
+    <string name="age_distribution_description">Age distribution in volunteers active</string>
+    <string name="age_distribution_title">Age distribution</string>
+    <string name="age_under_18">Moins 18 ans</string>
+    <string name="age_18_20">18-20 ans</string>
+    <string name="age_21_23">21-23 ans</string>
+    <string name="age_24_26">24-26 ans</string>
+    <string name="age_27_30">27-30 ans</string>
+    <string name="age_over_31">Plus 31 ans</string>
+    <string name="age_unknown">Age ignota</string>
+    <string name="no_age_data">Nulla aetas notitia available for active volunteers</string>
+    <string name="not_enough_data">Non satis notitia</string>
+    <string name="total">Summa</string>
+    
+    <!-- Sync Error Messages -->
+    <string name="sync_error_title">⚠️ Error synchronizatio</string>
+    <string name="sync_error_occurred">Error occurrit in synchronisation</string>
+    <string name="sync_not_synced_title">Applicatio non synchronizatume</string>
+    <string name="sync_not_synced_message">Applicatio non iam synchronised. Quaeso uti resync puga ut update vestri notitia.</string>
+    <string name="sync_error_details">Error: %1$s</string>
+    <string name="sync_error_retry">Iterum synchronizanisation</string>
+    <string name="sync_error_dismiss">Ignorer</string>
+    <string name="sync_error_dont_tell_today">Ne plus me dire hodie</string>
+    
+    <!-- Device Time/Date Error -->
+    <string name="sync_error_device_time_title">⏰ Hora/Dies deinstrumentum incorrecte</string>
+    <string name="sync_error_device_time_message">Tempus vel diem in fabrica tua est falsa. Google schedae API praecise tempus synchronisationi ad bene operandum requirit.</string>
+    <string name="sync_error_device_time_solution">Quomodo corrigere:\n\n1. Vade ad Optiones\n2. Quaere "Dies &amp; tempus" vel "Systema"\n3. Activa "Dies &amp; tempus automatica" vel "Tempus automatice statue"\n4. Si non praesto est, die et tempus recta manu constitue\n5. Applicationem restitue et synchronizationem iterum tempta\n\nFrequens in tabulis veteribus — quaeso optiones instrumenti inspice!</string>
+    <string name="sync_error_device_time_open_settings">Aperi optioes</string>
+    
+    <!-- Sleep/Resume Sync Warning -->
+    <string name="sync_warning_sleep_resume_title">⚠️ Applicatio non synchronizatume</string>
+    <string name="sync_warning_sleep_resume_message">L'application n'est plus synchronizatume. Quaeso synchroniser en appuyant in puga resynchronizatio en humile.</string>
+    <string name="sync_error_sleep_resume_detail">📱 Instrumentum tuum dormiebat, ut nova sync requiratur. Tap in resync conjunctionem in fundo paginae.</string>
+    
+    <!-- Specific Sync Error Types -->
+    <string name="sync_error_rate_limit">Terminus festinationis transgressus. Quaeso attendre 1-2 minuta avant iterum conare.</string>
+    <string name="sync_error_authentication">Defecit authenticas. Quaeso reprehendo Google schedae configurationem tuum.</string>
+    <string name="sync_error_permission">Licentia negavit. Fac opera tua rationi editori accessum ad spreadsheet.</string>
+    <string name="sync_error_network">Retis error. Quaeso reprehendo tuum conexio.</string>
+    <string name="sync_error_invalid_config">Configuratio invalidum. Quaeso verifica tua optioes.</string>
+    <string name="sync_error_spreadsheet_not_found">Scheda calcul introuvable. Quaeso verificaID schedae computensis.</string>
+    <string name="sync_error_sheet_not_found">Scheda introuvable. Quaeso verifica noms ex feuilles in tuum configuration.</string>
+    <string name="sync_error_invalid_data">Forma data invalida. Quaeso reprehendo structuram Google schedae tuae.</string>
+    <string name="sync_error_unknown">Error incognitus inciderunt. Mox iterum conare.</string>
+    
+    <!-- Full Sync Errors -->
+    <string name="sync_error_full_sync_failed">Deficio ad plene sync</string>
+    <string name="sync_error_page_change_failed">Defecit synchronize pagina mutatio</string>
+    <string name="sync_error_volunteer_sync_failed">Deficio ad sync volunteers</string>
+    <string name="sync_error_guest_sync_failed">Deficio ad sync convivis</string>
+    <string name="sync_error_job_sync_failed">Deficio synchronize jobs</string>
+    <string name="sync_error_job_type_sync_failed">Deficio synchronize Job types</string>
+    <string name="sync_error_venue_sync_failed">Deficio ad sync locis</string>
+    <string name="sync_error_backup_failed">Tergum defecit</string>
+    
+    <!-- Sync Success Messages -->
+    <string name="sync_success_title">Synchronizatio successume</string>
+    <string name="sync_success_message">Synchronisation feliciter consummarunt</string>
+    <string name="sync_retrying">Nouvelle tentative synchronizatio…</string>
+    
+    <!-- Sync Error Dialog Labels -->
+    <string name="sync_error_details_label">Error details:</string>
+    <string name="sync_error_what_to_do">💡 Que faire:</string>
+    
+    <!-- Sync Error Advice Messages -->
+    <string name="sync_advice_rate_limit">• expecta 1-2 minuta priusquam iterum\n• application mos automatically retry\n• Vide reducing sync frequency in occasus</string>
+    <string name="sync_advice_authentication">• Reprehendo vestri muneris ratio clavem lima\n• Vide key quod in Occasus downloaded\n• Recharge clavis, si opus est</string>
+    <string name="sync_advice_permission">• Share your spreadsheet cum servitio propter inscriptio\n• dona Editor aditus ad rationem muneris\n• Reprehendo rationem inscriptio in key lima</string>
+    <string name="sync_advice_network">• Reprehendo vestri conexio\n• Reprehendo quod Wi-FI seu mobile data est on\n• Conare iterum cum nexu stabilis\n• Vide Vivamus modus est off</string>
+    <string name="sync_advice_not_found">• Reprehendo in spreadsheet id est in Occasus\n• sheet Quin nomina quae sunt\n• Vide in spreadsheet est facilis</string>
+    <string name="sync_advice_generic">• Try syncing iterum\n• Reprehendo vestri Google rudentis occasus\n• Visit Occasus ut reprehendo tuum configuratione</string>
+
+    <!-- Seasonal Fun -->
+    <string name="seasonal_fun_title">Temporis atmosphaera</string>
+    <string name="seasonal_fun_description">Admitte speciales temporis features et ornamenta</string>
+    
+    <!-- Settings Categories -->
+    <string name="settings_category_sync">Synchronisation &amp; Data</string>
+    <string name="settings_category_appearance">Apparence &amp; Affichage</string>
+    <string name="settings_category_localization">Localisation</string>
+    <string name="settings_category_animations">Animations &amp; Effets</string>
+    <string name="settings_category_developer">Elit &amp; Debugging</string>
+    <string name="settings_category_maintenance">Maintenance</string>
+    
+    <!-- App Icon Settings -->
+    <string name="app_icon_title">App icon</string>
+    <string name="app_icon_description">Malle icon style tuum</string>
+    <string name="app_icon_white">Album</string>
+    <string name="app_icon_black">Nigrum</string>
+    <string name="app_icon_brown">Brun</string>
+    <string name="app_icon_creme_black">Crème &amp; Black</string>
+    <string name="app_icon_dark_blue">Caeruleum</string>
+    <string name="app_icon_dark_legacy">Obscurum classique</string>
+    <string name="app_icon_dark_turquoise">Turquoise</string>
+    <string name="app_icon_dark_violet">Purpureo tenebris</string>
+    <string name="app_icon_light_blue">Caeruleum clair</string>
+    <string name="app_icon_light_legacy">Clarum classique</string>
+    <string name="app_icon_light_violet">Violaceum clair</string>
+    <string name="app_icon_orange">Aurantium</string>
+    <string name="app_icon_pink">Pink</string>
+    <string name="app_icon_selected">Lego</string>
+    <string name="app_icon_auto_adapt_title">Automatice aptet icon ad systema</string>
+    <string name="app_icon_auto_adapt_description">Automatarie commutandum inter icones lucis et obscuras fundatur in systemate tuo</string>
+    <string name="app_icon_white_applied">Icon alba applicata.</string>
+    <string name="app_icon_black_applied">Icon nigrum applicata.</string>
+    <string name="app_icon_brown_applied">Icon fuscum applicatum.</string>
+    <string name="app_icon_creme_black_applied">Crème &amp; Black icon applied.</string>
+    <string name="app_icon_dark_blue_applied">Icon fusca caerulea applicata.</string>
+    <string name="app_icon_dark_legacy_applied">Icon classica obscura apposita.</string>
+    <string name="app_icon_dark_turquoise_applied">Icon carbunculus fuscus applicatus.</string>
+    <string name="app_icon_dark_violet_applied">Icon atro purpureo applicata.</string>
+    <string name="app_icon_light_blue_applied">Icon caeruleae levis applicata.</string>
+    <string name="app_icon_light_legacy_applied">Classica claris iconibus applicata.</string>
+    <string name="app_icon_light_violet_applied">Icon luce purpurea applicata.</string>
+    <string name="app_icon_orange_applied">Icon Auriaco applicata.</string>
+    <string name="app_icon_pink_applied">Icona rosea applicata.</string>
+    <string name="app_icon_auto_adapt_enabled">Accommodatio automatic enabled. Icon icon renovabitur secundum thematis systematis.</string>
+    <string name="app_icon_restart_title">Reincipeapplication</string>
+    <string name="app_icon_restart_message">Quaeso restitueapplication pro que changementde icon prenne effet.</string>
+    <string name="app_icon_restart_now">Reincipe nunc</string>
+    <string name="app_icon_restart_later">Plus tard</string>
+    
+    <!-- Graph Export -->
+    <string name="exporting">Exportation...</string>
+    <string name="export_graph">Exporter graphicum</string>
+    <string name="choose_export_format">Choisir formatde exportation:</string>
+    <string name="export_as_xlsx">Exporter en XLSX</string>
+    <string name="export_xlsx_description">Omnia notitia et chart</string>
+    <string name="export_as_jpg">Exporter en JPG</string>
+    <string name="export_jpg_description">Image ex graphicum uniquement</string>
+    <string name="export_complete">Exportation perfecta</string>
+    <string name="xlsx_export_complete">Exportation XLSX perfecta</string>
+    <string name="xlsx_export_success_message">Your spreadsheet has been successfully created and is ready to share</string>
+    <string name="file_name">File name</string>
+    <string name="file_size">Taille: %1$s</string>
+    <string name="graph_preview">Prospectus ex graphicum</string>
+    <string name="share_graph">Communica graphicum</string>
+    
+    <!-- POS Accounting PDF Report -->
+    <string name="pos_report_title">POS accounting report</string>
+    <string name="pos_report_entry_title">POS accounting PDF</string>
+    <string name="pos_report_entry_subtitle">Evening or period breakdown for accounting (sales, transfers, adjustments)</string>
+    <string name="pos_report_mode_evening">Single evening</string>
+    <string name="pos_report_mode_period">Date range</string>
+    <string name="pos_report_select_date">Evening date</string>
+    <string name="pos_report_period_start">Start date</string>
+    <string name="pos_report_period_end">End date</string>
+    <string name="pos_report_closure_time">Closure time</string>
+    <string name="pos_report_closure_override">Override closure for this report only</string>
+    <string name="pos_report_evening_help">Evening of %1$s · closure at %2$s\nPeriod: %3$s</string>
+    <string name="pos_report_period_help">Period: %1$s</string>
+    <string name="pos_report_preview_transfers">%1$d transfers (%2$d POS sales)</string>
+    <string name="pos_report_preview_cash">Cash/card collected: %1$s</string>
+    <string name="pos_report_preview_credit">Internal credit used: %1$s</string>
+    <string name="pos_report_generate">Generate PDF</string>
+    <string name="pos_report_generating">Generating PDF…</string>
+    <string name="pos_report_preview_title">Report ready</string>
+    <string name="pos_report_preview_summary">%1$d POS sales · %2$s cash/card · %3$d transfers total</string>
+    <string name="pos_report_share">Share report</string>
+    <string name="pos_report_open">Open report</string>
+    <string name="pos_report_file_size">Size</string>
+    <string name="pos_report_venue_scope_all">Total (all venues)</string>
+    <string name="pos_report_venue_scope_global">Global</string>
+    <string name="pos_report_venue_label">Venue</string>
+    <string name="pos_venue_global">Global</string>
+    <string name="pos_venue_selector_label">Sales venue</string>
+    <string name="pos_venue_current">Current venue: %1$s</string>
+    <string name="sales_item_venues_label">Sales venues</string>
+    <string name="sales_item_venues_hint">Select where this item is available for POS sales.</string>
+    <string name="pos_report_preview_period">Period covered</string>
+    <string name="pos_report_save_as">Save as…</string>
+
+    <string name="open_with">Aperire cum</string>
+    <string name="active_volunteers_graph">Graphique ex voluntarii actifves</string>
+    
+    <!-- Tablet-specific strings (also in default locale for lint) -->
+    <string name="tablet_optimized">Optimized for tabula viewing</string>
+    <string name="large_screen_experience">Improved experientia pro magnis screens</string>
+    <string name="nav_dashboard_tablet">Prospectus ex tabula bord</string>
+    <string name="nav_guests_tablet">Gestion indexde hospitum</string>
+    <string name="nav_volunteers_tablet">Gestion ex voluntarii</string>
+    <string name="nav_shifts_tablet">Suivi ex Munera</string>
+    <string name="nav_benefits_tablet">Prospectus ex commoda</string>
+    <string name="nav_settings_tablet">Optiones &amp; configuratio</string>
+    <string name="volunteer_manager_tablet">Systema complet gestion ex voluntarii</string>
+    <string name="guest_list_management_tablet">Procuratio hospitalis completum pro omnibus configurati locis</string>
+    <string name="volunteer_benefits_overview_tablet">Detailed tracking of beneficii ac status Voluntarius</string>
+    <string name="shift_tracking_tablet">Suivi complet ex shifts et gestion ex jobs</string>
+    <string name="shield_optimized">Optimized pro NVIDIA scutum tabulis</string>
+    <string name="enhanced_touch_targets">Melior tactus scuta melius commercium</string>
+    
+    <!-- Easter Egg Games -->
+    <string name="easter_egg_hextris">Hextris</string>
+    <string name="easter_egg_pizza_undelivery">Pizza Undelivery</string>
+    <string name="easter_egg_scroll">Scroll!</string>
+    <string name="easter_egg_wendol_village">Wendol Village</string>
+    <string name="easter_egg_catculus">Catculus</string>
+    <string name="arcade_title">★ ARCADE ★</string>
+    <string name="arcade_subtitle">INSERT FUN</string>
+    <string name="arcade_pick_game">CHOISIS UN JEU!</string>
+    <string name="arcade_credits_title">CREATOR CREDITS</string>
+    <string name="arcade_exit">[ ESC ] SORTIR</string>
+    <string name="arcade_credit_wendol_village">Wendol Village — a js13kGames 2024 game by @sanojian.</string>
+    <string name="arcade_credit_scroll">👆Scroll! — TypeScript game using Web Components for JS13K. © 2019 Zeev Katz. All rights reserved.</string>
+    <string name="arcade_credit_hextris">Hextris — An addictive puzzle game inspired by Tetris. hextris.io · By Logan Engstrom, Garrett Finucane, Noah Moroze &amp; Michael Yang.</string>
+    <string name="arcade_credit_pizza_undelivery">Pizza Undelivery — A game made for the 2019 js13kGames competition. nilsgawlik.github.io/js13k2019/ · @nikigawlik</string>
+    <string name="arcade_credit_catculus">Catculus — a js13kGames 2025 game by @anttihaavikko.</string>
+    
+    <!-- Entry Validation -->
+    <string name="validate_entry">Valider introitus</string>
+    <string name="validate_entry_description">Hoc voluntarius insuetum liberum ingressum egit ad "vesperarum" mutatione frui non potest. Tollenone confirmare introitum.</string>
+    <string name="validate_entry_description_one_future">Il reste introitus eventus (usage unique) ad ce voluntarius. Glissez pro validumr.</string>
+    <string name="validate_entry_description_n_remaining">Il reste %1$d introituss eventus (usage unique) ad ce voluntarius. Glissez pro en consommer une.</string>
+    <string name="validate_entry_description_with_invites">Introitus pro voluntarius + %1$d hospes(s). Glissez pro confirma.</string>
+    <string name="validate_entry_description_solo">Introitus seule (sans hospitum). Glissez pro confirma.</string>
+    <string name="slide_to_confirm">Glisser pro confirma</string>
+    <string name="future_entry_group_label_invites">%1$d introitus restante (+%2$d inv.)</string>
+    <string name="future_entries_group_label_invites">%1$d introituss restantes (+%2$d inv.)</string>
+    <string name="future_entry_group_label_solo">%1$d introitus restante (seul)</string>
+    <string name="future_entries_group_label_solo">%1$d introituss restantes (seul)</string>
+    
+    <!-- Activity Status -->
+    <string name="activity_status_never_worked">Numquam laboravi</string>
+    <string name="activity_status_active_today">Activus (hodie)</string>
+    <string name="activity_status_active_days_ago">Activus (il y a %1$d dies)</string>
+    <string name="activity_status_active_months_ago">Activus (il y a %1$d menses)</string>
+    <string name="activity_status_inactive_years_ago">Inactivus (il y a %1$d ans)</string>
+    <string name="legend_badge_label">Legend</string>
+
+    <!-- Billeterie Scanner -->
+    <string name="billeterie_scanner_tap_to_activate">ICTUS movere camera</string>
+    <string name="billeterie_scanner_tap_to_pause">Appuyer pro suspendre</string>
+    <string name="billeterie_scanner_entry_approved">Probatus Entry</string>
+    <string name="billeterie_scanner_entry_validated">Ingressus Validated!</string>
+    <string name="billeterie_scanner_scan_next">Scanner Suivant</string>
+    <string name="billeterie_scanner_no_entry">Pasde Introitus</string>
+    <string name="billeterie_scanner_no_benefits">Haec personususne n'a pasde commodade introitus</string>
+    <string name="billeterie_scanner_guest_found">Hospes Found</string>
+    <string name="billeterie_scanner_validate_ticket">Valider Ticket</string>
+    <string name="billeterie_scanner_ready">Paratus ad scan…</string>
+    <string name="billeterie_scanner_with_invites">+%1$d invitation(s)</string>
+    <string name="billeterie_scanner_error">Error</string>
+    <string name="desktop_billeterie_webcam_section">Codex QR (webcam)</string>
+    <string name="desktop_billeterie_nfc_section">Lector NFC</string>
+    <string name="desktop_billeterie_nfc_connected">Lector connexa - ad scan</string>
+    <string name="desktop_billeterie_nfc_disconnected">Non NFC lectorem - connect a USB vel Bluetooth lectorem in occasus</string>
+    <string name="desktop_billeterie_nfc_reading">Lecture carte…</string>
+    <string name="desktop_billeterie_scan_next_shortcut">Introitus ↵ pro scanner personususne sequense</string>
+    <string name="desktop_billeterie_camera_stop">Subsisto webcam</string>
+    <string name="desktop_qr_start_webcam">Satus webcam</string>
+    <string name="desktop_qr_open_image">Aperi imago QR…</string>
+    <string name="desktop_qr_opening_camera">Aperiens cameram…</string>
+    <string name="desktop_qr_point_at_code">Ostende QR code in fronte de camera</string>
+    <string name="desktop_qr_opening_file_picker">Elige imaginem file…</string>
+    <string name="desktop_qr_no_webcam_mac">Nulla webcam deprehenditur. Da aditum ad cameram in Optiones Systematis, seu imaginem QR aperire.</string>
+    <string name="desktop_qr_no_webcam_linux">Nulla webcam deprehenditur. Perscriptio camera permissionum (V4L2/PipeWire) et membra coetus video vel imaginem QR aperi.</string>
+    <string name="desktop_qr_no_webcam_generic">Nulla webcam deprehenditur. Reprehendo camera permissiones, vel imaginem QR aperi.</string>
+    <string name="desktop_qr_no_frames">Camera aperta est sed nulla imago recipitur. Reprehendo camera permissiones.</string>
+
+    <!-- Admin Setup (first admin creation) -->
+    <string name="admin_setup_title">Primum creare Fusce</string>
+    <string name="admin_setup_description">No sed existit admin. Fac primum admin ut applicationes regendi.</string>
+    <string name="admin_setup_type_title">Typus administratoris</string>
+    <string name="admin_setup_type_description">Souhaitez-vous ajouter premier admin en tant qu'hospes permanent vel en tant que voluntarius?</string>
+    <string name="admin_setup_type_guest">Hospes Permanent</string>
+    <string name="admin_setup_type_guest_desc">Hospes cum admin privilegia addere</string>
+    <string name="admin_setup_type_volunteer">Voluntarius</string>
+    <string name="admin_setup_type_volunteer_desc">Add a volunteer with admin privilegia</string>
+    <string name="admin_setup_create_guest_title">Create an Admin Hospes</string>
+    <string name="admin_setup_create_guest_desc">Remplissez informatioes ex nouvel hospes admin</string>
+    <string name="admin_setup_create_volunteer_title">Create an Maecenas et ipsum</string>
+    <string name="admin_setup_create_volunteer_desc">Remplissez informatioes ex novus voluntarius admin</string>
+    <string name="admin_setup_access_title">Comment tu connecter?</string>
+    <string name="admin_setup_access_desc">Comment souhaitez-vous tu connecter en tant que premier admin?</string>
+    <string name="admin_setup_access_explained">Infra optio elige.\n\n• QR code — codicem ostendit ut e ductorio domus lustrandae. Commodum est communicare cum alio vel alio telephonio.\n\n• NFC Card - schedulam vel insigne coniungit quod cum artificio tangis admin accessum.</string>
+    <string name="admin_setup_created_line">%1$s addita est ad administratorem.</string>
+    <string name="admin_setup_done_title">Paratus est</string>
+    <string name="admin_setup_done_message">%1$s Admin modus aperire poterit a screen domestica cum optione electa. Postea modos in applicatione addere vel mutare potes.</string>
+    <string name="admin_setup_btn_skip">Passer</string>
+    <string name="admin_setup_btn_qr">Code QR</string>
+    <string name="admin_setup_btn_nfc">Charta NFC</string>
+    <string name="admin_setup_nfc_linked_title">Consociata NFC</string>
+    <string name="admin_setup_use_qr">Utiliser QR Code</string>
+    <string name="admin_setup_use_qr_desc">Generare et communicare QR code pro admin login</string>
+    <string name="admin_setup_use_nfc">Ajouter Charta NFC</string>
+    <string name="admin_setup_use_nfc_desc">Assigner carte NFC pro connexio admin</string>
+    <string name="admin_setup_creating">Creatio admin…</string>
+    <string name="admin_setup_success">Admin feliciter creatus est!</string>
+    <string name="admin_setup_error">Deficio creare admin: %1$s</string>
+    <string name="admin_setup_qr_title">QR Code Administratoristrator</string>
+    <string name="admin_setup_qr_description">Partagez ce Codex QR pro connexio admin. Vous pouvez partager via puga ci-dessous vel entreremail manu.</string>
+    <string name="admin_setup_nfc_assigned">NFC card assignata! Hoc card uti iam potes pro login admin.</string>
+    <string name="admin_setup_done">Factum</string>
+    <string name="admin_setup_skip">Passer proinstant</string>
+    <string name="admin_setup_no_admin_warning">Cave: Sine admin, modus administratoris accedere non poteris.</string>
+
+    <!-- Announcements -->
+    <string name="settings_category_announcements">Annonces</string>
+    <string name="announcements_reception_title">Admitte receptionem</string>
+    <string name="announcements_reception_description">Afficher vel Cela nuntii entrantes</string>
+    <string name="announcements_tracked_venues_title">Loci observati</string>
+    <string name="announcements_tracked_venues_description">Elige ex quibus locis nuntios accipere vis</string>
+    <string name="announcements_tracked_venues_all">Omnes loci</string>
+    <string name="announcements_validity_title">Validitatem tempus</string>
+    <string name="announcements_validity_description">Mandata maior quam haec duratio non amplius proponendum est</string>
+    <string name="announcements_validity_15min">15 minuta</string>
+    <string name="announcements_validity_30min">30 minuta</string>
+    <string name="announcements_validity_1h">I hora</string>
+    <string name="announcements_validity_2h">2 horae</string>
+    <string name="announcements_validity_4h">4 horae</string>
+    <string name="announcements_non_admin_send_title">Autoriserenvoi non-admin</string>
+    <string name="announcements_non_admin_send_description">Permettre aux interfaces billetteriede envoyer ex nuntii</string>
+    <string name="announcement_button_label">Faire nuntius</string>
+    <string name="announcement_send_title">Envoyer nuntius</string>
+    <string name="announcement_destination_label">Locus(x) destination</string>
+    <string name="announcement_all_venues">Omnes lieux</string>
+    <string name="announcement_title_label">Destinataire / Titre</string>
+    <string name="announcement_title_placeholder">Sujet court…</string>
+    <string name="announcement_message_label">Message</string>
+    <string name="announcement_message_placeholder">Contentus nuntii…</string>
+    <string name="announcement_send_button">Envoyer</string>
+    <string name="announcement_cancel_button">Abrogare</string>
+    <string name="announcement_sending">Envoi in progressu…</string>
+    <string name="announcement_sent_success">Nuntius missus!</string>
+    <string name="announcement_sent_error">Defecit mittere ad</string>
+    <string name="announcement_popup_title">Annonce</string>
+    <string name="announcement_popup_close">Claude</string>
+    <string name="announcement_popup_from">: %1$s</string>
+
+    <!-- External Bluetooth NFC reader (ACR1255U-J1) -->
+    <string name="settings_category_external_reader">Lector NFC Bluetooth</string>
+    <string name="settings_category_pcsc_reader">Lector NFC USB</string>
+    <string name="pcsc_reader_description">Obturaculum in ACS ACR122U vel USB NFC compatitur lectori. macOS et Fenestra PC/SC includunt; On Linux, install and satus pcscd.</string>
+    <string name="desktop_external_reader_description">USB agitet (ACR122U, ACR1255U-J1 in USB modo) opus inplenda cum PC/SC ACS agitator inauguratus. Flectendum coegi ad USB modum, obturaculum in remulco, sub test Connection utere.</string>
+    <string name="desktop_ble_supported_windows">Bluetooth (ACR1255U-J1): ACS Bluetooth PC/SC rectorem instrue, ludio ludius in Fenestra Bluetooth occasus par, deinde infra elige.</string>
+    <string name="desktop_ble_unsupported_macos">Bluetooth n'est pas pris en charge in macOS (pas driver PC/SC BLE ACS). Utilisez mode USB cum driver USB ACS.</string>
+    <string name="desktop_ble_unsupported_linux">Bluetooth n'est pas pris en charge in Linux (pas driver PC/SC BLE ACS). Utilisez mode USB cum pcscd et driver USB ACS.</string>
+    <string name="desktop_list_pcsc_readers">Lister lecteurs PC/SC</string>
+    <string name="desktop_usb_reader_test_button">Proba lector USB</string>
+    <string name="desktop_ble_reader_picker_subtitle">Par ACR1255U-J1 in systemate Bluetooth, hic elige. Agit iam visibilem ad PC/SC parata statim.</string>
+    <string name="desktop_ble_reader_not_found">ACR1255U-J1 non invenitur. Vertere, par cum Bluetooth et ACS PC/SC rectorem institue.</string>
+    <string name="desktop_ble_reader_pcsc_ready">PC/SC paratus · %1$s</string>
+    <string name="external_reader_description">NFC externum lectorem hic elige. Apparet in occasus MASCULINUS Bluetooth, sed cum hoc app coniungere non potest.</string>
+    <string name="external_reader_connected_label">Electus coegi</string>
+    <string name="external_reader_pick_button">Quaere lecteur Bluetooth</string>
+    <string name="external_reader_change">Changer lecteur</string>
+    <string name="external_reader_forget">Oublier</string>
+    <string name="external_reader_saved_toast">Descripserunt: %1$s</string>
+    <string name="external_reader_cleared_toast">Lector externum obliviscere</string>
+    <string name="external_reader_test_button">Proba connexionemem</string>
+    <string name="external_reader_testing">Test in progressu\u2026</string>
+    <string name="external_reader_test_success_title">Lector OK</string>
+    <string name="external_reader_test_failure_title">Test defectum</string>
+    <string name="external_reader_test_close">Claude</string>
+
+    <string name="ble_reader_picker_title">Choisir lector NFC Bluetooth</string>
+    <string name="ble_reader_picker_subtitle">Cognoscere quod coegi ACR1255U-J1 in et prope vertitur. ACR primo apparent fugat.</string>
+    <string name="ble_reader_section_acr_title">Lectores NFC ACS</string>
+    <string name="ble_reader_section_acr_hint">Commendatum · ACR1255U-J1 et instrumenta ACS compatibilia</string>
+    <string name="ble_reader_section_acr_empty">Nullus lector ACS deprehensus. Accende ACR1255U-J1 et prope tene dum quaeritur.</string>
+    <string name="ble_reader_section_other_title">Alia instrumenta Bluetooth</string>
+    <string name="ble_reader_show_other_devices">Ostende alia instrumenta Bluetooth (%1$d)</string>
+    <string name="ble_reader_hide_other_devices">Celare alia instrumenta Bluetooth</string>
+    <string name="ble_reader_search_other_hint">Filtra per nomen vel MAC…</string>
+    <string name="ble_reader_other_truncated">Ostendens %1$d ex %2$d instrumentis (fortissimum signum primum)</string>
+    <string name="ble_reader_rssi_label">%1$d dBm</string>
+    <string name="ble_reader_scanning">Recherchede instrumentums Bluetooth…</string>
+    <string name="ble_reader_scanning_hint">Quaestione activae manet dum haec fenestra aperta est.</string>
+    <string name="ble_reader_show_all">Afficher omnes instrumentums Bluetooth</string>
+    <string name="ble_reader_show_acr_only">Afficher uniquement lecteurs ACR</string>
+    <string name="ble_reader_unnamed">Instrumentum sine nom</string>
+    <string name="ble_reader_bonded_label">excipere</string>
+    <string name="ble_reader_row_subtitle">%1$s · %2$s</string>
+    <string name="ble_reader_row_subtitle_bonded">%1$s  ·  %2$s Iam paribus ·</string>
+    <string name="ble_reader_bluetooth_off">Bluetooth est deactivatum. Activusz- pro quaerensr ex lecteurs.</string>
+    <string name="ble_reader_bluetooth_unavailable">Bluetooth est non praesto in cet instrumentum.</string>
+    <string name="ble_reader_scan_permission_denied">L'autorisationde analyse Bluetooth est requiriture.</string>
+    <string name="ble_reader_connect_permission_denied">L'autorisation connexio Bluetooth est requiriture.</string>
+    <string name="ble_reader_location_permission_denied">Locus permissio requiritur ut machinas Bluetooth in hac versione Android quaererent.</string>
+    <string name="ble_reader_scanner_unavailable">scanner Bluetooth Low Energy est non praesto.</string>
+    <string name="ble_reader_low_level_error">Bluetooth quaerere defuit. Turn Bluetooth iterum inde, deinde iterum tenta.</string>
+    <string name="ble_reader_enable_bluetooth">Activusr Bluetooth</string>
+    <string name="ble_reader_not_acr1255">Delectum Bluetooth fabrica lectorem ACS ACR1255U-J1 non est.</string>
+    <string name="ble_reader_verification_inconclusive_saved">Coegi reprehendo concludunt. Cogitatus adhuc descripserunt.</string>
+
+    <!-- UI strings (shared components / desktop) -->
+    <string name="noctulist_admin_title">NoctuList Administratoristrator</string>
+    <string name="download">Deprome</string>
+    <string name="download_complete_opening_installer">Download perficitur - foramen installer...</string>
+    <string name="select_date">Lego date</string>
+    <string name="select_time">Lego tempore</string>
+    <string name="date_time_label">Dies &amp; tempus</string>
+    <string name="dropdown_no_volunteers_found">Non voluntarios invenerunt</string>
+    <string name="open_in_browser">Aperi in navigateur: %1$s</string>
+    <string name="desktop_app_icon_unavailable">personususalizatio deicon applicationis n'est pas praesto in ordinateur.</string>
+    <string name="minutes_short">min</string>
+    <string name="selecting_file">Discriptis tabella…</string>
+    <string name="action_cancelled">Pax</string>
+    <string name="invalid_service_account_json">Fasciculus JSON ratio ministerii invalidum</string>
+    <string name="upload_failed_generic">Download defecit</string>
+
+    <!-- Desktop admin navigation -->
+    <string name="desktop_admin_nav_layout_title">Disposition ex index admin</string>
+    <string name="desktop_admin_nav_layout_description">Elige ubi admin navigation in computatrum display</string>
+    <string name="desktop_admin_nav_layout_bottom">En humile (style tablette)</string>
+    <string name="desktop_admin_nav_layout_left">Pars sinistra</string>
+    <string name="desktop_admin_nav_layout_right">Pars dextra</string>
+    <string name="desktop_admin_nav_expand">Expand menu</string>
+    <string name="desktop_admin_nav_collapse">Collapse menu</string>
+
+    <!-- Hardcoded / desktop / POS message strings (i18n) -->
+    <string name="account_reversal_description">Annulation: %1$s</string>
+    <string name="custom_theme_editor_title">Custom Theme Editor</string>
+    <string name="desktop_bluetooth_nfc_reader">Lector NFC Bluetooth</string>
+    <string name="desktop_bluetooth_nfc_reader_offline">Lector NFC Bluetooth (hors ligne)</string>
+    <string name="desktop_no_external_reader">Non externum coegi</string>
+    <string name="desktop_pcsc_error">Error PC/SC</string>
+    <string name="desktop_pcsc_library_unavailable">PC/SC bibliotheca unavailable</string>
+    <string name="desktop_pcsc_no_ble_reader">Nullus NFC Bluetooth lector in PC/SC.
+Socius\'ACR1255U-J1 in occasus systematis Bluetooth ac rectorem ACS install.</string>
+    <string name="desktop_pcsc_no_card_on_reader">Nulla card deprehenditur ad lectorem</string>
+    <string name="desktop_pcsc_no_card_present">Nulla card praesens</string>
+    <string name="desktop_pcsc_no_reader">Non PC/SC lectorem</string>
+    <string name="desktop_pcsc_no_readers_found">Non PC / SC agit inventus est.</string>
+    <string name="desktop_pcsc_no_readers_hint">Non PC / SC agit inventus est.
+Obturaculum in USB coegi vel par ACR1255U-J1 Bluetooth.</string>
+    <string name="desktop_pcsc_provider_failed">Deficio load PC / SC provisor.
+Fac PC/SC installatur et sileo the\'adhibitis.</string>
+    <string name="desktop_pcsc_reader_disconnected">Lector disiunctum.</string>
+    <string name="desktop_pcsc_reader_error">Error ex lecteur</string>
+    <string name="desktop_pcsc_reader_ok_place_card">OK — lector coniunctus.
+Placez carte in lecteur et testez ad novus pro lire UID.</string>
+    <string name="desktop_pcsc_readers_header">Lectors (%1$d):</string>
+    <string name="desktop_pcsc_unable_select_reader">Impossibile Elige lecteur.</string>
+    <string name="desktop_pcsc_unavailable">PC/SC non praesto</string>
+    <string name="desktop_pcsc_using_reader">Utilisation: %1$s</string>
+    <string name="desktop_pcsc_waiting_card">Expectans card (usque ad\'has %1$d s) ...</string>
+    <string name="desktop_pcsc_waiting_removal">En attente ex retrait carte</string>
+    <string name="desktop_usb_nfc_reader">Lector NFC USB</string>
+    <string name="done">Factum</string>
+    <string name="email_gmail_connect_activity_unavailable">Connexio impossible: contexte Activity non praesto</string>
+    <string name="email_gmail_connect_api">Connecter l\'API Gmail</string>
+    <string name="email_gmail_connect_api_hint">Ratio tua descripserunt. In Android TV et machinis vetustis, unus gradus\'Additional permissio requiritur ad coniungere\'Grex API.</string>
+    <string name="pos_sale_complete_message">Venditio perfecta</string>
+    <string name="rate_limit_action_auto_retry">L\'applicationem mos automatically retry cum backoff</string>
+    <string name="rate_limit_action_check_quota">reprehendo si\'aliis medicamentis idem API quota</string>
+    <string name="rate_limit_action_reduce_freq">Sync frequency minuere in Occasus</string>
+    <string name="rate_limit_action_wait">Attendez 1 ad 2 minuta avant iterum conare</string>
+    <string name="rate_limit_current_limits">Limites API actualiss:</string>
+    <string name="rate_limit_dialog_title">API rate modus exceditur</string>
+    <string name="rate_limit_per_100_seconds">Par 100 secondes</string>
+    <string name="rate_limit_per_100_value">D petitiones per project</string>
+    <string name="rate_limit_per_user_requests">Queries per user</string>
+    <string name="rate_limit_per_user_value">60 per minutum et per utilisateur</string>
+    <string name="rate_limit_read_requests">Read queries</string>
+    <string name="rate_limit_read_value">300 per minutum et per projet</string>
+    <string name="rate_limit_retry_sync">Iterum synchroniza</string>
+    <string name="rate_limit_tips_body">• uti manual pro synchronisation\'auto- sync in periodis onere
+• Sync rarius, si fines saepe perveneris
+• Reprehendo Google Cloud consolatorium\'quota usus</string>
+    <string name="rate_limit_tips_title">Astuces:</string>
+    <string name="rate_limit_too_many_requests">Nimiae petitiones</string>
+    <string name="rate_limit_wait_message">Vous avez atteint limite debitum l\'API Google Sheets. Quaeso attendre 1 ad 2 minuta avant iterum conare.</string>
+    <string name="rate_limit_what_to_do">Que faire:</string>
+    <string name="rate_limit_write_requests">Petitiones Write</string>
+    <string name="rate_limit_write_value">300 per minutum et per projet</string>
+    <string name="theme_hue_label">Teinte (arc-en-ciel): %1$d°</string>
+    <string name="theme_luminosity_label">Splendor: %1$d%%</string>
+    <string name="theme_saturation_label">Saturation: %1$d%%</string>
+</resources>

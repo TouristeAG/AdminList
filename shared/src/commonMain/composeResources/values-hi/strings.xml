@@ -1,0 +1,1614 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App Name -->
+    <string name="app_name">NoctuList</string>
+    
+    <!-- Settings Screen -->
+    <string name="settings_title">सेटिंग्स &amp; विन्यास</string>
+    <string name="settings_subtitle">Google शीट सिंक्रोनाइज़ेशन और ऐप सेटिंग्स कॉन्फ़िगर करें</string>
+    <string name="settings_logout">लॉग आउट करें</string>
+    <string name="settings_logout_description">स्वागत स्क्रीन पर लौटें. प्रबंधन सुविधाओं तक पहुँचने के लिए आपको व्यवस्थापक के रूप में फिर से साइन इन करना होगा।</string>
+
+    <!-- Google Sheets Configuration -->
+    <string name="google_sheets_config_title">Google शीट कॉन्फ़िगरेशन</string>
+    <string name="view_setup_instructions">सेटअप निर्देश देखें</string>
+    <string name="spreadsheet_id_label">स्प्रेडशीट आईडी</string>
+    <string name="spreadsheet_id_hint">इसे अपने Google शीट्स URL से प्राप्त करें: https://docs.google.com/spreadshields/d/SPREADSHEET_ID/edit</string>
+    <string name="guest_list_sheet_label">अतिथि सूची पत्रक</string>
+    <string name="volunteer_sheet_label">स्वयंसेवक पत्रक</string>
+    <string name="shifts_sheet_label">शिफ्ट शीट</string>
+    <string name="volunteer_guest_list_sheet_label">स्वयंसेवक अतिथि सूची पत्रक</string>
+    <!-- Read-only banner written to the volunteer benefit guest list Google Sheet (K1:M5, K6:M6); language follows app setting -->
+    <string name="volunteer_guest_sheet_banner_title">संपादित न करें - स्वयंसेवी लाभ अतिथि सूची (केवल पढ़ने के लिए)</string>
+    <string name="volunteer_guest_sheet_banner_l2">इस शीट को संशोधित न करें.</string>
+    <string name="volunteer_guest_sheet_banner_l3">यहां किए गए परिवर्तन ऐप द्वारा सहेजे नहीं जाते हैं.</string>
+    <string name="volunteer_guest_sheet_banner_l4">यह टैब केवल उन स्वयंसेवकों को सूचीबद्ध करता है जिनके पास वर्तमान में ऐप से अतिथि-सूची का लाभ है।</string>
+    <string name="volunteer_guest_sheet_banner_l5">ऐप इस टैब को रीफ़्रेश करता है—यदि ऐप का उपयोग नहीं किया गया है, तो यह अब अद्यतित नहीं है।</string>
+    <string name="volunteer_guest_sheet_last_updated">अंतिम अद्यतन: %1$s</string>
+    <!-- Epoch helper panel written to Google Sheets (formulas + titles); language follows app setting -->
+    <string name="sheet_epoch_calc_title_ms_to_date">टाइमस्टैम्प (एमएस) → दिनांक/समय</string>
+    <string name="sheet_epoch_calc_title_date_to_ms">दिनांक/समय → टाइमस्टैम्प (एमएस)</string>
+    <string name="sheet_epoch_calc_hint_ms">यहां epoch ms टाइप करें (उदा. 1776711088094)</string>
+    <string name="sheet_epoch_calc_hint_datetime">दिनांक/समय सेल चुनें या टाइप करें</string>
+    <string name="temp_guest_list_sheet_label">अस्थायी अतिथि सूची शीट</string>
+    <string name="shift_types_sheet_label">शिफ्ट प्रकार शीट</string>
+    <string name="venues_sheet_label">स्थान पत्रक</string>
+    <string name="admin_label">व्यवस्थापक</string>
+    <string name="admin_yes">हाँ</string>
+    <string name="admin_no">नहीं</string>
+    <string name="save_settings">सेटिंग्स सहेजें</string>
+    <string name="test_connection">परीक्षण कनेक्शन</string>
+    
+    <!-- Service Account Configuration -->
+    <string name="service_account_config_title">सेवा खाता कॉन्फ़िगरेशन</string>
+    <string name="service_account_key_found">सेवा खाता कुंजी मिली</string>
+    <string name="service_account_key_required">सेवा खाता कुंजी आवश्यक है</string>
+    <string name="email_label">ईमेल: %1$s</string>
+    <string name="project_label">प्रोजेक्ट: %1$s</string>
+    <string name="email_colon">ईमेल: %1$s</string>
+    <string name="project_colon">प्रोजेक्ट: %1$s</string>
+    <string name="upload_key_file_description">अपना Google सेवा खाता JSON कुंजी फ़ाइल अपलोड करें</string>
+    <string name="upload_key_description">अपना Google सेवा खाता JSON कुंजी फ़ाइल अपलोड करें</string>
+    <string name="replace_key_file">कुंजी फ़ाइल बदलें</string>
+    <string name="upload_key_file">कुंजी फ़ाइल अपलोड करें</string>
+    
+    <!-- Sync Configuration -->
+    <string name="sync_config_title">सिंक कॉन्फ़िगरेशन</string>
+    <string name="sync_interval_label">सिंक अंतराल (मिनट)</string>
+    <string name="sync_interval_hint">Google शीट्स के साथ कितनी बार सिंक करना है (1-60 मिनट)। परिवर्तन स्वचालित रूप से लागू होते हैं.</string>
+    <string name="save_sheets_config">शीट्स कॉन्फ़िगरेशन सहेजें</string>
+    <string name="test_sync_status">सिंक स्थिति का परीक्षण करें</string>
+    <string name="sync_status_dialog_title">तुल्यकालन स्थिति</string>
+    <string name="sync_status_configured">Google शीट कॉन्फ़िगर हो गई है और सिंक के लिए तैयार है</string>
+    <string name="sync_status_not_configured">Google शीट कॉन्फ़िगर नहीं है. कृपया अपनी सेटिंग जांचें.</string>
+    <string name="sync_status_error">सिंक स्थिति का परीक्षण करने में त्रुटि: %1$s</string>
+    <string name="manual_sync_now">अभी मैन्युअल सिंक करें</string>
+    <string name="view_active_volunteers">सक्रिय स्वयंसेवकों को देखें</string>
+    <string name="cleanup_inactive_volunteers">सफ़ाई निष्क्रिय स्वयंसेवक</string>
+    <string name="cleanup_choose_duration">चुनें कि हटाए जाने के लिए स्वयंसेवकों को कितने समय तक निष्क्रिय रहना होगा:</string>
+    <string name="cleanup_inactive_for">इसके लिए निष्क्रिय:</string>
+    <string name="cleanup_years_value">%1$d वर्ष</string>
+    <string name="cleanup_hide_preview">पूर्वावलोकन छिपाएँ</string>
+    <string name="cleanup_preview_to_delete">हटाने के लिए पूर्वावलोकन स्वयंसेवक (%1$d)</string>
+    <string name="cleanup_volunteers_to_be_deleted">हटाए जाने वाले स्वयंसेवक:</string>
+    <string name="cleanup_no_volunteers_found">कोई भी स्वयंसेवक ऐसा नहीं मिला जो %1$d वर्ष या उससे अधिक समय से निष्क्रिय हो।</string>
+    
+    <!-- Advanced Settings -->
+    <string name="advanced_settings_title">उन्नत सेटिंग्स</string>
+    <string name="show_advanced_settings">उन्नत सेटिंग्स दिखाएँ</string>
+    <string name="hide_advanced_settings">उन्नत सेटिंग्स छिपाएँ</string>
+    <string name="debug_mode_title">डिबग मोड</string>
+    <string name="debug_mode_description">समस्या निवारण के लिए विस्तृत लॉगिंग सक्षम करें</string>
+    <string name="debug_logs_title">डिबग लॉग</string>
+    <string name="debug_logs_location">स्थान: %1$s</string>
+    <string name="debug_logs_files_size">फ़ाइलें: %1$d | आकार: %2$s एमबी</string>
+    <string name="debug_logs_recent_files">हाल की लॉग फ़ाइलें:</string>
+    <string name="debug_logs_view">देखें</string>
+    <string name="debug_logs_share">साझा करें</string>
+    <string name="debug_logs_view_latest">नवीनतम देखें</string>
+    <string name="debug_logs_clear_all">सभी साफ़ करें</string>
+    <string name="debug_logs_content">सामग्री लॉग करें</string>
+    <string name="debug_logs_no_content">कोई लॉग सामग्री नहीं</string>
+    <string name="debug_logs_error_reading">लॉग फ़ाइल पढ़ने में त्रुटि: %1$s</string>
+    <string name="debug_logs_error_reading_generic">लॉग फ़ाइल पढ़ने में त्रुटि</string>
+    <string name="debug_logs_share_file">लॉग फ़ाइल साझा करें</string>
+    <string name="animated_background_title">एनिमेटेड पृष्ठभूमि</string>
+    <string name="animated_background_description">स्वागत और व्यवस्थापक स्क्रीन के लिए एक सूक्ष्म एनिमेटेड पृष्ठभूमि चुनें</string>
+    <string name="background_animation_none">कोई नहीं</string>
+    <string name="background_animation_arches">मेहराब</string>
+    <string name="background_animation_topographic">स्थलाकृतिक रेखाएँ</string>
+    <string name="background_animation_opacity_title">पृष्ठभूमि की तीव्रता</string>
+    <string name="background_animation_opacity_description">एनिमेटेड पंक्तियों को अधिक सूक्ष्म बनाने के लिए अपारदर्शिता कम करें</string>
+    <string name="background_animation_opacity_apply">तीव्रता लागू करें</string>
+    <string name="billeterie_background_animation_title">बिलेटरी पृष्ठभूमि</string>
+    <string name="billeterie_background_animation_description">केवल टिकट जांच स्क्रीन के लिए पृष्ठभूमि एनीमेशन चुनें</string>
+    <string name="page_animations_title">पेज एनिमेशन</string>
+    <string name="page_animations_description">पेज और टैब स्विच करते समय स्लाइड एनिमेशन सक्षम करें</string>
+    <string name="clear_app_cache">ऐप कैश साफ़ करें</string>
+    <string name="app_cache_cleared">ऐप डेटा कैश साफ़ किया गया. सेटिंग्स और चाबियाँ रखी गईं।</string>
+    <string name="check_for_updates">अपडेट के लिए जांचें</string>
+    <string name="update_available_title">अद्यतन उपलब्ध: %1$s</string>
+    <string name="update_required_message">जारी रखने के लिए इस ऐप का एक नया संस्करण आवश्यक है। कृपया नवीनतम संस्करण में अद्यतन करें.</string>
+    <string name="update_available_message">इस ऐप का एक नया संस्करण उपलब्ध है। क्या आप अभी अपडेट करना चाहेंगे?</string>
+    <string name="update_now">अभी अपडेट करें</string>
+    <string name="later">बाद में</string>
+    <string name="up_to_date_title">आप अप टू डेट हैं</string>
+    <string name="up_to_date_message">आपके पास पहले से ही नवीनतम संस्करण स्थापित है.</string>
+    <string name="update_error_title">अद्यतन जांच विफल रही</string>
+    <string name="update_error_message">अद्यतनों की जाँच नहीं की जा सकी: %1$s</string>
+    <string name="checking_for_updates_title">अपडेट के लिए जाँच की जा रही है</string>
+    <string name="checking_for_updates_message">अद्यतन सर्वर से संपर्क किया जा रहा है...</string>
+    <string name="downloading_update">अपडेट डाउनलोड हो रहा है...</string>
+    <string name="download_progress">डाउनलोड हो रहा है: %1$d%%</string>
+    <string name="download_complete">पूरा डाउनलोड करें</string>
+    <string name="install_update">अद्यतन स्थापित करें</string>
+    <string name="download_error_title">डाउनलोड विफल रहा</string>
+    <string name="download_error_message">अद्यतन डाउनलोड नहीं किया जा सका: %1$s</string>
+    <string name="change_update_sources">अद्यतन स्रोत बदलें</string>
+    <string name="update_sources_title">अद्यतन स्रोत</string>
+    <string name="update_sources_warning">अपडेट जांच के काम करने के लिए GitHub URL को एक वैध संस्करण.json फ़ाइल की ओर इंगित करना चाहिए। इन सेटिंग्स को केवल तभी संशोधित करें यदि आप जानते हैं कि आप क्या कर रहे हैं।</string>
+    <string name="update_sources_github_label">GitHub मेनिफेस्ट URL</string>
+    <string name="update_sources_store_label">ऐप स्टोर यूआरएल (फ़ॉलबैक)</string>
+    <string name="update_sources_reset">डिफ़ॉल्ट पर रीसेट करें</string>
+    <string name="update_sources_custom_url">कस्टम यूआरएल</string>
+
+    <!-- Language Settings -->
+    <string name="language_title">भाषा</string>
+    <string name="language_description">अपनी पसंदीदा भाषा चुनें</string>
+    <string name="language_english">English</string>
+    <string name="language_french">Français</string>
+    <string name="language_spanish">Español</string>
+    <string name="language_chinese">繁體中文</string>
+    <string name="language_chinese_simplified">简体中文</string>
+    <string name="language_latin">Latina</string>
+    <string name="language_hindi">हिन्दी</string>
+    
+    <!-- Theme Settings -->
+    <string name="theme_title">थीम</string>
+    <string name="theme_description">अपनी पसंदीदा थीम उपस्थिति चुनें</string>
+    <string name="theme_light">रोशनी</string>
+    <string name="theme_dark">अंधेरा</string>
+    <string name="theme_default">सिस्टम</string>
+    
+    <!-- Color Theme Settings -->
+    <string name="color_theme_title">रंग थीम</string>
+    <string name="color_theme_description">उन उपकरणों के लिए एक रंग थीम चुनें जो गतिशील रंगों का समर्थन नहीं करते हैं</string>
+    <string name="color_theme_system">सिस्टम</string>
+    <string name="color_theme_professional_blue">नीला</string>
+    <string name="color_theme_neutral_green">हरा</string>
+    <string name="color_theme_warm_gray">धूसर</string>
+    <string name="color_theme_neutral_purple">बैंगनी</string>
+    <string name="color_theme_rich_brown">भूरा</string>
+    <string name="color_theme_sunset_mist">धुंध</string>
+    <string name="color_theme_feminist_violet">बैंगनी</string>
+    <string name="color_theme_custom">कस्टम</string>
+    <string name="color_theme_customize">कस्टम थीम अनुकूलित करें</string>
+    
+    <!-- Restart Dialog -->
+    <string name="restart_required_title">पुनरारंभ आवश्यक</string>
+    <string name="restart_required_message">कलर थीम बदल दी गई है. नई थीम लागू देखने के लिए कृपया ऐप को पुनः आरंभ करें।</string>
+    <string name="restart_now">अभी पुनः प्रारंभ करें</string>
+    <string name="restart_later">बाद में</string>
+    
+    <!-- UI Size Settings -->
+    <string name="resolution_scale_title">संकल्प पैमाना</string>
+    <string name="resolution_scale_description" formatted="false">यूआई को छोटा या बड़ा करने के लिए रिज़ॉल्यूशन स्केल को समायोजित करें। स्केल को 80% (बड़ा) से 120% (छोटा) में बदलने के लिए स्लाइडर को खींचें।</string>
+    <string name="resolution_small">बड़ा</string>
+    <string name="resolution_medium_small">मध्यम छोटा</string>
+    <string name="resolution_normal">सामान्य</string>
+    <string name="resolution_medium_large">मध्यम बड़ा</string>
+    <string name="resolution_large">छोटा</string>
+    <string name="save_resolution_scale">रिज़ॉल्यूशन स्केल सहेजें</string>
+    <string name="system_is_in_dark_mode">सिस्टम डार्क मोड में है</string>
+    <string name="system_is_in_light_mode">सिस्टम लाइट मोड में है</string>
+    <string name="people_counter_visibility_title">पीपल काउंटर दिखाएँ</string>
+    <string name="people_counter_visibility_description">मुख पृष्ठ पर लोग काउंटर दिखाएँ या छिपाएँ</string>
+    <string name="statistics_visibility_title">सांख्यिकी ग्राफ़ दिखाएँ</string>
+    <string name="statistics_visibility_description">मुख पृष्ठ पर सांख्यिकी ग्राफ़ अनुभाग दिखाएँ या छिपाएँ</string>
+    <string name="scroll_behavior_title">प्रबंधक पृष्ठों के लिए स्क्रॉल व्यवहार</string>
+    <string name="scroll_behavior_description">नियंत्रित करें कि जब आप स्वयंसेवक, अतिथि सूची और शिफ्ट पेज स्क्रॉल करते हैं तो हेडर (ऐड, फ़िल्टर, खोज) कैसे व्यवहार करता है।</string>
+    <string name="scroll_behavior_list_only_title">हेडर को ठीक रखें</string>
+    <string name="scroll_behavior_list_only_description">केवल सूची स्क्रॉल होती है. शीर्ष क्रियाएँ (जोड़ें, फ़िल्टर करें, खोजें) शीर्ष पर दृश्यमान रहती हैं।</string>
+    <string name="scroll_behavior_full_page_title">संपूर्ण पृष्ठ स्क्रॉल करें</string>
+    <string name="scroll_behavior_full_page_description">शीर्षलेख और सूची एक साथ स्क्रॉल होते हैं. जैसे ही आप नीचे स्क्रॉल करते हैं शीर्ष क्रियाएं दूर चली जाती हैं।</string>
+    <string name="scroll_behavior_sticky_filters_option">स्क्रॉल करते समय फ़िल्टर दृश्यमान रखें</string>
+    <string name="scroll_behavior_sticky_filters_description">फ़िल्टर बार स्क्रीन के शीर्ष पर पहुंचने के बाद शीर्ष पर स्थिर रहता है, जबकि शीर्षक और ऐड बटन दूर स्क्रॉल होते हैं।</string>
+
+    <!-- Shift Type Management -->
+    <string name="shift_type_management_title">शिफ्ट प्रकार प्रबंधन</string>
+    <string name="shift_type_management_description">शिफ्ट प्रकार और उनकी रैंक पात्रता कॉन्फ़िगर करें</string>
+    <string name="manage_shift_types">शिफ्ट प्रकार प्रबंधित करें</string>
+    <string name="shift_types_title">शिफ्ट प्रकार</string>
+    <string name="add_shift_type">शिफ्ट प्रकार जोड़ें</string>
+    <string name="search_shift_types_placeholder">शिफ्ट प्रकार खोजें...</string>
+    <string name="filter_shift_types">शिफ्ट प्रकार</string>
+    <string name="filter_orion_types">ओरियन प्रकार</string>
+    <string name="shift_types_count">%1$d का %2$d शिफ्ट प्रकार</string>
+    <string name="shift_job">नौकरी शिफ्ट करें</string>
+    <string name="orion_job">ओरियन जॉब</string>
+    <string name="requires_time">समय की आवश्यकता है</string>
+    <string name="stellar_benefits">तारकीय लाभ</string>
+    <string name="manual_rewards">मैनुअल पुरस्कार</string>
+    <string name="manual_rewards_details">मैनुअल पुरस्कार विवरण</string>
+    <string name="days_n">%1$d दिन</string>
+    <string name="free_drinks_n">%1$d निःशुल्क पेय</string>
+    <string name="bar_discount_n">%1$d%% बार छूट</string>
+    <string name="invites_n">%1$d आमंत्रण</string>
+    <string name="no_rewards_configured">कोई पुरस्कार कॉन्फ़िगर नहीं किया गया</string>
+    <!-- Shift Type Dialog -->
+    <string name="add_shift_type_title_compact">शिफ्ट प्रकार जोड़ें</string>
+    <string name="add_shift_type_title_full">नया शिफ्ट प्रकार जोड़ें</string>
+    <string name="edit_shift_type_title_compact">शिफ्ट प्रकार संपादित करें</string>
+    <string name="edit_shift_type_title_full">शिफ्ट प्रकार कॉन्फ़िगरेशन संपादित करें</string>
+    <string name="shift_type_name_label">शिफ्ट प्रकार का नाम</string>
+    <string name="shift_type_name_placeholder">उदाहरण के लिए, बार स्टाफ़</string>
+    <string name="description_label">विवरण</string>
+    <string name="description_placeholder">वैकल्पिक विवरण</string>
+    <string name="benefit_system_label">लाभ प्रणाली</string>
+    <string name="stellar_config_label">शिफ्ट प्रकार कॉन्फ़िगरेशन</string>
+    <string name="manual_rewards_config_label">मैन्युअल पुरस्कार कॉन्फ़िगरेशन</string>
+    <string name="manual_rewards_warning_orion_automatic_enabled">इस शिफ्ट प्रकार के लिए स्वचालित ओरियन लाभ सक्षम हैं! वे मैन्युअल पुरस्कारों के साथ ढेर हो जाते हैं - स्टेलर पर स्विच करें और यदि ऐसा इरादा नहीं था तो ओरियन जॉब को बंद कर दें।</string>
+    <string name="manual_rewards_warning_nova_stellar_automatic_enabled">स्वचालित नोवा/गैलेक्सी (शिफ्ट जॉब) लाभ सक्षम हैं! वे मैन्युअल पुरस्कारों के साथ ढेर हो जाते हैं - स्टेलर पर स्विच करें और यदि ऐसा इरादा नहीं था तो शिफ्ट जॉब को बंद कर दें।</string>
+    <string name="shift_job_label">शिफ्ट जॉब (नोवा/गैलेक्सी)</string>
+    <string name="orion_job_label">ओरियन जॉब (समिति/समन्वय)</string>
+    <string name="requires_shift_time_label">आवश्यक है कि शाम की सेटिंग का आनंद लिया जा सकता है/नहीं लिया जा सकता</string>
+    <string name="duration_days_label">अवधि (दिन)</string>
+    <string name="free_drinks_label">मुफ़्त पेय</string>
+    <string name="bar_discount_percent_label">बार छूट (%)</string>
+    <string name="free_entry_label">निःशुल्क प्रवेश</string>
+    <string name="number_of_invites_label">आमंत्रणों की संख्या</string>
+    <string name="duration_invites_label">इनाम अवधि के दौरान आमंत्रित करें</string>
+    <string name="future_single_use_entries_label">भविष्य की घटना प्रविष्टियाँ (एकल उपयोग)</string>
+    <string name="future_entry_invites_label">प्रति भावी प्रविष्टि के लिए आमंत्रण (मित्र)</string>
+    <string name="future_entry_invites_helper">भविष्य की एकल-उपयोग प्रविष्टियों पर दिखाए गए "+n inv." के लिए उपयोग किया जाता है।</string>
+    <string name="future_single_use_entries_with_invites_summary">भविष्य की एकल-उपयोग प्रविष्टियाँ: %1$d (+%2$d आमंत्रण)</string>
+    <string name="future_event_entries_remaining_n">🎟️ %1$d भविष्य की घटना प्रविष्टियाँ (एकल उपयोग)</string>
+    <string name="future_entry_remaining_with_invites">🎟️ %1$d प्रविष्टि शेष (+%2$d आमंत्रण)</string>
+    <string name="future_entries_remaining_with_invites">🎟️ %1$d प्रविष्टियाँ शेष (+%2$d आमंत्रण)</string>
+    <string name="future_entry_solo">🎟️ %1$d प्रविष्टि बाएँ (एकल)</string>
+    <string name="future_entries_solo">🎟️ %1$d प्रविष्टियाँ शेष (एकल)</string>
+    <string name="other_notes_label">अन्य नोट्स</string>
+    <string name="other_notes_placeholder">अतिरिक्त नोट्स...</string>
+    <string name="update_shift_type">शिफ्ट प्रकार अपडेट करें</string>
+    <string name="stellar_benefits_info_title">पर्क्स चीट शीट</string>
+
+    <string name="benefits_help_dialog_title">पर्क्स चीट शीट</string>
+    <string name="benefits_help_dialog_subtitle">कलेक्टिफ़ नॉक्टर्न · 2026-27</string>
+    <string name="benefits_help_intro">बदलाव का मिलान वास्तव में जो हुआ उससे करें। तारकीय = ऑटो; मैनुअल = आप इसे टाइप करें।</string>
+
+    <string name="benefits_help_tab_modes">मोड</string>
+    <string name="benefits_help_tab_nova">शिफ्ट प्रकार</string>
+    <string name="benefits_help_tab_extras">बोनस &amp; समय</string>
+
+    <string name="benefits_help_app_stellar">नौकरी शिफ्ट करें → नोवा प्रकार चुनें\nओरियन नौकरी → जनादेश वर्ष (अनुभवी वर्ष बाद)\nपेय, अतिथि सूची, भविष्य की प्रविष्टियाँ → आपके लिए गणना की गई</string>
+    <string name="benefits_help_app_manual">आप दिन, पेय, बार \u0025, मेहमान, अतिरिक्त दर्ज करें\nसामान्य ग्रिड के बाहर एक बार के लिए\nयदि यह पहले से ही तारकीय है तो उसी वास्तविक बदलाव को दोबारा न गिनें</string>
+
+    <string name="benefits_help_section_profité_title">लाभ/गैर-लाभकारी</string>
+    <string name="benefits_help_section_profité_body">डिफ़ॉल्ट शिफ्ट केवल तभी, जब \"शाम का आनंद लें\" चालू हो।\nप्रवेश के बारे में नहीं: बात यह है कि क्या शिफ्ट के घंटे अभी भी व्यक्ति को रात का आनंद लेने देते हैं या नहीं।\nअन्य नोवा प्रकार: यह टॉगल छिपा हुआ है।</string>
+
+    <string name="benefits_help_section_nova_title">नोवा पर्क्स (शिफ्ट जॉब)</string>
+    <string name="benefits_help_nova_profité_title">डिफ़ॉल्ट शिफ्ट - मुनाफ़ा</string>
+    <string name="benefits_help_nova_profité_rationale">वह घटना वाली रात ही.</string>
+    <string name="benefits_help_nova_profité_perks">निःशुल्क प्रवेश + 1 अतिथि - कार्यक्रम की रात\n50\u0025 बार - कार्यक्रम की रात\n2 निःशुल्क पेय (~10 सीएचएफ) - कार्यक्रम की रात</string>
+
+    <string name="benefits_help_nova_non_profité_title">डिफ़ॉल्ट शिफ्ट - गैर-लाभकारी</string>
+    <string name="benefits_help_nova_non_profité_rationale">रात्रि पैकेज + मौसमी कॉम्प (+1 अतिथि)।</string>
+    <string name="benefits_help_nova_non_profité_perks">लाभ के समान इवेंट-नाइट पैकेज\nप्लस 1 मौसमी निःशुल्क प्रवेश + 1 अतिथि (ऐप में)</string>
+
+    <string name="benefits_help_nova_photo_title">फोटोग्राफर/वीडियोग्राफर</string>
+    <string name="benefits_help_nova_photo_rationale">गैर-लाभकारी डिफ़ॉल्ट के समान बॉलपार्क।</string>
+    <string name="benefits_help_nova_photo_perks">निःशुल्क प्रवेश + 1 अतिथि - ढकी हुई रात\n50\u0025 बार - ढकी हुई रात\n2 मुफ़्त पेय (~10 CHF) - ढकी हुई रात\n1 मौसमी मुफ़्त प्रवेश + 1 अतिथि</string>
+
+    <string name="benefits_help_nova_meeting_title">बैठक</string>
+    <string name="benefits_help_nova_meeting_rationale">एक महीने में 3 बैठकें अभी भी गैलेक्सी को बढ़ावा देती हैं - ओरियन को छोड़कर (बैठकों की गिनती नहीं होती)।</string>
+    <string name="benefits_help_nova_meeting_perks">1 मौसमी निःशुल्क प्रवेश + 1 अतिथि\n1 निःशुल्क पेय (~5 CHF)</string>
+
+    <string name="benefits_help_nova_gd_event_title">ग्राफ़िक डिज़ाइनर - एक इवेंट</string>
+    <string name="benefits_help_nova_gd_event_rationale">उस रात के फोटो/वीडियो जैसा ही माहौल।</string>
+    <string name="benefits_help_nova_gd_event_perks">निःशुल्क प्रवेश + 1 अतिथि - कार्यक्रम रात्रि\n50\u0025 बार - कार्यक्रम रात्रि\n2 निःशुल्क पेय (~10 सीएचएफ) - कार्यक्रम रात्रि\n1 मौसमी निःशुल्क प्रवेश + 1 अतिथि</string>
+
+    <string name="benefits_help_nova_gd_asso_title">ग्राफ़िक डिज़ाइनर - एसोसिएशन-व्यापी</string>
+    <string name="benefits_help_nova_gd_asso_rationale">एक पार्टी से बंधा नहीं → अधिक पेय, कोई रोक नहीं \u0025।</string>
+    <string name="benefits_help_nova_gd_asso_perks">2 मौसमी निःशुल्क प्रविष्टियाँ + 1 अतिथि प्रत्येक\n4 निःशुल्क पेय (~20 CHF)</string>
+
+    <string name="benefits_help_section_galaxie_title">आकाशगंगा</string>
+    <string name="benefits_help_section_galaxie_body">एक ही कैलेंडर माह में 3 योगदान (शिफ्ट + मीटिंग)\nओरियन: मीटिंग को 3\n में नहीं गिना जाता है: उस महीने: हर जगह मुफ्त प्रवेश + 50\u0025 बार + 1 अतिरिक्त पेय\nसामान्य शिफ्ट भत्तों के साथ ढेर</string>
+
+    <string name="benefits_help_section_orion_title">ओरायन</string>
+    <string name="benefits_help_section_orion_body">नौकरी के प्रकार को ओरियन के रूप में टैग करें\nमैंडेट प्रारंभ से 1 वर्ष: निःशुल्क प्रवेश + 50\u0025 बार + 1 अतिथि\n270 सीएचएफ वॉलेट (शर्ट पॉट + पेय बजट)</string>
+
+    <string name="benefits_help_section_veteran_title">वयोवृद्ध</string>
+    <string name="benefits_help_section_veteran_body">ओरियन के बाद का वर्ष\nफिर भी: नि:शुल्क प्रवेश + 50\u0025 बार\nमैंडेट समाप्त होने पर वॉलेट बंद हो जाता है</string>
+
+    <string name="benefits_help_section_timing_title">जब ऐप अनुलाभ चालू करता है</string>
+    <string name="benefits_help_section_timing_body">रात्रि-भत्तों = उस स्थान के कार्यक्रम का दिन (सेटिंग्स → दिन-परिवर्तन का समय)\nभविष्य की प्रविष्टियाँ उसी क्षण से अनलॉक हो जाती हैं\nओरियन / गैलेक्सी / वेटरन लंबी खिड़कियों का उपयोग करते हैं</string>
+
+    <string name="benefits_help_footer_title">सचेत रहें</string>
+    <string name="benefits_help_footer_bullets">लाभ/गैर-लाभकारी - शिफ्ट के घंटे आपको रात का आनंद लेने देते हैं या नहीं (प्रवेश के बारे में नहीं)\n50\u0025 बार दर लाइटस्पीड की कीमतों को ट्रैक करती है\nशिफ्ट सुविधाओं के साथ गैलेक्सी स्टैक</string>
+
+    <string name="nova_job_type_label">नोवा लाभ प्रकार</string>
+    <string name="nova_type_default_shift">डिफ़ॉल्ट बदलाव</string>
+    <string name="nova_type_meeting">बैठक</string>
+    <string name="nova_type_graphic_designer_event">ग्राफ़िक डिज़ाइनर (इवेंट के लिए)</string>
+    <string name="nova_type_photographer_videographer">फोटोग्राफर/वीडियोग्राफर</string>
+    <string name="nova_type_graphic_designer_association">ग्राफ़िक डिज़ाइनर (एसोसिएशन के लिए)</string>
+
+    <!-- Venue Management -->
+    <string name="venue_management_title">स्थल प्रबंधन</string>
+    <string name="venue_management_description">स्थल और उनकी सेटिंग्स कॉन्फ़िगर करें</string>
+    <string name="manage_venues">स्थानों का प्रबंधन करें</string>
+    <string name="venues_title">स्थान</string>
+    <string name="add_venue">स्थान जोड़ें</string>
+    <string name="sales_items_sheet_label">बिक्री आइटम शीट</string>
+    <string name="sales_items_management_title">बिक्री वस्तु प्रबंधन</string>
+    <string name="sales_items_management_description">Google शीट्स से समन्वयित बिक्री आइटम कॉन्फ़िगर करें</string>
+    <string name="manage_sales_items">बिक्री आइटम प्रबंधित करें</string>
+    <string name="sales_items_title">विक्रय वस्तुएँ</string>
+    <string name="add_sales_item">विक्रय वस्तु जोड़ें</string>
+    <string name="edit_sales_item">विक्रय मद संपादित करें</string>
+    <string name="sales_update_item">विक्रय मद अद्यतन करें</string>
+    <string name="search_sales_items_placeholder">बिक्री आइटम खोजें...</string>
+    <string name="sales_items_count">बिक्री आइटम: %1$d/%2$d</string>
+    <string name="sales_price_label">मूल्य (सीएचएफ)</string>
+    <string name="sales_discount_label">छूट लागू है</string>
+    <string name="sales_required_rank_label">न्यूनतम आवश्यक रैंक</string>
+    <string name="sales_rank_none_required">किसी पद की आवश्यकता नहीं</string>
+    <string name="sales_item_summary_line">CHF %1$.2f • छूट: %2$s • न्यूनतम रैंक: %3$s</string>
+    <string name="sales_categories_label">श्रेणियाँ</string>
+    <string name="sales_emoji_label">इमोजी</string>
+    <string name="sales_category_merch">माल</string>
+    <string name="sales_category_entry">प्रवेश</string>
+    <string name="sales_category_bar">बार</string>
+    <string name="sales_category_other">अन्य</string>
+
+    <!-- Account / POS -->
+    <string name="transfers_sheet_label">स्थानांतरण पत्रक</string>
+    <string name="account_amount_label">खाता राशि</string>
+    <string name="recent_transfers_label">हाल ही में हुए तबादले</string>
+    <string name="show_all_transfers">सभी स्थानान्तरण दिखाएँ</string>
+    <string name="show_fewer_transfers">कम स्थानान्तरण दिखाएँ</string>
+    <string name="adjust_account_button">खाता समायोजित करें</string>
+    <string name="adjust_account_title">खाता शेष समायोजित करें</string>
+    <string name="account_add_money">पैसे जोड़ें</string>
+    <string name="account_remove_money">पैसे निकालो</string>
+    <string name="amount_label">रकम</string>
+    <string name="note_label">नोट</string>
+    <string name="continue_label">जारी रखें</string>
+    <string name="manual_adjustment_default_note">मैन्युअल समायोजन</string>
+    <string name="currency_setting_label">मुद्रा</string>
+    <string name="currency_setting_description">खाता शेष और पीओएस के लिए मुद्रा दिखाई गई</string>
+    <string name="pos_title">POS</string>
+    <string name="pos_welcome_button">आंतरिक पीओएस</string>
+    <string name="pos_background_animation_title">पीओएस पृष्ठभूमि</string>
+    <string name="pos_background_animation_description">केवल पीओएस स्क्रीन के लिए पृष्ठभूमि एनीमेशन चुनें</string>
+    <string name="pos_scan_customer">कार्ड या क्यूआर कोड स्कैन करें</string>
+    <string name="pos_category_all">सब</string>
+    <string name="pos_manual_amount">मैन्युअल राशि</string>
+    <string name="pos_cart_title">गाड़ी</string>
+    <string name="pos_validate_sale">बिक्री मान्य करें</string>
+    <string name="pos_sale_success">बिक्री पूरी!</string>
+    <string name="pos_sale_remaining_credit">शेष क्रेडिट: %1$s</string>
+    <string name="pos_remaining_credit_label">शेष श्रेय</string>
+    <string name="pos_sale_next">अगला</string>
+    <string name="pos_sale_next_hint">अगला कार्ड स्कैन करें</string>
+    <string name="pos_sale_next_shortcut">↵ दर्ज करें</string>
+    <string name="pos_insufficient_funds">पर्याप्त श्रेय नहीं</string>
+    <string name="pos_cash_payment_title">पर्याप्त श्रेय नहीं</string>
+    <string name="pos_cash_payment_message">खाता %1$s को कवर करता है। बिक्री पूरी करने के लिए %2$s नकद या कार्ड से भुगतान करें?</string>
+    <string name="pos_cash_payment_credit_covers">खाता %1$s को कवर करता है।</string>
+    <string name="pos_cash_payment_due_label">नकद या कार्ड से भुगतान करें</string>
+    <string name="pos_cash_payment_bar_discount_applied">बार छूट -%1$d\u0025 अंतर पर लागू होती है</string>
+    <string name="pos_cash_payment_confirm">भुगतान करें और सत्यापित करें</string>
+    <string name="pos_cash_payment_cancel">बिक्री रद्द करें</string>
+    <string name="pos_pay_cash_card">नकद या कार्ड से %1$s का भुगतान करें</string>
+    <string name="pos_customer_balance">शेष राशि: %1$s</string>
+    <string name="pos_total">कुल: %1$s</string>
+    <string name="pos_clear_cart">स्पष्ट</string>
+    <string name="pos_use_qr">क्यूआर कोड का प्रयोग करें</string>
+    <string name="pos_manual_default_label">मैनुअल</string>
+    <string name="pos_step_scan">कार्ड स्कैन करें</string>
+    <string name="pos_step_add">आइटम जोड़ें</string>
+    <string name="pos_step_validate">मान्य करें</string>
+    <string name="pos_waiting_card">कार्ड को रीडर पर रखें</string>
+    <string name="pos_reader_active">पाठक सक्रिय</string>
+    <string name="pos_reader_not_connected">कोई पाठक जुड़ा नहीं</string>
+    <string name="pos_reader_waiting">कार्ड का इंतजार है</string>
+    <string name="pos_unknown_card">कार्ड पहचाना नहीं गया</string>
+    <string name="pos_customer_recognized">%1$s पहचाना गया</string>
+    <string name="pos_clear_customer">प्रोफ़ाइल बदलें</string>
+    <string name="pos_profile_switch_title">प्रोफ़ाइल बदलें?</string>
+    <string name="pos_profile_switch_message">%1$s को स्कैन किया गया था, लेकिन प्रगति में क्रम %2$s के लिए है।</string>
+    <string name="pos_profile_switch_keep_cart">प्रोफ़ाइल स्विच करें - कार्ट रखें</string>
+    <string name="pos_profile_switch_clear_cart">प्रोफ़ाइल स्विच करें - कार्ट साफ़ करें</string>
+    <string name="pos_profile_switch_keep_current">रद्द करें - वर्तमान प्रोफ़ाइल और कार्ट रखें</string>
+    <string name="pos_reader_scanning">एनएफसी स्कैन प्रगति पर है</string>
+    <string name="pos_bar_discount_badge">-%1$d\u0025 बार में</string>
+    <string name="pos_bar_discount_at_bar">बार में</string>
+    <string name="pos_bar_discount_cash_hint">नकद या कार्ड से भुगतान पर</string>
+    <string name="pos_scan_next">अगला कार्ड स्कैन करें</string>
+    <string name="pos_cart_empty">कार्ट खाली है - जोड़ने के लिए उत्पादों पर टैप करें</string>
+    <string name="pos_select_customer_first">पहले एक प्रोफ़ाइल स्कैन करें</string>
+    <string name="pos_customer_guest_label">अतिथि</string>
+    <string name="pos_items_count">%1$d आइटम</string>
+    <string name="numpad_clear">स्पष्ट</string>
+    <string name="numpad_backspace">बैकस्पेस</string>
+    <string name="numpad_add_to_cart">कार्ट में जोड़ें</string>
+    <string name="emoji_picker_title">इमोजी चुनें</string>
+    <string name="emoji_picker_choose">चुनें</string>
+    <string name="account_credit_tooltip">क्रेडिट जोड़ें</string>
+    <string name="account_debit_tooltip">श्रेय हटाओ</string>
+
+    <string name="search_venues_placeholder">स्थान खोजें...</string>
+    <string name="venues_count">%1$d का %2$d जगहों में</string>
+    <string name="venue_name">स्थल का नाम</string>
+    <string name="venue_description">विवरण</string>
+    <string name="venue_active">सक्रिय</string>
+    <string name="venue_inactive">निष्क्रिय</string>
+    <string name="update_venue">स्थान अद्यतन करें</string>
+    <string name="venue_name_placeholder">जैसे, ग्रूव</string>
+    <string name="venue_description_placeholder">वैकल्पिक विवरण</string>
+    <string name="add_new_venue">नया स्थान जोड़ें</string>
+    <string name="edit_venue_configuration">स्थान कॉन्फ़िगरेशन संपादित करें</string>
+    <string name="venue_all">सब</string>
+    <string name="venue_both">दोनों</string>
+
+    <!-- Temporary Guest List -->
+    <string name="temp_guest_artist_label">कलाकार/समूह</string>
+    <string name="temp_guest_event_date_label">घटना दिनांक</string>
+    <string name="temp_guest_contact_phone_label">आपातकालीन संपर्क फ़ोन</string>
+    <string name="temp_guest_chip_label">Temp</string>
+    <string name="temp_guest_timeline_button">भविष्य/इतिहास</string>
+    <string name="temp_guest_timeline_title">अस्थायी अतिथि समयरेखा</string>
+    <string name="temp_guest_tab_temp">अस्थायी</string>
+    <string name="temp_guest_tab_volunteer">स्वयंसेवक</string>
+    <string name="temp_guest_range_label">रेंज</string>
+    <string name="temp_guest_range_three_days">+/- 3 दिन</string>
+    <string name="temp_guest_range_three_days_short">±3डी</string>
+    <string name="temp_guest_range_one_week">1 सप्ताह</string>
+    <string name="temp_guest_range_one_week_short">1w</string>
+    <string name="temp_guest_range_two_weeks">2 सप्ताह</string>
+    <string name="temp_guest_range_two_weeks_short">2w</string>
+    <string name="temp_guest_range_one_month">1 महीना</string>
+    <string name="temp_guest_range_one_month_short">1मी</string>
+    <string name="temp_guest_range_six_months">6 महीने</string>
+    <string name="temp_guest_range_six_months_short">6मी</string>
+    <string name="temp_guest_range_one_year">1 वर्ष</string>
+    <string name="temp_guest_range_one_year_short">1 वर्ष</string>
+    <string name="temp_guest_range_all_time">हर समय</string>
+    <string name="temp_guest_range_all_time_short">सब</string>
+    <string name="temp_guest_section_upcoming">आने वाले मेहमान</string>
+    <string name="temp_guest_section_past">पिछले मेहमान</string>
+    <string name="temp_guest_none_upcoming">इस फ़िल्टर के लिए कोई आगामी अस्थायी अतिथि नहीं है।</string>
+    <string name="temp_guest_none_past">इस फ़िल्टर के लिए कोई पिछला अस्थायी मेहमान नहीं।</string>
+    
+    <!-- App Information -->
+    <string name="app_info_title">ऐप की जानकारी</string>
+    <string name="app_version">NoctuList 0.9</string>
+    <string name="app_designed_for">कलेक्टिफ़ नॉक्टर्न स्थानों के लिए डिज़ाइन किया गया</string>
+    <!-- Single full sentence to avoid spacing issues across locales -->
+    <string name="app_developed_full">लियोनार्डो मोंडाडा द्वारा कलेक्टिफ़ नॉक्टर्न के लिए विकसित किया गया</string>
+    <string name="last_sync">अंतिम अपडेट: %1$s</string>
+    <string name="never">कभी नहीं</string>
+    
+    <!-- Instructions Dialog -->
+    <string name="google_sheets_setup_instructions">Google शीट सेटअप निर्देश</string>
+    <string name="setup_instructions_intro">Google शीट सिंक्रनाइज़ेशन सेट करने के लिए इन चरणों का पालन करें:</string>
+    <string name="open_google_cloud_console">Google क्लाउड कंसोल खोलें</string>
+    <string name="got_it">समझ गया!</string>
+    
+    <!-- Instruction Steps -->
+    <string name="step_1_title">Google क्लाउड प्रोजेक्ट बनाएं</string>
+    <string name="step_1_description">Google क्लाउड कंसोल पर जाएं और एक नया प्रोजेक्ट बनाएं या किसी मौजूदा को चुनें।</string>
+    <string name="step_2_title">Google शीट्स API सक्षम करें</string>
+    <string name="step_2_description">अपने प्रोजेक्ट में, एपीआई &amp; सेवा अनुभाग से Google शीट एपीआई को सक्षम करें।</string>
+    <string name="step_3_title">सेवा खाता बनाएँ</string>
+    <string name="step_3_description">IAM &amp; Admin > Service Accounts में एक सेवा खाता बनाएँ। JSON कुंजी फ़ाइल डाउनलोड करें।</string>
+    <string name="step_4_title">ऐप में कुंजी जोड़ें</string>
+    <string name="step_4_description">सेटिंग्स में \'अपलोड कुंजी फ़ाइल\' बटन का उपयोग करें, या मैन्युअल रूप से JSON फ़ाइल को ऐप/src/main/assets/ में \'service_account_key.json\' के रूप में रखें।</string>
+    <string name="step_5_title">Google स्प्रेडशीट बनाएं</string>
+    <string name="step_5_description">एक नई Google स्प्रेडशीट बनाएं और URL से उसकी आईडी कॉपी करें।</string>
+    <string name="step_6_title">आवश्यक शीट बनाएं</string>
+    <string name="step_6_description">शीट बनाएं: \'अतिथि सूची\', \'स्वयंसेवक\', \'शिफ्ट\', \'शिफ्ट प्रकार\', \'स्वयंसेवक अतिथि सूची\', \'स्थान\' और \'अस्थायी अतिथि सूची\' (\'अस्थायी अतिथि सूची\' में तिथियों को YYYY-MM-DD प्रारूप का उपयोग करना होगा)।</string>
+    <string name="step_7_title">शीट हेडर सेट करें</string>
+    <string name="step_7_description">प्रत्येक शीट में हेडर जोड़ें. ऐप उन्हें स्वचालित रूप से बनाएगा, लेकिन यदि आवश्यक हो तो आप उन्हें मैन्युअल रूप से सेट कर सकते हैं।</string>
+    <string name="step_8_title">सेवा खाते के साथ साझा करें</string>
+    <string name="step_8_description">संपादक की पहुंच के साथ स्प्रेडशीट को अपने सेवा खाते के ईमेल (JSON फ़ाइल में पाया गया) के साथ साझा करें।</string>
+    <string name="step_9_title">ऐप सेटिंग कॉन्फ़िगर करें</string>
+    <string name="step_9_description">उपरोक्त सेटिंग में स्प्रेडशीट आईडी और शीट नाम दर्ज करें।</string>
+    
+    <!-- Test Connection Dialog -->
+    <string name="test_google_sheets_connection">Google शीट कनेक्शन का परीक्षण करें</string>
+    <string name="testing_connection">कनेक्शन का परीक्षण किया जा रहा है...</string>
+    <string name="test_connection_description">यह वर्तमान सेटिंग्स का उपयोग करके आपके Google शीट से कनेक्शन का परीक्षण करेगा।</string>
+    <string name="test">परीक्षण</string>
+    <string name="close">बंद करें</string>
+    
+    <!-- Active Volunteers Dialog -->
+    <string name="volunteer_activity_status">स्वयंसेवी गतिविधि स्थिति</string>
+    <string name="active_volunteers_count">सक्रिय स्वयंसेवक: %1$d</string>
+    <string name="inactive_volunteers_count">निष्क्रिय स्वयंसेवक: %1$d</string>
+    <string name="inactive_volunteers_label">निष्क्रिय स्वयंसेवक:</string>
+    <string name="active">सक्रिय</string>
+    <string name="inactive">निष्क्रिय</string>
+    
+    <!-- Cleanup Dialog -->
+    <string name="warning">⚠️ चेतावनी:</string>
+    <string name="cleanup_warning" formatted="false">यह कार्रवाई %1$d स्वयंसेवक%2$s और उनके सभी संबंधित नौकरी रिकॉर्ड को स्थायी रूप से हटा देगी। इसे असंपादित नहीं किया जा सकता है!</string>
+    <string name="delete_volunteers" formatted="false">हटाएं %1$d स्वयंसेवक%2$s</string>
+    <string name="cancel">रद्द करें</string>
+    
+    <!-- Delete Volunteer Dialog -->
+    <string name="delete_volunteer_title">स्वयंसेवक हटाएँ</string>
+    <string name="delete_volunteer_confirm">क्या आप वाकई %1$s को हटाना चाहते हैं?</string>
+    <string name="delete_volunteer_shift_count_one">इस स्वयंसेवक के पास %1$d शिफ्ट दर्ज है।</string>
+    <string name="delete_volunteer_shift_count_other">इस स्वयंसेवक के पास %1$d शिफ्ट दर्ज हैं।</string>
+    <string name="delete_volunteer_also_delete_shifts_one">%1$d शिफ्ट को भी हटा दें</string>
+    <string name="delete_volunteer_also_delete_shifts_other">सभी %1$d शिफ्ट भी हटा दें</string>
+    <string name="delete_volunteer_warning">⚠️ चेतावनी: इस क्रिया को पूर्ववत नहीं किया जा सकता!</string>
+    <string name="delete_volunteer_graph_warning">नोट: किसी स्वयंसेवक को निलंबित करने से होम पेज सांख्यिकी ग्राफ़ प्रभावित होंगे। उनकी पारियों को हटाने से ग्राफ़ की सटीकता पर और भी अधिक प्रभाव पड़ेगा।</string>
+    
+    <!-- Upload Status Messages -->
+    <string name="validating_file">फ़ाइल सत्यापित हो रही है...</string>
+    <string name="file_validated_uploading">फ़ाइल सत्यापित! अपलोड हो रहा है...</string>
+    <string name="file_uploaded_successfully">फ़ाइल सफलतापूर्वक अपलोड हो गई!</string>
+    <string name="upload_failed">अपलोड विफल: %1$s</string>
+    <string name="validation_failed">सत्यापन विफल: %1$s</string>
+    <string name="key_file_found">कुंजी फ़ाइल मिली</string>
+    <string name="unknown">अज्ञात</string>
+    
+    <!-- Common Actions -->
+    <string name="save">सहेजें</string>
+    <string name="delete">हटाएँ</string>
+    <string name="edit">संपादित करें</string>
+    <string name="add">जोड़ें</string>
+    <string name="remove">हटाओ</string>
+    <string name="confirm">पुष्टि करें</string>
+    <string name="ok">OK</string>
+    <string name="yes">हाँ</string>
+    <string name="no">नहीं</string>
+    
+    <!-- Navigation -->
+    <string name="nav_dashboard">डैशबोर्ड</string>
+    <string name="nav_guests">अतिथि सूची</string>
+    <string name="nav_volunteers">स्वयंसेवक</string>
+    <string name="nav_shifts">पाली</string>
+    <string name="nav_benefits">लाभ</string>
+    <string name="nav_settings">सेटिंग्स</string>
+    
+    <!-- Dashboard -->
+    <string name="dashboard_title">डैशबोर्ड</string>
+    <string name="dashboard_subtitle_phone">इवेंट मैनेजमेंट सिंहावलोकन</string>
+    <string name="dashboard_subtitle_tablet">आपके इवेंट मैनेजमेंट सिस्टम का अवलोकन</string>
+    <string name="active_volunteers">सक्रिय स्वयंसेवक</string>
+    <string name="jobs_this_month">इस माह नौकरियाँ</string>
+    <string name="venues">स्थान</string>
+    <string name="volunteers_total">कुल स्वयंसेवक</string>
+    <string name="plus_one_invites">+1 आमंत्रण</string>
+    <string name="total_people">कुल सूची</string>
+    <string name="shifts_past_month">पिछले महीने में बदलाव</string>
+    <string name="inactive_volunteers">निष्क्रिय स्वयंसेवक</string>
+    <string name="free_drinks_today">आज मुफ़्त पेय</string>
+    <string name="recent_activity">हाल की गतिविधि</string>
+    <string name="recent_guests">हाल के मेहमान</string>
+    <string name="recent_volunteers">हाल के स्वयंसेवक</string>
+    <string name="recent_shifts">हालिया बदलाव</string>
+    <string name="latest_guest_phone">अतिथि: %1$s</string>
+    <string name="latest_guest_tablet">नवीनतम अतिथि: %1$s</string>
+    <string name="latest_volunteer_phone">स्वयंसेवक: %1$s</string>
+    <string name="latest_volunteer_tablet">नवीनतम स्वयंसेवक: %1$s</string>
+    <string name="latest_job_phone">नौकरी: %1$s</string>
+    <string name="latest_job_tablet">नवीनतम नौकरी: %1$s</string>
+    
+    <!-- Stats and Graphs -->
+    <string name="stats_and_graphs">सांख्यिकी &amp; रुझान</string>
+    
+    <!-- Sync Status -->
+    <string name="syncing">सिंक हो रहा है...</string>
+    <string name="last_update_just_now">अभी अभी</string>
+    <string name="last_update_never_brief">—</string>
+    <string name="last_update_seconds_ago">%1$d सेकंड पहले</string>
+    <string name="last_update_min_sec_ago">%1$dमिनट %2$ds पहले</string>
+    <string name="last_update_hour_min_ago">%1$dh %2$dm पहले</string>
+    <string name="last_update_days_ago">%1$dd पहले</string>
+    <string name="last_update_line">अद्यतन · %1$s</string>
+    <string name="last_update_none_line">अद्यतन · —</string>
+    <string name="sync_pill_minutes_ago">%1$dमिनट पहले</string>
+    <string name="sync_pill_hours_ago">%1$dh पहले</string>
+    <string name="sync_pill_hours_minutes_ago">%1$dh %2$dमिनट पहले</string>
+    <string name="sync_pill_days_ago">%1$dd पहले</string>
+    <string name="sync_pill_days_hours_ago">%1$dd %2$dh पहले</string>
+    <string name="sync_pill_days_minutes_ago">%1$dd %2$dमिनट पहले</string>
+    <string name="sync_pill_days_hours_minutes_ago">%1$dd %2$dh %3$dमिनट पहले</string>
+    
+    <!-- Welcome Screen -->
+    <string name="start_admin">व्यवस्थापक प्रारंभ करें</string>
+    <string name="admin_mode">व्यवस्थापक</string>
+    <string name="ticket_check_mode">टिकटिंग</string>
+    <string name="welcome_background_sync_content_description">व्यवस्थापक पहुंच सत्यापित करने के लिए Google शीट के साथ समन्वयित किया जा रहा है</string>
+
+    <!-- Admin Auth Screen -->
+    <string name="admin_auth_title">व्यवस्थापक प्रमाणीकरण</string>
+    <string name="admin_auth_description">अपनी व्यवस्थापक पहुंच सत्यापित करने के लिए अपना बैज या क्यूआर कोड स्कैन करें</string>
+    <string name="admin_auth_syncing">Google शीट से डेटा लोड हो रहा है…</string>
+    <string name="admin_auth_syncing_title">व्यवस्थापक पहुंच तैयार की जा रही है</string>
+    <string name="admin_auth_syncing_subtitle">हम\'Google शीट के साथ पुन: समन्वयित किया जा रहा है ताकि आपके बैज या क्यूआर कोड को सटीक रूप से सत्यापित किया जा सके।</string>
+    <string name="admin_auth_sync_wait_hint">अभी तक स्कैन न करें - सिंक पूरा होने पर प्रमाणीकरण अनलॉक हो जाएगा</string>
+    <string name="admin_auth_sync_step_sheet">स्प्रेडशीट संरचना की जाँच करना</string>
+    <string name="admin_auth_sync_step_download">नवीनतम अतिथि और स्वयंसेवक डेटा डाउनलोड करना</string>
+    <string name="admin_auth_sync_step_verify">व्यवस्थापक प्रोफ़ाइल ताज़ा हो रही है</string>
+    <!-- Admin pre-check: repair sheet + sync before NFC/QR gate -->
+    <string name="admin_precheck_sync_loading">व्यवस्थापक पहुंच तैयार करना: शीट की जाँच करना और समन्वयन करना…</string>
+    <string name="admin_precheck_sync_failed_title">व्यवस्थापक पहुंच तैयार नहीं की जा सकी</string>
+    <string name="admin_precheck_sync_failed_message">शीट की मरम्मत या समन्वयन नहीं किया जा सका. अपना कनेक्शन और स्प्रेडशीट सेटिंग जांचें, फिर पुनः प्रयास करें।</string>
+    <string name="admin_precheck_sync_retry">पुनः प्रयास करें</string>
+    <string name="admin_auth_ready">अपने एनएफसी बैज को डिवाइस के पास रखें या अपना क्यूआर कोड स्कैन करें</string>
+    <string name="admin_auth_scan_qr">QR कोड स्कैन करें</string>
+    <string name="admin_auth_granted">स्वागत है, %1$s! व्यवस्थापक पहुंच प्रदान की गई</string>
+    <string name="admin_auth_denied">%1$s के पास एडमिन एक्सेस नहीं है</string>
+    <string name="admin_auth_not_found">कोई मेल खाती प्रोफ़ाइल नहीं मिली</string>
+    <string name="admin_auth_try_again">पुनः प्रयास करें</string>
+    <string name="admin_auth_use_fingerprint">फ़िंगरप्रिंट का उपयोग करें</string>
+    <string name="admin_auth_fingerprint_description">एडमिन मोड तक पहुंचने के लिए अपने फिंगरप्रिंट से प्रमाणित करें</string>
+    <string name="admin_auth_biometric_prompt_title">व्यवस्थापक प्रमाणीकरण</string>
+    <string name="admin_auth_biometric_prompt_subtitle">बायोमेट्रिक्स से अपनी पहचान सत्यापित करें</string>
+    <string name="admin_auth_biometric_cancel">इसके बजाय क्यूआर/एनएफसी का प्रयोग करें</string>
+    <string name="admin_auth_biometric_error">बायोमेट्रिक प्रमाणीकरण विफल: %1$s</string>
+
+    <!-- Biometric Admin Login Settings -->
+    <string name="biometric_admin_login_title">फ़िंगरप्रिंट व्यवस्थापक लॉगिन</string>
+    <string name="biometric_admin_login_description">एडमिन मोड तक पहुंचने के लिए इस डिवाइस के फ़िंगरप्रिंट सेंसर का उपयोग करने की अनुमति दें</string>
+    <string name="biometric_admin_login_not_available">इस डिवाइस पर बायोमेट्रिक प्रमाणीकरण उपलब्ध नहीं है</string>
+    <string name="biometric_admin_login_none_enrolled">इस डिवाइस पर कोई फ़िंगरप्रिंट दर्ज नहीं किया गया है. कृपया पहले अपनी डिवाइस सेटिंग में फ़िंगरप्रिंट जोड़ें।</string>
+    <string name="biometric_admin_login_enabled">फ़िंगरप्रिंट व्यवस्थापक लॉगिन सक्षम</string>
+    <string name="biometric_admin_login_disabled">फ़िंगरप्रिंट व्यवस्थापक लॉगिन अक्षम किया गया</string>
+    <string name="biometric_warning_title">सुरक्षा चेतावनी</string>
+    <string name="biometric_warning_message">इस डिवाइस के पासकोड वाला कोई भी व्यक्ति फिंगरप्रिंट जोड़ सकता है और इस प्रकार एडमिन पेज तक पहुंच प्राप्त कर सकता है।\n\nयह उन उपकरणों के लिए सख्ती से प्रतिबंधित है जो जनता के लिए सुलभ हैं या जिन लोगों के पास इस निजी जानकारी तक पहुंच नहीं होनी चाहिए।\n\nयह सुविधा केवल उन उपयोगकर्ताओं के लिए है जो संबंधित जोखिमों को समझते हैं और स्वीकार करते हैं।\n\nआगे बढ़ने के लिए, आपकी व्यवस्थापक पहचान को पहले QR कोड या NFC बैज के माध्यम से सत्यापित किया जाएगा।</string>
+    <string name="biometric_warning_accept">मैं जोखिम समझता हूं</string>
+    <string name="biometric_warning_cancel">रद्द करें</string>
+    <string name="biometric_enrollment_verify_title">व्यवस्थापक पहुंच सत्यापित करें</string>
+    <string name="biometric_enrollment_verify_description">बायोमेट्रिक लॉगिन सक्षम करने से पहले अपनी पहचान की पुष्टि करने के लिए अपने एडमिन बैज या क्यूआर कोड को स्कैन करें</string>
+    <string name="biometric_enrollment_success">व्यवस्थापक पहुंच के लिए फ़िंगरप्रिंट लॉगिन सक्षम किया गया है</string>
+    <string name="biometric_enrollment_prompt_title">बायोमेट्रिक्स रजिस्टर करें</string>
+    <string name="biometric_enrollment_prompt_subtitle">व्यवस्थापक लॉगिन सक्षम करने के लिए अपने फ़िंगरप्रिंट की पुष्टि करें</string>
+
+    <!-- Ticketing (Billeterie) hub -->
+    <string name="ticket_check_title">टिकटिंग</string>
+    <string name="ticket_check_coming_soon">यह सुविधा जल्द ही आने वाली है</string>
+    <string name="ticket_check_description">अतिथि सूची तक त्वरित पहुंच और दरवाजे पर स्कैनर।</string>
+    <string name="billeterie_stat_permanent_guests">स्थायी अतिथि</string>
+    <string name="billeterie_stat_temporary_guests_today">अस्थायी मेहमान (आज)</string>
+    <string name="billeterie_stat_volunteers_on_list">सूची में स्वयंसेवक</string>
+    <string name="billeterie_stat_total_without_invites">सूची में (+1 को छोड़कर)</string>
+    <string name="billeterie_button_guest_list">अतिथि सूची</string>
+    <string name="billeterie_button_scanner">स्कैनर</string>
+
+    <!-- Setup Wizard -->
+    <string name="setup_continue">जारी रखें</string>
+    <string name="setup_back">वापस</string>
+    <string name="setup_skip">सेटअप छोड़ें</string>
+    <string name="setup_finish">सेटअप समाप्त करें</string>
+    <string name="setup_welcome_title">नोक्टुलिस्ट में आपका स्वागत है</string>
+    <string name="setup_welcome_description">कुछ त्वरित चरणों में अपना इवेंट प्रबंधन ऐप सेट करें। आप बाद में सेटिंग्स में सब कुछ बदल सकते हैं।</string>
+    <string name="setup_get_started">आरंभ करें</string>
+    <string name="setup_step_progress">चरण %1$d का %2$d</string>
+    <string name="setup_phase_personalize">वैयक्तिकृत करें</string>
+    <string name="setup_phase_connect">Google शीट कनेक्ट करें</string>
+    <string name="setup_phase_finish">ख़त्म करो</string>
+    <string name="setup_google_sheets_title">Google शीट कनेक्ट करें</string>
+    <string name="setup_google_sheets_description">अपनी स्प्रैडशीट को लिंक करें और अपनी सेवा खाता कुंजी अपलोड करें ताकि NoctuList आपके ईवेंट डेटा को सिंक कर सके।</string>
+    <string name="setup_sheets_defaults_hint">अधिकांश इवेंट के लिए डिफ़ॉल्ट शीट नाम काम करते हैं। यदि आपकी स्प्रैडशीट भिन्न टैब नामों का उपयोग करती है तो ही नीचे विस्तार करें।</string>
+    <string name="setup_sheets_customize">शीट नाम अनुकूलित करें</string>
+    <string name="setup_start_sync">सिंक प्रारंभ करें</string>
+    <string name="setup_first_sync_ready">सब कुछ तैयार है. Google शीट से अपना डेटा डाउनलोड करने के लिए नीचे टैप करें।</string>
+    <string name="setup_language_title">अपनी भाषा चुनें</string>
+    <string name="setup_language_description">वह भाषा चुनें जिसे आप ऐप में उपयोग करना चाहते हैं</string>
+    <string name="setup_theme_title">एक थीम चुनें</string>
+    <string name="setup_theme_description">चुनें कि ऐप कैसा दिखेगा - आप इसे बाद में सेटिंग्स में कभी भी बदल सकते हैं</string>
+    <string name="setup_color_profile_title">रंग प्रोफ़ाइल</string>
+    <string name="setup_color_profile_description">उच्चारण रंग चुनें. सिस्टम समर्थित उपकरणों पर आपके वॉलपेपर का अनुसरण करता है।</string>
+    <string name="setup_layout_size_title">लेआउट का आकार</string>
+    <string name="setup_layout_size_description">समायोजित करें कि इंटरफ़ेस कितना बड़ा दिखाई दे - आप सेटिंग्स में इसे किसी भी समय ठीक कर सकते हैं।</string>
+    <string name="setup_layout_nvidia_hint">NVIDIA टैबलेट पर, 107% अक्सर इस डिस्प्ले के लिए बेहतर फिट होता है।</string>
+    <string name="setup_layout_use_recommended">107% उपयोग करें</string>
+    <string name="setup_spreadsheet_title">गूगल शीट्स आईडी</string>
+    <string name="setup_spreadsheet_description">अपने ईवेंट डेटा के साथ समन्वयित करने के लिए Google स्प्रेडशीट की आईडी दर्ज करें</string>
+    <string name="setup_spreadsheet_hint">अपने Google शीट URL में आईडी ढूंढें:\nhttps://docs.google.com/spreadshields/d/SPREADSHEET_ID/edit</string>
+    <string name="setup_json_key_title">सेवा खाता कुंजी</string>
+    <string name="setup_json_key_description">सिंक्रनाइज़ेशन सक्षम करने के लिए अपने Google सेवा खाते के लिए JSON कुंजी फ़ाइल अपलोड करें</string>
+    <string name="setup_sheets_title">शीट नाम</string>
+    <string name="setup_sheets_description">अपनी Google स्प्रेडशीट में प्रत्येक शीट के नाम कॉन्फ़िगर करें - डिफ़ॉल्ट पहले से भरे हुए हैं</string>
+    <string name="setup_wizard_first_sync_title">पहला सिंक</string>
+    <string name="setup_wizard_first_sync_message">Google शीट से आपका ईवेंट डेटा डाउनलोड किया जा रहा है…</string>
+    <string name="setup_wizard_first_sync_error_title">पहला सिंक विफल रहा</string>
+    <string name="setup_wizard_first_sync_error_generic">Google शीट के साथ समन्वयित नहीं किया जा सका. अपनी स्प्रैडशीट आईडी, JSON कुंजी और नेटवर्क जांचें, फिर पुनः प्रयास करें।</string>
+    
+    <!-- Volunteer Screen -->
+    <string name="volunteers_title">स्वयंसेवक</string>
+    <string name="volunteer_manager">स्वयंसेवक प्रबंधक</string>
+    <string name="add_volunteer">स्वयंसेवक जोड़ें</string>
+    <string name="add_new_volunteer">नये स्वयंसेवक जोड़ें</string>
+    <string name="refresh">ताज़ा करें</string>
+    <string name="search_volunteers_placeholder">स्वयंसेवकों को नाम या ईमेल से खोजें...</string>
+    <string name="filter_all">सब</string>
+    <string name="filter_active">सक्रिय</string>
+    <string name="filter_inactive">निष्क्रिय</string>
+    <string name="active_status">सक्रिय</string>
+    <string name="inactive_status">निष्क्रिय</string>
+    <string name="view_details">विवरण देखें</string>
+    <string name="full_name">प्रथम नाम</string>
+    <string name="last_name_abbreviation">अंतिम नाम</string>
+    <string name="last_name_abbreviation_placeholder">उदाहरण के लिए, स्मिथ</string>
+    <string name="email">Email</string>
+    <string name="email_placeholder">name@example.com</string>
+    <string name="phone_number">फ़ोन नंबर</string>
+    <string name="date_of_birth">जन्मतिथि</string>
+    <string name="date_of_birth_placeholder">dd.mm.yyyy</string>
+    <string name="gender">लिंग</string>
+    <string name="select_gender">लिंग चुनें</string>
+    <string name="gender_female">स्त्री</string>
+    <string name="gender_male">पुरुष</string>
+    <string name="gender_non_binary">गैर-बाइनरी</string>
+    <string name="gender_other">अन्य</string>
+    <string name="gender_prefer_not_to_disclose">खुलासा नहीं करना पसंद करते हैं</string>
+    <string name="update_volunteer">स्वयंसेवक को अद्यतन करें</string>
+    <string name="edit_volunteer">स्वयंसेवक संपादित करें</string>
+    <string name="edit_volunteer_details">स्वयंसेवक विवरण संपादित करें</string>
+    
+    <!-- Guest List Screen -->
+    <string name="guest_list_title">अतिथि सूची</string>
+    <string name="guest_list_management">अतिथि सूची प्रबंधन</string>
+    <string name="guest_list_description">सभी कॉन्फ़िगर स्थानों पर अतिथियों का प्रबंधन करें</string>
+    <string name="venue_groove">Groove</string>
+    <string name="venue_le_terreau">Le Terreau</string>
+    <string name="add_guest">अतिथि जोड़ें</string>
+    <string name="add_new_guest">नया अतिथि जोड़ें</string>
+    <string name="add_guest_tab_permanent">स्थाई</string>
+    <string name="add_guest_tab_temporary">अस्थायी</string>
+    <string name="add_guest_add_another_name">किसी अन्य अतिथि का नाम जोड़ें</string>
+    <string name="add_guest_additional_name_label">अतिथि का नाम (%1$d)</string>
+    <string name="last_synced">अंतिम अद्यतन:</string>
+    <string name="just_now">अभी अभी</string>
+    <string name="minutes_ago">%1$d मिनट पहले</string>
+    <string name="hours_ago">%1$d घंटे पहले</string>
+    <string name="days_ago">%1$d दिन पहले</string>
+    <string name="search_guests_placeholder">मेहमानों को नाम, ईमेल या फ़ोन से खोजें...</string>
+    <string name="filter_volunteer_benefits">स्वयंसेवक लाभ</string>
+    <string name="filter_permanent_guests">स्थायी अतिथि</string>
+    <string name="filter_temporary_guests">अस्थायी मेहमान</string>
+    <string name="guests_count">मेहमान</string>
+    <string name="total_guests_count">कुल अतिथि</string>
+    <string name="invitations_count">निमंत्रण</string>
+    <string name="total_invitations_count">कुल निमंत्रण</string>
+    <string name="volunteer_label">स्वयंसेवक</string>
+    <string name="invitations_text">%1$d निमंत्रण</string>
+    <string name="view_benefits">लाभ देखें</string>
+    <string name="delete_guest">अतिथि हटाएँ</string>
+    <string name="edit_guest">अतिथि संपादित करें</string>
+    <string name="edit_guest_details">अतिथि विवरण संपादित करें</string>
+    <string name="update_guest">अतिथि अद्यतन करें</string>
+    <string name="guest_information">अतिथि सूचना</string>
+    <string name="guest_name">अतिथि का नाम</string>
+    <string name="guest_email">ईमेल</string>
+    <string name="guest_email_placeholder">email@example.com</string>
+    <string name="guest_phone_number">फ़ोन नंबर</string>
+    <string name="guest_phone_placeholder">+91 98765 43210</string>
+    <string name="number_of_invitations">निमंत्रणों की संख्या</string>
+    <string name="venue">स्थान</string>
+    <string name="notes">टिप्पणियाँ</string>
+    
+    <!-- Benefits Screen -->
+    <string name="benefits_title">लाभ</string>
+    <string name="volunteer_benefits_overview">स्वयंसेवक लाभ अवलोकन</string>
+    <string name="benefits_description">स्वयंसेवी लाभों की जाँच के लिए स्टाफ संदर्भ</string>
+    <string name="search_volunteers_benefits_placeholder">स्वयंसेवकों को नाम या ईमेल से खोजें...</string>
+    <string name="no_rank">कोई रैंक नहीं</string>
+    <string name="high_rank">उच्च पद</string>
+    <string name="active_benefits">सक्रिय लाभ</string>
+    <string name="benefits_overview_info_button">मार्गदर्शक</string>
+    <string name="benefits_overview_totals_section">कुल</string>
+    <string name="benefits_overview_ranks_section">रैंक के अनुसार</string>
+    <string name="benefits_overview_line_50_bar">50%% बार: %1$d</string>
+    <string name="benefits_overview_line_free_entry">नि:शुल्क प्रवेश: %1$d · %2$d आमंत्रण।</string>
+    <string name="benefits_overview_line_extraordinary">अतिरिक्त: %1$d</string>
+    <string name="benefits_overview_line_future_tickets">टिकट: %1$d · %2$d आमंत्रण।</string>
+    <string name="current_benefits">✨ वर्तमान लाभ</string>
+    <string name="days_left">%1$d दिन बचे हैं</string>
+    <string name="expires_soon">जल्द ही समाप्त हो रहा है</string>
+    <string name="free_entry">✅ निःशुल्क प्रवेश</string>
+    <string name="friend_invitation">👥मित्र निमंत्रण</string>
+    <string name="drink_tokens">🍺 %1$d ड्रिंक टोकन</string>
+    <string name="bar_discount">💰 %1$d%% बार डिस्काउंट</string>
+    <string name="extraordinary_benefits">💎असाधारण लाभ</string>
+    
+    <!-- Shifts Screen -->
+    <string name="shifts_title">पाली</string>
+    <string name="shift_tracking">शिफ्ट ट्रैकिंग</string>
+    <string name="add_shift">शिफ्ट जोड़ें</string>
+    <string name="add_new_shift">नई शिफ्ट जोड़ें</string>
+    <string name="search_shifts_placeholder">स्वयंसेवक के नाम या नोट्स के आधार पर बदलाव खोजें...</string>
+    <string name="unknown_volunteer">अज्ञात स्वयंसेवक</string>
+    <string name="volunteer">स्वयंसेवक</string>
+    <string name="search_volunteers_shift_placeholder">स्वयंसेवक खोजें...</string>
+    <string name="shift_type">शिफ्ट प्रकार</string>
+    <string name="select_shift_type">एक शिफ्ट प्रकार चुनें...</string>
+    <string name="no_shift_types_available">कोई सक्रिय शिफ्ट प्रकार नहीं. Shift प्रकार प्रबंधन में प्रकार जोड़ें या सक्रिय करें।</string>
+    <string name="shift_time">शिफ्ट का समय</string>
+    <string name="shift_time_evening_profited">लाभ हुआ</string>
+    <string name="shift_time_evening_non_profited">लाभ नहीं हुआ</string>
+    <string name="shift_date_time">शिफ्ट दिनांक &amp; समय</string>
+    <string name="notes_optional">नोट्स (वैकल्पिक)</string>
+    <string name="add_job">नौकरी जोड़ें</string>
+    <string name="edit_shift">शिफ्ट संपादित करें</string>
+    <string name="edit_shift_details">शिफ्ट विवरण संपादित करें</string>
+    <string name="update_job">नौकरी अद्यतन करें</string>
+    
+    <!-- QR Code Related -->
+    <string name="qr_code">क्यूआर कोड</string>
+    <string name="volunteer_qr_code">स्वयंसेवक QR कोड</string>
+    <string name="qr_code_anonymized_label">अज्ञात</string>
+    <string name="edit_volunteer_button">स्वयंसेवक संपादित करें</string>
+    <string name="delete_volunteer_button">स्वयंसेवक हटाएँ</string>
+    <string name="camera_permission_required">क्यूआर कोड को स्कैन करने के लिए कैमरे की अनुमति आवश्यक है</string>
+    <string name="camera_permission_title">कैमरे की अनुमति आवश्यक है</string>
+    <string name="camera_permission_qr_nfc_body">Camera permission is required for QR scanning. उपलब्ध होने पर एनएफसी स्कैनिंग उसी समय सक्रिय रहती है।</string>
+    <string name="camera_error">कैमरा त्रुटि</string>
+    <string name="enter_id_manually">आईडी मैन्युअल रूप से दर्ज करें</string>
+    <string name="add_nfc_card">एनएफसी कार्ड जोड़ें</string>
+    <string name="add_nfc_card_uid_title">एनएफसी कार्ड यूआईडी जोड़ें</string>
+    <string name="enter_uid_manually">यूआईडी मैन्युअल रूप से दर्ज करें</string>
+    <string name="read_uid_with_phone_nfc">फ़ोन (एनएफसी) के साथ यूआईडी पढ़ें</string>
+    <string name="read_uid_with_usb_reader">बाहरी रीडर के साथ यूआईडी पढ़ें (USB ACR122U या ब्लूटूथ ACR1255U-J1)</string>
+    <string name="usb_reader_not_connected">कोई बाहरी USB NFC रीडर नहीं मिला।</string>
+    <string name="usb_reader_waiting_card">बाहरी रीडर (यूएसबी या ब्लूटूथ) पर एनएफसी कार्ड की प्रतीक्षा की जा रही है...</string>
+    <string name="enter_nfc_uid_title">एनएफसी यूआईडी दर्ज करें</string>
+    <string name="uid_label">UID</string>
+    <string name="scan_nfc_card_title">एनएफसी कार्ड स्कैन करें</string>
+    <string name="place_nfc_card_on_phone">एनएफसी कार्ड को अपने फोन के पीछे रखें।</string>
+    <string name="nfc_card_detected">कार्ड का पता चला.</string>
+    <string name="use_this_uid">इस यूआईडी का प्रयोग करें</string>
+    <string name="nfc_uid_label">NFC UID</string>
+    <string name="nfc_uid_copied">एनएफसी यूआईडी कॉपी किया गया</string>
+    <string name="copy_nfc_uid">एनएफसी यूआईडी कॉपी करें</string>
+    <string name="back">वापस</string>
+    <string name="scan_qr_or_nfc_title">क्यूआर कोड या एनएफसी कार्ड स्कैन करें</string>
+    <string name="scan_qr_or_nfc_subtitle_enabled">कैमरा क्यूआर स्कैनर और एनएफसी कार्ड स्कैनर सक्रिय हैं। आप किसी एक का उपयोग कर सकते हैं.</string>
+    <string name="scan_qr_or_nfc_subtitle_phone_and_usb">क्यूआर स्कैनर, फोन एनएफसी और एक बाहरी एनएफसी रीडर (यूएसबी या ब्लूटूथ) उपलब्ध हैं।</string>
+    <string name="scan_qr_or_nfc_subtitle_usb_only">क्यूआर स्कैनर और एक बाहरी एनएफसी रीडर (यूएसबी या ब्लूटूथ) उपलब्ध हैं। फ़ोन एनएफसी सक्रिय नहीं है.</string>
+    <string name="scan_qr_subtitle_nfc_disabled">कैमरा क्यूआर स्कैनर सक्रिय है। इस डिवाइस पर एनएफसी अक्षम है.</string>
+    <string name="scan_with_usb_reader">बाहरी रीडर से स्कैन करें</string>
+    <string name="usb_reader_waiting_card_short">वेटिंग कार्ड...</string>
+    <string name="scanner_ble_reader_footer_label">ब्लूटूथ रीडर (ACR1255U-J1)</string>
+    <string name="scanner_ble_reader_footer_connected">सक्रिय लिंक - स्कैन करने के लिए तैयार</string>
+    <string name="scanner_ble_reader_footer_disconnected">कोई सक्रिय लिंक नहीं - रीडर (बटन) को जगाएं या पुनः कनेक्ट होने की प्रतीक्षा करें</string>
+    <string name="scanner_ble_reader_footer_reading">कार्ड पढ़ना...</string>
+    <string name="nfc_not_supported_device">यह डिवाइस एनएफसी स्कैनिंग का समर्थन नहीं करता है.</string>
+    <string name="nfc_unavailable_no_usb_hint">इस डिवाइस में कोई एनएफसी नहीं है, और कोई बाहरी रीडर कनेक्ट नहीं है (यूएसबी या ब्लूटूथ)।</string>
+    <string name="nfc_phone_unavailable_use_usb_reader">इस डिवाइस में कोई अंतर्निहित एनएफसी नहीं है। नीचे दिए गए बाहरी रीडर विकल्प (USB ACR122U या ब्लूटूथ ACR1255U-J1) का उपयोग करें।</string>
+    <string name="nfc_disabled_enable">एनएफसी अक्षम है. कार्ड स्कैन करने के लिए अपने फ़ोन सेटिंग में NFC सक्षम करें।</string>
+    <string name="nfc_uid_read_failed">एनएफसी कार्ड यूआईडी पढ़ने में असमर्थ. पुनः प्रयास करें।</string>
+    <string name="nfc_uid_not_found">एनएफसी यूआईडी के लिए कोई स्वयंसेवक या स्थायी अतिथि नहीं मिला: %1$s</string>
+    <string name="billeterie_nfc_no_match">कोई भी स्वयंसेवक या स्थायी अतिथि इस कार्ड से मेल नहीं खाता।</string>
+    <string name="nfc_reader_error">एनएफसी रीडर त्रुटि: %1$s</string>
+    <string name="external_reader_bt_blocked_hint">बाहरी रीडर के लिए ब्लूटूथ एक्सेस अस्वीकृत कर दिया गया था। एंड्रॉइड ऐप सेटिंग खोलने के लिए नीचे टैप करें, फिर इस ऐप के लिए ब्लूटूथ/आस-पास डिवाइस को अनुमति दें। यदि आपने पहले ही \"फिर से न पूछें\" चुना है, तो आपको इसे वहां सक्षम करना होगा।</string>
+    <string name="open_app_settings_for_reader">ऐप सेटिंग खोलें</string>
+    <string name="last_nfc_uid_scanned">अंतिम एनएफसी यूआईडी स्कैन: %1$s</string>
+    <string name="invalid_qr_or_nfc_data">अमान्य क्यूआर/एनएफसी डेटा।</string>
+    <string name="permanent_guest_label">स्थायी अतिथि</string>
+    <string name="nfc_uid_multiple_matches_title">एकाधिक प्रोफ़ाइलें मिलीं</string>
+    <string name="nfc_uid_multiple_matches_message">यूआईडी %1$s %2$d प्रोफाइल से मेल खाता है। सही का चयन करें.</string>
+    <string name="manual_volunteer_input">स्वयंसेवक आईडी दर्ज करें</string>
+    <string name="enter_volunteer_id_manually">स्वयंसेवक आईडी मैन्युअल रूप से दर्ज करें:</string>
+    <string name="volunteer_id">स्वयंसेवक आईडी</string>
+    <string name="find_volunteer">स्वयंसेवक खोजें</string>
+    <string name="please_enter_valid_volunteer_id">कृपया एक वैध स्वयंसेवक आईडी दर्ज करें</string>
+    <string name="volunteer_id_not_found">आईडी के साथ स्वयंसेवक\'%1$s\' नहीं मिला</string>
+    <string name="available_volunteers">उपलब्ध स्वयंसेवक:</string>
+    <string name="error_processing_qr_code">क्यूआर कोड को संसाधित करने में त्रुटि: %1$s</string>
+    <string name="invalid_qr_code_format">अमान्य QR कोड प्रारूप: %1$s</string>
+    <string name="volunteer_not_found">स्वयंसेवक \'%1$s\' (पहचान: %2$s) डेटाबेस में नहीं मिला. कृपया जांचें कि क्या स्वयंसेवक डेटा Google शीट से समन्वयित किया गया है।</string>
+    <string name="qr_code_for_volunteer">स्वयंसेवक के लिए क्यूआर कोड: %1$s</string>
+    <string name="qr_code_subject">स्वयंसेवक क्यूआर कोड - %1$s</string>
+    <string name="share_qr_code">QR कोड साझा करें</string>
+    <string name="share">साझा करें</string>
+    <string name="send_by_mail">मेल से भेजें</string>
+    <string name="failed_to_generate_qr_code">QR कोड जनरेट करने में विफल</string>
+    
+    <!-- Guest QR Code Related -->
+    <string name="guest_qr_code">अतिथि क्यूआर कोड</string>
+    <string name="qr_code_for_guest">अतिथि के लिए क्यूआर कोड: %1$s</string>
+    <string name="qr_code_subject_guest">अतिथि क्यूआर कोड - %1$s</string>
+    <string name="scan_guest_qr_code">अतिथि क्यूआर कोड स्कैन करें</string>
+    <string name="invalid_guest_qr_code">अमान्य क्यूआर कोड. यह कोई अतिथि QR कोड नहीं है.</string>
+    <string name="guest_not_found">अतिथि \'%1$s\'डेटाबेस में नहीं मिला.</string>
+    <string name="enter_guest_name_manually">अतिथि का नाम मैन्युअल रूप से दर्ज करें:</string>
+    <string name="manual_guest_input">अतिथि का नाम दर्ज करें</string>
+    <string name="find_guest">अतिथि खोजें</string>
+    <string name="available_guests">उपलब्ध अतिथि:</string>
+    <string name="please_enter_guest_name">कृपया एक मान्य अतिथि नाम दर्ज करें</string>
+    <string name="invalid_input">अमान्य इनपुट: %1$s</string>
+    <string name="guest_email_input_title">ईमेल पता दर्ज करें</string>
+    <string name="guest_email_input_message">इस अतिथि का डेटाबेस में कोई ईमेल पता नहीं है। क्यूआर कोड भेजने के लिए कृपया एक ईमेल पता दर्ज करें:</string>
+    <string name="continue_button">जारी रखें</string>
+    <string name="grant_permission">अनुमति प्रदान करें</string>
+    
+    <!-- Guest Email Settings -->
+    <string name="guest_email_subject_default">आपका अतिथि क्यूआर कोड</string>
+    <string name="guest_email_content_before_default">नमस्ते!\n\nयहां अतिथि प्रवेश के लिए आपका व्यक्तिगत क्यूआर कोड है। कृपया इसे संभाल कर रखें और प्रवेश द्वार पर पहुंचने पर इसे दिखाएं।</string>
+    <string name="guest_email_content_after_default">यदि आपके कोई प्रश्न हैं, तो बेझिझक हमसे संपर्क करें। हम आगे आपसे मिलंगे!</string>
+    <string name="guest_email_html_header">आपका अतिथि क्यूआर कोड</string>
+    <string name="guest_email_html_footer">यह ईमेल स्वचालित रूप से भेजा गया था. कृपया अपना क्यूआर कोड सुरक्षित रखें।</string>
+    
+    <!-- Email QR Code Settings -->
+    <string name="settings_category_email">ईमेल सेटिंग्स</string>
+    <string name="email_qr_settings_title">क्यूआर कोड ईमेल सेटिंग्स</string>
+    <string name="email_qr_settings_description">क्यूआर कोड भेजते समय ईमेल की सामग्री कॉन्फ़िगर करें</string>
+    <string name="email_tab_volunteer">स्वयंसेवक</string>
+    <string name="email_tab_guest">मेहमान</string>
+    <string name="email_shared_settings_title">साझा सेटिंग्स</string>
+    <string name="email_shared_settings_description">ये सेटिंग्स स्वयंसेवक और अतिथि ईमेल दोनों पर लागू होती हैं</string>
+    <string name="email_subject_label">ईमेल विषय</string>
+    <string name="email_subject_hint">क्यूआर कोड ईमेल के लिए विषय पंक्ति</string>
+    <string name="email_subject_default">आपका स्वयंसेवक प्रोफ़ाइल क्यूआर कोड</string>
+    <string name="email_content_before_label">QR कोड से पहले संदेश</string>
+    <string name="email_content_before_hint">वैकल्पिक अभिवादन या परिचय</string>
+    <string name="email_content_before_default">नमस्ते !\n\nयहां आपके स्वयंसेवक प्रोफ़ाइल के लिए आपका व्यक्तिगत क्यूआर कोड है। यह क्यूआर कोड सभी आयोजनों के लिए काम करता है, इसलिए कृपया इसे अपने पास रखें और प्रवेश द्वार पर पहुंचने पर इसे दिखाएं। यह आपकी प्रविष्टि को शीघ्रता से संसाधित करने में हमारी सहायता करता है।</string>
+    <string name="email_include_qr_label">ईमेल में QR कोड शामिल करें</string>
+    <string name="email_include_qr_description">ईमेल में क्यूआर कोड छवि संलग्न करें</string>
+    <string name="email_content_after_label">QR कोड के बाद संदेश</string>
+    <string name="email_content_after_hint">वैकल्पिक अतिरिक्त जानकारी</string>
+    <string name="email_content_after_default">यदि आपके कोई प्रश्न हैं, तो बेझिझक हमसे संपर्क करें। :)</string>
+    <string name="email_signature_label">हस्ताक्षर</string>
+    <string name="email_signature_hint">आपका साइन-ऑफ़ (जैसे, सादर, टीम)</string>
+    <string name="email_signature_default">कलेक्टिफ़ नॉक्टर्न</string>
+    <string name="email_association_name_label">एसोसिएशन का नाम</string>
+    <string name="email_association_name_hint">कलेक्टिफ़ नॉक्टर्न</string>
+    <string name="email_association_name_description">डिजिटल वॉलेट पास ब्रांडिंग और प्रेषक के नाम के लिए डिफ़ॉल्ट हस्ताक्षर के रूप में उपयोग किया जाता है।</string>
+    <string name="email_include_digital_wallet_pass_label">डिजिटल वॉलेट पास शामिल करें</string>
+    <string name="email_include_digital_wallet_pass_description">पास प्रकार आईडी प्रमाणपत्र कॉन्फ़िगर होने पर Apple वॉलेट और Google Pay के लिए एक हस्ताक्षरित डिजिटल वॉलेट पास (.pkpass) संलग्न करें</string>
+    <string name="email_wallet_pass_cert_title">Apple वॉलेट हस्ताक्षर प्रमाणपत्र</string>
+    <string name="email_wallet_pass_cert_description">Apple वॉलेट को आपके Apple डेवलपर खाते से पास टाइप आईडी प्रमाणपत्र (.p12) की आवश्यकता होती है। Google Pay इसके बिना काम करता है.</string>
+    <string name="email_wallet_pass_cert_upload">पास प्रकार आईडी प्रमाणपत्र अपलोड करें (.p12)</string>
+    <string name="email_wallet_pass_cert_password_label">प्रमाणपत्र पासवर्ड</string>
+    <string name="email_wallet_pass_cert_password_hint">.p12 फ़ाइल के लिए पासवर्ड</string>
+    <string name="email_wallet_pass_cert_configured">Apple वॉलेट हस्ताक्षर तैयार है (%1$s · टीम %2$s)।</string>
+    <string name="email_wallet_pass_cert_missing">कोई प्रमाणपत्र कॉन्फ़िगर नहीं किया गया - पास Google Pay के साथ काम करता है लेकिन Apple वॉलेट में नहीं खुलेगा।</string>
+    <string name="email_include_logo_label">एसोसिएशन का लोगो शामिल करें</string>
+    <string name="email_include_logo_description">ईमेल में अपने संगठन का लोगो जोड़ें</string>
+    <string name="email_logo_upload">लोगो अपलोड करें</string>
+    <string name="email_logo_change">लोगो बदलें</string>
+    <string name="email_logo_remove">लोगो हटाएँ</string>
+    <string name="email_logo_preview">लोगो पूर्वावलोकन</string>
+    <string name="email_settings_saved">ईमेल सेटिंग सहेजी गईं</string>
+    <string name="email_reset_to_defaults">डिफ़ॉल्ट पर रीसेट करें</string>
+    <string name="email_preview">ईमेल का पूर्वावलोकन करें</string>
+    
+    <!-- Gmail OAuth -->
+    <string name="email_gmail_auth_title">जीमेल एपीआई प्रमाणीकरण</string>
+    <string name="email_gmail_auth_description">जीमेल एपीआई के माध्यम से स्वचालित रूप से ईमेल भेजने के लिए अपने जीमेल खाते को कनेक्ट करें</string>
+    <string name="email_gmail_oauth_client_description">डेस्कटॉप को Gmail API सक्षम के साथ Google OAuth क्लाइंट JSON (डेस्कटॉप ऐप प्रकार) की आवश्यकता होती है। इसे Google क्लाउड कंसोल से डाउनलोड करें, फिर साइन इन करने से पहले इसे यहां अपलोड करें।</string>
+    <string name="email_gmail_oauth_client_upload">OAuth क्लाइंट JSON अपलोड करें</string>
+    <string name="email_gmail_oauth_client_configured">OAuth क्लाइंट कॉन्फ़िगर किया गया</string>
+    <string name="email_gmail_oauth_client_missing">OAuth क्लाइंट JSON गायब है - Google के साथ साइन इन करने से पहले इसे अपलोड करें</string>
+    <string name="email_gmail_use_service_account">Google शीट्स के समान सेवा खाते का उपयोग करें</string>
+    <string name="email_gmail_use_service_account_description">सिंक सेटिंग्स से सेवा खाता JSON का उपयोग करता है। Google Workspace पर Gmail API सक्षम और डोमेन-व्यापी प्रतिनिधिमंडल की आवश्यकता है।</string>
+    <string name="email_gmail_service_account_sender_label">प्रेषक का ईमेल पता</string>
+    <string name="email_gmail_service_account_sender_description">जीमेल या Google वर्कस्पेस पता जो सेवा खाते की ओर से ईमेल भेजता है।</string>
+    <string name="email_gmail_service_account_missing">सेवा खाता कुंजी गायब है - इसे पहले सिंक सेटिंग्स में अपलोड करें</string>
+    <string name="email_gmail_service_account_configured">सेवा खाता कुंजी मिली</string>
+    <string name="email_gmail_oauth_help_title">जीमेल एपीआई सहायता</string>
+    <string name="email_gmail_help_tab_oauth">OAuth क्लाइंट</string>
+    <string name="email_gmail_help_tab_service_account">सेवा खाता</string>
+    <string name="email_gmail_oauth_help_intro">डेस्कटॉप पर जीमेल एपीआई के माध्यम से ईमेल भेजने के लिए OAuth क्लाइंट JSON को प्राप्त करने और कॉन्फ़िगर करने के लिए इन चरणों का पालन करें।</string>
+    <string name="email_gmail_oauth_step_1_title">Google क्लाउड कंसोल खोलें</string>
+    <string name="email_gmail_oauth_step_1_description">console.cloud.google.com पर जाएं और अपना प्रोजेक्ट चुनें (या एक नया प्रोजेक्ट बनाएं)।</string>
+    <string name="email_gmail_oauth_step_2_title">जीमेल एपीआई सक्षम करें</string>
+    <string name="email_gmail_oauth_step_2_description">एपीआई में &amp; सेवाएं &gt; लाइब्रेरी, \"जीमेल एपीआई\" खोजें और इसे सक्षम करें।</string>
+    <string name="email_gmail_oauth_step_3_title">OAuth सहमति स्क्रीन कॉन्फ़िगर करें</string>
+    <string name="email_gmail_oauth_step_3_description">एपीआई &amp; सेवाएँ &gt; OAuth सहमति स्क्रीन में, आवश्यक फ़ील्ड भरें। यदि ऐप परीक्षण मोड में है, तो परीक्षण उपयोगकर्ता के रूप में अपना जीमेल पता जोड़ें।</string>
+    <string name="email_gmail_oauth_step_4_title">एक डेस्कटॉप OAuth क्लाइंट बनाएं</string>
+    <string name="email_gmail_oauth_step_4_description">एपीआई &amp; सेवाएँ &gt; क्रेडेंशियल्स में, क्रिएट क्रेडेंशियल्स &gt; OAuth क्लाइंट आईडी पर क्लिक करें। एप्लिकेशन प्रकार चुनें: डेस्कटॉप ऐप, फिर JSON फ़ाइल बनाएं और डाउनलोड करें।</string>
+    <string name="email_gmail_oauth_step_5_title">JSON फ़ाइल अपलोड करें</string>
+    <string name="email_gmail_oauth_step_5_description">डाउनलोड की गई फ़ाइल को आयात करने के लिए इन सेटिंग्स में \"अपलोड OAuth क्लाइंट JSON\" बटन का उपयोग करें।</string>
+    <string name="email_gmail_oauth_step_6_title">Google से साइन इन करें</string>
+    <string name="email_gmail_oauth_step_6_description">\"Google से साइन इन करें\" पर क्लिक करें। आपका ब्राउज़र NoctuList को अधिकृत करने के लिए खुलता है। अनुमोदन के बाद, ऐप को स्वचालित रूप से एक्सेस प्राप्त होता है (स्थानीय पोर्ट 8888, 8765 या 9090)।</string>
+    <string name="email_gmail_service_account_help_intro">जब \"Google शीट के समान सेवा खाते का उपयोग करें\" सक्षम हो, तो वास्तविक ईमेल पता दर्ज करें जिससे संदेश भेजा जाना चाहिए। सेवा खाता Google कार्यस्थान डोमेन-व्यापी प्रतिनिधिमंडल के माध्यम से इस मेलबॉक्स का प्रतिरूपण करता है।</string>
+    <string name="email_gmail_service_account_help_sender_title">क्या दर्ज करना है</string>
+    <string name="email_gmail_service_account_help_sender_body">दृश्यमान प्रेषण पता - आपके डोमेन पर एक जीमेल या Google वर्कस्पेस मेलबॉक्स, उदाहरण के लिए contact@your-association.org या no-reply@your-domain.org।</string>
+    <string name="email_gmail_service_account_help_not_title">प्रयोग न करें</string>
+    <string name="email_gmail_service_account_help_not_body">सेवा खाता ईमेल सिंक सेटिंग्स में दिखाया गया है (.iam.gserviceaccount.com पर समाप्त होता है)। वह पता केवल एपीआई प्रमाणीकरण के लिए है, भेजने के लिए नहीं।</string>
+    <string name="email_gmail_service_account_help_requirements_title">आवश्यकताएँ</string>
+    <string name="email_gmail_service_account_help_requirements_body">यह मोड केवल Google Workspace के साथ काम करता है (अकेले व्यक्तिगत @gmail.com खाते के साथ नहीं)। जीमेल एपीआई को उसी Google क्लाउड प्रोजेक्ट पर सक्षम किया जाना चाहिए, और डोमेन-व्यापी प्रतिनिधिमंडल को कॉन्फ़िगर किया जाना चाहिए।</string>
+    <string name="email_gmail_service_account_help_step_1_title">जीमेल एपीआई सक्षम करें</string>
+    <string name="email_gmail_service_account_help_step_1_description">Google क्लाउड कंसोल में, अपने सेवा खाते के समान प्रोजेक्ट पर जीमेल एपीआई सक्षम करें।</string>
+    <string name="email_gmail_service_account_help_step_2_title">डोमेन-व्यापी प्रतिनिधिमंडल कॉन्फ़िगर करें</string>
+    <string name="email_gmail_service_account_help_step_2_description">Google वर्कस्पेस एडमिन कंसोल में: सुरक्षा &gt; एपीआई नियंत्रण &gt; डोमेन-व्यापी प्रतिनिधिमंडल। https://www.googleapis.com/auth/gmail.send दायरे के साथ अपना सेवा खाता क्लाइंट आईडी जोड़ें</string>
+    <string name="email_gmail_service_account_help_step_3_title">प्रेषक का पता दर्ज करें</string>
+    <string name="email_gmail_service_account_help_step_3_description">ईमेल सेटिंग्स में, सेवा खाता टॉगल सक्षम करें, कार्यस्थान पता दर्ज करें जिसे ईमेल भेजना चाहिए, फिर सत्यापित करने के लिए Google के साथ साइन इन करें पर क्लिक करें।</string>
+    <string name="email_gmail_service_account_help_no_workspace">कोई Google कार्यस्थान नहीं? सेवा खाता टॉगल अक्षम करें और इसके बजाय OAuth क्लाइंट टैब का उपयोग करें।</string>
+    <string name="invalid_gmail_oauth_client_json">अमान्य Gmail OAuth क्लाइंट JSON. Google क्लाउड कंसोल से डेस्कटॉप OAuth क्लाइंट फ़ाइल का उपयोग करें।</string>
+    <string name="email_gmail_sign_in">Google से साइन इन करें</string>
+    <string name="email_gmail_sign_out">साइन आउट करें</string>
+    <string name="email_gmail_signed_in_as">इस रूप में साइन इन किया गया: %1$s</string>
+    <string name="email_gmail_not_signed_in">साइन इन नहीं है</string>
+    <string name="email_gmail_auth_success">जीमेल से सफलतापूर्वक प्रमाणित किया गया</string>
+    <string name="email_gmail_auth_error">जीमेल से प्रमाणित करने में विफल: %1$s</string>
+    <string name="email_gmail_auth_revoked">जीमेल एक्सेस निरस्त कर दिया गया</string>
+    
+    <!-- Email Send Dialog -->
+    <string name="email_confirm_send_title">ईमेल द्वारा QR कोड भेजें</string>
+    <string name="email_confirm_send_message">%1$s पर QR कोड भेजें?</string>
+    <string name="email_send_manual">मैन्युअल रूप से भेजें (HTML)</string>
+    <string name="email_send_api">जीमेल एपीआई के माध्यम से भेजें</string>
+    <string name="email_send_manual_description">HTML सामग्री और QR कोड अनुलग्नक के साथ ईमेल ऐप खोलें</string>
+    <string name="email_send_api_description">एम्बेडेड छवियों के साथ जीमेल एपीआई के माध्यम से स्वचालित रूप से भेजें</string>
+    <string name="email_no_email_title">कोई ईमेल पता नहीं</string>
+    <string name="email_no_email_message">इस स्वयंसेवक के पास कोई ईमेल पता नहीं है. कृपया पहले एक जोड़ें.</string>
+    <string name="email_no_email_guest_staff_message">इस अतिथि का फ़ाइल पर कोई ईमेल पता नहीं है। इस स्क्रीन से QR भेजने से पहले व्यवस्थापक को एक जोड़ना होगा।</string>
+    <string name="email_send">भेजें</string>
+    <string name="email_sending">भेजा जा रहा है...</string>
+    <string name="email_error_title">ईमेल त्रुटि</string>
+    <string name="email_error_message">ईमेल ऐप नहीं खुल सका: %1$s</string>
+    <string name="email_api_error_message">जीमेल एपीआई के माध्यम से ईमेल भेजने में विफल: %1$s</string>
+    <string name="email_api_success">जीमेल एपीआई के माध्यम से ईमेल सफलतापूर्वक भेजा गया</string>
+    <string name="email_api_not_authenticated">जीमेल एपीआई प्रमाणित नहीं है। कृपया पहले सेटिंग्स में साइन इन करें।</string>
+    <string name="email_open_settings">ईमेल कॉन्फ़िगर करें</string>
+    
+    <!-- Email HTML Template -->
+    <string name="email_html_header">आपका स्वयंसेवक क्यूआर कोड</string>
+    <string name="email_html_footer">यह ईमेल स्वचालित रूप से भेजा गया था. कृपया अपना क्यूआर कोड सुरक्षित रखें।</string>
+    <string name="email_qr_attachment_text">क्यूआर कोड\nसंलग्न</string>
+    <string name="email_qr_attachment_note">क्यूआर कोड अनुलग्नक के रूप में उपलब्ध है</string>
+    <string name="email_wallet_section_title">वॉलेट में जोड़ें</string>
+    <string name="email_wallet_section_description">आपका डिजिटल वॉलेट पास इस ईमेल के साथ संलग्न है। तेज़ चेक-इन के लिए इसे ऐप्पल वॉलेट या संगत एंड्रॉइड वॉलेट ऐप में सेव करें।</string>
+    <string name="email_wallet_section_compatibility">डिजिटल वॉलेट पास (.pkpass): ऐप्पल वॉलेट + संगत एंड्रॉइड ऐप्स।</string>
+    <string name="personal_information">व्यक्तिगत जानकारी</string>
+    <string name="name">नाम</string>
+    <string name="abbreviation">अंतिम नाम</string>
+    <string name="female">स्त्री</string>
+    <string name="male">पुरुष</string>
+    <string name="non_binary">गैर-बाइनरी</string>
+    <string name="other">अन्य</string>
+    <string name="prefer_not_to_disclose">खुलासा नहीं करना पसंद करते हैं</string>
+    <string name="not_specified">निर्दिष्ट नहीं</string>
+    <string name="birthday">जन्मदिन</string>
+    <string name="age">उम्र</string>
+    <string name="phone">फ़ोन</string>
+    <string name="volunteer_information">स्वयंसेवक सूचना</string>
+    <string name="current_rank">वर्तमान रैंक</string>
+    <string name="status">स्थिति:</string>
+    <string name="total_shifts">कुल बदलाव</string>
+    <string name="last_shift">अंतिम पाली</string>
+    <string name="shift_history">शिफ्ट इतिहास (%1$d शिफ्ट)</string>
+    <string name="no_shifts_recorded">कोई शिफ्ट रिकॉर्ड नहीं की गई</string>
+    <string name="actions">क्रियाएँ</string>
+    <string name="not_provided">प्रदान नहीं किया गया</string>
+    
+    <!-- Additional Volunteer Panel Strings -->
+    <string name="expired">समाप्त हो गया</string>
+    <string name="benefit_details">लाभ विवरण</string>
+    <string name="more_shifts">… और %1$d अधिक बदलाव</string>
+    <string name="years_old">%1$d वर्ष पुराना</string>
+    
+    <!-- Date & Time Format Settings -->
+    <string name="date_time_format_title">दिनांक &amp; समय प्रारूप</string>
+    <string name="date_time_format_description">चुनें कि दिनांक और समय पूरे ऐप में कैसे प्रदर्शित होते हैं</string>
+    <string name="date_format_dd_mm_yyyy">25/12/2025 (दिन/माह/वर्ष)</string>
+    <string name="date_format_mm_dd_yyyy">12/25/2025 (MM/dd/yyyy)</string>
+    <string name="date_format_yyyy_mm_dd">2025–12–25 (yyyy–MM–dd)</string>
+    <string name="time_format_hh_mm">14:30 (एचएच:मिमी)</string>
+    <string name="time_format_hh_mm_ss">14:30:45 (एचएच:मिमी:एसएस)</string>
+    <string name="time_format_hh_mm_ss_sss">14:30:45.123 (HH:mm:ss.SSS)</string>
+    <string name="date_change_offset_title">दिनांक परिवर्तन ऑफसेट</string>
+    <string name="date_change_offset_description">दिनांक बदलने से पहले जोड़ने के लिए घंटे (उदाहरण के लिए, +3 घंटे = 03:00)। लाभ एवं परिवर्तन मध्यरात्रि के स्थान पर इस समय तक रहेंगे।</string>
+    <string name="date_change_offset_hours">%1$d घंटे</string>
+    <string name="date_change_offset_zero">0 घंटे (आधी रात)</string>
+    <string name="date_change_offset_time">%1$s</string>
+    <string name="date_change_offset_previous_day">%1$s पिछला दिन</string>
+    <string name="date_change_offset_increase">घंटे बढ़ाएँ</string>
+    <string name="date_change_offset_decrease">घंटे कम करें</string>
+    <string name="dashboard_calculation_time_info">गणना समय: %1$s (दिनांक परिवर्तन ऑफसेट: %2$s)</string>
+    <string name="dashboard_date_offset_hours">%1$s एच</string>
+    <string name="dashboard_date_offset_zero">0 बजे (आधी रात)</string>
+    
+    <!-- Multiple Benefits -->
+    <string name="active_benefits_multiple_ranks">एकाधिक रैंक से सक्रिय लाभ:</string>
+    
+    <!-- People Counter -->
+    <string name="people_counter_title">लोग काउंटर</string>
+    <string name="people_counter_hint">अतिथि उपस्थिति को ट्रैक करें</string>
+    <string name="people_counter_hint_tap_plus_minus">गिनती समायोजित करने के लिए +/- टैप करें</string>
+    <string name="people_counter_hint_long_press">लंबे समय तक दबाएं ±10 लोग</string>
+    <string name="people_counter_reset">काउंटर रीसेट करें</string>
+    <string name="people_counter_priority">प्राथमिकता</string>
+    <string name="people_counter_sheet_synced">काउंटर अंतिम बार अद्यतन किया गया</string>
+    <string name="people_counter_priority_lost">किसी अन्य डिवाइस को प्राथमिकता दी गई है. आपका बंद कर दिया गया था. इस डिवाइस को अपने हाथ में लेने के लिए प्रायोरिटी स्विच को 3 सेकंड के लिए दबाकर रखें।</string>
+    <string name="people_counter_another_device">इस स्थल के लिए किसी अन्य उपकरण को पहले से ही प्राथमिकता दी गई है। इस डिवाइस को अपने हाथ में लेने के लिए प्रायोरिटी स्विच को 3 सेकंड के लिए दबाकर रखें।</string>
+    <string name="people_counter_no_sheet_row">इस स्थल पर अभी तक कोई शीट पंक्ति नहीं है. सेटिंग्स से स्थानों को सिंक करें।</string>
+    <string name="people_counter_need_sheets">काउंटर को नियंत्रित करने से पहले Google शीट कनेक्ट करें।</string>
+    <string name="people_counter_select_venue">स्थान लोड होने के बाद एक स्थान का चयन करें।</string>
+    <string name="people_counter_no_venues">काउंटर का उपयोग करने के लिए सेटिंग्स में सक्रिय स्थान जोड़ें।</string>
+    
+    <!-- QR Code Scanner -->
+    <string name="camera_not_available">इस डिवाइस पर कैमरा हार्डवेयर उपलब्ध नहीं है या काम नहीं कर रहा है</string>
+    
+    <!-- Statistics and Graphs Labels -->
+    <string name="terreau_average">टेरेउ औसत</string>
+    <string name="groove_average">नाली औसत</string>
+    <string name="total_average">कुल औसत</string>
+    <string name="guest_metrics">अतिथि मेट्रिक्स</string>
+    <string name="invitations">निमंत्रण</string>
+    <string name="volunteers">स्वयंसेवक</string>
+    <string name="permanent_guests">स्थायी अतिथि</string>
+    <string name="count">गिनती</string>
+    <string name="shift_statistics">शिफ्ट सांख्यिकी</string>
+    <string name="guest_list_statistics">अतिथि सूची सांख्यिकी</string>
+    <string name="free_drinks_statistics">निःशुल्क पेय सांख्यिकी</string>
+    <string name="free_drinks">मुफ़्त पेय</string>
+    
+    <!-- Graph Descriptions -->
+    <string name="active_volunteers_description">पिछले वर्ष के प्रत्येक समय में शिफ्ट होने वाले स्वयंसेवकों की संख्या</string>
+    <string name="active_volunteers_graph_description">दिखाता है कि प्रत्येक तिथि पर कितने स्वयंसेवकों को सक्रिय माना गया (पिछले वर्ष के भीतर एक बदलाव था)।</string>
+    <string name="shift_statistics_description">स्थल के अनुसार समय के साथ स्वयंसेवकों द्वारा पूरी की गई शिफ्टों की संख्या</string>
+    <string name="venue_shifts_description">समय के साथ %1$s पर पूरी की गई शिफ्टों की संख्या</string>
+    <string name="total_shifts_description">समय के साथ सभी स्थानों पर पूरी की गई शिफ्टों की कुल संख्या</string>
+    <string name="guest_list_statistics_description">अतिथि सूची के आँकड़े पहुँच वाले स्वयंसेवकों और उनके उपलब्ध निमंत्रणों को दर्शाते हैं</string>
+    <string name="volunteer_guests_description">स्वयंसेवकों की संख्या जिनके पास प्रत्येक समय पर अतिथि सूची तक पहुंच थी</string>
+    <string name="volunteer_invites_description">आमंत्रणों की कुल संख्या जो अतिथि सूची पहुंच वाले स्वयंसेवक प्रत्येक समय पर दे सकते हैं</string>
+    <string name="total_guests_description">प्रत्येक समय पर अतिथि सूची में लोगों की कुल संख्या (पहुँच वाले स्वयंसेवक + उनके उपलब्ध निमंत्रण)।</string>
+    <string name="free_drinks_statistics_description">समय के साथ उपलब्ध निःशुल्क पेय की संख्या</string>
+    <string name="gender_parity">लिंग समानता</string>
+    <string name="gender_parity_description">सक्रिय स्वयंसेवकों के बीच लिंग का वितरण</string>
+    <string name="gender_distribution">लिंग वितरण</string>
+    <string name="unspecified">अनिर्दिष्ट</string>
+    <string name="no_gender_data">कोई लिंग डेटा उपलब्ध नहीं है</string>
+    <string name="age_distribution">आयु वितरण</string>
+    <string name="age_distribution_description">सक्रिय स्वयंसेवकों के बीच आयु का वितरण</string>
+    <string name="age_distribution_title">आयु वितरण</string>
+    <string name="age_under_18">18 वर्ष से कम आयु</string>
+    <string name="age_18_20">18-20 साल का</string>
+    <string name="age_21_23">21-23 साल की</string>
+    <string name="age_24_26">24-26 साल का</string>
+    <string name="age_27_30">27-30 साल का</string>
+    <string name="age_over_31">31 वर्ष से अधिक उम्र</string>
+    <string name="age_unknown">अज्ञात उम्र</string>
+    <string name="no_age_data">सक्रिय स्वयंसेवकों के लिए कोई आयु डेटा उपलब्ध नहीं है</string>
+    <string name="not_enough_data">पर्याप्त डेटा नहीं</string>
+    <string name="total">कुल</string>
+    
+    <!-- Sync Error Messages -->
+    <string name="sync_error_title">⚠️ समन्वयन त्रुटि</string>
+    <string name="sync_error_occurred">सिंक्रनाइज़ेशन के दौरान कोई त्रुटि उत्पन्न हुई</string>
+    <string name="sync_not_synced_title">ऐप सिंक नहीं हुआ</string>
+    <string name="sync_not_synced_message">एप्लिकेशन अब सिंक्रनाइज़ नहीं है. कृपया अपना डेटा अपडेट करने के लिए रीसिंक बटन का उपयोग करें।</string>
+    <string name="sync_error_details">त्रुटि: %1$s</string>
+    <string name="sync_error_retry">पुनः समन्वयन का प्रयास करें</string>
+    <string name="sync_error_dismiss">ख़ारिज करें</string>
+    <string name="sync_error_dont_tell_today">आज मुझे दोबारा मत बताना</string>
+    
+    <!-- Device Time/Date Error -->
+    <string name="sync_error_device_time_title">⏰ डिवाइस का समय/दिनांक गलत</string>
+    <string name="sync_error_device_time_message">आपके डिवाइस का समय या दिनांक ग़लत है. Google शीट्स एपीआई को ठीक से काम करने के लिए सटीक समय सिंक्रनाइज़ेशन की आवश्यकता होती है।</string>
+    <string name="sync_error_device_time_solution">कैसे ठीक करें:\n\n1. सेटिंग्स में जाएं\n2. तलाश करो \"तारीख &amp; समय\" या \"प्रणाली\"\n3. सक्षम करें \"स्वचालित तिथि &amp; समय\" या \"स्वचालित रूप से समय निर्धारित करें\"\n4. यदि उपलब्ध नहीं है, तो मैन्युअल रूप से सही तिथि और समय निर्धारित करें\n5. ऐप को पुनरारंभ करें और फिर से सिंक करने का प्रयास करें\n\nपुराने टैबलेट पर सामान्य - कृपया अपनी डिवाइस सेटिंग जांचें!</string>
+    <string name="sync_error_device_time_open_settings">सेटिंग्स खोलें</string>
+    
+    <!-- Sleep/Resume Sync Warning -->
+    <string name="sync_warning_sleep_resume_title">⚠️ ऐप सिंक नहीं हुआ</string>
+    <string name="sync_warning_sleep_resume_message">ऐप अब सिंक नहीं है. कृपया नीचे दिए गए रीसिंक बटन को दबाकर इसे सिंक करें।</string>
+    <string name="sync_error_sleep_resume_detail">📱 आपका उपकरण निष्क्रिय था, इसलिए एक नए सिंक की आवश्यकता है। पेज के नीचे रीसिंक बटन दबाएँ।</string>
+    
+    <!-- Specific Sync Error Types -->
+    <string name="sync_error_rate_limit">दर सीमा पार हो गई. कृपया दोबारा प्रयास करने से पहले 1-2 मिनट प्रतीक्षा करें।</string>
+    <string name="sync_error_authentication">प्रमाणीकरण विफल रहा. कृपया अपना Google शीट कॉन्फ़िगरेशन जांचें।</string>
+    <string name="sync_error_permission">अनुमति नहीं मिली। सुनिश्चित करें कि आपके सेवा खाते के पास स्प्रेडशीट तक संपादक की पहुंच है।</string>
+    <string name="sync_error_network">नेटवर्क त्रुटि. कृपया अपने इंटरनेट कनेक्शन की जाँच करें।</string>
+    <string name="sync_error_invalid_config">अमान्य कॉन्फ़िगरेशन. कृपया अपनी सेटिंग जांचें.</string>
+    <string name="sync_error_spreadsheet_not_found">स्प्रेडशीट नहीं मिली. कृपया स्प्रेडशीट आईडी जांचें।</string>
+    <string name="sync_error_sheet_not_found">शीट नहीं मिली. कृपया अपने कॉन्फ़िगरेशन में शीट नामों की जाँच करें।</string>
+    <string name="sync_error_invalid_data">अमान्य डेटा प्रारूप. कृपया अपनी Google शीट संरचना की जाँच करें।</string>
+    <string name="sync_error_unknown">एक अज्ञात त्रुटि उत्पन्न हुई. कृपया बाद में पुन: प्रयास करें।</string>
+    
+    <!-- Full Sync Errors -->
+    <string name="sync_error_full_sync_failed">पूर्ण समन्वयन विफल</string>
+    <string name="sync_error_page_change_failed">पृष्ठ परिवर्तन समन्वयन विफल</string>
+    <string name="sync_error_volunteer_sync_failed">स्वयंसेवक सिंक विफल रहा</string>
+    <string name="sync_error_guest_sync_failed">अतिथि समन्वयन विफल</string>
+    <string name="sync_error_job_sync_failed">कार्य समन्वयन विफल</string>
+    <string name="sync_error_job_type_sync_failed">कार्य प्रकार समन्वयन विफल</string>
+    <string name="sync_error_venue_sync_failed">स्थान समन्वयन विफल</string>
+    <string name="sync_error_backup_failed">बैकअप विफल रहा</string>
+    
+    <!-- Sync Success Messages -->
+    <string name="sync_success_title">सिंक सफल</string>
+    <string name="sync_success_message">सिंक्रोनाइज़ेशन सफलतापूर्वक पूरा हुआ</string>
+    <string name="sync_retrying">सिंक्रनाइज़ेशन का पुनः प्रयास किया जा रहा है...</string>
+    
+    <!-- Sync Error Dialog Labels -->
+    <string name="sync_error_details_label">त्रुटि विवरण:</string>
+    <string name="sync_error_what_to_do">💡क्या करें:</string>
+    
+    <!-- Sync Error Advice Messages -->
+    <string name="sync_advice_rate_limit">• पुनः प्रयास करने से पहले 1-2 मिनट प्रतीक्षा करें\n• ऐप स्वचालित रूप से बैकऑफ़ के साथ पुनः प्रयास करेगा\n• सेटिंग्स में सिंक आवृत्ति को कम करने पर विचार करें</string>
+    <string name="sync_advice_authentication">• अपनी सेवा खाता कुंजी फ़ाइल जांचें\n• सत्यापित करें कि कुंजी सेटिंग्स में अपलोड की गई है\n• यदि आवश्यक हो तो कुंजी पुनः अपलोड करें</string>
+    <string name="sync_advice_permission">• अपनी स्प्रेडशीट को सेवा खाते के ईमेल के साथ साझा करें\n• संपादक को सेवा खाते तक पहुंच प्रदान करें\n• अपनी सेवा कुंजी फ़ाइल में खाता ईमेल की जांच करें</string>
+    <string name="sync_advice_network">• अपना इंटरनेट कनेक्शन जांचें\n• सत्यापित करें कि वाई-फाई या मोबाइल डेटा सक्षम है\n• कनेक्शन स्थिर होने पर पुनः प्रयास करें\n• सुनिश्चित करें कि आप हवाई जहाज मोड में नहीं हैं</string>
+    <string name="sync_advice_not_found">• सेटिंग्स में स्प्रेडशीट आईडी की जांच करें\n• सत्यापित करें कि शीट नाम मौजूद हैं\n• सुनिश्चित करें कि स्प्रेडशीट पहुंच योग्य है</string>
+    <string name="sync_advice_generic">• फिर से सिंक करने का प्रयास करें\n• अपनी Google शीट सेटिंग्स जांचें\n• अपनी कॉन्फ़िगरेशन सत्यापित करने के लिए सेटिंग्स पर जाएं</string>
+
+    <!-- Seasonal Fun -->
+    <string name="seasonal_fun_title">मौसमी मज़ा</string>
+    <string name="seasonal_fun_description">विशेष मौसमी सुविधाएँ और सजावट सक्षम करें</string>
+    
+    <!-- Settings Categories -->
+    <string name="settings_category_sync">सिंक &amp; डेटा</string>
+    <string name="settings_category_appearance">उपस्थिति &amp; प्रदर्शन</string>
+    <string name="settings_category_localization">स्थानीयकरण</string>
+    <string name="settings_category_animations">एनिमेशन &amp; प्रभाव</string>
+    <string name="settings_category_developer">डेवलपर &amp; डीबग</string>
+    <string name="settings_category_maintenance">रख-रखाव</string>
+    
+    <!-- App Icon Settings -->
+    <string name="app_icon_title">ऐप आइकन</string>
+    <string name="app_icon_description">अपनी पसंदीदा आइकन शैली चुनें</string>
+    <string name="app_icon_white">सफ़ेद</string>
+    <string name="app_icon_black">काला</string>
+    <string name="app_icon_brown">भूरा</string>
+    <string name="app_icon_creme_black">क्रीम &amp; काला</string>
+    <string name="app_icon_dark_blue">गहरा नीला</string>
+    <string name="app_icon_dark_legacy">डार्क लिगेसी</string>
+    <string name="app_icon_dark_turquoise">गहरा फ़िरोज़ा</string>
+    <string name="app_icon_dark_violet">गहरा बैंगनी</string>
+    <string name="app_icon_light_blue">हल्का नीला</string>
+    <string name="app_icon_light_legacy">हल्की विरासत</string>
+    <string name="app_icon_light_violet">हल्का बैंगनी</string>
+    <string name="app_icon_orange">नारंगी</string>
+    <string name="app_icon_pink">गुलाबी</string>
+    <string name="app_icon_selected">✓ चयनित</string>
+    <string name="app_icon_auto_adapt_title">सिस्टम थीम पर आधारित ऑटो-एडाप्ट आइकन</string>
+    <string name="app_icon_auto_adapt_description">आपके सिस्टम थीम के आधार पर प्रकाश और अंधेरे आइकन के बीच स्वचालित रूप से स्विच करें</string>
+    <string name="app_icon_white_applied">सफ़ेद आइकन लागू किया गया.</string>
+    <string name="app_icon_black_applied">काला चिह्न लागू किया गया.</string>
+    <string name="app_icon_brown_applied">भूरा आइकन लागू किया गया.</string>
+    <string name="app_icon_creme_black_applied">क्रीम &amp; काला आइकन लागू।</string>
+    <string name="app_icon_dark_blue_applied">गहरा नीला आइकन लागू किया गया.</string>
+    <string name="app_icon_dark_legacy_applied">डार्क लिगेसी आइकन लागू किया गया.</string>
+    <string name="app_icon_dark_turquoise_applied">गहरा फ़िरोज़ा आइकन लागू किया गया.</string>
+    <string name="app_icon_dark_violet_applied">गहरा बैंगनी चिह्न लागू किया गया.</string>
+    <string name="app_icon_light_blue_applied">हल्का नीला आइकन लागू किया गया.</string>
+    <string name="app_icon_light_legacy_applied">लाइट लिगेसी आइकन लागू किया गया.</string>
+    <string name="app_icon_light_violet_applied">हल्का बैंगनी आइकन लागू किया गया.</string>
+    <string name="app_icon_orange_applied">नारंगी आइकन लागू किया गया.</string>
+    <string name="app_icon_pink_applied">गुलाबी चिह्न लागू किया गया.</string>
+    <string name="app_icon_auto_adapt_enabled">स्वतः-अनुकूलन सक्षम। सिस्टम थीम के आधार पर आइकन अपडेट हो जाएगा.</string>
+    <string name="app_icon_restart_title">ऐप पुनः प्रारंभ करें</string>
+    <string name="app_icon_restart_message">आइकन परिवर्तन को प्रभावी बनाने के लिए कृपया ऐप को पुनरारंभ करें।</string>
+    <string name="app_icon_restart_now">अभी पुनः प्रारंभ करें</string>
+    <string name="app_icon_restart_later">बाद में</string>
+    
+    <!-- Graph Export -->
+    <string name="exporting">निर्यात हो रहा है...</string>
+    <string name="export_graph">निर्यात ग्राफ़</string>
+    <string name="choose_export_format">निर्यात प्रारूप चुनें:</string>
+    <string name="export_as_xlsx">XLSX के रूप में निर्यात करें</string>
+    <string name="export_xlsx_description">सभी डेटा और ग्राफ़ शामिल हैं</string>
+    <string name="export_as_jpg">JPG के रूप में निर्यात करें</string>
+    <string name="export_jpg_description">केवल ग्राफ़ छवि</string>
+    <string name="export_complete">निर्यात पूर्ण</string>
+    <string name="xlsx_export_complete">XLSX निर्यात पूर्ण</string>
+    <string name="xlsx_export_success_message">आपकी स्प्रैडशीट सफलतापूर्वक बनाई गई है और साझा करने के लिए तैयार है</string>
+    <string name="file_name">फ़ाइल का नाम</string>
+    <string name="file_size">साइज़: %1$s</string>
+    <string name="graph_preview">ग्राफ़ पूर्वावलोकन</string>
+    <string name="share_graph">ग्राफ़ साझा करें</string>
+    
+    <!-- POS Accounting PDF Report -->
+    <string name="pos_report_title">POS accounting report</string>
+    <string name="pos_report_entry_title">POS accounting PDF</string>
+    <string name="pos_report_entry_subtitle">Evening or period breakdown for accounting (sales, transfers, adjustments)</string>
+    <string name="pos_report_mode_evening">Single evening</string>
+    <string name="pos_report_mode_period">Date range</string>
+    <string name="pos_report_select_date">Evening date</string>
+    <string name="pos_report_period_start">Start date</string>
+    <string name="pos_report_period_end">End date</string>
+    <string name="pos_report_closure_time">Closure time</string>
+    <string name="pos_report_closure_override">Override closure for this report only</string>
+    <string name="pos_report_evening_help">Evening of %1$s · closure at %2$s\nPeriod: %3$s</string>
+    <string name="pos_report_period_help">Period: %1$s</string>
+    <string name="pos_report_preview_transfers">%1$d transfers (%2$d POS sales)</string>
+    <string name="pos_report_preview_cash">Cash/card collected: %1$s</string>
+    <string name="pos_report_preview_credit">Internal credit used: %1$s</string>
+    <string name="pos_report_generate">Generate PDF</string>
+    <string name="pos_report_generating">Generating PDF…</string>
+    <string name="pos_report_preview_title">Report ready</string>
+    <string name="pos_report_preview_summary">%1$d POS sales · %2$s cash/card · %3$d transfers total</string>
+    <string name="pos_report_share">Share report</string>
+    <string name="pos_report_open">Open report</string>
+    <string name="pos_report_file_size">Size</string>
+    <string name="pos_report_venue_scope_all">Total (all venues)</string>
+    <string name="pos_report_venue_scope_global">Global</string>
+    <string name="pos_report_venue_label">Venue</string>
+    <string name="pos_venue_global">Global</string>
+    <string name="pos_venue_selector_label">Sales venue</string>
+    <string name="pos_venue_current">Current venue: %1$s</string>
+    <string name="sales_item_venues_label">Sales venues</string>
+    <string name="sales_item_venues_hint">Select where this item is available for POS sales.</string>
+    <string name="pos_report_preview_period">Period covered</string>
+    <string name="pos_report_save_as">Save as…</string>
+
+    <string name="open_with">के साथ खोलें</string>
+    <string name="active_volunteers_graph">सक्रिय स्वयंसेवकों का ग्राफ़</string>
+    
+    <!-- Tablet-specific strings (also in default locale for lint) -->
+    <string name="tablet_optimized">टेबलेट देखने के लिए अनुकूलित</string>
+    <string name="large_screen_experience">बड़ी स्क्रीन के लिए बेहतर अनुभव</string>
+    <string name="nav_dashboard_tablet">डैशबोर्ड अवलोकन</string>
+    <string name="nav_guests_tablet">अतिथि सूची प्रबंधन</string>
+    <string name="nav_volunteers_tablet">स्वयंसेवी प्रबंधन</string>
+    <string name="nav_shifts_tablet">शिफ्ट ट्रैकिंग</string>
+    <string name="nav_benefits_tablet">लाभ अवलोकन</string>
+    <string name="nav_settings_tablet">सेटिंग्स &amp; कॉन्फ़िगरेशन</string>
+    <string name="volunteer_manager_tablet">व्यापक स्वयंसेवक प्रबंधन प्रणाली</string>
+    <string name="guest_list_management_tablet">सभी कॉन्फ़िगर स्थानों पर अतिथि सूची प्रबंधन पूरा करें</string>
+    <string name="volunteer_benefits_overview_tablet">विस्तृत स्वयंसेवक लाभ और स्थिति ट्रैकिंग</string>
+    <string name="shift_tracking_tablet">पूर्ण शिफ्ट ट्रैकिंग और कार्य प्रबंधन</string>
+    <string name="shield_optimized">NVIDIA शील्ड टैबलेट के लिए अनुकूलित</string>
+    <string name="enhanced_touch_targets">बेहतर इंटरैक्शन के लिए उन्नत स्पर्श लक्ष्य</string>
+    
+    <!-- Easter Egg Games -->
+    <string name="easter_egg_hextris">Hextris</string>
+    <string name="easter_egg_pizza_undelivery">Pizza Undelivery</string>
+    <string name="easter_egg_scroll">Scroll!</string>
+    <string name="easter_egg_wendol_village">Wendol Village</string>
+    <string name="easter_egg_catculus">Catculus</string>
+    <string name="arcade_title">★ आर्केड ★</string>
+    <string name="arcade_subtitle">▶ मज़ा डालें ◀</string>
+    <string name="arcade_pick_game">एक गेम चुनें!</string>
+    <string name="arcade_credits_title">★ निर्माता क्रेडिट ★</string>
+    <string name="arcade_exit">[ईएससी] बाहर निकलें</string>
+    <string name="arcade_credit_wendol_village">Wendol Village — a js13kGames 2024 game by @sanojian.</string>
+    <string name="arcade_credit_scroll">👆Scroll! — TypeScript game using Web Components for JS13K. © 2019 Zeev Katz. All rights reserved.</string>
+    <string name="arcade_credit_hextris">Hextris — An addictive puzzle game inspired by Tetris. hextris.io · By Logan Engstrom, Garrett Finucane, Noah Moroze &amp; Michael Yang.</string>
+    <string name="arcade_credit_pizza_undelivery">Pizza Undelivery — A game made for the 2019 js13kGames competition. nilsgawlik.github.io/js13k2019/ · @nikigawlik</string>
+    <string name="arcade_credit_catculus">Catculus — a js13kGames 2025 game by @anttihaavikko.</string>
+    
+    <!-- Entry Validation -->
+    <string name="validate_entry">प्रविष्टि मान्य करें</string>
+    <string name="validate_entry_description">इस स्वयंसेवक को शाम की पाली का आनंद नहीं लेने से अप्रयुक्त निःशुल्क प्रवेश लाभ मिलता है। उनकी प्रविष्टि की पुष्टि करने के लिए स्लाइड करें।</string>
+    <string name="validate_entry_description_one_future">इस स्वयंसेवक के पास भविष्य की एक ईवेंट प्रविष्टि शेष है (एकल उपयोग)। इस प्रविष्टि की पुष्टि करने के लिए स्लाइड करें।</string>
+    <string name="validate_entry_description_n_remaining">इस स्वयंसेवक के पास %1$d भविष्य की घटना प्रविष्टियाँ शेष हैं (एकल उपयोग)। एक प्रविष्टि की पुष्टि करने के लिए स्लाइड करें।</string>
+    <string name="validate_entry_description_with_invites">स्वयंसेवक के लिए प्रवेश + %1$d अतिथि। पुष्टि करने के लिए स्लाइड करें.</string>
+    <string name="validate_entry_description_solo">एकल प्रवेश (कोई अतिथि नहीं)। पुष्टि करने के लिए स्लाइड करें.</string>
+    <string name="slide_to_confirm">प्रविष्टि की पुष्टि के लिए स्लाइड करें</string>
+    <string name="future_entry_group_label_invites">%1$d प्रविष्टि बाएँ (+%2$d आमंत्रण)</string>
+    <string name="future_entries_group_label_invites">%1$d प्रविष्टियाँ शेष (+%2$d आमंत्रण)</string>
+    <string name="future_entry_group_label_solo">%1$d प्रविष्टि बाएँ (एकल)</string>
+    <string name="future_entries_group_label_solo">%1$d प्रविष्टियाँ शेष (एकल)</string>
+    
+    <!-- Activity Status -->
+    <string name="activity_status_never_worked">कभी काम नहीं किया</string>
+    <string name="activity_status_active_today">सक्रिय (आज)</string>
+    <string name="activity_status_active_days_ago">सक्रिय (%1$d दिन पहले)</string>
+    <string name="activity_status_active_months_ago">सक्रिय (%1$d महीने पहले)</string>
+    <string name="activity_status_inactive_years_ago">निष्क्रिय (%1$d वर्ष पहले)</string>
+    <string name="legend_badge_label">किंवदंती</string>
+
+    <!-- Billeterie Scanner -->
+    <string name="billeterie_scanner_tap_to_activate">कैमरा सक्रिय करने के लिए टैप करें</string>
+    <string name="billeterie_scanner_tap_to_pause">रोकने के लिए टैप करें</string>
+    <string name="billeterie_scanner_entry_approved">प्रवेश स्वीकृत</string>
+    <string name="billeterie_scanner_entry_validated">प्रवेश मान्य!</string>
+    <string name="billeterie_scanner_scan_next">अगला स्कैन करें</string>
+    <string name="billeterie_scanner_no_entry">कोई प्रवेश नहीं</string>
+    <string name="billeterie_scanner_no_benefits">इस व्यक्ति को प्रवेश लाभ नहीं है</string>
+    <string name="billeterie_scanner_guest_found">अतिथि मिला</string>
+    <string name="billeterie_scanner_validate_ticket">मान्य टिकट</string>
+    <string name="billeterie_scanner_ready">स्कैन करने के लिए तैयार...</string>
+    <string name="billeterie_scanner_with_invites">+%1$d निमंत्रण</string>
+    <string name="billeterie_scanner_error">त्रुटि</string>
+    <string name="desktop_billeterie_webcam_section">क्यूआर कोड (वेबकैम)</string>
+    <string name="desktop_billeterie_nfc_section">एनएफसी कार्ड रीडर</string>
+    <string name="desktop_billeterie_nfc_connected">रीडर कनेक्ट - स्कैन करने के लिए तैयार</string>
+    <string name="desktop_billeterie_nfc_disconnected">कोई एनएफसी रीडर नहीं मिला - सेटिंग्स में यूएसबी या ब्लूटूथ रीडर कनेक्ट करें</string>
+    <string name="desktop_billeterie_nfc_reading">कार्ड पढ़ना...</string>
+    <string name="desktop_billeterie_scan_next_shortcut">अगले व्यक्ति को स्कैन करने के लिए ↵ दर्ज करें</string>
+    <string name="desktop_billeterie_camera_stop">वेबकैम बंद करो</string>
+    <string name="desktop_qr_start_webcam">वेबकैम प्रारंभ करें</string>
+    <string name="desktop_qr_open_image">QR छवि खोलें…</string>
+    <string name="desktop_qr_opening_camera">कैमरा खुल रहा है...</string>
+    <string name="desktop_qr_point_at_code">क्यूआर कोड को कैमरे की ओर इंगित करें</string>
+    <string name="desktop_qr_opening_file_picker">एक छवि फ़ाइल चुनें...</string>
+    <string name="desktop_qr_no_webcam_mac">कोई वेबकैम नहीं मिला. सिस्टम सेटिंग्स में कैमरा एक्सेस प्रदान करें, या एक क्यूआर छवि फ़ाइल खोलें।</string>
+    <string name="desktop_qr_no_webcam_linux">कोई वेबकैम नहीं मिला. कैमरा अनुमतियाँ (V4L2/पाइपवायर) जाँचें और देखें कि आप वीडियो समूह में हैं, या एक QR छवि फ़ाइल खोलें।</string>
+    <string name="desktop_qr_no_webcam_generic">कोई वेबकैम नहीं मिला. कैमरा अनुमतियाँ जाँचें, या QR छवि फ़ाइल खोलें।</string>
+    <string name="desktop_qr_no_frames">कैमरा खुला लेकिन कोई वीडियो फ़्रेम प्राप्त नहीं हुआ। कैमरा अनुमतियाँ जांचें.</string>
+
+    <!-- Admin Setup (first admin creation) -->
+    <string name="admin_setup_title">पहला एडमिन बनाएं</string>
+    <string name="admin_setup_description">अभी तक कोई व्यवस्थापक मौजूद नहीं है. ऐप को प्रबंधित करने के लिए पहला एडमिन बनाएं.</string>
+    <string name="admin_setup_type_title">व्यवस्थापक प्रकार</string>
+    <string name="admin_setup_type_description">क्या आप पहले व्यवस्थापक को स्थायी अतिथि के रूप में या स्वयंसेवक के रूप में जोड़ना चाहेंगे?</string>
+    <string name="admin_setup_type_guest">स्थायी अतिथि</string>
+    <string name="admin_setup_type_guest_desc">व्यवस्थापकीय विशेषाधिकारों के साथ एक अतिथि जोड़ें</string>
+    <string name="admin_setup_type_volunteer">स्वयंसेवक</string>
+    <string name="admin_setup_type_volunteer_desc">व्यवस्थापकीय विशेषाधिकारों के साथ एक स्वयंसेवक जोड़ें</string>
+    <string name="admin_setup_create_guest_title">एडमिन गेस्ट बनाएं</string>
+    <string name="admin_setup_create_guest_desc">नए व्यवस्थापक अतिथि के लिए विवरण भरें</string>
+    <string name="admin_setup_create_volunteer_title">एडमिन वालंटियर बनाएं</string>
+    <string name="admin_setup_create_volunteer_desc">नए व्यवस्थापक स्वयंसेवक के लिए विवरण भरें</string>
+    <string name="admin_setup_access_title">आप कैसे साइन इन करेंगे?</string>
+    <string name="admin_setup_access_desc">आप प्रथम व्यवस्थापक के रूप में कैसे लॉग इन करना चाहेंगे?</string>
+    <string name="admin_setup_access_explained">नीचे एक विकल्प चुनें।\n\n• क्यूआर कोड - एक कोड दिखाता है जिसे आप स्वागत स्क्रीन से स्कैन करते हैं। किसी अन्य आयोजक या फोन के साथ साझा करने के लिए अच्छा है।\n\n• एनएफसी कार्ड - त्वरित व्यवस्थापक पहुंच के लिए इस डिवाइस पर आपके द्वारा टैप किए गए कार्ड या टैग को लिंक करता है।</string>
+    <string name="admin_setup_created_line">%1$s को प्रशासक के रूप में जोड़ा गया।</string>
+    <string name="admin_setup_done_title">आप पूरी तरह तैयार हैं</string>
+    <string name="admin_setup_done_message">%1$s आपके द्वारा चुने गए विकल्प का उपयोग करके स्वागत स्क्रीन से एडमिन मोड खोल सकते हैं। आप बाद में ऐप में तरीके जोड़ या बदल सकते हैं।</string>
+    <string name="admin_setup_btn_skip">छोड़ें</string>
+    <string name="admin_setup_btn_qr">क्यूआर कोड</string>
+    <string name="admin_setup_btn_nfc">एनएफसी कार्ड</string>
+    <string name="admin_setup_nfc_linked_title">एनएफसी जुड़ा हुआ</string>
+    <string name="admin_setup_use_qr">क्यूआर कोड का प्रयोग करें</string>
+    <string name="admin_setup_use_qr_desc">व्यवस्थापक लॉगिन के लिए एक QR कोड बनाएं और साझा करें</string>
+    <string name="admin_setup_use_nfc">एनएफसी कार्ड जोड़ें</string>
+    <string name="admin_setup_use_nfc_desc">व्यवस्थापक लॉगिन के लिए एक एनएफसी कार्ड निर्दिष्ट करें</string>
+    <string name="admin_setup_creating">व्यवस्थापक बनाया जा रहा है…</string>
+    <string name="admin_setup_success">व्यवस्थापक सफलतापूर्वक बनाया गया!</string>
+    <string name="admin_setup_error">व्यवस्थापक बनाने में विफल: %1$s</string>
+    <string name="admin_setup_qr_title">व्यवस्थापक क्यूआर कोड</string>
+    <string name="admin_setup_qr_description">व्यवस्थापक लॉगिन के लिए उपयोग करने के लिए इस QR कोड को साझा करें। आप इसे नीचे दिए गए बटन के माध्यम से साझा कर सकते हैं या मैन्युअल रूप से ईमेल दर्ज कर सकते हैं।</string>
+    <string name="admin_setup_nfc_assigned">एनएफसी कार्ड सौंपा गया! अब आप इस कार्ड का उपयोग एडमिन लॉगइन के लिए कर सकते हैं।</string>
+    <string name="admin_setup_done">हो गया</string>
+    <string name="admin_setup_skip">अभी के लिए छोड़ें</string>
+    <string name="admin_setup_no_admin_warning">चेतावनी: व्यवस्थापक के बिना, आप व्यवस्थापक मोड तक नहीं पहुंच पाएंगे।</string>
+
+    <!-- Announcements -->
+    <string name="settings_category_announcements">घोषणाएँ</string>
+    <string name="announcements_reception_title">रिसेप्शन सक्षम करें</string>
+    <string name="announcements_reception_description">आने वाली घोषणाएँ दिखाएँ या छिपाएँ</string>
+    <string name="announcements_tracked_venues_title">ट्रैक किए गए स्थान</string>
+    <string name="announcements_tracked_venues_description">घोषणाएँ प्राप्त करने के लिए किन स्थानों से चयन करें</string>
+    <string name="announcements_tracked_venues_all">सभी स्थल</string>
+    <string name="announcements_validity_title">वैधता अवधि</string>
+    <string name="announcements_validity_description">इस अवधि से अधिक पुराने संदेश प्रदर्शित नहीं किये जायेंगे</string>
+    <string name="announcements_validity_15min">15 मिनट</string>
+    <string name="announcements_validity_30min">30 मिनट</string>
+    <string name="announcements_validity_1h">1 घंटा</string>
+    <string name="announcements_validity_2h">2 घंटे</string>
+    <string name="announcements_validity_4h">4 घंटे</string>
+    <string name="announcements_non_admin_send_title">गैर-व्यवस्थापक भेजने की अनुमति दें</string>
+    <string name="announcements_non_admin_send_description">टिकट जाँच इंटरफ़ेस को घोषणाएँ भेजने की अनुमति दें</string>
+    <string name="announcement_button_label">एक घोषणा करें</string>
+    <string name="announcement_send_title">घोषणा भेजें</string>
+    <string name="announcement_destination_label">गंतव्य स्थान</string>
+    <string name="announcement_all_venues">सभी स्थल</string>
+    <string name="announcement_title_label">प्राप्तकर्ता/शीर्षक</string>
+    <string name="announcement_title_placeholder">लघु विषय…</string>
+    <string name="announcement_message_label">संदेश</string>
+    <string name="announcement_message_placeholder">संदेश सामग्री...</string>
+    <string name="announcement_send_button">भेजें</string>
+    <string name="announcement_cancel_button">रद्द करें</string>
+    <string name="announcement_sending">भेजा जा रहा है...</string>
+    <string name="announcement_sent_success">घोषणा भेजी गई!</string>
+    <string name="announcement_sent_error">घोषणा भेजने में विफल</string>
+    <string name="announcement_popup_title">घोषणा</string>
+    <string name="announcement_popup_close">बंद करें</string>
+    <string name="announcement_popup_from">प्रेषक: %1$s</string>
+
+    <!-- External Bluetooth NFC reader (ACR1255U-J1) -->
+    <string name="settings_category_external_reader">ब्लूटूथ एनएफसी रीडर</string>
+    <string name="settings_category_pcsc_reader">यूएसबी एनएफसी रीडर</string>
+    <string name="pcsc_reader_description">ACS ACR122U या संगत USB NFC रीडर कनेक्ट करें। macOS और Windows में स्वचालित रूप से PC/SC समर्थन शामिल है; लिनक्स पर पीसीएससीडी स्थापित करें और प्रारंभ करें।</string>
+    <string name="desktop_external_reader_description">यूएसबी रीडर (एसीआर122यू, यूएसबी मोड में एसीआर1255यू-जे1) एसीएस पीसी/एससी ड्राइवर स्थापित होने पर प्लग इन होने पर काम करते हैं। रीडर को यूएसबी मोड पर स्विच करें, केबल कनेक्ट करें, फिर नीचे दिए गए टेस्ट कनेक्शन का उपयोग करें।</string>
+    <string name="desktop_ble_supported_windows">ब्लूटूथ (एसीआर1255यू-जे1): एसीएस ब्लूटूथ पीसी/एससी ड्राइवर स्थापित करें, विंडोज ब्लूटूथ सेटिंग्स में जोड़ें, फिर नीचे रीडर का चयन करें।</string>
+    <string name="desktop_ble_unsupported_macos">ब्लूटूथ macOS पर समर्थित नहीं है (कोई ACS BLE PC/SC ड्राइवर नहीं)। इसके बजाय ACS USB ड्राइवर के साथ USB मोड का उपयोग करें।</string>
+    <string name="desktop_ble_unsupported_linux">लिनक्स पर ब्लूटूथ समर्थित नहीं है (कोई एसीएस बीएलई पीसी/एससी ड्राइवर नहीं)। इसके बजाय पीसीएससीडी और एसीएस यूएसबी ड्राइवर के साथ यूएसबी मोड का उपयोग करें।</string>
+    <string name="desktop_list_pcsc_readers">पीसी/एससी पाठकों की सूची बनाएं</string>
+    <string name="desktop_usb_reader_test_button">USB रीडर का परीक्षण करें</string>
+    <string name="desktop_ble_reader_picker_subtitle">ACR1255U-J1 को सिस्टम ब्लूटूथ सेटिंग्स में जोड़ें, फिर यहां रीडर चुनें। पीसी/एससी को पहले से ही दिखाई देने वाले रीडर तुरंत उपयोग के लिए तैयार हैं।</string>
+    <string name="desktop_ble_reader_not_found">कोई ACR1255U-J1 रीडर नहीं मिला। इसे चालू करें, इसे ब्लूटूथ सेटिंग्स में जोड़ें, और सुनिश्चित करें कि एसीएस पीसी/एससी ड्राइवर स्थापित है।</string>
+    <string name="desktop_ble_reader_pcsc_ready">पीसी/एससी तैयार · %1$s</string>
+    <string name="external_reader_description">यहां अपना बाहरी एनएफसी रीडर चुनें। यह एंड्रॉइड ब्लूटूथ सेटिंग्स में दिखाई दे सकता है, लेकिन आप वहां से कनेक्ट नहीं कर सकते - ऐप के लिए रीडर चुनने के लिए इस स्क्रीन का उपयोग करें।</string>
+    <string name="external_reader_connected_label">चयनित पाठक</string>
+    <string name="external_reader_pick_button">ब्लूटूथ रीडर के लिए स्कैन करें</string>
+    <string name="external_reader_change">पाठक बदलें</string>
+    <string name="external_reader_forget">भूल जाओ</string>
+    <string name="external_reader_saved_toast">सहेजा गया: %1$s</string>
+    <string name="external_reader_cleared_toast">बाहरी पाठक साफ़ हो गया</string>
+    <string name="external_reader_test_button">कनेक्शन का परीक्षण करें</string>
+    <string name="external_reader_testing">परीक्षण\u2026</string>
+    <string name="external_reader_test_success_title">पाठक ठीक है</string>
+    <string name="external_reader_test_failure_title">रीडर परीक्षण विफल रहा</string>
+    <string name="external_reader_test_close">बंद करें</string>
+
+    <string name="ble_reader_picker_title">ब्लूटूथ एनएफसी रीडर चुनें</string>
+    <string name="ble_reader_picker_subtitle">सुनिश्चित करें कि ACR1255U-J1 चालू और पास में है। एसीआर-श्रेणी के पाठक पहले आते हैं।</string>
+    <string name="ble_reader_section_acr_title">ACS NFC रीडर</string>
+    <string name="ble_reader_section_acr_hint">अनुशंसित · ACR1255U-J1 और संगत ACS उपकरण</string>
+    <string name="ble_reader_section_acr_empty">कोई ACS रीडर नहीं मिला। ACR1255U-J1 चालू करें और स्कैन के दौरान इसे पास रखें।</string>
+    <string name="ble_reader_section_other_title">अन्य ब्लूटूथ उपकरण</string>
+    <string name="ble_reader_show_other_devices">अन्य ब्लूटूथ उपकरण दिखाएं (%1$d)</string>
+    <string name="ble_reader_hide_other_devices">अन्य ब्लूटूथ उपकरण छिपाएं</string>
+    <string name="ble_reader_search_other_hint">नाम या MAC पते से फ़िल्टर करें…</string>
+    <string name="ble_reader_other_truncated">%2$d में से %1$d उपकरण दिखाए जा रहे हैं (सबसे मजबूत सिग्नल पहले)</string>
+    <string name="ble_reader_rssi_label">%1$d dBm</string>
+    <string name="ble_reader_scanning">ब्लूटूथ डिवाइस के लिए स्कैन किया जा रहा है...</string>
+    <string name="ble_reader_scanning_hint">यह संवाद खुला रहने पर स्कैन सक्रिय रहता है।</string>
+    <string name="ble_reader_show_all">सभी ब्लूटूथ डिवाइस दिखाएं</string>
+    <string name="ble_reader_show_acr_only">केवल एसीआर रीडर दिखाएं</string>
+    <string name="ble_reader_unnamed">अनाम डिवाइस</string>
+    <string name="ble_reader_bonded_label">बंधुआ</string>
+    <string name="ble_reader_row_subtitle">%1$s · %2$s</string>
+    <string name="ble_reader_row_subtitle_bonded">%1$s · %2$s · पहले से ही युग्मित है</string>
+    <string name="ble_reader_bluetooth_off">ब्लूटूथ बंद है. पाठकों को स्कैन करने के लिए इसे चालू करें।</string>
+    <string name="ble_reader_bluetooth_unavailable">इस डिवाइस पर ब्लूटूथ उपलब्ध नहीं है.</string>
+    <string name="ble_reader_scan_permission_denied">ब्लूटूथ स्कैन अनुमति आवश्यक है.</string>
+    <string name="ble_reader_connect_permission_denied">ब्लूटूथ कनेक्ट अनुमति आवश्यक है.</string>
+    <string name="ble_reader_location_permission_denied">इस एंड्रॉइड संस्करण पर ब्लूटूथ डिवाइस को स्कैन करने के लिए स्थान अनुमति की आवश्यकता है।</string>
+    <string name="ble_reader_scanner_unavailable">ब्लूटूथ लो एनर्जी स्कैनर उपलब्ध नहीं है।</string>
+    <string name="ble_reader_low_level_error">ब्लूटूथ स्कैन विफल रहा. ब्लूटूथ को बंद और चालू करें, फिर पुनः प्रयास करें।</string>
+    <string name="ble_reader_enable_bluetooth">ब्लूटूथ सक्षम करें</string>
+    <string name="ble_reader_not_acr1255">चयनित ब्लूटूथ डिवाइस ACS ACR1255U-J1 रीडर नहीं है।</string>
+    <string name="ble_reader_verification_inconclusive_saved">रीडर की जांच बेनतीजा रही. डिवाइस फिर भी सहेजा गया.</string>
+
+    <!-- UI strings (shared components / desktop) -->
+    <string name="noctulist_admin_title">नोक्टुलिस्ट एडमिन</string>
+    <string name="download">डाउनलोड करें</string>
+    <string name="download_complete_opening_installer">डाउनलोड पूर्ण - इंस्टॉलर खुल रहा है...</string>
+    <string name="select_date">दिनांक चुनें</string>
+    <string name="select_time">समय चुनें</string>
+    <string name="date_time_label">दिनांक &amp; समय</string>
+    <string name="dropdown_no_volunteers_found">कोई स्वयंसेवक नहीं मिला</string>
+    <string name="open_in_browser">ब्राउज़र में खोलें: %1$s</string>
+    <string name="desktop_app_icon_unavailable">ऐप आइकन अनुकूलन डेस्कटॉप पर उपलब्ध नहीं है.</string>
+    <string name="minutes_short">मि</string>
+    <string name="selecting_file">फ़ाइल का चयन किया जा रहा है...</string>
+    <string name="action_cancelled">रद्द कर दिया गया</string>
+    <string name="invalid_service_account_json">अमान्य सेवा खाता JSON</string>
+    <string name="upload_failed_generic">अपलोड विफल रहा</string>
+
+    <!-- Desktop admin navigation -->
+    <string name="desktop_admin_nav_layout_title">व्यवस्थापक मेनू लेआउट</string>
+    <string name="desktop_admin_nav_layout_description">चुनें कि डेस्कटॉप पर व्यवस्थापक नेविगेशन कहाँ दिखाई देता है</string>
+    <string name="desktop_admin_nav_layout_bottom">नीचे (टैबलेट शैली)</string>
+    <string name="desktop_admin_nav_layout_left">बायां साइडबार</string>
+    <string name="desktop_admin_nav_layout_right">दायां साइडबार</string>
+    <string name="desktop_admin_nav_expand">मेनू का विस्तार करें</string>
+    <string name="desktop_admin_nav_collapse">मेनू संक्षिप्त करें</string>
+
+    <!-- Hardcoded / desktop / POS message strings (i18n) -->
+    <string name="account_reversal_description">उलटा: %1$s</string>
+    <string name="custom_theme_editor_title">कस्टम थीम संपादक</string>
+    <string name="desktop_bluetooth_nfc_reader">ब्लूटूथ एनएफसी रीडर</string>
+    <string name="desktop_bluetooth_nfc_reader_offline">ब्लूटूथ एनएफसी रीडर (ऑफ़लाइन)</string>
+    <string name="desktop_no_external_reader">कोई बाहरी पाठक नहीं</string>
+    <string name="desktop_pcsc_error">पीसी/एससी त्रुटि</string>
+    <string name="desktop_pcsc_library_unavailable">पीसी/एससी लाइब्रेरी अनुपलब्ध</string>
+    <string name="desktop_pcsc_no_ble_reader">पीसी/एससी में कोई ब्लूटूथ एनएफसी रीडर नहीं।
+ACR1255U-J1 को सिस्टम ब्लूटूथ सेटिंग्स में जोड़ें और ACS ड्राइवर स्थापित करें।</string>
+    <string name="desktop_pcsc_no_card_on_reader">रीडर पर कोई कार्ड नहीं मिला</string>
+    <string name="desktop_pcsc_no_card_present">कोई कार्ड मौजूद नहीं</string>
+    <string name="desktop_pcsc_no_reader">कोई पीसी/एससी रीडर नहीं</string>
+    <string name="desktop_pcsc_no_readers_found">कोई पीसी/एससी रीडर नहीं मिला.</string>
+    <string name="desktop_pcsc_no_readers_hint">कोई पीसी/एससी रीडर नहीं मिला.
+USB रीडर प्लग इन करें या ब्लूटूथ ACR1255U-J1 को पेयर करें।</string>
+    <string name="desktop_pcsc_provider_failed">पीसी/एससी प्रदाता लोड करने में विफल रहा।
+सुनिश्चित करें कि पीसी/एससी इंस्टॉल है और ऐप को पुनरारंभ करें।</string>
+    <string name="desktop_pcsc_reader_disconnected">पाठक का संपर्क टूट गया.</string>
+    <string name="desktop_pcsc_reader_error">पाठक त्रुटि</string>
+    <string name="desktop_pcsc_reader_ok_place_card">ठीक है - रीडर कनेक्ट हो गया।
+रीडर पर एक कार्ड रखें और यूआईडी पढ़ने के लिए दोबारा परीक्षण करें।</string>
+    <string name="desktop_pcsc_readers_header">पाठक (%1$d):</string>
+    <string name="desktop_pcsc_unable_select_reader">पाठक का चयन करने में असमर्थ.</string>
+    <string name="desktop_pcsc_unavailable">पीसी/एससी अनुपलब्ध</string>
+    <string name="desktop_pcsc_using_reader">उपयोग करना: %1$s</string>
+    <string name="desktop_pcsc_waiting_card">कार्ड की प्रतीक्षा में (%1$d सेकंड तक)…</string>
+    <string name="desktop_pcsc_waiting_removal">कार्ड हटाने की प्रतीक्षा की जा रही है</string>
+    <string name="desktop_usb_nfc_reader">यूएसबी एनएफसी रीडर</string>
+    <string name="done">हो गया</string>
+    <string name="email_gmail_connect_activity_unavailable">कनेक्ट नहीं हो सकता: गतिविधि संदर्भ उपलब्ध नहीं है</string>
+    <string name="email_gmail_connect_api">जीमेल एपीआई कनेक्ट करें</string>
+    <string name="email_gmail_connect_api_hint">आपका Google खाता सहेजा गया है. एंड्रॉइड टीवी और पुराने उपकरणों पर, जीमेल एपीआई को कनेक्ट करने के लिए एक अतिरिक्त प्राधिकरण चरण की आवश्यकता होती है।</string>
+    <string name="pos_sale_complete_message">बिक्री पूर्ण</string>
+    <string name="rate_limit_action_auto_retry">ऐप स्वचालित रूप से बैकऑफ़ के साथ पुनः प्रयास करेगा</string>
+    <string name="rate_limit_action_check_quota">जांचें कि क्या अन्य ऐप्स समान एपीआई कोटा का उपयोग कर रहे हैं</string>
+    <string name="rate_limit_action_reduce_freq">सेटिंग्स में सिंक आवृत्ति को कम करने पर विचार करें</string>
+    <string name="rate_limit_action_wait">दोबारा प्रयास करने से पहले 1-2 मिनट प्रतीक्षा करें</string>
+    <string name="rate_limit_current_limits">वर्तमान एपीआई सीमाएँ:</string>
+    <string name="rate_limit_dialog_title">एपीआई दर सीमा पार हो गई</string>
+    <string name="rate_limit_per_100_seconds">प्रति 100 सेकंड</string>
+    <string name="rate_limit_per_100_value">प्रति प्रोजेक्ट 500 अनुरोध</string>
+    <string name="rate_limit_per_user_requests">प्रति उपयोगकर्ता अनुरोध</string>
+    <string name="rate_limit_per_user_value">प्रति उपयोगकर्ता 60 प्रति मिनट</string>
+    <string name="rate_limit_read_requests">अनुरोध पढ़ें</string>
+    <string name="rate_limit_read_value">प्रति प्रोजेक्ट 300 प्रति मिनट</string>
+    <string name="rate_limit_retry_sync">पुनः समन्वयन का प्रयास करें</string>
+    <string name="rate_limit_tips_body">• चरम उपयोग के दौरान ऑटो-सिंक के बजाय मैन्युअल सिंक का उपयोग करें
+• यदि आप कम बार सिंक करते हैं\'बार-बार सीमा पार कर रहे हैं
+• कोटा उपयोग के लिए अपने Google क्लाउड कंसोल की जाँच करें</string>
+    <string name="rate_limit_tips_title">युक्तियाँ:</string>
+    <string name="rate_limit_too_many_requests">बहुत सारे अनुरोध</string>
+    <string name="rate_limit_wait_message">आप\'हम Google शीट API दर सीमा तक पहुंच गए हैं। कृपया दोबारा प्रयास करने से पहले 1-2 मिनट प्रतीक्षा करें।</string>
+    <string name="rate_limit_what_to_do">क्या करें:</string>
+    <string name="rate_limit_write_requests">अनुरोध लिखें</string>
+    <string name="rate_limit_write_value">प्रति प्रोजेक्ट 300 प्रति मिनट</string>
+    <string name="theme_hue_label">रंग (इंद्रधनुष): %1$d°</string>
+    <string name="theme_luminosity_label">चमक: %1$d%%</string>
+    <string name="theme_saturation_label">संतृप्ति: %1$d%%</string>
+</resources>

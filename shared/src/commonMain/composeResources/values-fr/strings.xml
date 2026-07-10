@@ -1,0 +1,1616 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App Name -->
+    <string name="app_name">NoctuList</string>
+    
+    <!-- Settings Screen -->
+    <string name="settings_title">Paramètres &amp; Configuration</string>
+    <string name="settings_subtitle">Configurer la synchronisation Google Sheets et les paramètres de l'application</string>
+    <string name="settings_logout">Déconnexion</string>
+    <string name="settings_logout_description">Retour à l'écran d'accueil. Vous devrez vous authentifier à nouveau en tant qu'admin pour accéder à la gestion.</string>
+
+    <!-- Google Sheets Configuration -->
+    <string name="google_sheets_config_title">Configuration Google Sheets</string>
+    <string name="view_setup_instructions">Voir les instructions de configuration</string>
+    <string name="spreadsheet_id_label">ID de la feuille de calcul</string>
+    <string name="spreadsheet_id_hint">Obtenez ceci depuis l'URL de votre Google Sheets : https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit</string>
+    <string name="guest_list_sheet_label">Feuille liste des invité·e·s</string>
+    <string name="volunteer_sheet_label">Feuille des bénévoles</string>
+    <string name="shifts_sheet_label">Feuille des Shifts</string>
+    <string name="volunteer_guest_list_sheet_label">Feuille liste invité·e·s bénévoles</string>
+    <string name="volunteer_guest_sheet_banner_title">NE PAS MODIFIER - Guest List bénéfices bénévoles</string>
+    <string name="volunteer_guest_sheet_banner_l2">Cette page ne doit pas être modifiée.</string>
+    <string name="volunteer_guest_sheet_banner_l3">Toute modification de cette page ne sera pas sauvegardée par l'application.</string>
+    <string name="volunteer_guest_sheet_banner_l4">Ce sheet est le résultat d'un upload de l'application, suite à un calcul des avantages bénévoles. Ce sheet est donc uniquement rafraîchie par l'application ; si l'application n'est pas utilisée, cette page n'est plus à jour (voir dernière mise à jour).</string>
+    <string name="volunteer_guest_sheet_banner_l5"></string>
+    <string name="volunteer_guest_sheet_last_updated">Dernière mise à jour : %1$s</string>
+    <string name="sheet_epoch_calc_title_ms_to_date">Horodatage (ms) → date/heure</string>
+    <string name="sheet_epoch_calc_title_date_to_ms">Date/heure → horodatage (ms)</string>
+    <string name="sheet_epoch_calc_hint_ms">Saisir les ms (ex. 1776711088094)</string>
+    <string name="sheet_epoch_calc_hint_datetime">Choisir ou saisir une date/heure</string>
+    <string name="temp_guest_list_sheet_label">Feuille guest-list temporaire</string>
+    <string name="shift_types_sheet_label">Feuille types de Shifts</string>
+    <string name="venues_sheet_label">Feuille Lieux</string>
+    <string name="sales_items_sheet_label">Feuille des articles de vente</string>
+    <string name="transfers_sheet_label">Feuille des transferts</string>
+    <string name="account_amount_label">Montant du compte</string>
+    <string name="currency_setting_label">Devise</string>
+    <string name="currency_setting_description">Devise affichée pour les soldes et le POS</string>
+    <string name="pos_title">POS</string>
+    <string name="pos_welcome_button">POS interne</string>
+    <string name="pos_background_animation_title">Arrière-plan POS</string>
+    <string name="pos_background_animation_description">Choisissez un arrière-plan animé pour les écrans POS uniquement</string>
+    <string name="pos_scan_customer">Scanner carte ou QR</string>
+    <string name="pos_category_all">Tout</string>
+    <string name="pos_manual_amount">Montant manuel</string>
+    <string name="pos_cart_title">Panier</string>
+    <string name="pos_validate_sale">Valider la vente</string>
+    <string name="pos_sale_success">Vente terminée !</string>
+    <string name="pos_sale_remaining_credit">Crédit restant : %1$s</string>
+    <string name="pos_remaining_credit_label">Crédit restant</string>
+    <string name="pos_sale_next">Suivant</string>
+    <string name="pos_sale_next_hint">Scannez la prochaine carte</string>
+    <string name="pos_sale_next_shortcut">Entrée ↵</string>
+    <string name="pos_insufficient_funds">Crédit insuffisant</string>
+    <string name="pos_cash_payment_title">Crédit insuffisant</string>
+    <string name="pos_cash_payment_message">Le compte couvre %1$s. Souhaitez-vous payer %2$s en espèces ou carte pour valider la vente ?</string>
+    <string name="pos_cash_payment_credit_covers">Le compte couvre %1$s.</string>
+    <string name="pos_cash_payment_due_label">À payer en espèces ou carte</string>
+    <string name="pos_cash_payment_bar_discount_applied">Rabais bar -%1$d\u0025 appliqué sur la différence</string>
+    <string name="pos_cash_payment_confirm">Payer et valider</string>
+    <string name="pos_cash_payment_cancel">Annuler la vente</string>
+    <string name="pos_pay_cash_card">Payer %1$s en espèces ou carte</string>
+    <string name="pos_customer_balance">Solde : %1$s</string>
+    <string name="pos_total">Total : %1$s</string>
+    <string name="pos_clear_cart">Vider</string>
+    <string name="pos_use_qr">Utiliser un QR</string>
+    <string name="pos_manual_default_label">Manuel</string>
+    <string name="pos_step_scan">Scanner la carte</string>
+    <string name="pos_step_add">Ajouter articles</string>
+    <string name="pos_step_validate">Valider</string>
+    <string name="pos_waiting_card">Approchez la carte du lecteur</string>
+    <string name="pos_reader_active">Lecteur actif</string>
+    <string name="pos_reader_not_connected">Aucun lecteur connecté</string>
+    <string name="pos_reader_waiting">En attente de carte</string>
+    <string name="pos_unknown_card">Carte non reconnue</string>
+    <string name="pos_customer_recognized">%1$s reconnu·e</string>
+    <string name="pos_clear_customer">Changer de profil</string>
+    <string name="pos_profile_switch_title">Changer de profil ?</string>
+    <string name="pos_profile_switch_message">%1$s a été scanné, mais la commande en cours est au nom de %2$s.</string>
+    <string name="pos_profile_switch_keep_cart">Changer de profil — garder le panier</string>
+    <string name="pos_profile_switch_clear_cart">Changer de profil — vider le panier</string>
+    <string name="pos_profile_switch_keep_current">Annuler — garder le profil et le panier actuels</string>
+    <string name="pos_reader_scanning">Lecture NFC en cours</string>
+    <string name="pos_bar_discount_badge">-%1$d\u0025 au bar</string>
+    <string name="pos_bar_discount_at_bar">au bar</string>
+    <string name="pos_bar_discount_cash_hint">Sur paiement en espèces ou carte</string>
+    <string name="pos_scan_next">Scannez la prochaine carte</string>
+    <string name="pos_cart_empty">Panier vide — touchez les produits pour ajouter</string>
+    <string name="pos_select_customer_first">Scannez d\'abord un profil</string>
+    <string name="pos_customer_guest_label">Invité·e</string>
+    <string name="pos_items_count">%1$d articles</string>
+    <string name="numpad_clear">Effacer</string>
+    <string name="numpad_backspace">Retour arrière</string>
+    <string name="numpad_add_to_cart">Ajouter au panier</string>
+    <string name="emoji_picker_title">Choisir un emoji</string>
+    <string name="emoji_picker_choose">Choisir</string>
+    <string name="account_credit_tooltip">Ajouter du crédit</string>
+    <string name="account_debit_tooltip">Retirer du crédit</string>
+    <string name="recent_transfers_label">Transferts récents</string>
+    <string name="show_all_transfers">Montrer tous les transferts</string>
+    <string name="show_fewer_transfers">Montrer moins de transferts</string>
+    <string name="adjust_account_button">Ajuster le compte</string>
+    <string name="sales_categories_label">Catégories</string>
+    <string name="sales_emoji_label">Emoji</string>
+    <string name="sales_category_merch">Merch</string>
+    <string name="sales_category_entry">Entrée</string>
+    <string name="sales_category_bar">Bar</string>
+    <string name="sales_category_other">Autre</string>
+    <string name="admin_label">Admin</string>
+    <string name="admin_yes">Oui</string>
+    <string name="admin_no">Non</string>
+    <string name="save_settings">Enregistrer les paramètres</string>
+    <string name="test_connection">Tester la connexion</string>
+    
+    <!-- Service Account Configuration -->
+    <string name="service_account_config_title">Configuration du compte de service</string>
+    <string name="service_account_key_found">Clé de compte de service trouvée</string>
+    <string name="service_account_key_required">Clé de compte de service requise</string>
+    <string name="email_label">Email : %1$s</string>
+    <string name="project_label">Projet : %1$s</string>
+    <string name="email_colon">Email : %1$s</string>
+    <string name="project_colon">Projet : %1$s</string>
+    <string name="upload_key_file_description">Téléchargez votre fichier de clé JSON du compte de service Google</string>
+    <string name="upload_key_description">Téléchargez votre fichier de clé JSON du compte de service Google</string>
+    <string name="replace_key_file">Remplacer le fichier de clé</string>
+    <string name="upload_key_file">Télécharger le fichier de clé</string>
+    
+    <!-- Sync Configuration -->
+    <string name="sync_config_title">Configuration de synchronisation</string>
+    <string name="sync_interval_label">Intervalle de synchronisation (minutes)</string>
+    <string name="sync_interval_hint">Fréquence de synchronisation avec Google Sheets (1-60 minutes). Les modifications sont enregistrées automatiquement.</string>
+    <string name="save_sheets_config">Enregistrer la configuration Sheets</string>
+    <string name="test_sync_status">Tester le statut de synchronisation</string>
+    <string name="sync_status_dialog_title">Statut de synchronisation</string>
+    <string name="sync_status_configured">Google Sheets est configuré et prêt pour la synchronisation</string>
+    <string name="sync_status_not_configured">Google Sheets n'est pas configuré. Veuillez vérifier vos paramètres.</string>
+    <string name="sync_status_error">Erreur lors du test du statut de synchronisation : %1$s</string>
+    <string name="manual_sync_now">Synchronisation manuelle maintenant</string>
+    <string name="view_active_volunteers">Voir les bénévoles actif·ve·s</string>
+    <string name="cleanup_inactive_volunteers">Nettoyer les bénévoles inactif·ve·s</string>
+    <string name="cleanup_choose_duration">Choisissez depuis combien de temps les bénévoles doivent être inactif·ve·s pour être supprimé·e·s :</string>
+    <string name="cleanup_inactive_for">Inactif·ve depuis :</string>
+    <string name="cleanup_years_value">%1$d ans</string>
+    <string name="cleanup_hide_preview">Masquer l'aperçu</string>
+    <string name="cleanup_preview_to_delete">Aperçu des bénévoles à supprimer (%1$d)</string>
+    <string name="cleanup_volunteers_to_be_deleted">Bénévoles qui seront supprimé·e·s :</string>
+    <string name="cleanup_no_volunteers_found">Aucun·e bénévole inactif·ve depuis %1$d ans ou plus n'a été trouvé·e.</string>
+    
+    <!-- Advanced Settings -->
+    <string name="advanced_settings_title">Paramètres avancés</string>
+    <string name="show_advanced_settings">Afficher les paramètres avancés</string>
+    <string name="hide_advanced_settings">Masquer les paramètres avancés</string>
+    <string name="debug_mode_title">Mode de débogage</string>
+    <string name="debug_mode_description">Activer la journalisation détaillée pour le dépannage</string>
+    <string name="debug_logs_title">Journaux de débogage</string>
+    <string name="debug_logs_location">Emplacement : %1$s</string>
+    <string name="debug_logs_files_size">Fichiers : %1$d | Taille : %2$s Mo</string>
+    <string name="debug_logs_recent_files">Fichiers journaux récents :</string>
+    <string name="debug_logs_view">Voir</string>
+    <string name="debug_logs_share">Partager</string>
+    <string name="debug_logs_view_latest">Voir le plus récent</string>
+    <string name="debug_logs_clear_all">Tout effacer</string>
+    <string name="debug_logs_content">Contenu du journal</string>
+    <string name="debug_logs_no_content">Aucun contenu de journal</string>
+    <string name="debug_logs_error_reading">Erreur lors de la lecture du fichier journal : %1$s</string>
+    <string name="debug_logs_error_reading_generic">Erreur lors de la lecture du fichier journal</string>
+    <string name="debug_logs_share_file">Partager le fichier journal</string>
+    <string name="animated_background_title">Arrière-plan animé</string>
+    <string name="animated_background_description">Choisissez un arrière-plan animé discret pour l\'accueil et l\'administration</string>
+    <string name="background_animation_none">Aucun</string>
+    <string name="background_animation_arches">Arcs</string>
+    <string name="background_animation_topographic">Lignes topographiques</string>
+    <string name="background_animation_opacity_title">Intensité de l\'arrière-plan</string>
+    <string name="background_animation_opacity_description">Réduisez l\'opacité pour des lignes animées plus discrètes</string>
+    <string name="background_animation_opacity_apply">Appliquer l\'intensité</string>
+    <string name="billeterie_background_animation_title">Arrière-plan billetterie</string>
+    <string name="billeterie_background_animation_description">Choisissez un arrière-plan animé pour les écrans de billetterie uniquement</string>
+    <string name="page_animations_title">Animations de pages</string>
+    <string name="page_animations_description">Activer les animations de glissement lors du changement de page et d'onglet</string>
+    <string name="clear_app_cache">Vider le cache de l'application</string>
+    
+    <!-- Language Settings -->
+    <string name="language_title">Langue</string>
+    <string name="language_description">Sélectionnez votre langue préférée</string>
+    <string name="language_english">Anglais</string>
+    <string name="language_french">Français</string>
+    <string name="language_spanish">Español</string>
+    <string name="language_chinese">繁體中文</string>
+    <string name="language_chinese_simplified">简体中文</string>
+    <string name="language_latin">Latina</string>
+    <string name="language_hindi">हिन्दी</string>
+    
+    <!-- Theme Settings -->
+    <string name="theme_title">Thème</string>
+    <string name="theme_description">Choisissez l'apparence de votre thème préféré</string>
+    <string name="theme_light">Clair</string>
+    <string name="theme_dark">Sombre</string>
+    <string name="theme_default">Système</string>
+    
+    <!-- Color Theme Settings -->
+    <string name="color_theme_title">Thème de couleur</string>
+    <string name="color_theme_description">Choisissez un thème de couleur pour les appareils qui ne prennent pas en charge les couleurs dynamiques</string>
+    <string name="color_theme_system">Système</string>
+    <string name="color_theme_professional_blue">Bleu</string>
+    <string name="color_theme_neutral_green">Vert</string>
+    <string name="color_theme_warm_gray">Gris</string>
+    <string name="color_theme_neutral_purple">Violet</string>
+    <string name="color_theme_rich_brown">Brun</string>
+    <string name="color_theme_sunset_mist">Brume</string>
+    <string name="color_theme_feminist_violet">Violet</string>
+
+    <string name="color_theme_custom">Personnalisé</string>
+    <string name="color_theme_customize">Personnaliser le thème personnalisé</string>    
+    <!-- Restart Dialog -->
+    <string name="restart_required_title">Redémarrage requis</string>
+    <string name="restart_required_message">Le thème de couleur a été modifié. Veuillez redémarrer l'application pour voir le nouveau thème appliqué.</string>
+    <string name="restart_now">Redémarrer maintenant</string>
+    <string name="restart_later">Plus tard</string>
+    
+    <!-- UI Size Settings -->
+    <string name="resolution_scale_title">Échelle de résolution</string>
+    <string name="resolution_scale_description" formatted="false">Ajustez l'échelle de résolution pour rendre l'interface utilisateur plus petite ou plus grande. Faites glisser le curseur pour modifier l'échelle de 80% (GRAND) à 120% (PETIT).</string>
+    <string name="resolution_small">Grand</string>
+    <string name="resolution_medium_small">Moyen petit</string>
+    <string name="resolution_normal">Normal</string>
+    <string name="resolution_medium_large">Moyen grand</string>
+    <string name="resolution_large">Petit</string>
+    <string name="save_resolution_scale">Enregistrer l'échelle de résolution</string>
+    <string name="system_is_in_dark_mode">Le système est en mode sombre</string>
+    <string name="system_is_in_light_mode">Le système est en mode clair</string>
+    <string name="people_counter_visibility_title">Afficher le compteur de personnes</string>
+    <string name="people_counter_visibility_description">Afficher ou masquer le compteur de personnes sur l'accueil billetterie et le tableau de bord admin</string>
+    <string name="statistics_visibility_title">Afficher les graphiques statistiques</string>
+    <string name="statistics_visibility_description">Afficher ou masquer la section des graphiques statistiques sur la page d'accueil</string>
+    <string name="scroll_behavior_title">Comportement du défilement pour les pages de gestion</string>
+    <string name="scroll_behavior_description">Contrôlez comment l'en-tête (ajouter, filtres, recherche) se comporte lorsque vous faites défiler les pages Bénévoles, Guest-List et Shifts.</string>
+    <string name="scroll_behavior_list_only_title">Garder l'en-tête fixe</string>
+    <string name="scroll_behavior_list_only_description">Seule la liste défile. Les actions du haut (ajouter, filtres, recherche) restent visibles en haut.</string>
+    <string name="scroll_behavior_full_page_title">Faire défiler toute la page</string>
+    <string name="scroll_behavior_full_page_description">L'en-tête et la liste défilent ensemble. Les actions du haut disparaissent lorsque vous faites défiler vers le bas.</string>
+    <string name="scroll_behavior_sticky_filters_option">Garder les filtres visibles en défilant</string>
+    <string name="scroll_behavior_sticky_filters_description">La barre de filtres reste fixée en haut une fois qu'elle atteint le haut de l'écran, tandis que le titre et le bouton d'ajout défilent.</string>
+
+    <!-- Update flow -->
+    <string name="app_cache_cleared">Cache des données de l'application vidé. Les paramètres et les clés ont été conservés.</string>
+    <string name="check_for_updates">Rechercher des mises à jour</string>
+    <string name="update_available_title">Mise à jour disponible : %1$s</string>
+    <string name="update_required_message">Une version plus récente de l'application est requise pour continuer. Veuillez mettre à jour vers la dernière version.</string>
+    <string name="update_available_message">Une nouvelle version de cette application est disponible. Voulez-vous la mettre à jour maintenant ?</string>
+    <string name="update_now">Mettre à jour</string>
+    <string name="later">Plus tard</string>
+    <string name="up_to_date_title">Application à jour</string>
+    <string name="up_to_date_message">Vous avez déjà la dernière version installée.</string>
+    <string name="update_error_title">Échec de la vérification des mises à jour</string>
+    <string name="update_error_message">Impossible de vérifier les mises à jour : %1$s</string>
+    <string name="checking_for_updates_title">Vérification des mises à jour</string>
+    <string name="checking_for_updates_message">Connexion au serveur de mise à jour…</string>
+    <string name="downloading_update">Téléchargement de la mise à jour…</string>
+    <string name="download_progress">Téléchargement : %1$d%%</string>
+    <string name="download_complete">Téléchargement terminé</string>
+    <string name="install_update">Installer la mise à jour</string>
+    <string name="download_error_title">Échec du téléchargement</string>
+    <string name="download_error_message">Impossible de télécharger la mise à jour : %1$s</string>
+    <string name="change_update_sources">Modifier les sources de mise à jour</string>
+    <string name="update_sources_title">Sources de mise à jour</string>
+    <string name="update_sources_warning">L'URL GitHub doit pointer vers un fichier version.json valide pour que les vérifications de mise à jour fonctionnent. Ne modifiez ces paramètres que si vous savez ce que vous faites.</string>
+    <string name="update_sources_github_label">URL du manifeste GitHub</string>
+    <string name="update_sources_store_label">URL du store (secours)</string>
+    <string name="update_sources_reset">Réinitialiser par défaut</string>
+    <string name="update_sources_custom_url">URL personnalisée</string>
+
+    <!-- Cleanup Dialog -->
+    <string name="warning">⚠️ Attention :</string>
+    <string name="cleanup_warning" formatted="false">Cette action supprimera définitivement %1$d bénévole%2$s et tous leurs enregistrements de travail associés. Cette action ne peut pas être annulée !</string>
+    <string name="delete_volunteers" formatted="false">Supprimer %1$d bénévole%2$s</string>
+    
+    <!-- Delete Volunteer Dialog -->
+    <string name="delete_volunteer_title">Supprimer le·la bénévole</string>
+    <string name="delete_volunteer_confirm">Êtes-vous sûr·e de vouloir supprimer %1$s ?</string>
+    <string name="delete_volunteer_shift_count_one">Ce·tte bénévole a %1$d shift enregistré.</string>
+    <string name="delete_volunteer_shift_count_other">Ce·tte bénévole a %1$d shifts enregistrés.</string>
+    <string name="delete_volunteer_also_delete_shifts_one">Supprimer également le %1$d shift</string>
+    <string name="delete_volunteer_also_delete_shifts_other">Supprimer également les %1$d shifts</string>
+    <string name="delete_volunteer_warning">⚠️ Attention : Cette action ne peut pas être annulée !</string>
+    <string name="delete_volunteer_graph_warning">Note : La suspension d'un·e bénévole faussera les graphiques de statistiques de la page d'accueil. La suppression de ses shifts aura un impact encore plus important sur la précision des graphiques.</string>
+    
+    <!-- Upload Status Messages -->
+    <string name="validating_file">Validation du fichier...</string>
+    <string name="file_validated_uploading">Fichier validé ! Téléchargement...</string>
+    <string name="file_uploaded_successfully">Fichier téléchargé avec succès !</string>
+    <string name="upload_failed">Échec du téléchargement : %1$s</string>
+    <string name="validation_failed">Échec de la validation : %1$s</string>
+    <string name="key_file_found">Fichier de clé trouvé</string>
+    <string name="unknown">Inconnu</string>
+    
+    <!-- Common Actions -->
+    <string name="save">Enregistrer</string>
+    <string name="delete">Supprimer</string>
+    <string name="edit">Modifier</string>
+    <string name="add">Ajouter</string>
+    <string name="remove">Retirer</string>
+    <string name="confirm">Confirmer</string>
+    
+    <!-- Common buttons -->
+    <string name="ok">OK</string>
+    <string name="yes">Oui</string>
+    <string name="no">Non</string>
+    <string name="cancel">Annuler</string>
+    
+    <!-- Navigation -->
+    <string name="nav_dashboard">Tableau de bord</string>
+    <string name="nav_guests">Guestlist</string>
+    <string name="nav_volunteers">Bénévoles</string>
+    <string name="nav_shifts">Shifts</string>
+    <string name="nav_benefits">Avantages</string>
+    <string name="nav_settings">Paramètres</string>
+    
+    <!-- Dashboard -->
+    <string name="dashboard_title">Tableau de bord</string>
+    <string name="dashboard_subtitle_phone">Aperçu de la gestion d'événements</string>
+    <string name="dashboard_subtitle_tablet">Aperçu de votre système de gestion d'événements</string>
+    <string name="active_volunteers">Bénévoles actif·ve·s</string>
+    <string name="jobs_this_month">Jobs ce mois</string>
+    <string name="venues">Lieux</string>
+    <string name="volunteers_total">Total de bénévoles</string>
+    <string name="plus_one_invites">Invitations +1</string>
+    <string name="total_people">Liste totale</string>
+    <string name="shifts_past_month">Shifts le mois dernier</string>
+    <string name="inactive_volunteers">Bénévoles inactif·ve·s</string>
+    <string name="free_drinks_today">Boissons gratuites aujourd'hui</string>
+    <string name="recent_activity">Activité récente</string>
+    <string name="recent_guests">Invité·e·s récent·e·s</string>
+    <string name="recent_volunteers">Bénévoles récent·e·s</string>
+    <string name="recent_shifts">Shifts récents</string>
+    <string name="latest_guest_phone">Invité·e : %1$s</string>
+    <string name="latest_guest_tablet">Dernier·e invité·e : %1$s</string>
+    <string name="latest_volunteer_phone">Bénévole : %1$s</string>
+    <string name="latest_volunteer_tablet">Dernier·e bénévole : %1$s</string>
+    <string name="latest_job_phone">Job : %1$s</string>
+    <string name="latest_job_tablet">Dernier job : %1$s</string>
+    
+    <!-- Stats and Graphs -->
+    <string name="stats_and_graphs">Statistiques &amp; Tendances</string>
+    
+    <!-- Sync Status -->
+    <string name="syncing">Synchronisation...</string>
+    <string name="last_update_just_now">à l'instant</string>
+    <string name="last_update_never_brief">—</string>
+    <string name="last_update_seconds_ago">il y a %1$d s</string>
+    <string name="last_update_min_sec_ago">il y a %1$d min %2$d s</string>
+    <string name="last_update_hour_min_ago">il y a %1$d h %2$d min</string>
+    <string name="last_update_days_ago">il y a %1$d j</string>
+    <string name="last_update_line">Mise à jour · %1$s</string>
+    <string name="last_update_none_line">Mise à jour · —</string>
+    <string name="sync_pill_minutes_ago">il y a %1$d min</string>
+    <string name="sync_pill_hours_ago">il y a %1$d h</string>
+    <string name="sync_pill_hours_minutes_ago">il y a %1$d h %2$d min</string>
+    <string name="sync_pill_days_ago">il y a %1$d j</string>
+    <string name="sync_pill_days_hours_ago">il y a %1$d j %2$d h</string>
+    <string name="sync_pill_days_minutes_ago">il y a %1$d j %2$d min</string>
+    <string name="sync_pill_days_hours_minutes_ago">il y a %1$d j %2$d h %3$d min</string>
+    
+    <!-- Welcome Screen -->
+    <string name="start_admin">Démarrer Admin</string>
+    <string name="admin_mode">Admin</string>
+    <string name="ticket_check_mode">Billeterie</string>
+    <string name="welcome_background_sync_content_description">Synchronisation avec Google Sheets pour vérifier l'accès admin</string>
+
+    <!-- Admin Auth Screen -->
+    <string name="admin_auth_title">Authentification Admin</string>
+    <string name="admin_auth_description">Scannez votre badge ou code QR pour vérifier votre accès admin</string>
+    <string name="admin_auth_syncing">Chargement des données depuis Google Sheets…</string>
+    <string name="admin_auth_syncing_title">Préparation de l'accès admin</string>
+    <string name="admin_auth_syncing_subtitle">Synchronisation avec Google Sheets pour vérifier correctement votre badge ou code QR.</string>
+    <string name="admin_auth_sync_wait_hint">Ne scannez pas encore — l'authentification sera disponible à la fin de la synchronisation</string>
+    <string name="admin_auth_sync_step_sheet">Vérification de la structure de la feuille</string>
+    <string name="admin_auth_sync_step_download">Téléchargement des dernières données invités et bénévoles</string>
+    <string name="admin_auth_sync_step_verify">Actualisation des profils administrateurs</string>
+    <string name="admin_precheck_sync_loading">Préparation de l'accès admin : vérification de la feuille et synchronisation…</string>
+    <string name="admin_precheck_sync_failed_title">Impossible de préparer l'accès admin</string>
+    <string name="admin_precheck_sync_failed_message">La feuille n'a pas pu être réparée ou synchronisée. Vérifiez la connexion et les paramètres du classeur, puis réessayez.</string>
+    <string name="admin_precheck_sync_retry">Réessayer</string>
+    <string name="admin_auth_ready">Présentez votre badge NFC ou scannez votre code QR</string>
+    <string name="admin_auth_scan_qr">Scanner un code QR</string>
+    <string name="admin_auth_granted">Bienvenue, %1$s ! Accès admin accordé</string>
+    <string name="admin_auth_denied">%1$s n'a pas l'accès admin</string>
+    <string name="admin_auth_not_found">Aucun profil correspondant trouvé</string>
+    <string name="admin_auth_try_again">Réessayer</string>
+    <string name="admin_auth_use_fingerprint">Utiliser l'empreinte digitale</string>
+    <string name="admin_auth_fingerprint_description">Authentifiez-vous avec votre empreinte digitale pour accéder au mode admin</string>
+    <string name="admin_auth_biometric_prompt_title">Authentification Admin</string>
+    <string name="admin_auth_biometric_prompt_subtitle">Vérifiez votre identité avec la biométrie</string>
+    <string name="admin_auth_biometric_cancel">Utiliser QR / NFC à la place</string>
+    <string name="admin_auth_biometric_error">Échec de l'authentification biométrique : %1$s</string>
+
+    <!-- Paramètres de connexion biométrique admin -->
+    <string name="biometric_admin_login_title">Connexion admin par empreinte</string>
+    <string name="biometric_admin_login_description">Permettre l'utilisation du capteur d'empreinte de cet appareil pour accéder au mode admin</string>
+    <string name="biometric_admin_login_not_available">L'authentification biométrique n'est pas disponible sur cet appareil</string>
+    <string name="biometric_admin_login_none_enrolled">Aucune empreinte n'est enregistrée sur cet appareil. Veuillez d'abord ajouter une empreinte dans les paramètres de l'appareil.</string>
+    <string name="biometric_admin_login_enabled">Connexion admin par empreinte activée</string>
+    <string name="biometric_admin_login_disabled">Connexion admin par empreinte désactivée</string>
+    <string name="biometric_warning_title">Avertissement de Sécurité</string>
+    <string name="biometric_warning_message">Toute personne possédant le code de déverrouillage de cet appareil peut ajouter une empreinte digitale et ainsi accéder à la page Admin.\n\nCela est strictement interdit pour les appareils accessibles au public ou à des personnes qui ne devraient pas avoir accès à ces informations privées.\n\nCette fonctionnalité est UNIQUEMENT destinée aux utilisateurs qui comprennent et acceptent les risques associés.\n\nPour continuer, votre identité admin sera d'abord vérifiée via un code QR ou un badge NFC.</string>
+    <string name="biometric_warning_accept">Je comprends les risques</string>
+    <string name="biometric_warning_cancel">Annuler</string>
+    <string name="biometric_enrollment_verify_title">Vérifier l'accès Admin</string>
+    <string name="biometric_enrollment_verify_description">Scannez votre badge admin ou code QR pour confirmer votre identité avant d'activer la connexion biométrique</string>
+    <string name="biometric_enrollment_success">La connexion par empreinte a été activée pour l'accès admin</string>
+    <string name="biometric_enrollment_prompt_title">Enregistrer la biométrie</string>
+    <string name="biometric_enrollment_prompt_subtitle">Confirmez votre empreinte pour activer la connexion admin</string>
+
+    <!-- Billeterie -->
+    <string name="ticket_check_title">Billeterie</string>
+    <string name="ticket_check_coming_soon">Cette fonctionnalité arrive bientôt</string>
+    <string name="ticket_check_description">Accès rapide à la liste des invité·e·s et au scanner à l'entrée.</string>
+    <string name="billeterie_stat_permanent_guests">Invité·e·s permanents</string>
+    <string name="billeterie_stat_temporary_guests_today">Invité·e·s temporaires (aujourd'hui)</string>
+    <string name="billeterie_stat_volunteers_on_list">Bénévoles sur la liste</string>
+    <string name="billeterie_stat_total_without_invites">Sur la liste (sans +1)</string>
+    <string name="billeterie_button_guest_list">Guest List</string>
+    <string name="billeterie_button_scanner">Scanner</string>
+
+    <!-- Setup Wizard -->
+    <string name="setup_continue">Continuer</string>
+    <string name="setup_back">Retour</string>
+    <string name="setup_skip">Passer la configuration</string>
+    <string name="setup_finish">Terminer la configuration</string>
+    <string name="setup_welcome_title">Bienvenue sur NoctuList</string>
+    <string name="setup_welcome_description">Configurez votre application de gestion d'événements en quelques étapes. Vous pourrez tout modifier plus tard dans les Réglages.</string>
+    <string name="setup_get_started">Commencer</string>
+    <string name="setup_step_progress">Étape %1$d sur %2$d</string>
+    <string name="setup_phase_personalize">Personnalisation</string>
+    <string name="setup_phase_connect">Connexion Google Sheets</string>
+    <string name="setup_phase_finish">Terminer</string>
+    <string name="setup_google_sheets_title">Connecter Google Sheets</string>
+    <string name="setup_google_sheets_description">Liez votre tableur et téléversez la clé de compte de service pour synchroniser vos données.</string>
+    <string name="setup_sheets_defaults_hint">Les noms d'onglets par défaut conviennent à la plupart des événements. Développez ci-dessous uniquement si votre tableur utilise d'autres noms.</string>
+    <string name="setup_sheets_customize">Personnaliser les noms d'onglets</string>
+    <string name="setup_start_sync">Lancer la synchronisation</string>
+    <string name="setup_first_sync_ready">Tout est prêt. Appuyez ci-dessous pour télécharger vos données depuis Google Sheets.</string>
+    <string name="setup_language_title">Choisissez votre langue</string>
+    <string name="setup_language_description">Sélectionnez la langue que vous souhaitez utiliser dans l'application</string>
+    <string name="setup_theme_title">Choisissez un thème</string>
+    <string name="setup_theme_description">Choisissez l'apparence de l'application — vous pourrez toujours modifier cela dans les Paramètres</string>
+    <string name="setup_color_profile_title">Profil de couleur</string>
+    <string name="setup_color_profile_description">Choisissez les couleurs d'accent. Le système suit votre fond d'écran sur les appareils compatibles.</string>
+    <string name="setup_layout_size_title">Taille de la mise en page</string>
+    <string name="setup_layout_size_description">Ajustez la taille de l'interface — vous pourrez l'affiner à tout moment dans les Paramètres.</string>
+    <string name="setup_layout_nvidia_hint">Sur les tablettes NVIDIA, 107% convient souvent mieux à cet écran.</string>
+    <string name="setup_layout_use_recommended">Utiliser 107%</string>
+    <string name="setup_spreadsheet_title">ID Google Sheets</string>
+    <string name="setup_spreadsheet_description">Entrez l'ID de la feuille de calcul Google pour synchroniser vos données d'événement</string>
+    <string name="setup_spreadsheet_hint">Trouvez l'ID dans l'URL de votre Google Sheets :\nhttps://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit</string>
+    <string name="setup_json_key_title">Clé de compte de service</string>
+    <string name="setup_json_key_description">Téléchargez le fichier de clé JSON de votre compte de service Google pour activer la synchronisation</string>
+    <string name="setup_sheets_title">Noms des feuilles</string>
+    <string name="setup_sheets_description">Configurez les noms de chaque feuille dans votre Google Spreadsheet — les valeurs par défaut sont pré-remplies</string>
+    <string name="setup_wizard_first_sync_title">Première synchronisation</string>
+    <string name="setup_wizard_first_sync_message">Téléchargement des données de l'événement depuis Google Sheets…</string>
+    <string name="setup_wizard_first_sync_error_title">Échec de la première synchronisation</string>
+    <string name="setup_wizard_first_sync_error_generic">Impossible de synchroniser avec Google Sheets. Vérifiez l'ID du classeur, la clé JSON et la connexion, puis réessayez.</string>
+    
+    <!-- Instructions Dialog -->
+    <string name="google_sheets_setup_instructions">Instructions de configuration Google Sheets</string>
+    <string name="setup_instructions_intro">Suivez ces étapes pour configurer la synchronisation Google Sheets :</string>
+    <string name="open_google_cloud_console">Ouvrir la Console Google Cloud</string>
+    <string name="got_it">Compris !</string>
+    
+    <!-- Instruction Steps -->
+    <string name="step_1_title">Créer un projet Google Cloud</string>
+    <string name="step_1_description">Accédez à la Console Google Cloud et créez un nouveau projet ou sélectionnez-en un existant.</string>
+    <string name="step_2_title">Activer l'API Google Sheets</string>
+    <string name="step_2_description">Dans votre projet, activez l'API Google Sheets depuis la section APIs &amp; Services.</string>
+    <string name="step_3_title">Créer un compte de service</string>
+    <string name="step_3_description">Créez un compte de service dans IAM &amp; Admin > Service Accounts. Téléchargez le fichier de clé JSON.</string>
+    <string name="step_4_title">Ajouter la clé à l'application</string>
+    <string name="step_4_description">Utilisez le bouton 'Télécharger le fichier de clé' dans les paramètres, ou placez manuellement le fichier JSON dans app/src/main/assets/ sous le nom 'service_account_key.json'</string>
+    <string name="step_5_title">Créer une feuille de calcul Google</string>
+    <string name="step_5_description">Créez une nouvelle feuille de calcul Google et copiez son ID depuis l'URL.</string>
+    <string name="step_6_title">Créer les feuilles requises</string>
+    <string name="step_6_description">Créez les feuilles : 'Guest List', 'Volunteers', 'Shifts', 'Shift Types', 'Volunteer Guest List', 'Venues' et 'Temp Guest List' (les dates dans 'Temp Guest List' doivent utiliser le format YYYY-MM-DD).</string>
+    <string name="step_7_title">Configurer les en-têtes des feuilles</string>
+    <string name="step_7_description">Ajoutez les en-têtes à chaque feuille. L'application les créera automatiquement, mais vous pouvez les configurer manuellement si nécessaire.</string>
+    <string name="step_8_title">Partager avec le compte de service</string>
+    <string name="step_8_description">Partagez la feuille de calcul avec l'adresse e-mail de votre compte de service (trouvée dans le fichier JSON) avec un accès Éditeur.</string>
+    <string name="step_9_title">Configurer les paramètres de l'application</string>
+    <string name="step_9_description">Saisissez l'ID de la feuille de calcul et les noms des feuilles dans les paramètres ci-dessus.</string>
+    
+    <!-- Test Connection Dialog -->
+    <string name="test_google_sheets_connection">Tester la connexion Google Sheets</string>
+    <string name="testing_connection">Test de connexion en cours...</string>
+    <string name="test_connection_description">Cela testera la connexion à votre Google Sheets en utilisant les paramètres actuels.</string>
+    <string name="test">Tester</string>
+    <string name="close">Fermer</string>
+    
+    <!-- Active Volunteers Dialog -->
+    <string name="volunteer_activity_status">Statut d'activité des bénévoles</string>
+    <string name="active_volunteers_count">Bénévoles actif·ve·s : %1$d</string>
+    <string name="inactive_volunteers_count">Bénévoles inactif·ve·s : %1$d</string>
+    <string name="inactive_volunteers_label">Bénévoles inactif·ve·s :</string>
+    <string name="active">Actif·ve</string>
+    <string name="inactive">Inactif·ve</string>
+    
+    <!-- Volunteer Screen -->
+    <string name="volunteers_title">Bénévoles</string>
+    <string name="volunteer_manager">Gestion des bénévoles</string>
+    <string name="add_volunteer">Ajouter un·e bénévole</string>
+    <string name="add_new_volunteer">Ajouter un·e nouveau·elle bénévole</string>
+    <string name="refresh">Actualiser</string>
+    <string name="search_volunteers_placeholder">Rechercher des bénévoles par nom ou email...</string>
+    <string name="filter_all">Tous·tes</string>
+    <string name="filter_active">Actif·ve·s</string>
+    <string name="filter_inactive">Inactif·ve·s</string>
+    <string name="active_status">Actif·ve</string>
+    <string name="inactive_status">Inactif·ve</string>
+    <string name="view_details">Voir les détails</string>
+    <string name="full_name">Prénom</string>
+    <string name="last_name_abbreviation">Nom de famille</string>
+    <string name="last_name_abbreviation_placeholder">par ex., Dupont</string>
+    <string name="email">Email</string>
+    <string name="email_placeholder">nom@exemple.com</string>
+    <string name="phone_number">Numéro de téléphone</string>
+    <string name="date_of_birth">Date de naissance</string>
+    <string name="date_of_birth_placeholder">jj.mm.aaaa</string>
+    <string name="gender">Genre</string>
+    <string name="select_gender">Sélectionner le genre</string>
+    <string name="gender_female">Femme</string>
+    <string name="gender_male">Homme</string>
+    <string name="gender_non_binary">Non-binaire</string>
+    <string name="gender_other">Autre</string>
+    <string name="gender_prefer_not_to_disclose">Préfère ne pas divulguer</string>
+    <string name="update_volunteer">Mettre à jour le·la bénévole</string>
+    <string name="edit_volunteer">Modifier le·la bénévole</string>
+    <string name="edit_volunteer_details">Modifier les détails du·de la bénévole</string>
+    
+    <!-- Guest List Screen -->
+    <string name="guest_list_title">Guestlist</string>
+    <string name="guest_list_management">Gestion de la liste des invité·e·s</string>
+    <string name="guest_list_description">Gérer les invité·e·s pour tous les lieux configurés</string>
+    <string name="venue_groove">Groove</string>
+    <string name="venue_le_terreau">Le Terreau</string>
+    <string name="add_guest">Ajouter un·e invité·e</string>
+    <string name="add_new_guest">Ajouter un·e nouveau·elle invité·e</string>
+    <string name="add_guest_tab_permanent">Permanent</string>
+    <string name="add_guest_tab_temporary">Temporaire</string>
+    <string name="add_guest_add_another_name">Ajouter un autre nom d’invité·e</string>
+    <string name="add_guest_additional_name_label">Nom d’invité·e (%1$d)</string>
+    <string name="last_synced">Dernière mise à jour :</string>
+    <string name="just_now">À l'instant</string>
+    <string name="minutes_ago">Il y a %1$d minutes</string>
+    <string name="hours_ago">Il y a %1$d heures</string>
+    <string name="days_ago">Il y a %1$d jours</string>
+    <string name="search_guests_placeholder">Rechercher par nom, email ou téléphone...</string>
+    <string name="filter_volunteer_benefits">Avantages bénévoles</string>
+    <string name="filter_permanent_guests">Invité·e·s permanent·e·s</string>
+    <string name="filter_temporary_guests">Invité·e·s temporaires</string>
+    <string name="guests_count">Invité·e·s</string>
+    <string name="total_guests_count">Total d'invité·e·s</string>
+    <string name="invitations_count">Invitations</string>
+    <string name="total_invitations_count">Total d'invitations</string>
+    <string name="volunteer_label">Bénévole</string>
+    <string name="invitations_text">%1$d invitations</string>
+    <string name="view_benefits">Voir les avantages</string>
+    <string name="delete_guest">Supprimer l'invité·e</string>
+    <string name="edit_guest">Modifier l'invité·e</string>
+    <string name="edit_guest_details">Modifier les détails de l'invité·e</string>
+    <string name="update_guest">Mettre à jour l'invité·e</string>
+    <string name="guest_information">Informations sur l'invité·e</string>
+    <string name="guest_name">Nom de l'invité·e</string>
+    <string name="guest_email">Email</string>
+    <string name="guest_email_placeholder">email@exemple.com</string>
+    <string name="guest_phone_number">Numéro de téléphone</string>
+    <string name="guest_phone_placeholder">+33 6 12 34 56 78</string>
+    <string name="number_of_invitations">Nombre d'invitations</string>
+    <string name="venue">Lieu</string>
+    <string name="notes">Notes</string>
+    
+    <!-- Benefits Screen -->
+    <string name="benefits_title">Avantages</string>
+    <string name="volunteer_benefits_overview">Aperçu des avantages bénévoles</string>
+    <string name="benefits_description">Référence du personnel pour vérifier les avantages des bénévoles</string>
+    <string name="search_volunteers_benefits_placeholder">Rechercher des bénévoles par nom ou email...</string>
+    <string name="no_rank">Pas de rang</string>
+    <string name="high_rank">Rang élevé</string>
+    <string name="active_benefits">Avantages actifs</string>
+    <string name="benefits_overview_info_button">Aide</string>
+    <string name="benefits_overview_totals_section">Totaux</string>
+    <string name="benefits_overview_ranks_section">Par rang</string>
+    <string name="benefits_overview_line_50_bar">Bar 50%% : %1$d</string>
+    <string name="benefits_overview_line_free_entry">Entrée : %1$d · %2$d inv.</string>
+    <string name="benefits_overview_line_extraordinary">Extra : %1$d</string>
+    <string name="benefits_overview_line_future_tickets">Billets : %1$d · %2$d inv.</string>
+    <string name="current_benefits">✨ Avantages actuels</string>
+    <string name="days_left">%1$d jours restants</string>
+    <string name="expires_soon">Expire bientôt</string>
+    <string name="free_entry">✅ Entrée gratuite</string>
+    <string name="friend_invitation">👥 Invitation d'un·e ami·e</string>
+    <string name="drink_tokens">🍺 %1$d jetons de boisson</string>
+    <string name="bar_discount">💰 %1$d%% de réduction au bar</string>
+    <string name="extraordinary_benefits">💎 Avantages extraordinaires</string>
+    
+    <!-- Shifts Screen -->
+    <string name="shifts_title">Shifts</string>
+    <string name="shift_tracking">Suivi des Shifts</string>
+    <string name="add_shift">Ajouter un Shift</string>
+    <string name="add_new_shift">Ajouter un nouveau Shift</string>
+    <string name="search_shifts_placeholder">Rechercher des shifts par nom de bénévole ou notes...</string>
+    <string name="unknown_volunteer">Bénévole inconnu·e</string>
+    <string name="volunteer">Bénévole</string>
+    <string name="search_volunteers_shift_placeholder">Rechercher des bénévoles...</string>
+    <string name="shift_type">Type de Shift</string>
+    <string name="no_shift_types_available">Aucun type de shift actif. Ajoutez ou activez des types dans la gestion des types de shift.</string>
+    <string name="select_shift_type">Sélectionner un type de shift...</string>
+    <string name="shift_time">Heure du Shift</string>
+    <string name="shift_time_evening_profited">Profité</string>
+    <string name="shift_time_evening_non_profited">Pas profité</string>
+    <string name="shift_date_time">Date &amp; heure du Shift</string>
+    <string name="notes_optional">Notes (optionnel)</string>
+    <string name="add_job">Ajouter un job</string>
+    <string name="edit_shift">Modifier le Shift</string>
+    <string name="edit_shift_details">Modifier les détails du Shift</string>
+    <string name="update_job">Mettre à jour le job</string>
+    
+    <!-- Shift Type Management -->
+    <string name="shift_type_management_title">Gestion des types de Shifts</string>
+    <string name="shift_type_management_description">Configurer les types de shifts et leur éligibilité au rang</string>
+    <string name="manage_shift_types">Gérer les types de Shifts</string>
+    <string name="shift_types_title">Types de Shifts</string>
+    <string name="add_shift_type">Ajouter un type de Shift</string>
+    <string name="search_shift_types_placeholder">Rechercher des types de shifts...</string>
+    <string name="filter_shift_types">Types de Shifts</string>
+    <string name="filter_orion_types">Types Orion</string>
+    <string name="shift_types_count">%1$d sur %2$d types de shifts</string>
+    <string name="shift_job">Shift Job</string>
+    <string name="orion_job">Orion Job</string>
+    <string name="requires_time">Nécessite du temps</string>
+    <string name="stellar_benefits">Avantages Stellar</string>
+    <string name="manual_rewards">Récompenses manuelles</string>
+    <string name="manual_rewards_details">Détails des récompenses manuelles</string>
+    <string name="days_n">%1$d jours</string>
+    <string name="free_drinks_n">%1$d boissons gratuites</string>
+    <string name="bar_discount_n">%1$d%% de réduction au bar</string>
+    <string name="invites_n">%1$d invitations</string>
+    <string name="no_rewards_configured">Aucune récompense configurée</string>
+    <!-- Shift Type Dialog -->
+    <string name="add_shift_type_title_compact">Ajouter un type de shift</string>
+    <string name="add_shift_type_title_full">Ajouter un nouveau type de shift</string>
+    <string name="edit_shift_type_title_compact">Modifier le type de shift</string>
+    <string name="edit_shift_type_title_full">Modifier la configuration du type de shift</string>
+    <string name="shift_type_name_label">Nom du type de shift</string>
+    <string name="shift_type_name_placeholder">ex. : Personnel du bar</string>
+    <string name="description_label">Description</string>
+    <string name="description_placeholder">Description facultative</string>
+    <string name="benefit_system_label">Système d'avantages</string>
+    <string name="stellar_config_label">Configuration du type de shift</string>
+    <string name="manual_rewards_config_label">Configuration des récompenses manuelles</string>
+    <string name="manual_rewards_warning_orion_automatic_enabled">Les avantages automatiques Orion sont activés pour ce type de shift ! Ils se cumulent avec les récompenses manuelles — repassez en mode Stellaire et désactivez « Orion Job » si ce n'était pas voulu.</string>
+    <string name="manual_rewards_warning_nova_stellar_automatic_enabled">Les avantages automatiques Nova / Galaxie (shift comptabilisé) sont activés ! Ils se cumulent avec les récompenses manuelles — repassez en mode Stellaire et désactivez « Shift Job » si ce n'était pas voulu.</string>
+    <string name="shift_job_label">Shift Job (Nova / Galaxie)</string>
+    <string name="orion_job_label">Orion Job (Comité / Coordination)</string>
+    <string name="requires_shift_time_label">Paramètre requis : peut/ne peut pas profiter de la soirée</string>
+    <string name="duration_days_label">Durée (jours)</string>
+    <string name="free_drinks_label">Boissons gratuites</string>
+    <string name="bar_discount_percent_label">Réduction bar (%)</string>
+    <string name="free_entry_label">Entrée gratuite</string>
+    <string name="number_of_invites_label">Nombre d'invitations</string>
+    <string name="duration_invites_label">Invitations pendant la durée de la récompense</string>
+    <string name="future_single_use_entries_label">Entrées futures à un usage unique</string>
+    <string name="future_entry_invites_label">Invitations par entrée future (amis)</string>
+    <string name="future_entry_invites_helper">Utilisé pour le « +n inv. » affiché sur les entrées futures à usage unique.</string>
+    <string name="future_single_use_entries_with_invites_summary">Entrées futures à usage unique : %1$d (+%2$d inv.)</string>
+    <string name="future_event_entries_remaining_n">🎟️ %1$d Entrées événement (usage unique)</string>
+    <string name="future_entry_remaining_with_invites">🎟️ %1$d entrée restante (+%2$d inv.)</string>
+    <string name="future_entries_remaining_with_invites">🎟️ %1$d entrées restantes (+%2$d inv.)</string>
+    <string name="future_entry_solo">🎟️ %1$d entrée restante (seul)</string>
+    <string name="future_entries_solo">🎟️ %1$d entrées restantes (seul)</string>
+    <string name="other_notes_label">Autres remarques</string>
+    <string name="other_notes_placeholder">Remarques supplémentaires…</string>
+    <string name="update_shift_type">Mettre à jour le type de shift</string>
+    <string name="stellar_benefits_info_title">Guide des avantages bénévoles</string>
+
+    <string name="benefits_help_dialog_title">Guide des avantages bénévoles</string>
+    <string name="benefits_help_dialog_subtitle">Collectif Nocturne · 2026-2027</string>
+    <string name="benefits_help_intro">Indique le type de shift qui correspond au travail réellement effectué. En mode Stellaire, l'application calcule les avantages ; en mode Manuel, tu les définis toi-même.</string>
+
+    <string name="benefits_help_tab_modes">Modes</string>
+    <string name="benefits_help_tab_nova">Types de shift</string>
+    <string name="benefits_help_tab_extras">Bonus et dates</string>
+
+    <string name="benefits_help_app_stellar">Active « Shift job », puis choisis le type Nova qui convient\nActive « Orion job » pour un mandat (année Orion, puis statut Vétéran l'année suivante)\nBoissons, liste d'invités et entrées futures : calcul automatique</string>
+    <string name="benefits_help_app_manual">Tu saisis toi-même la durée, les boissons, la réduction au bar, les invitations, etc.\nÀ utiliser pour des cas particuliers hors grille habituelle\nÉvite de compter deux fois le même engagement s'il est déjà pris en charge en mode Stellaire</string>
+
+    <string name="benefits_help_section_profité_title">Profité / non-profité</string>
+    <string name="benefits_help_section_profité_body">Uniquement pour le type Nova « Shift par défaut », avec le réglage « profiter de la soirée » activé.\nCe n'est pas une question d'entrée : on indique simplement si les horaires du shift ont permis à la personne de profiter de la soirée malgré le travail, ou non.\nLes autres types Nova n'utilisent pas ce paramètre.</string>
+
+    <string name="benefits_help_section_nova_title">Avantages par type Nova (shift job)</string>
+    <string name="benefits_help_nova_profité_title">Shift soirée - profité</string>
+    <string name="benefits_help_nova_profité_rationale">Uniquement pour la soirée de l'événement concerné.</string>
+    <string name="benefits_help_nova_profité_perks">Entrée gratuite + 1 ami·e - soirée de l'événement\n50\u0025 au bar - soirée de l'événement\n2 boissons offertes (~10 CHF) - soirée de l'événement</string>
+
+    <string name="benefits_help_nova_non_profité_title">Shift soirée - non-profité</string>
+    <string name="benefits_help_nova_non_profité_rationale">Mêmes avantages pour la nuit d'événement, plus une entrée saisonnière gratuite (+1 ami·e).</string>
+    <string name="benefits_help_nova_non_profité_perks">Même paquet que le profité pour la nuit d'événement\n+ 1 entrée saisonnière + 1 ami·e (suivie dans l'application)</string>
+
+    <string name="benefits_help_nova_photo_title">Photographe / vidéaste (soirée)</string>
+    <string name="benefits_help_nova_photo_rationale">Même principe que le shift par défaut en non-profité.</string>
+    <string name="benefits_help_nova_photo_perks">Entrée gratuite + 1 ami·e - nuit couverte\n50\u0025 au bar - nuit couverte\n2 boissons offertes (~10 CHF) - nuit couverte\n1 entrée saisonnière + 1 ami·e</string>
+
+    <string name="benefits_help_nova_meeting_title">Réunion</string>
+    <string name="benefits_help_nova_meeting_rationale">Trois réunions dans le même mois comptent pour Galaxie, sauf pour Orion : les réunions ne sont pas comptabilisées dans leur total.</string>
+    <string name="benefits_help_nova_meeting_perks">1 entrée saisonnière + 1 ami·e\n1 boisson offerte (~5 CHF)</string>
+
+    <string name="benefits_help_nova_gd_event_title">Graphiste - pour un événement précis</string>
+    <string name="benefits_help_nova_gd_event_rationale">Même logique que la photo ou la vidéo pour cette soirée.</string>
+    <string name="benefits_help_nova_gd_event_perks">Entrée gratuite + 1 ami·e - soirée de l'événement\n50\u0025 au bar - soirée de l'événement\n2 boissons offertes (~10 CHF) - soirée de l'événement\n1 entrée saisonnière + 1 ami·e</string>
+
+    <string name="benefits_help_nova_gd_asso_title">Graphiste - pour l'association (hors une seule soirée)</string>
+    <string name="benefits_help_nova_gd_asso_rationale">Travail non limité à une soirée : davantage de boissons offertes, sans 50\u0025 au bar.</string>
+    <string name="benefits_help_nova_gd_asso_perks">2 entrées saisonnières + 1 ami·e chacune\n4 boissons offertes (~20 CHF)</string>
+
+    <string name="benefits_help_section_galaxie_title">Galaxie</string>
+    <string name="benefits_help_section_galaxie_body">Trois contributions le même mois civil (shifts et réunions)\nPour Orion, les réunions ne comptent pas dans ces trois contributions\nCe mois-là : entrée gratuite à tous les événements, 50\u0025 au bar, et une boisson supplémentaire\nCes avantages s'ajoutent à ceux de chaque shift</string>
+
+    <string name="benefits_help_section_orion_title">Orion</string>
+    <string name="benefits_help_section_orion_body">Indique que le type de poste est un job Orion\nPendant un an à partir du début du mandat : entrée gratuite, 50\u0025 au bar, 1 invité·e\n270 CHF sur le porte-monnaie interne (budget T-shirt et boissons)</string>
+
+    <string name="benefits_help_section_veteran_title">Vétéran·e·x</string>
+    <string name="benefits_help_section_veteran_body">L'année suivant Orion\nEntrée gratuite et 50\u0025 au bar sont maintenus\nLe porte-monnaie interne prend fin avec le mandat</string>
+
+    <string name="benefits_help_section_timing_title">Quand les avantages s'activent dans l'application</string>
+    <string name="benefits_help_section_timing_body">Les avantages « nuit d'événement » suivent le jour de soirée du lieu (paramètre « changement de jour » dans les réglages)\nLes entrées futures deviennent utilisables à partir du même moment\nOrion, Galaxie et Vétéran suivent des périodes plus longues</string>
+
+    <string name="benefits_help_footer_title">Remarques utiles</string>
+    <string name="benefits_help_footer_bullets">Profité / non-profité - savoir si les horaires du shift ont permis de profiter de la soirée ou non (sans lien avec l'entrée)\nLe 50\u0025 au bar dépend des prix enregistrés dans Lightspeed\nGalaxie se cumule avec les avantages par shift</string>
+
+    <string name="nova_job_type_label">Type d'avantages Nova</string>
+    <string name="nova_type_default_shift">Shift par défaut</string>
+    <string name="nova_type_meeting">Réunion</string>
+    <string name="nova_type_graphic_designer_event">Graphiste (pour l'événement)</string>
+    <string name="nova_type_photographer_videographer">Photographe / cadreur</string>
+    <string name="nova_type_graphic_designer_association">Graphiste (pour l'association)</string>
+
+    <!-- Venue Management -->
+    <string name="venue_management_title">Gestion des lieux</string>
+    <string name="venue_management_description">Configurer les lieux et leurs paramètres</string>
+    <string name="manage_venues">Gérer les lieux</string>
+    <string name="sales_items_management_title">Gestion des articles de vente</string>
+    <string name="sales_items_management_description">Configurer les articles de vente et leurs paramètres</string>
+    <string name="manage_sales_items">Gérer les articles de vente</string>
+    <string name="sales_items_title">Articles de vente</string>
+    <string name="add_sales_item">Ajouter un article de vente</string>
+    <string name="edit_sales_item">Modifier l’article de vente</string>
+    <string name="sales_update_item">Mettre à jour l’article de vente</string>
+    <string name="search_sales_items_placeholder">Rechercher des articles de vente...</string>
+    <string name="sales_items_count">Articles de vente : %1$d/%2$d</string>
+    <string name="sales_price_label">Prix (CHF)</string>
+    <string name="sales_discount_label">Réduction applicable</string>
+    <string name="sales_required_rank_label">Rang minimum requis</string>
+    <string name="sales_rank_none_required">Aucun rang requis</string>
+    <string name="sales_item_summary_line">CHF %1$.2f • Réduction : %2$s • Rang min. : %3$s</string>
+    <string name="venues_title">Lieux</string>
+    <string name="add_venue">Ajouter un lieu</string>
+    <string name="search_venues_placeholder">Rechercher des lieux...</string>
+    <string name="venues_count">%1$d sur %2$d lieux</string>
+    <string name="venue_name">Nom du lieu</string>
+    <string name="venue_description">Description</string>
+    <string name="venue_active">Actif</string>
+    <string name="venue_inactive">Inactif</string>
+    <string name="update_venue">Mettre à jour le lieu</string>
+    <string name="venue_name_placeholder">par ex., Groove</string>
+    <string name="venue_description_placeholder">Description optionnelle</string>
+    <string name="add_new_venue">Ajouter un nouveau lieu</string>
+    <string name="edit_venue_configuration">Modifier la configuration du lieu</string>
+    <string name="venue_all">TOUS</string>
+    <string name="venue_both">LES DEUX</string>
+
+    <!-- Temporary Guest List -->
+    <string name="temp_guest_artist_label">Artiste / Groupe</string>
+    <string name="temp_guest_event_date_label">Date de l’événement</string>
+    <string name="temp_guest_contact_phone_label">Numéro de téléphone d’urgence</string>
+    <string name="temp_guest_chip_label">Temp</string>
+    <string name="temp_guest_timeline_button">Futurs / Historique</string>
+    <string name="temp_guest_timeline_title">Guest list temporaire</string>
+    <string name="temp_guest_tab_temp">Temporaire</string>
+    <string name="temp_guest_tab_volunteer">Bénévole</string>
+    <string name="temp_guest_range_label">Période</string>
+    <string name="temp_guest_range_three_days">+/- 3 jours</string>
+    <string name="temp_guest_range_three_days_short">±3j</string>
+    <string name="temp_guest_range_one_week">1 semaine</string>
+    <string name="temp_guest_range_one_week_short">1sem</string>
+    <string name="temp_guest_range_two_weeks">2 semaines</string>
+    <string name="temp_guest_range_two_weeks_short">2sem</string>
+    <string name="temp_guest_range_one_month">1 mois</string>
+    <string name="temp_guest_range_one_month_short">1m</string>
+    <string name="temp_guest_range_six_months">6 mois</string>
+    <string name="temp_guest_range_six_months_short">6m</string>
+    <string name="temp_guest_range_one_year">1 an</string>
+    <string name="temp_guest_range_one_year_short">1a</string>
+    <string name="temp_guest_range_all_time">Depuis toujours</string>
+    <string name="temp_guest_range_all_time_short">Tous</string>
+    <string name="temp_guest_section_upcoming">Futurs invités</string>
+    <string name="temp_guest_section_past">Historique</string>
+    <string name="temp_guest_none_upcoming">Aucun invité futur pour ce filtre.</string>
+    <string name="temp_guest_none_past">Aucun invité passé pour ce filtre.</string>
+    
+    <!-- App Information -->
+    <string name="app_info_title">Informations sur l'application</string>
+    <string name="app_version">NoctuList 0.9</string>
+    <string name="app_designed_for">Conçu pour les lieux du Collectif Nocturne</string>
+    <string name="app_developed_full">Développé pour le Collectif Nocturne par Leonardo Mondada</string>
+    <string name="last_sync">Dernière mise à jour : %1$s</string>
+    <string name="never">Jamais</string>
+    
+    <!-- QR Code Related -->
+    <string name="qr_code">QR Code</string>
+    <string name="volunteer_qr_code">QR Code bénévole</string>
+    <string name="qr_code_anonymized_label">anonymisé</string>
+    <string name="edit_volunteer_button">Modifier le·la bénévole</string>
+    <string name="delete_volunteer_button">Supprimer le·la bénévole</string>
+    <string name="camera_permission_required">L'autorisation de la caméra est requise pour scanner les QR codes</string>
+    <string name="camera_permission_title">Autorisation de caméra requise</string>
+    <string name="camera_permission_qr_nfc_body">L'autorisation caméra est requise pour scanner les QR codes. Le scan NFC reste actif en parallèle quand il est disponible.</string>
+    <string name="camera_error">Erreur de caméra</string>
+    <string name="enter_id_manually">Entrer l'ID manuellement</string>
+    <string name="add_nfc_card">Ajouter une carte NFC</string>
+    <string name="add_nfc_card_uid_title">Ajouter l'UID de la carte NFC</string>
+    <string name="enter_uid_manually">Entrer l'UID manuellement</string>
+    <string name="read_uid_with_phone_nfc">Lire l'UID avec le téléphone (NFC)</string>
+    <string name="read_uid_with_usb_reader">Lire l'UID avec un lecteur externe (ACR122U USB ou ACR1255U-J1 Bluetooth)</string>
+    <string name="usb_reader_not_connected">Aucun lecteur NFC USB externe détecté.</string>
+    <string name="usb_reader_waiting_card">En attente d'une carte NFC sur le lecteur externe (USB ou Bluetooth)…</string>
+    <string name="enter_nfc_uid_title">Entrer l'UID NFC</string>
+    <string name="uid_label">UID</string>
+    <string name="scan_nfc_card_title">Scanner une carte NFC</string>
+    <string name="place_nfc_card_on_phone">Placez la carte NFC au dos du téléphone.</string>
+    <string name="nfc_card_detected">Carte détectée.</string>
+    <string name="use_this_uid">Utiliser cet UID</string>
+    <string name="nfc_uid_label">UID NFC</string>
+    <string name="nfc_uid_copied">UID NFC copié</string>
+    <string name="copy_nfc_uid">Copier l'UID NFC</string>
+    <string name="back">Retour</string>
+    <string name="scan_qr_or_nfc_title">Scanner un QR code ou une carte NFC</string>
+    <string name="scan_qr_or_nfc_subtitle_enabled">Le scanner QR caméra et le scanner de carte NFC sont actifs. Vous pouvez utiliser l'un ou l'autre.</string>
+    <string name="scan_qr_or_nfc_subtitle_phone_and_usb">Le scanner QR, le NFC du téléphone et un lecteur NFC externe (USB ou Bluetooth) sont disponibles.</string>
+    <string name="scan_qr_or_nfc_subtitle_usb_only">Le scanner QR et un lecteur NFC externe (USB ou Bluetooth) sont disponibles. Le NFC du téléphone n'est pas actif.</string>
+    <string name="scan_qr_subtitle_nfc_disabled">Le scanner QR caméra est actif. NFC est désactivé sur cet appareil.</string>
+    <string name="scan_with_usb_reader">Scanner avec le lecteur externe</string>
+    <string name="usb_reader_waiting_card_short">Carte en attente...</string>
+    <string name="scanner_ble_reader_footer_label">Lecteur Bluetooth (ACR1255U-J1)</string>
+    <string name="scanner_ble_reader_footer_connected">Lien actif — prêt à scanner</string>
+    <string name="scanner_ble_reader_footer_disconnected">Pas de lien actif — réveillez le lecteur (bouton) ou attendez la reconnexion</string>
+    <string name="scanner_ble_reader_footer_reading">Lecture de la carte…</string>
+    <string name="nfc_not_supported_device">Cet appareil ne prend pas en charge le scan NFC.</string>
+    <string name="nfc_unavailable_no_usb_hint">Cet appareil n'a pas de NFC et aucun lecteur externe n'est connecté (USB ou Bluetooth).</string>
+    <string name="nfc_phone_unavailable_use_usb_reader">Cet appareil n'a pas de NFC intégré. Utilisez l'option lecteur externe ci-dessous (ACR122U USB ou ACR1255U-J1 Bluetooth).</string>
+    <string name="nfc_disabled_enable">NFC est désactivé. Activez NFC dans les réglages du téléphone pour scanner les cartes.</string>
+    <string name="nfc_uid_read_failed">Impossible de lire l'UID NFC. Réessayez.</string>
+    <string name="nfc_uid_not_found">Aucun·e bénévole ou invité·e permanent·e trouvé·e pour l'UID NFC : %1$s</string>
+    <string name="billeterie_nfc_no_match">Aucun·e bénévole ou invité·e permanent·e ne correspond à cette carte.</string>
+    <string name="nfc_reader_error">Erreur du lecteur NFC : %1$s</string>
+    <string name="external_reader_bt_blocked_hint">L'accès Bluetooth pour le lecteur externe a été refusé. Touchez ci-dessous pour ouvrir les paramètres Android de l'application, puis autorisez le Bluetooth ou les appareils à proximité pour cette application. Si vous avez choisi « Ne plus demander », vous devez l'activer dans ces paramètres.</string>
+    <string name="open_app_settings_for_reader">Ouvrir les paramètres de l'application</string>
+    <string name="last_nfc_uid_scanned">Dernier UID NFC scanné : %1$s</string>
+    <string name="invalid_qr_or_nfc_data">Données QR/NFC invalides.</string>
+    <string name="permanent_guest_label">Invité·e permanent·e</string>
+    <string name="nfc_uid_multiple_matches_title">Plusieurs profils trouvés</string>
+    <string name="nfc_uid_multiple_matches_message">L'UID %1$s correspond à %2$d profils. Sélectionnez le bon profil.</string>
+    <string name="manual_volunteer_input">Entrer l'ID du·de la bénévole</string>
+    <string name="enter_volunteer_id_manually">Entrez l'ID du·de la bénévole manuellement :</string>
+    <string name="volunteer_id">ID du·de la bénévole</string>
+    <string name="find_volunteer">Trouver un·e bénévole</string>
+    <string name="please_enter_valid_volunteer_id">Veuillez entrer un ID bénévole valide</string>
+    <string name="volunteer_id_not_found">Bénévole avec l'ID \"%1$s\" introuvable</string>
+    <string name="available_volunteers">Bénévoles disponibles :</string>
+    <string name="error_processing_qr_code">Erreur de traitement du QR code : %1$s</string>
+    <string name="invalid_qr_code_format">Format de QR code invalide : %1$s</string>
+    <string name="volunteer_not_found">Bénévole '%1$s' (ID: %2$s) introuvable dans la base de données. Veuillez vérifier si les données du·de la bénévole ont été synchronisées depuis Google Sheets.</string>
+    <string name="qr_code_for_volunteer">QR Code pour le·la bénévole : %1$s</string>
+    <string name="qr_code_subject">QR Code bénévole - %1$s</string>
+    <string name="share_qr_code">Partager le QR Code</string>
+    <string name="share">Partager</string>
+    <string name="send_by_mail">Envoyer par email</string>
+    <string name="failed_to_generate_qr_code">Échec de la génération du QR code</string>
+    
+    <!-- Guest QR Code Related -->
+    <string name="guest_qr_code">QR Code Invité·e</string>
+    <string name="qr_code_for_guest">QR Code pour l'invité·e : %1$s</string>
+    <string name="qr_code_subject_guest">QR Code invité·e - %1$s</string>
+    <string name="scan_guest_qr_code">Scanner le QR Code Invité·e</string>
+    <string name="invalid_guest_qr_code">QR code invalide. Ce n'est pas un QR code d'invité·e.</string>
+    <string name="guest_not_found">Invité·e '%1$s' introuvable dans la base de données.</string>
+    <string name="enter_guest_name_manually">Entrez le nom de l'invité·e manuellement :</string>
+    <string name="manual_guest_input">Entrer le Nom de l'Invité·e</string>
+    <string name="find_guest">Trouver un·e invité·e</string>
+    <string name="available_guests">Invité·es disponibles :</string>
+    <string name="please_enter_guest_name">Veuillez entrer un nom d'invité·e valide</string>
+    <string name="invalid_input">Entrée invalide : %1$s</string>
+    <string name="guest_email_input_title">Entrer l'Adresse Email</string>
+    <string name="guest_email_input_message">Cet·te invité·e n'a pas d'adresse email dans la base de données. Veuillez entrer une adresse email pour envoyer le QR code :</string>
+    <string name="continue_button">Continuer</string>
+    <string name="grant_permission">Autoriser</string>
+    
+    <!-- Guest Email Settings -->
+    <string name="guest_email_subject_default">Votre QR Code Invité·e</string>
+    <string name="guest_email_content_before_default">Bonjour !\n\nVoici votre QR code personnel pour l'entrée invité·e. Gardez-le à portée de main et présentez-le à votre arrivée à l'entrée.</string>
+    <string name="guest_email_content_after_default">Si vous avez des questions, n'hésitez pas à nous contacter. Nous avons hâte de vous voir !</string>
+    <string name="guest_email_html_header">Votre QR Code Invité·e</string>
+    <string name="guest_email_html_footer">Ce message a été envoyé automatiquement. Gardez votre QR code en sécurité.</string>
+    
+    <!-- Email QR Code Settings -->
+    <string name="settings_category_email">Paramètres Email</string>
+    <string name="email_qr_settings_title">Paramètres Email QR Code</string>
+    <string name="email_qr_settings_description">Configurer le contenu des emails lors de l'envoi de QR codes</string>
+    <string name="email_tab_volunteer">Bénévoles</string>
+    <string name="email_tab_guest">Invité·es</string>
+    <string name="email_shared_settings_title">Paramètres partagés</string>
+    <string name="email_shared_settings_description">Ces paramètres s'appliquent aux emails des bénévoles et des invité·es</string>
+    <string name="email_subject_label">Objet de l'email</string>
+    <string name="email_subject_hint">Ligne d'objet pour l'email QR code</string>
+    <string name="email_subject_default">Votre QR Code de Profil Bénévole</string>
+    <string name="email_content_before_label">Message Avant le QR Code</string>
+    <string name="email_content_before_hint">Salutation ou introduction optionnelle</string>
+    <string name="email_content_before_default">Hello ! \n\nVoici votre QR code personnel pour votre profil bénévole. Ce QR code fonctionne pour tous les événements, alors gardez-le à portée de main et présentez-le lors de votre arrivée à l'entrée. Cela nous aide à traiter votre entrée rapidement.</string>
+    <string name="email_include_qr_label">Inclure le QR Code dans l'Email</string>
+    <string name="email_include_qr_description">Joindre l'image du QR code à l'email</string>
+    <string name="email_content_after_label">Message Après le QR Code</string>
+    <string name="email_content_after_hint">Informations supplémentaires optionnelles</string>
+    <string name="email_content_after_default">Si vous avez des questions, n'hésitez pas à nous contacter. :) </string>
+    <string name="email_signature_label">Signature</string>
+    <string name="email_signature_hint">Votre formule de politesse (ex: Cordialement, L'Équipe)</string>
+    <string name="email_signature_default">Collectif Nocturne</string>
+    <string name="email_association_name_label">Nom de l'association</string>
+    <string name="email_association_name_hint">Collectif Nocturne</string>
+    <string name="email_association_name_description">Utilisé comme signature par défaut pour l'image de marque du Digital Wallet Pass et le nom de l'expéditeur.</string>
+    <string name="email_include_digital_wallet_pass_label">Inclure le Digital Wallet Pass</string>
+    <string name="email_include_digital_wallet_pass_description">Joindre un Digital Wallet Pass (.pkpass) signé pour Apple Wallet et Google Pay lorsqu'un certificat Pass Type ID est configuré</string>
+    <string name="email_wallet_pass_cert_title">Certificat de signature Apple Wallet</string>
+    <string name="email_wallet_pass_cert_description">Apple Wallet exige un certificat Pass Type ID (.p12) depuis votre compte Apple Developer. Google Pay fonctionne sans certificat.</string>
+    <string name="email_wallet_pass_cert_upload">Téléverser le certificat Pass Type ID (.p12)</string>
+    <string name="email_wallet_pass_cert_password_label">Mot de passe du certificat</string>
+    <string name="email_wallet_pass_cert_password_hint">Mot de passe du fichier .p12</string>
+    <string name="email_wallet_pass_cert_configured">Signature Apple Wallet prête (%1$s · Équipe %2$s).</string>
+    <string name="email_wallet_pass_cert_missing">Aucun certificat configuré — les passes fonctionnent avec Google Pay mais pas avec Apple Wallet.</string>
+    <string name="email_include_logo_label">Inclure le Logo de l'Association</string>
+    <string name="email_include_logo_description">Ajouter le logo de votre organisation à l'email</string>
+    <string name="email_logo_upload">Télécharger le Logo</string>
+    <string name="email_logo_change">Changer le Logo</string>
+    <string name="email_logo_remove">Supprimer le Logo</string>
+    <string name="email_logo_preview">Aperçu du Logo</string>
+    <string name="email_settings_saved">Paramètres email enregistrés</string>
+    <string name="email_reset_to_defaults">Réinitialiser aux Valeurs par Défaut</string>
+    <string name="email_preview">Aperçu de l'Email</string>
+    
+    <!-- Gmail OAuth -->
+    <string name="email_gmail_auth_title">Authentification API Gmail</string>
+    <string name="email_gmail_auth_description">Connectez votre compte Gmail pour envoyer des emails automatiquement via l'API Gmail</string>
+    <string name="email_gmail_oauth_client_description">Sur desktop, un fichier JSON OAuth Google (type application de bureau) avec l'API Gmail activée est requis. Téléchargez-le depuis Google Cloud Console, puis importez-le ici avant de vous connecter.</string>
+    <string name="email_gmail_oauth_client_upload">Importer le JSON OAuth</string>
+    <string name="email_gmail_oauth_client_configured">Client OAuth configuré</string>
+    <string name="email_gmail_oauth_client_missing">Fichier OAuth client manquant — importez-le avant de vous connecter avec Google</string>
+    <string name="email_gmail_use_service_account">Utiliser le même compte de service que Google Sheets</string>
+    <string name="email_gmail_use_service_account_description">Utilise le JSON du compte de service des paramètres Synchronisation. Nécessite l'API Gmail activée et la délégation à l'échelle du domaine (Google Workspace).</string>
+    <string name="email_gmail_service_account_sender_label">Adresse e-mail expéditeur</string>
+    <string name="email_gmail_service_account_sender_description">L'adresse Gmail ou Google Workspace qui envoie les e-mails au nom du compte de service.</string>
+    <string name="email_gmail_service_account_missing">Clé de compte de service manquante — importez-la d'abord dans les paramètres Synchronisation</string>
+    <string name="email_gmail_service_account_configured">Clé de compte de service trouvée</string>
+    <string name="email_gmail_oauth_help_title">Aide API Gmail</string>
+    <string name="email_gmail_help_tab_oauth">Client OAuth</string>
+    <string name="email_gmail_help_tab_service_account">Compte de service</string>
+    <string name="email_gmail_oauth_help_intro">Suivez ces étapes pour obtenir et configurer le fichier JSON OAuth permettant d'envoyer des e-mails via l'API Gmail sur desktop.</string>
+    <string name="email_gmail_oauth_step_1_title">Ouvrir Google Cloud Console</string>
+    <string name="email_gmail_oauth_step_1_description">Allez sur console.cloud.google.com et sélectionnez votre projet (ou créez-en un nouveau).</string>
+    <string name="email_gmail_oauth_step_2_title">Activer l'API Gmail</string>
+    <string name="email_gmail_oauth_step_2_description">Dans APIs et services &gt; Bibliothèque, recherchez « Gmail API » et activez-la.</string>
+    <string name="email_gmail_oauth_step_3_title">Configurer l'écran de consentement OAuth</string>
+    <string name="email_gmail_oauth_step_3_description">Dans APIs et services &gt; Écran de consentement OAuth, renseignez les champs requis. Si l'application est en mode Test, ajoutez votre adresse Gmail comme utilisateur test.</string>
+    <string name="email_gmail_oauth_step_4_title">Créer un client OAuth de type Desktop</string>
+    <string name="email_gmail_oauth_step_4_description">Dans APIs et services &gt; Identifiants, cliquez sur Créer des identifiants &gt; ID client OAuth. Choisissez Type d'application : Application de bureau, puis créez et téléchargez le fichier JSON.</string>
+    <string name="email_gmail_oauth_step_5_title">Importer le fichier JSON</string>
+    <string name="email_gmail_oauth_step_5_description">Utilisez le bouton « Importer le JSON OAuth » dans ces paramètres pour importer le fichier téléchargé.</string>
+    <string name="email_gmail_oauth_step_6_title">Se connecter avec Google</string>
+    <string name="email_gmail_oauth_step_6_description">Cliquez sur « Se connecter avec Google ». Votre navigateur s'ouvre pour autoriser NoctuList. Après validation, l'application reçoit l'accès automatiquement (ports locaux 8888, 8765 ou 9090).</string>
+    <string name="email_gmail_service_account_help_intro">Lorsque « Utiliser le même compte de service que Google Sheets » est activé, saisissez l'adresse e-mail réelle qui doit envoyer les messages. Le compte de service agit au nom de cette boîte via la délégation Google Workspace.</string>
+    <string name="email_gmail_service_account_help_sender_title">Que saisir</string>
+    <string name="email_gmail_service_account_help_sender_body">L'adresse d'envoi visible — une boîte Gmail ou Google Workspace de votre domaine, par exemple contact@votreassociation.org ou no-reply@votre-domaine.org.</string>
+    <string name="email_gmail_service_account_help_not_title">À ne pas utiliser</string>
+    <string name="email_gmail_service_account_help_not_body">L'e-mail du compte de service affiché dans Synchronisation (se terminant par .iam.gserviceaccount.com). Cette adresse sert uniquement à l'authentification API, pas à l'envoi.</string>
+    <string name="email_gmail_service_account_help_requirements_title">Prérequis</string>
+    <string name="email_gmail_service_account_help_requirements_body">Ce mode fonctionne uniquement avec Google Workspace (pas un compte @gmail.com personnel seul). L'API Gmail doit être activée sur le même projet Google Cloud, et la délégation à l'échelle du domaine doit être configurée.</string>
+    <string name="email_gmail_service_account_help_step_1_title">Activer l'API Gmail</string>
+    <string name="email_gmail_service_account_help_step_1_description">Dans Google Cloud Console, activez l'API Gmail sur le même projet que votre compte de service.</string>
+    <string name="email_gmail_service_account_help_step_2_title">Configurer la délégation à l'échelle du domaine</string>
+    <string name="email_gmail_service_account_help_step_2_description">Dans la console Admin Google Workspace : Sécurité &gt; Contrôles API &gt; Délégation à l'échelle du domaine. Ajoutez le Client ID du compte de service avec le scope https://www.googleapis.com/auth/gmail.send</string>
+    <string name="email_gmail_service_account_help_step_3_title">Saisir l'adresse expéditeur</string>
+    <string name="email_gmail_service_account_help_step_3_description">Dans les paramètres E-mail, activez le toggle compte de service, saisissez l'adresse Workspace qui doit envoyer les e-mails, puis cliquez sur Se connecter avec Google pour valider.</string>
+    <string name="email_gmail_service_account_help_no_workspace">Pas de Google Workspace ? Désactivez le toggle compte de service et utilisez l'onglet Client OAuth.</string>
+    <string name="invalid_gmail_oauth_client_json">JSON OAuth Gmail invalide. Utilisez un client OAuth de type application de bureau depuis Google Cloud Console.</string>
+    <string name="email_gmail_sign_in">Se connecter avec Google</string>
+    <string name="email_gmail_sign_out">Se déconnecter</string>
+    <string name="email_gmail_signed_in_as">Connecté en tant que : %1$s</string>
+    <string name="email_gmail_not_signed_in">Non connecté</string>
+    <string name="email_gmail_auth_success">Authentification Gmail réussie</string>
+    <string name="email_gmail_auth_error">Échec de l'authentification Gmail : %1$s</string>
+    <string name="email_gmail_auth_revoked">Accès Gmail révoqué</string>
+    
+    <!-- Email Send Dialog -->
+    <string name="email_confirm_send_title">Envoyer le QR Code par Email</string>
+    <string name="email_confirm_send_message">Envoyer le QR code à %1$s ?</string>
+    <string name="email_send_manual">Envoyer Manuellement (HTML)</string>
+    <string name="email_send_api">Envoyer via Gmail API</string>
+    <string name="email_send_manual_description">Ouvrir l'application email avec contenu HTML et QR code en pièce jointe</string>
+    <string name="email_send_api_description">Envoyer automatiquement via Gmail API avec images intégrées</string>
+    <string name="email_no_email_title">Aucune Adresse Email</string>
+    <string name="email_no_email_message">Ce·tte bénévole n'a pas d'adresse email. Veuillez en ajouter une d'abord.</string>
+    <string name="email_no_email_guest_staff_message">Cet·te invité·e n'a pas d'adresse e-mail enregistrée. Un·e administrateur·rice doit en ajouter une avant l'envoi du QR depuis cet écran.</string>
+    <string name="email_send">Envoyer</string>
+    <string name="email_sending">Envoi en cours…</string>
+    <string name="email_error_title">Erreur Email</string>
+    <string name="email_error_message">Impossible d'ouvrir l'application email : %1$s</string>
+    <string name="email_api_error_message">Échec de l'envoi de l'email via Gmail API : %1$s</string>
+    <string name="email_api_success">Email envoyé avec succès via Gmail API</string>
+    <string name="email_api_not_authenticated">Gmail API non authentifié. Veuillez d'abord vous connecter dans les Paramètres.</string>
+    <string name="email_open_settings">Configurer l'Email</string>
+    
+    <!-- Email HTML Template -->
+    <string name="email_html_header">Votre QR Code Bénévole</string>
+    <string name="email_html_footer">Ce courriel a été envoyé automatiquement. Veuillez conserver votre QR code en lieu sûr.</string>
+    <string name="email_qr_attachment_text">QR Code\nen pièce jointe</string>
+    <string name="email_qr_attachment_note">Le QR code est disponible en pièce jointe</string>
+    <string name="email_wallet_section_title">Ajouter au portefeuille</string>
+    <string name="email_wallet_section_description">Votre Digital Wallet Pass est joint à cet e-mail. Enregistrez-le dans Apple Wallet ou une application de portefeuille Android compatible pour un check-in plus rapide.</string>
+    <string name="email_wallet_section_compatibility">Digital Wallet Pass (.pkpass) : Apple Wallet + applications Android compatibles.</string>
+    <string name="personal_information">Informations personnelles</string>
+    <string name="name">Nom</string>
+    <string name="abbreviation">Nom de famille</string>
+    <string name="female">Femme</string>
+    <string name="male">Homme</string>
+    <string name="non_binary">Non-binaire</string>
+    <string name="other">Autre</string>
+    <string name="prefer_not_to_disclose">Préfère ne pas divulguer</string>
+    <string name="not_specified">Non spécifié</string>
+    <string name="birthday">Anniversaire</string>
+    <string name="age">Âge</string>
+    <string name="phone">Téléphone</string>
+    <string name="volunteer_information">Informations sur le·la bénévole</string>
+    <string name="current_rank">Rang actuel</string>
+    <string name="status">Statut :</string>
+    <string name="total_shifts">Total de Shifts</string>
+    <string name="last_shift">Dernier Shift</string>
+    <string name="shift_history">Historique des Shifts (%1$d shifts)</string>
+    <string name="no_shifts_recorded">Aucun shift enregistré</string>
+    <string name="actions">Actions</string>
+    <string name="not_provided">Non fourni</string>
+    
+    <!-- Additional Volunteer Panel Strings -->
+    <string name="expired">Expiré</string>
+    <string name="benefit_details">Détails des avantages</string>
+    <string name="more_shifts">... et %1$d shifts de plus</string>
+    <string name="years_old">%1$d ans</string>
+    
+    <!-- Multiple Benefits -->
+    <string name="active_benefits_multiple_ranks">Avantages actifs de plusieurs rangs :</string>
+    
+    <!-- People Counter -->
+    <string name="people_counter_title">Compteur de personnes</string>
+    <string name="people_counter_hint">Suivre la présence des invité·e·s</string>
+    <string name="people_counter_hint_tap_plus_minus">Appuyez sur +/- pour ajuster le compte</string>
+    <string name="people_counter_hint_long_press">Appui long ±10 personnes</string>
+    <string name="people_counter_reset">Réinitialiser le compteur</string>
+    <string name="people_counter_priority">Priorité</string>
+    <string name="people_counter_sheet_synced">Dernière mise à jour du compteur</string>
+    <string name="people_counter_priority_lost">Un autre appareil a la priorité. La vôtre a été désactivée. Pour reprendre la priorité sur cet appareil, maintenez l'interrupteur Priorité pendant 3 secondes.</string>
+    <string name="people_counter_another_device">Un autre appareil a déjà la priorité pour ce lieu. Pour reprendre la priorité sur cet appareil, maintenez l'interrupteur Priorité pendant 3 secondes.</string>
+    <string name="people_counter_no_sheet_row">Ce lieu n'a pas encore de ligne sur la feuille. Synchronisez les lieux dans les réglages.</string>
+    <string name="people_counter_need_sheets">Connectez Google Sheets avant de contrôler le compteur.</string>
+    <string name="people_counter_select_venue">Sélectionnez un lieu une fois les lieux chargés.</string>
+    <string name="people_counter_no_venues">Ajoutez des lieux actifs dans les réglages pour utiliser le compteur.</string>
+    
+    <!-- QR Code Scanner -->
+    <string name="camera_not_available">Le matériel de la caméra n'est pas disponible ou ne fonctionne pas sur cet appareil</string>
+    
+    <!-- Statistics and Graphs Labels -->
+    <string name="terreau_average">Moyenne Terreau</string>
+    <string name="groove_average">Moyenne Groove</string>
+    <string name="total_average">Moyenne totale</string>
+    <string name="guest_metrics">Métriques des invité·e·s</string>
+    <string name="invitations">Invitations</string>
+    <string name="volunteers">Bénévoles</string>
+    <string name="permanent_guests">Invité·e·s permanent·e·s</string>
+    <string name="count">Compte</string>
+    <string name="shift_statistics">Statistiques des Shifts</string>
+    <string name="guest_list_statistics">Statistiques de la liste des invité·e·s</string>
+    <string name="free_drinks_statistics">Statistiques des boissons gratuites</string>
+    <string name="free_drinks">Boissons gratuites</string>
+    
+    <!-- Graph Descriptions -->
+    <string name="active_volunteers_description">Nombre de bénévoles qui ont eu un shift au cours de la dernière année à chaque moment</string>
+    <string name="active_volunteers_graph_description">Montre combien de bénévoles étaient considéré·e·s comme actif·ve·s (ont eu un shift au cours de la dernière année) à chaque date</string>
+    <string name="shift_statistics_description">Nombre de shifts effectués par les bénévoles au fil du temps, organisés par lieu</string>
+    <string name="venue_shifts_description">Nombre de shifts effectués à %1$s au fil du temps</string>
+    <string name="total_shifts_description">Nombre total de shifts effectués dans tous les lieux au fil du temps</string>
+    <string name="guest_list_statistics_description">Statistiques de la liste des invité·e·s montrant les bénévoles avec accès et leurs invitations disponibles</string>
+    <string name="volunteer_guests_description">Nombre de bénévoles qui avaient accès à la liste des invité·e·s à chaque moment</string>
+    <string name="volunteer_invites_description">Nombre total d'invitations que les bénévoles avec accès à la liste des invité·e·s pouvaient donner à chaque moment</string>
+    <string name="total_guests_description">Nombre total de personnes sur la liste des invité·e·s (bénévoles avec accès + leurs invitations disponibles) à chaque moment</string>
+    <string name="free_drinks_statistics_description">Nombre de boissons gratuites disponibles au fil du temps</string>
+    <string name="gender_parity">Parité des genres</string>
+    <string name="gender_parity_description">Répartition des genres parmi les bénévoles actif·ve·s</string>
+    <string name="gender_distribution">Répartition des genres</string>
+    <string name="unspecified">Non spécifié</string>
+    <string name="no_gender_data">Aucune donnée de genre disponible</string>
+    <string name="age_distribution">Répartition des âges</string>
+    <string name="age_distribution_description">Répartition des âges parmi les bénévoles actif·ve·s</string>
+    <string name="age_distribution_title">Répartition des âges</string>
+    <string name="age_under_18">Moins de 18 ans</string>
+    <string name="age_18_20">18-20 ans</string>
+    <string name="age_21_23">21-23 ans</string>
+    <string name="age_24_26">24-26 ans</string>
+    <string name="age_27_30">27-30 ans</string>
+    <string name="age_over_31">Plus de 31 ans</string>
+    <string name="age_unknown">Âge inconnu</string>
+    <string name="no_age_data">Aucune donnée d'âge disponible pour les bénévoles actif·ve·s</string>
+    <string name="not_enough_data">Pas assez de données</string>
+    <string name="total">Total</string>
+    
+    <!-- Date & Time Format Settings -->
+    <string name="date_time_format_title">Format de date et d'heure</string>
+    <string name="date_time_format_description">Choisissez comment les dates et heures sont affichées dans l'application</string>
+    <string name="date_format_dd_mm_yyyy">25/12/2025 (jj/MM/aaaa)</string>
+    <string name="date_format_mm_dd_yyyy">12/25/2025 (MM/jj/aaaa)</string>
+    <string name="date_format_yyyy_mm_dd">2025-12-25 (aaaa-MM-jj)</string>
+    <string name="time_format_hh_mm">14:30 (HH:mm)</string>
+    <string name="time_format_hh_mm_ss">14:30:45 (HH:mm:ss)</string>
+    <string name="time_format_hh_mm_ss_sss">14:30:45.123 (HH:mm:ss.SSS)</string>
+    <string name="date_change_offset_title">Décalage du changement de date</string>
+    <string name="date_change_offset_description">Heures à ajouter avant que la date ne change (par ex., +3 heures = 03:00). Les avantages et les shifts dureront jusqu'à cette heure au lieu de minuit.</string>
+    <string name="date_change_offset_hours">%1$d heures</string>
+    <string name="date_change_offset_zero">0 heures (minuit)</string>
+    <string name="date_change_offset_time">%1$s</string>
+    <string name="date_change_offset_previous_day">%1$s jour précédent</string>
+    <string name="date_change_offset_increase">Augmenter les heures</string>
+    <string name="date_change_offset_decrease">Diminuer les heures</string>
+    <string name="dashboard_calculation_time_info">Heure de calcul : %1$s (décalage changement de date : %2$s)</string>
+    <string name="dashboard_date_offset_hours">%1$s h</string>
+    <string name="dashboard_date_offset_zero">0 h (minuit)</string>
+    
+    <!-- App Icon Settings -->
+    <string name="app_icon_title">Icône de l'application</string>
+    <string name="app_icon_description">Sélectionnez votre style d'icône préféré</string>
+    <string name="app_icon_white">Blanc</string>
+    <string name="app_icon_black">Noir</string>
+    <string name="app_icon_brown">Brun</string>
+    <string name="app_icon_creme_black">Crème et noir</string>
+    <string name="app_icon_dark_blue">Bleu foncé</string>
+    <string name="app_icon_dark_legacy">Sombre classique</string>
+    <string name="app_icon_dark_turquoise">Turquoise</string>
+    <string name="app_icon_dark_violet">Violet foncé</string>
+    <string name="app_icon_light_blue">Bleu clair</string>
+    <string name="app_icon_light_legacy">Clair classique</string>
+    <string name="app_icon_light_violet">Violet clair</string>
+    <string name="app_icon_orange">Orange</string>
+    <string name="app_icon_pink">Rose</string>
+    <string name="app_icon_selected">✓ Sélectionné</string>
+    <string name="app_icon_auto_adapt_title">Adapter automatiquement l'icône au thème système</string>
+    <string name="app_icon_auto_adapt_description">Basculer automatiquement entre les icônes claires et sombres en fonction de votre thème système</string>
+    <string name="app_icon_white_applied">Icône blanche appliquée.</string>
+    <string name="app_icon_black_applied">Icône noire appliquée.</string>
+    <string name="app_icon_brown_applied">Icône brune appliquée.</string>
+    <string name="app_icon_creme_black_applied">Icône crème et noir appliquée.</string>
+    <string name="app_icon_dark_blue_applied">Icône bleu foncé appliquée.</string>
+    <string name="app_icon_dark_legacy_applied">Icône sombre classique appliquée.</string>
+    <string name="app_icon_dark_turquoise_applied">Icône turquoise foncé appliquée.</string>
+    <string name="app_icon_dark_violet_applied">Icône violet foncé appliquée.</string>
+    <string name="app_icon_light_blue_applied">Icône bleu clair appliquée.</string>
+    <string name="app_icon_light_legacy_applied">Icône clair classique appliquée.</string>
+    <string name="app_icon_light_violet_applied">Icône violet clair appliquée.</string>
+    <string name="app_icon_orange_applied">Icône orange appliquée.</string>
+    <string name="app_icon_pink_applied">Icône rose appliquée.</string>
+    <string name="app_icon_auto_adapt_enabled">Adaptation automatique activée. L'icône sera mise à jour en fonction du thème système.</string>
+    <string name="app_icon_restart_title">Redémarrer l'application</string>
+    <string name="app_icon_restart_message">Veuillez redémarrer l'application pour que le changement d'icône prenne effet.</string>
+    <string name="app_icon_restart_now">Redémarrer maintenant</string>
+    <string name="app_icon_restart_later">Plus tard</string>
+    
+    <!-- Seasonal Fun -->
+    <string name="seasonal_fun_title">Ambiance saisonnière</string>
+    <string name="seasonal_fun_description">Activer les fonctionnalités et décorations saisonnières spéciales</string>
+    
+    <!-- Sync Error Messages -->
+    <string name="sync_error_title">⚠️ Erreur de synchronisation</string>
+    <string name="sync_error_occurred">Une erreur s'est produite pendant la synchronisation</string>
+    <string name="sync_not_synced_title">Application non synchronisée</string>
+    <string name="sync_not_synced_message">L'application n'est plus synchronisée. Veuillez utiliser le bouton de resynchronisation pour mettre à jour vos données.</string>
+    <string name="sync_error_details">Erreur : %1$s</string>
+    <string name="sync_error_retry">Réessayer la synchronisation</string>
+    <string name="sync_error_dismiss">Ignorer</string>
+    <string name="sync_error_dont_tell_today">Ne plus me le dire aujourd'hui</string>
+    
+    <!-- Sleep/Resume Sync Warning -->
+    <string name="sync_warning_sleep_resume_title">⚠️ Application non synchronisée</string>
+    <string name="sync_warning_sleep_resume_message">L'application n'est plus synchronisée. Veuillez la synchroniser en appuyant sur le bouton de resynchronisation en bas.</string>
+    <string name="sync_error_sleep_resume_detail">📱 Votre appareil était en veille, donc une nouvelle synchronisation est nécessaire. Appuyez sur le bouton de resynchronisation en bas de la page.</string>
+    
+    <!-- Device Time/Date Error -->
+    <string name="sync_error_device_time_title">⏰ Heure/Date de l'appareil incorrecte</string>
+    <string name="sync_error_device_time_message">L'heure ou la date de votre appareil est incorrecte. L'API Google Sheets nécessite une synchronisation horaire précise pour fonctionner correctement.</string>
+    <string name="sync_error_device_time_solution">Comment corriger :\n\n1. Allez dans Paramètres\n2. Recherchez \"Date &amp; heure\" ou \"Système\"\n3. Activez \"Date &amp; heure automatiques\" ou \"Définir l'heure automatiquement\"\n4. Si non disponible, définissez manuellement la date et l'heure correctes\n5. Redémarrez l'application et réessayez la synchronisation\n\nCourant sur les anciennes tablettes - veuillez vérifier les paramètres de votre appareil !</string>
+    <string name="sync_error_device_time_open_settings">Ouvrir les paramètres</string>
+    
+    <!-- Specific Sync Error Types -->
+    <string name="sync_error_rate_limit">Limite de taux dépassée. Veuillez attendre 1-2 minutes avant de réessayer.</string>
+    <string name="sync_error_authentication">Échec de l'authentification. Veuillez vérifier votre configuration Google Sheets.</string>
+    <string name="sync_error_permission">Permission refusée. Assurez-vous que votre compte de service a un accès éditeur à la feuille de calcul.</string>
+    <string name="sync_error_network">Erreur réseau. Veuillez vérifier votre connexion internet.</string>
+    <string name="sync_error_invalid_config">Configuration invalide. Veuillez vérifier vos paramètres.</string>
+    <string name="sync_error_spreadsheet_not_found">Feuille de calcul introuvable. Veuillez vérifier l'ID de la feuille de calcul.</string>
+    <string name="sync_error_sheet_not_found">Feuille introuvable. Veuillez vérifier les noms des feuilles dans votre configuration.</string>
+    <string name="sync_error_invalid_data">Format de données invalide. Veuillez vérifier la structure de votre Google Sheets.</string>
+    <string name="sync_error_unknown">Une erreur inconnue s'est produite. Veuillez réessayer plus tard.</string>
+    
+    <!-- Full Sync Errors -->
+    <string name="sync_error_full_sync_failed">Échec de la synchronisation complète</string>
+    <string name="sync_error_page_change_failed">Échec de la synchronisation du changement de page</string>
+    <string name="sync_error_volunteer_sync_failed">Échec de la synchronisation des bénévoles</string>
+    <string name="sync_error_guest_sync_failed">Échec de la synchronisation des invité·e·s</string>
+    <string name="sync_error_job_sync_failed">Échec de la synchronisation des jobs</string>
+    <string name="sync_error_job_type_sync_failed">Échec de la synchronisation des types de jobs</string>
+    <string name="sync_error_venue_sync_failed">Échec de la synchronisation des lieux</string>
+    <string name="sync_error_backup_failed">Échec de la sauvegarde</string>
+    
+    <!-- Sync Success Messages -->
+    <string name="sync_success_title">Synchronisation réussie</string>
+    <string name="sync_success_message">La synchronisation s'est terminée avec succès</string>
+    <string name="sync_retrying">Nouvelle tentative de synchronisation…</string>
+    
+    <!-- Sync Error Dialog Labels -->
+    <string name="sync_error_details_label">Détails de l'erreur :</string>
+    <string name="sync_error_what_to_do">💡 Que faire :</string>
+    
+    <!-- Sync Error Advice Messages -->
+    <string name="sync_advice_rate_limit">• Attendez 1–2 minutes avant de réessayer\n• L'application réessaiera automatiquement\n• Envisagez de réduire la fréquence de synchronisation dans les paramètres</string>
+    <string name="sync_advice_authentication">• Vérifiez votre fichier de clé de compte de service\n• Assurez-vous que la clé est téléchargée dans les Paramètres\n• Rechargez la clé si nécessaire</string>
+    <string name="sync_advice_permission">• Partagez votre feuille de calcul avec l'email du compte de service\n• Accordez l'accès Éditeur au compte de service\n• Vérifiez l'email du compte dans votre fichier de clé</string>
+    <string name="sync_advice_network">• Vérifiez votre connexion internet\n• Vérifiez que le Wi-Fi ou les données mobiles sont activés\n• Réessayez quand la connexion est stable\n• Assurez-vous que le mode avion est désactivé</string>
+    <string name="sync_advice_not_found">• Vérifiez l'ID de la feuille de calcul dans les Paramètres\n• Vérifiez que les noms des feuilles existent\n• Assurez-vous que la feuille de calcul est accessible</string>
+    <string name="sync_advice_generic">• Réessayez la synchronisation\n• Vérifiez vos paramètres Google Sheets\n• Consultez les Paramètres pour vérifier votre configuration</string>
+    
+    <!-- Graph Export -->
+    <string name="exporting">Exportation...</string>
+    <string name="export_graph">Exporter le graphique</string>
+    <string name="choose_export_format">Choisir le format d'exportation :</string>
+    <string name="export_as_xlsx">Exporter en XLSX</string>
+    <string name="export_xlsx_description">Inclut toutes les données et le graphique</string>
+    <string name="export_as_jpg">Exporter en JPG</string>
+    <string name="export_jpg_description">Image du graphique uniquement</string>
+    <string name="export_complete">Exportation terminée</string>
+    <string name="xlsx_export_complete">Exportation XLSX terminée</string>
+    <string name="xlsx_export_success_message">Votre feuille de calcul a été créée avec succès et est prête à être partagée</string>
+    <string name="file_name">Nom du fichier</string>
+    <string name="file_size">Taille : %1$s</string>
+    <string name="graph_preview">Aperçu du graphique</string>
+    <string name="share_graph">Partager le graphique</string>
+    <string name="open_with">Ouvrir avec</string>
+
+    <!-- POS Accounting PDF Report -->
+    <string name="pos_report_title">Décompte comptable POS</string>
+    <string name="pos_report_entry_title">PDF décompte POS</string>
+    <string name="pos_report_entry_subtitle">Décompte d'une soirée ou d'une période pour la comptabilité (ventes, transferts, ajustements)</string>
+    <string name="pos_report_mode_evening">Une soirée</string>
+    <string name="pos_report_mode_period">Période</string>
+    <string name="pos_report_select_date">Date de la soirée</string>
+    <string name="pos_report_period_start">Date de début</string>
+    <string name="pos_report_period_end">Date de fin</string>
+    <string name="pos_report_closure_time">Heure de fermeture</string>
+    <string name="pos_report_closure_override">Modifier la fermeture pour ce rapport uniquement</string>
+    <string name="pos_report_evening_help">Soirée du %1$s · fermeture à %2$s\nPériode : %3$s</string>
+    <string name="pos_report_period_help">Période : %1$s</string>
+    <string name="pos_report_preview_transfers">%1$d transferts (%2$d ventes POS)</string>
+    <string name="pos_report_preview_cash">Espèces/carte encaissées : %1$s</string>
+    <string name="pos_report_preview_credit">Crédit interne consommé : %1$s</string>
+    <string name="pos_report_generate">Générer le PDF</string>
+    <string name="pos_report_generating">Génération du PDF…</string>
+    <string name="pos_report_preview_title">Rapport prêt</string>
+    <string name="pos_report_preview_summary">%1$d ventes POS · %2$s espèces/carte · %3$d transferts au total</string>
+    <string name="pos_report_share">Partager le rapport</string>
+    <string name="pos_report_open">Ouvrir le rapport</string>
+    <string name="pos_report_save_as">Enregistrer sous…</string>
+    <string name="pos_report_preview_period">Période couverte</string>
+    <string name="pos_report_venue_scope_all">Total (tous les lieux)</string>
+    <string name="pos_report_venue_scope_global">Global</string>
+    <string name="pos_report_venue_label">Lieu</string>
+    <string name="pos_venue_global">Global</string>
+    <string name="pos_venue_selector_label">Lieu de vente</string>
+    <string name="pos_venue_current">Lieu actuel : %1$s</string>
+    <string name="sales_item_venues_label">Lieux de vente</string>
+    <string name="sales_item_venues_hint">Choisissez dans quels lieux cet article est proposé au POS.</string>
+    <string name="pos_report_file_size">Taille</string>
+    <string name="active_volunteers_graph">Graphique des bénévoles actif·ve·s</string>
+    
+    <!-- Tablet-specific strings -->
+    <string name="tablet_optimized">Optimisé pour l'affichage sur tablette</string>
+    <string name="large_screen_experience">Expérience améliorée pour les grands écrans</string>
+    <string name="nav_dashboard_tablet">Aperçu du tableau de bord</string>
+    <string name="nav_guests_tablet">Gestion de la liste d'invités</string>
+    <string name="nav_volunteers_tablet">Gestion des bénévoles</string>
+    <string name="nav_shifts_tablet">Suivi des Shifts</string>
+    <string name="nav_benefits_tablet">Aperçu des avantages</string>
+    <string name="nav_settings_tablet">Paramètres &amp; Configuration</string>
+    <string name="volunteer_manager_tablet">Système complet de gestion des bénévoles</string>
+    <string name="guest_list_management_tablet">Gestion complète de la guestlist pour tous les lieux configurés</string>
+    <string name="volunteer_benefits_overview_tablet">Suivi détaillé des avantages et du statut des bénévoles</string>
+    <string name="shift_tracking_tablet">Suivi complet des shifts et gestion des jobs</string>
+    <string name="shield_optimized">Optimisé pour les tablettes NVIDIA Shield</string>
+    <string name="enhanced_touch_targets">Cibles tactiles améliorées pour une meilleure interaction</string>
+    
+    <!-- Settings Categories -->
+    <string name="settings_category_sync">Synchronisation &amp; Données</string>
+    <string name="settings_category_appearance">Apparence &amp; Affichage</string>
+    <string name="settings_category_localization">Localisation</string>
+    <string name="settings_category_animations">Animations &amp; Effets</string>
+    <string name="settings_category_developer">Développeur &amp; Débogage</string>
+    <string name="settings_category_maintenance">Maintenance</string>
+    
+    <!-- Easter Egg Games -->
+    <string name="easter_egg_hextris">Hextris</string>
+    <string name="easter_egg_pizza_undelivery">Pizza Undelivery</string>
+    <string name="easter_egg_scroll">Scroll!</string>
+    <string name="easter_egg_wendol_village">Wendol Village</string>
+    <string name="easter_egg_catculus">Catculus</string>
+    <string name="arcade_title">★ ARCADE ★</string>
+    <string name="arcade_subtitle">▶ INSÈRE DU FUN ◀</string>
+    <string name="arcade_pick_game">CHOISIS UN JEU !</string>
+    <string name="arcade_credits_title">★ CRÉDITS DES CRÉATEUR·ICES ★</string>
+    <string name="arcade_exit">[ ESC ] SORTIR</string>
+    <string name="arcade_credit_wendol_village">Wendol Village — a js13kGames 2024 game by @sanojian.</string>
+    <string name="arcade_credit_scroll">👆Scroll! — TypeScript game using Web Components for JS13K. © 2019 Zeev Katz. All rights reserved.</string>
+    <string name="arcade_credit_hextris">Hextris — An addictive puzzle game inspired by Tetris. hextris.io · By Logan Engstrom, Garrett Finucane, Noah Moroze &amp; Michael Yang.</string>
+    <string name="arcade_credit_pizza_undelivery">Pizza Undelivery — A game made for the 2019 js13kGames competition. nilsgawlik.github.io/js13k2019/ · @nikigawlik</string>
+    <string name="arcade_credit_catculus">Catculus — a js13kGames 2025 game by @anttihaavikko.</string>
+    
+    <!-- Entry Validation -->
+    <string name="validate_entry">Valider une entrée</string>
+    <string name="validate_entry_description">Ce bénévole a une entrée gratuite non utilisée grâce à un shift « ne peut pas profiter de la soirée ». Glissez pour confirmer son entrée.</string>
+    <string name="validate_entry_description_one_future">Il reste une entrée événement (usage unique) à ce bénévole. Glissez pour la valider.</string>
+    <string name="validate_entry_description_n_remaining">Il reste %1$d entrées événement (usage unique) à ce bénévole. Glissez pour en consommer une.</string>
+    <string name="validate_entry_description_with_invites">Entrée pour le bénévole + %1$d invité(s). Glissez pour confirmer.</string>
+    <string name="validate_entry_description_solo">Entrée seule (sans invités). Glissez pour confirmer.</string>
+    <string name="slide_to_confirm">Glisser pour confirmer</string>
+    <string name="desktop_confirm_entry_button">Valider l'entrée</string>
+    <string name="desktop_entry_confirmed">Entrée validée</string>
+    <string name="validate_entry_description_solo_desktop">Entrée seule (sans invités). Cliquez ci-dessous pour confirmer.</string>
+    <string name="validate_entry_description_with_invites_desktop">Entrée pour le bénévole + %1$d invité(s). Cliquez ci-dessous pour confirmer.</string>
+    <string name="future_entry_group_label_invites">%1$d entrée restante (+%2$d inv.)</string>
+    <string name="future_entries_group_label_invites">%1$d entrées restantes (+%2$d inv.)</string>
+    <string name="future_entry_group_label_solo">%1$d entrée restante (seul)</string>
+    <string name="future_entries_group_label_solo">%1$d entrées restantes (seul)</string>
+    
+    <!-- Activity Status -->
+    <string name="activity_status_never_worked">Jamais travaillé</string>
+    <string name="activity_status_active_today">Actif (aujourd'hui)</string>
+    <string name="activity_status_active_days_ago">Actif (il y a %1$d jours)</string>
+    <string name="activity_status_active_months_ago">Actif (il y a %1$d mois)</string>
+    <string name="activity_status_inactive_years_ago">Inactif (il y a %1$d ans)</string>
+    <string name="legend_badge_label">Légende</string>
+
+    <!-- Billeterie Scanner -->
+    <string name="billeterie_scanner_tap_to_activate">Appuyer pour activer la caméra</string>
+    <string name="billeterie_scanner_tap_to_pause">Appuyer pour suspendre</string>
+    <string name="billeterie_scanner_entry_approved">Entrée Approuvée</string>
+    <string name="billeterie_scanner_entry_validated">Entrée Validée !</string>
+    <string name="billeterie_scanner_scan_next">Scanner Suivant</string>
+    <string name="billeterie_scanner_no_entry">Pas d'Entrée</string>
+    <string name="billeterie_scanner_no_benefits">Cette personne n'a pas d'avantages d'entrée</string>
+    <string name="billeterie_scanner_guest_found">Invité Trouvé</string>
+    <string name="billeterie_scanner_validate_ticket">Valider le Ticket</string>
+    <string name="billeterie_scanner_ready">Prêt à scanner…</string>
+    <string name="billeterie_scanner_with_invites">+%1$d invitation(s)</string>
+    <string name="billeterie_scanner_error">Erreur</string>
+    <string name="desktop_billeterie_webcam_section">QR code (webcam)</string>
+    <string name="desktop_billeterie_nfc_section">Lecteur NFC</string>
+    <string name="desktop_billeterie_nfc_connected">Lecteur connecté — prêt à scanner</string>
+    <string name="desktop_billeterie_nfc_disconnected">Aucun lecteur NFC — connectez un lecteur USB ou Bluetooth dans les réglages</string>
+    <string name="desktop_billeterie_nfc_reading">Lecture de la carte…</string>
+    <string name="desktop_billeterie_scan_next_shortcut">Entrée ↵ pour scanner la personne suivante</string>
+    <string name="desktop_billeterie_camera_stop">Arrêter la webcam</string>
+    <string name="desktop_qr_no_webcam_mac">Aucune webcam détectée. Accordez l'accès à la caméra dans Réglages système, ou ouvrez une image QR.</string>
+    <string name="desktop_qr_no_webcam_linux">Aucune webcam détectée. Vérifiez les permissions caméra (V4L2/PipeWire) et l'appartenance au groupe video, ou ouvrez une image QR.</string>
+    <string name="desktop_qr_no_webcam_generic">Aucune webcam détectée. Vérifiez les permissions caméra, ou ouvrez une image QR.</string>
+    <string name="desktop_qr_no_frames">La caméra est ouverte mais aucune image n'est reçue. Vérifiez les permissions caméra.</string>
+
+    <!-- Admin Setup (first admin creation) -->
+    <string name="admin_setup_title">Créer le Premier Admin</string>
+    <string name="admin_setup_description">Aucun admin n'existe encore. Créez un premier admin pour gérer l'application.</string>
+    <string name="admin_setup_type_title">Type d'Admin</string>
+    <string name="admin_setup_type_description">Souhaitez-vous ajouter le premier admin en tant qu'invité permanent ou en tant que bénévole ?</string>
+    <string name="admin_setup_type_guest">Invité Permanent</string>
+    <string name="admin_setup_type_guest_desc">Ajouter un invité avec des privilèges admin</string>
+    <string name="admin_setup_type_volunteer">Bénévole</string>
+    <string name="admin_setup_type_volunteer_desc">Ajouter un bénévole avec des privilèges admin</string>
+    <string name="admin_setup_create_guest_title">Créer un Invité Admin</string>
+    <string name="admin_setup_create_guest_desc">Remplissez les informations du nouvel invité admin</string>
+    <string name="admin_setup_create_volunteer_title">Créer un Bénévole Admin</string>
+    <string name="admin_setup_create_volunteer_desc">Remplissez les informations du nouveau bénévole admin</string>
+    <string name="admin_setup_access_title">Comment vous connecter ?</string>
+    <string name="admin_setup_access_desc">Comment souhaitez-vous vous connecter en tant que premier admin ?</string>
+    <string name="admin_setup_access_explained">Choisissez une option ci-dessous.\n\n• Code QR — affiche un code à scanner depuis l'écran d'accueil. Pratique pour le partager avec une autre personne ou un autre téléphone.\n\n• Carte NFC — associe une carte ou un badge que vous approchez de l'appareil pour un accès admin rapide.</string>
+    <string name="admin_setup_created_line">%1$s a été ajouté comme administrateur.</string>
+    <string name="admin_setup_done_title">C'est prêt</string>
+    <string name="admin_setup_done_message">%1$s pourra ouvrir le mode admin depuis l'écran d'accueil avec l'option choisie. Vous pourrez ajouter ou modifier des méthodes plus tard dans l'application.</string>
+    <string name="admin_setup_btn_skip">Passer</string>
+    <string name="admin_setup_btn_qr">Code QR</string>
+    <string name="admin_setup_btn_nfc">Carte NFC</string>
+    <string name="admin_setup_nfc_linked_title">NFC associé</string>
+    <string name="admin_setup_use_qr">Utiliser un QR Code</string>
+    <string name="admin_setup_use_qr_desc">Générer et partager un QR code pour la connexion admin</string>
+    <string name="admin_setup_use_nfc">Ajouter une Carte NFC</string>
+    <string name="admin_setup_use_nfc_desc">Assigner une carte NFC pour la connexion admin</string>
+    <string name="admin_setup_creating">Création de l'admin…</string>
+    <string name="admin_setup_success">Admin créé avec succès !</string>
+    <string name="admin_setup_error">Échec de la création de l'admin : %1$s</string>
+    <string name="admin_setup_qr_title">QR Code Admin</string>
+    <string name="admin_setup_qr_description">Partagez ce QR code pour la connexion admin. Vous pouvez le partager via le bouton ci-dessous ou entrer l'email manuellement.</string>
+    <string name="admin_setup_nfc_assigned">Carte NFC assignée ! Vous pouvez maintenant utiliser cette carte pour la connexion admin.</string>
+    <string name="admin_setup_done">Terminé</string>
+    <string name="admin_setup_skip">Passer pour l'instant</string>
+    <string name="admin_setup_no_admin_warning">Attention : Sans admin, vous ne pourrez pas accéder au mode administrateur.</string>
+
+    <!-- Announcements -->
+    <string name="settings_category_announcements">Annonces</string>
+    <string name="announcements_reception_title">Activer la réception</string>
+    <string name="announcements_reception_description">Afficher ou masquer les annonces entrantes</string>
+    <string name="announcements_tracked_venues_title">Lieux suivis</string>
+    <string name="announcements_tracked_venues_description">Sélectionnez les lieux dont vous souhaitez recevoir les annonces</string>
+    <string name="announcements_tracked_venues_all">Tous les lieux</string>
+    <string name="announcements_validity_title">Durée de validité</string>
+    <string name="announcements_validity_description">Les messages plus anciens que cette durée ne seront plus affichés</string>
+    <string name="announcements_validity_15min">15 minutes</string>
+    <string name="announcements_validity_30min">30 minutes</string>
+    <string name="announcements_validity_1h">1 heure</string>
+    <string name="announcements_validity_2h">2 heures</string>
+    <string name="announcements_validity_4h">4 heures</string>
+    <string name="announcements_non_admin_send_title">Autoriser l'envoi non-admin</string>
+    <string name="announcements_non_admin_send_description">Permettre aux interfaces billetterie d'envoyer des annonces</string>
+    <string name="announcement_button_label">Faire une annonce</string>
+    <string name="announcement_send_title">Envoyer une annonce</string>
+    <string name="announcement_destination_label">Lieu(x) de destination</string>
+    <string name="announcement_all_venues">Tous les lieux</string>
+    <string name="announcement_title_label">Destinataire / Titre</string>
+    <string name="announcement_title_placeholder">Sujet court…</string>
+    <string name="announcement_message_label">Message</string>
+    <string name="announcement_message_placeholder">Contenu du message…</string>
+    <string name="announcement_send_button">Envoyer</string>
+    <string name="announcement_cancel_button">Annuler</string>
+    <string name="announcement_sending">Envoi en cours…</string>
+    <string name="announcement_sent_success">Annonce envoyée !</string>
+    <string name="announcement_sent_error">Échec de l'envoi de l'annonce</string>
+    <string name="announcement_popup_title">Annonce</string>
+    <string name="announcement_popup_close">Fermer</string>
+    <string name="announcement_popup_from">De : %1$s</string>
+
+    <!-- Lecteur NFC Bluetooth externe (ACR1255U-J1) -->
+    <string name="settings_category_external_reader">Lecteur NFC Bluetooth</string>
+    <string name="settings_category_pcsc_reader">Lecteur NFC USB</string>
+    <string name="pcsc_reader_description">Branchez un lecteur NFC USB ACS ACR122U ou compatible. macOS et Windows incluent PC/SC ; sous Linux, installez et démarrez pcscd.</string>
+    <string name="desktop_external_reader_description">Les lecteurs USB (ACR122U, ACR1255U-J1 en mode USB) fonctionnent branchés avec le driver PC/SC ACS installé. Basculez le lecteur en mode USB, branchez le câble, puis utilisez Tester la connexion ci-dessous.</string>
+    <string name="desktop_ble_supported_windows">Bluetooth (ACR1255U-J1) : installez le driver PC/SC Bluetooth ACS, associez le lecteur dans les réglages Bluetooth Windows, puis sélectionnez-le ci-dessous.</string>
+    <string name="desktop_ble_unsupported_macos">Le Bluetooth n'est pas pris en charge sur macOS (pas de driver PC/SC BLE ACS). Utilisez le mode USB avec le driver USB ACS.</string>
+    <string name="desktop_ble_unsupported_linux">Le Bluetooth n'est pas pris en charge sur Linux (pas de driver PC/SC BLE ACS). Utilisez le mode USB avec pcscd et le driver USB ACS.</string>
+    <string name="desktop_list_pcsc_readers">Lister les lecteurs PC/SC</string>
+    <string name="desktop_usb_reader_test_button">Tester le lecteur USB</string>
+    <string name="desktop_ble_reader_picker_subtitle">Associez l'ACR1255U-J1 dans le Bluetooth système, puis choisissez-le ici. Les lecteurs déjà visibles par PC/SC sont prêts immédiatement.</string>
+    <string name="desktop_ble_reader_not_found">Aucun ACR1255U-J1 trouvé. Allumez-le, associez-le au Bluetooth et installez le pilote ACS PC/SC.</string>
+    <string name="desktop_ble_reader_pcsc_ready">PC/SC prêt · %1$s</string>
+    <string name="external_reader_description">Sélectionnez le lecteur NFC externe ici. Il peut apparaître dans les paramètres Bluetooth d'Android, mais il n'est pas possible de s'y connecter pour cette application.</string>
+    <string name="external_reader_connected_label">Lecteur sélectionné</string>
+    <string name="external_reader_pick_button">Rechercher un lecteur Bluetooth</string>
+    <string name="external_reader_change">Changer de lecteur</string>
+    <string name="external_reader_forget">Oublier</string>
+    <string name="external_reader_saved_toast">Enregistré : %1$s</string>
+    <string name="external_reader_cleared_toast">Lecteur externe oublié</string>
+    <string name="external_reader_test_button">Tester la connexion</string>
+    <string name="external_reader_testing">Test en cours\u2026</string>
+    <string name="external_reader_test_success_title">Lecteur OK</string>
+    <string name="external_reader_test_failure_title">Échec du test</string>
+    <string name="external_reader_test_close">Fermer</string>
+
+    <string name="ble_reader_picker_title">Choisir un lecteur NFC Bluetooth</string>
+    <string name="ble_reader_picker_subtitle">Vérifiez que le lecteur ACR1255U-J1 est allumé et à proximité. Les lecteurs ACR apparaissent en premier.</string>
+    <string name="ble_reader_section_acr_title">Lecteurs NFC ACS</string>
+    <string name="ble_reader_section_acr_hint">Recommandé · ACR1255U-J1 et appareils ACS compatibles</string>
+    <string name="ble_reader_section_acr_empty">Aucun lecteur ACS détecté. Allumez l'ACR1255U-J1 et rapprochez-le de l'appareil pendant la recherche.</string>
+    <string name="ble_reader_section_other_title">Autres appareils Bluetooth</string>
+    <string name="ble_reader_show_other_devices">Afficher les autres appareils Bluetooth (%1$d)</string>
+    <string name="ble_reader_hide_other_devices">Masquer les autres appareils Bluetooth</string>
+    <string name="ble_reader_search_other_hint">Filtrer par nom ou adresse MAC…</string>
+    <string name="ble_reader_other_truncated">%1$d sur %2$d appareils affichés (signal le plus fort en premier)</string>
+    <string name="ble_reader_rssi_label">%1$d dBm</string>
+    <string name="ble_reader_scanning">Recherche d'appareils Bluetooth…</string>
+    <string name="ble_reader_scanning_hint">La recherche reste active tant que cette fenêtre est ouverte.</string>
+    <string name="ble_reader_show_all">Afficher tous les appareils Bluetooth</string>
+    <string name="ble_reader_show_acr_only">Afficher uniquement les lecteurs ACR</string>
+    <string name="ble_reader_unnamed">Appareil sans nom</string>
+    <string name="ble_reader_bonded_label">appairé</string>
+    <string name="ble_reader_row_subtitle">%1$s · %2$s</string>
+    <string name="ble_reader_row_subtitle_bonded">%1$s · %2$s · déjà appairé</string>
+    <string name="ble_reader_bluetooth_off">Le Bluetooth est désactivé. Activez-le pour rechercher des lecteurs.</string>
+    <string name="ble_reader_bluetooth_unavailable">Le Bluetooth est indisponible sur cet appareil.</string>
+    <string name="ble_reader_scan_permission_denied">L'autorisation d'analyse Bluetooth est requise.</string>
+    <string name="ble_reader_connect_permission_denied">L'autorisation de connexion Bluetooth est requise.</string>
+    <string name="ble_reader_location_permission_denied">L'autorisation de localisation est requise pour rechercher des appareils Bluetooth sur cette version d'Android.</string>
+    <string name="ble_reader_scanner_unavailable">Le scanner Bluetooth Low Energy est indisponible.</string>
+    <string name="ble_reader_low_level_error">La recherche Bluetooth a échoué. Désactivez puis réactivez le Bluetooth, puis réessayez.</string>
+    <string name="ble_reader_enable_bluetooth">Activer le Bluetooth</string>
+    <string name="ble_reader_not_acr1255">L'appareil Bluetooth sélectionné n'est pas un lecteur ACS ACR1255U-J1.</string>
+    <string name="ble_reader_verification_inconclusive_saved">La vérification du lecteur est restée inconclusive. L'appareil a quand même été enregistré.</string>
+
+    <!-- UI strings (shared components / desktop) -->
+    <string name="noctulist_admin_title">NoctuList Admin</string>
+    <string name="download">Télécharger</string>
+    <string name="download_complete_opening_installer">Téléchargement terminé — ouverture de l'installateur…</string>
+    <string name="select_date">Sélectionner la date</string>
+    <string name="select_time">Sélectionner l'heure</string>
+    <string name="date_time_label">Date et heure</string>
+    <string name="dropdown_no_volunteers_found">Aucun·e bénévole trouvé·e</string>
+    <string name="open_in_browser">Ouvrir dans le navigateur : %1$s</string>
+    <string name="desktop_app_icon_unavailable">La personnalisation de l'icône de l'application n'est pas disponible sur ordinateur.</string>
+    <string name="minutes_short">min</string>
+    <string name="selecting_file">Sélection du fichier…</string>
+    <string name="action_cancelled">Annulé</string>
+    <string name="invalid_service_account_json">Fichier JSON de compte de service invalide</string>
+    <string name="upload_failed_generic">Échec du téléchargement</string>
+
+    <!-- Desktop admin navigation -->
+    <string name="desktop_admin_nav_layout_title">Disposition du menu admin</string>
+    <string name="desktop_admin_nav_layout_description">Choisissez où afficher la navigation admin sur ordinateur</string>
+    <string name="desktop_admin_nav_layout_bottom">En bas (style tablette)</string>
+    <string name="desktop_admin_nav_layout_left">Barre latérale gauche</string>
+    <string name="desktop_admin_nav_layout_right">Barre latérale droite</string>
+    <string name="desktop_admin_nav_expand">Développer le menu</string>
+    <string name="desktop_admin_nav_collapse">Réduire le menu</string>
+
+    <!-- Account adjustment + desktop QR (i18n fill) -->
+    <string name="adjust_account_title">Ajuster le solde du compte</string>
+    <string name="account_add_money">Ajouter de l'argent</string>
+    <string name="account_remove_money">Retirer de l'argent</string>
+    <string name="amount_label">Montant</string>
+    <string name="note_label">Note</string>
+    <string name="continue_label">Continuer</string>
+    <string name="manual_adjustment_default_note">Ajustement manuel</string>
+    <string name="desktop_qr_start_webcam">Démarrer la webcam</string>
+    <string name="desktop_qr_open_image">Ouvrir une image QR…</string>
+    <string name="desktop_qr_opening_camera">Ouverture de la caméra…</string>
+    <string name="desktop_qr_point_at_code">Présentez le code QR devant la caméra</string>
+    <string name="desktop_qr_opening_file_picker">Choisissez un fichier image…</string>
+
+    <!-- Hardcoded / desktop / POS message strings (i18n) -->
+    <string name="account_reversal_description">Annulation : %1$s</string>
+    <string name="custom_theme_editor_title">Éditeur de thème personnalisé</string>
+    <string name="desktop_bluetooth_nfc_reader">Lecteur NFC Bluetooth</string>
+    <string name="desktop_bluetooth_nfc_reader_offline">Lecteur NFC Bluetooth (hors ligne)</string>
+    <string name="desktop_no_external_reader">Aucun lecteur externe</string>
+    <string name="desktop_pcsc_error">Erreur PC/SC</string>
+    <string name="desktop_pcsc_library_unavailable">Bibliothèque PC/SC indisponible</string>
+    <string name="desktop_pcsc_no_ble_reader">Aucun lecteur NFC Bluetooth dans PC/SC.
+Associez l\'ACR1255U-J1 dans les réglages Bluetooth du système et installez le driver ACS.</string>
+    <string name="desktop_pcsc_no_card_on_reader">Aucune carte détectée sur le lecteur</string>
+    <string name="desktop_pcsc_no_card_present">Aucune carte présente</string>
+    <string name="desktop_pcsc_no_reader">Aucun lecteur PC/SC</string>
+    <string name="desktop_pcsc_no_readers_found">Aucun lecteur PC/SC trouvé.</string>
+    <string name="desktop_pcsc_no_readers_hint">Aucun lecteur PC/SC trouvé.
+Branchez un lecteur USB ou associez un ACR1255U-J1 Bluetooth.</string>
+    <string name="desktop_pcsc_provider_failed">Échec du chargement du fournisseur PC/SC.
+Assurez-vous que PC/SC est installé et redémarrez l\'application.</string>
+    <string name="desktop_pcsc_reader_disconnected">Lecteur déconnecté.</string>
+    <string name="desktop_pcsc_reader_error">Erreur du lecteur</string>
+    <string name="desktop_pcsc_reader_ok_place_card">OK — lecteur connecté.
+Placez une carte sur le lecteur et testez à nouveau pour lire un UID.</string>
+    <string name="desktop_pcsc_readers_header">Lecteurs (%1$d) :</string>
+    <string name="desktop_pcsc_unable_select_reader">Impossible de sélectionner un lecteur.</string>
+    <string name="desktop_pcsc_unavailable">PC/SC indisponible</string>
+    <string name="desktop_pcsc_using_reader">Utilisation : %1$s</string>
+    <string name="desktop_pcsc_waiting_card">En attente de carte (jusqu\'à %1$d s)…</string>
+    <string name="desktop_pcsc_waiting_removal">En attente du retrait de la carte</string>
+    <string name="desktop_usb_nfc_reader">Lecteur NFC USB</string>
+    <string name="done">Terminé</string>
+    <string name="email_gmail_connect_activity_unavailable">Connexion impossible : contexte Activity indisponible</string>
+    <string name="email_gmail_connect_api">Connecter l\'API Gmail</string>
+    <string name="email_gmail_connect_api_hint">Votre compte Google est enregistré. Sur Android TV et les appareils plus anciens, une étape d\'autorisation supplémentaire est nécessaire pour connecter l\'API Gmail.</string>
+    <string name="pos_sale_complete_message">Vente terminée</string>
+    <string name="rate_limit_action_auto_retry">L\'application réessaiera automatiquement avec backoff</string>
+    <string name="rate_limit_action_check_quota">Vérifiez si d\'autres applications utilisent le même quota API</string>
+    <string name="rate_limit_action_reduce_freq">Réduisez la fréquence de synchronisation dans les paramètres</string>
+    <string name="rate_limit_action_wait">Attendez 1 à 2 minutes avant de réessayer</string>
+    <string name="rate_limit_current_limits">Limites API actuelles :</string>
+    <string name="rate_limit_dialog_title">Limite de débit API dépassée</string>
+    <string name="rate_limit_per_100_seconds">Par 100 secondes</string>
+    <string name="rate_limit_per_100_value">500 requêtes par projet</string>
+    <string name="rate_limit_per_user_requests">Requêtes par utilisateur</string>
+    <string name="rate_limit_per_user_value">60 par minute et par utilisateur</string>
+    <string name="rate_limit_read_requests">Requêtes en lecture</string>
+    <string name="rate_limit_read_value">300 par minute et par projet</string>
+    <string name="rate_limit_retry_sync">Réessayer la synchro</string>
+    <string name="rate_limit_tips_body">• Utilisez la synchronisation manuelle au lieu de l\'auto-sync en période de forte charge
+• Synchronisez moins souvent si vous atteignez souvent les limites
+• Consultez la console Google Cloud pour l\'utilisation du quota</string>
+    <string name="rate_limit_tips_title">Astuces :</string>
+    <string name="rate_limit_too_many_requests">Trop de requêtes</string>
+    <string name="rate_limit_wait_message">Vous avez atteint la limite de débit de l\'API Google Sheets. Veuillez attendre 1 à 2 minutes avant de réessayer.</string>
+    <string name="rate_limit_what_to_do">Que faire :</string>
+    <string name="rate_limit_write_requests">Requêtes en écriture</string>
+    <string name="rate_limit_write_value">300 par minute et par projet</string>
+    <string name="theme_hue_label">Teinte (arc-en-ciel) : %1$d°</string>
+    <string name="theme_luminosity_label">Luminosité : %1$d%%</string>
+    <string name="theme_saturation_label">Saturation : %1$d%%</string>
+</resources>

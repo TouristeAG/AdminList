@@ -1,0 +1,26 @@
+name: i18n key parity
+
+on:
+  push:
+    paths:
+      - "shared/src/commonMain/composeResources/**/strings.xml"
+      - "app/src/main/res/**/strings.xml"
+      - "scripts/check-i18n.py"
+      - ".github/workflows/i18n-check.yml"
+  pull_request:
+    paths:
+      - "shared/src/commonMain/composeResources/**/strings.xml"
+      - "app/src/main/res/**/strings.xml"
+      - "scripts/check-i18n.py"
+      - ".github/workflows/i18n-check.yml"
+  workflow_dispatch:
+
+jobs:
+  check-i18n:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify locale string key parity
+        run: python3 scripts/check-i18n.py
