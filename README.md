@@ -217,46 +217,92 @@ See [Volunteer Ranks & Benefits](#volunteer-ranks--benefits) for exact benefits.
 
 ---
 
-## Technical Overview
+## Desktop app (Kotlin Multiplatform)
 
-### Tech Stack
+A **desktop** build (`desktopApp`) shares the same Room database, Google Sheets sync, and most admin workflows as Android. Supported on **macOS**, **Windows**, and **Linux**.
 
-- **Language**: Kotlin
-- **UI**: Jetpack Compose (Material 3)
-- **Architecture**: MVVM + Repository pattern
-- **Database**: Room (SQLite)
-- **Dependency Injection**: Hilt (or DI modules, depending on branch)
-- **Async**: Coroutines + Flow / StateFlow
-- **Navigation**: Navigation Compose
-- **Cloud Integration**: Google Sheets API v4 using a service account
+Run locally (any desktop OS):
 
-### Architecture
+```bash
+./gradlew :desktopApp:run
+```
 
-- **MVVM**:
-  - ViewModels manage UI state and handle sync logic.
-  - Repositories abstract the database and network layers.
-- **Room**:
-  - Local persistence with proper indices for performance.
-- **TwoWaySyncSystem**:
-  - `TwoWaySyncService`, `SyncManager`, `DataStructureValidator`, and `EventManagerViewModel` coordinate all sync operations and validations.
-- **StateFlow / Compose**:
-  - UI reacts to changes via `StateFlow` for sync status, errors, and data updates.
+Package release installers (must be built **on the target OS** — Compose Desktop does not cross-compile):
 
-### Project Structure
+```bash
+./gradlew :desktopApp:packageReleaseDmg       # macOS → .dmg
+./gradlew :desktopApp:packageReleaseMsi     # Windows → .msi
+./gradlew :desktopApp:packageReleaseExe     # Windows → .exe
+./gradlew :desktopApp:packageReleaseDeb     # Linux → .deb
+./gradlew :desktopApp:packageReleaseAppImage # Linux → AppImage
+```
 
-app/
-  src/main/java/com/eventmanager/app/
-    data/
-      dao/          # Room DAOs
-      database/     # Database configuration
-      models/       # Data models (Guest, Volunteer, Job, JobType, Venue, etc.)
-      remote/       # Google Sheets service(s)
-      repository/   # Repository implementations
-      sync/         # Two-way sync system & configuration
-    di/             # Dependency injection (Hilt/modules)
-    ui/
-      components/   # Reusable Compose components
-      screens/      # Screen-level Composables
-      theme/        # Material 3 theme
-      viewmodel/    # ViewModels (EventManagerViewModel, etc.)
-    MainActivity.kt # App entry point
+Output binaries are under `desktopApp/build/compose/binaries/main-release/`.
+
+### Linux build prerequisites
+
+On Ubuntu/Debian before packaging:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y fakeroot binutils libfuse2
+```
+
+JDK 17+ is required. Linux package formats (`.deb`, AppImage) are enabled automatically when Gradle runs on Linux. A GitHub Actions workflow (`.github/workflows/desktop-linux.yml`) builds both artifacts when a GitHub Release is published.
+
+### Linux runtime setup (door / hardware)
+
+| Feature | Requirement |
+|---------|-------------|
+| USB NFC reader (ACR122U, ACR1255U-J1 USB) | `pcscd` running, [ACS USB PC/SC driver](https://www.acs.com.hk/en/driver/403/acr1255u-j1-secure-bluetooth%C2%AE-nfc-reader/), udev rules |
+| BLE NFC reader (ACR1255U-J1) | **Windows only**: [ACS Bluetooth PC/SC driver](https://www.acs.com.hk/en/driver/403/acr1255u-j1-secure-bluetooth%C2%AE-nfc-reader/) + system Bluetooth pairing. Not supported on macOS/Linux (use USB mode). |
+| BLE reader discovery list | Windows: PowerShell Bluetooth devices; macOS/Linux: paired-device listing for setup hints only |
+| Webcam QR scan | V4L2/PipeWire; user in `video` group or portal permission |
+| Biometric admin login | Polkit + enrolled fingerprint (`fprintd`) |
+
+### macOS / Windows USB NFC setup
+
+1. Install the ACS USB PC/SC driver for your reader model.
+2. For ACR1255U-J1: switch the reader to **USB mode** (physical toggle), connect the cable.
+3. In app Settings → External reader: use **List PC/SC readers** to verify detection, then **Test USB reader** with a card on the antenna.
+
+### Release checklist (all platforms)
+
+1. Bump `packageVersion` in `desktopApp/build.gradle.kts` and `version.json`.
+2. Build and attach artifacts to the GitHub Release:
+   - APK (Android)
+   - DMG (macOS)
+   - MSI + EXE (Windows)
+   - DEB + AppImage (Linux CI or local Linux build)
+3. Update all download URLs in `version.json` and publish to the AdminList manifest repo (`TouristeAG/AdminList/main/version.json`).
+4. Smoke-test in-app update on each platform.
+
+### Platform differences (by design)
+
+| Feature | Android | Desktop |
+|---------|---------|---------|
+| NFC | Built-in phone NFC + optional BLE ACS reader | USB **PC/SC** card reader (+ BLE via PC/SC on Windows after pairing) |
+| QR scan | Camera preview | Webcam (ZXing) or file picker |
+| Admin auth | NFC, QR, optional biometrics | NFC (PC/SC), QR, optional biometrics (Touch ID / Windows Hello / Linux Polkit) |
+| BLE external reader | Supported (ACS SDK) | Windows: PC/SC + pairing; macOS/Linux: USB only |
+| Dynamic app icon | 12 launcher icons | Not supported |
+| Resolution scale slider | Phone/tablet layout | Not used |
+| Seasonal animations / haptics | Optional | Not included |
+| Embedded WebView | In-app browser | Opens system browser |
+| Dashboard charts | Full Canvas graphs | Summary stats + XLSX/JPG export |
+| Debug logs UI | Settings → Developer | Settings → Developer (file logs in app data dir) |
+| In-app updates | APK download | Platform installer (DMG / MSI / EXE / DEB / AppImage) |
+
+Keyboard shortcuts on desktop: **Cmd+,** or **Ctrl+,** (Settings), **Cmd+F** or **Ctrl+F** (focus guest search), **Esc** (dismiss overlays).
+
+---
+
+## Contributing
+
+When extending behavior:
+
+- Preserve **Sheets compatibility** (column order, `JobTypes` tab name unless code is updated everywhere).  
+- Keep **benefit math** in `BenefitCalculator` / models testable and consistent with documented sheet columns.  
+- Respect **tablet and phone** layouts and touch targets.
+
+For product or policy questions (e.g. exact CHF wallet amounts shown in Orion copy), treat the **in-app strings and `Benefit` descriptions** as the source of truth alongside this file.

@@ -1,0 +1,1609 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App Name -->
+    <string name="app_name">NoctuList</string>
+    
+    <!-- Settings Screen -->
+    <string name="settings_title">设置与配置</string>
+    <string name="settings_subtitle">配置 Google Sheets 同步和应用程序设置</string>
+    <string name="settings_logout">退出登录</string>
+    <string name="settings_logout_description">返回欢迎界面。再次使用管理功能前需要重新以管理员身份验证。</string>
+
+    <!-- Google Sheets Configuration -->
+    <string name="google_sheets_config_title">Google Sheets 配置</string>
+    <string name="view_setup_instructions">查看设置说明</string>
+    <string name="spreadsheet_id_label">电子表格 ID</string>
+    <string name="spreadsheet_id_hint">从您的 Google Sheets 网址获取：https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit</string>
+    <string name="guest_list_sheet_label">来宾名单工作表</string>
+    <string name="volunteer_sheet_label">志愿者工作表</string>
+    <string name="shifts_sheet_label">班次工作表</string>
+    <string name="volunteer_guest_list_sheet_label">志愿者来宾名单工作表</string>
+    <string name="volunteer_guest_sheet_banner_title">请勿编辑 — 志愿者礼遇来宾名单（只读）</string>
+    <string name="volunteer_guest_sheet_banner_l2">请勿修改此工作表。</string>
+    <string name="volunteer_guest_sheet_banner_l3">在此处的修改不会被应用保存。</string>
+    <string name="volunteer_guest_sheet_banner_l4">此标签页仅列出当前在应用中享有来宾名单礼遇的志愿者。</string>
+    <string name="volunteer_guest_sheet_banner_l5">此内容由应用刷新；若不使用应用，此页面将不再是最新状态。</string>
+    <string name="volunteer_guest_sheet_last_updated">最后更新：%1$s</string>
+    <string name="sheet_epoch_calc_title_ms_to_date">时间戳（毫秒）→ 日期/时间</string>
+    <string name="sheet_epoch_calc_title_date_to_ms">日期/时间 → 时间戳（毫秒）</string>
+    <string name="sheet_epoch_calc_hint_ms">在此输入毫秒（如 1776711088094）</string>
+    <string name="sheet_epoch_calc_hint_datetime">选择或输入日期/时间</string>
+    <string name="temp_guest_list_sheet_label">临时来宾名单工作表</string>
+    <string name="shift_types_sheet_label">班次类型工作表</string>
+    <string name="venues_sheet_label">场地工作表</string>
+    <string name="sales_items_sheet_label">销售项目工作表</string>
+    <string name="admin_label">管理员</string>
+    <string name="admin_yes">是</string>
+    <string name="admin_no">否</string>
+    <string name="save_settings">保存设置</string>
+    <string name="test_connection">测试连接</string>
+    
+    <!-- Service Account Configuration -->
+    <string name="service_account_config_title">服务账号配置</string>
+    <string name="service_account_key_found">已找到服务账号密钥</string>
+    <string name="service_account_key_required">需要服务账号密钥</string>
+    <string name="email_label">电子邮件：%1$s</string>
+    <string name="project_label">项目：%1$s</string>
+    <string name="email_colon">电子邮件：%1$s</string>
+    <string name="project_colon">项目：%1$s</string>
+    <string name="upload_key_file_description">上传您的 Google 服务账号 JSON 密钥文件</string>
+    <string name="upload_key_description">上传您的 Google 服务账号 JSON 密钥文件</string>
+    <string name="replace_key_file">替换密钥文件</string>
+    <string name="upload_key_file">上传密钥文件</string>
+    
+    <!-- Sync Configuration -->
+    <string name="sync_config_title">同步配置</string>
+    <string name="sync_interval_label">同步间隔（分钟）</string>
+    <string name="sync_interval_hint">与 Google Sheets 同步的频率（1-60 分钟）。更改会自动保存并生效。</string>
+    <string name="save_sheets_config">保存表格配置</string>
+    <string name="test_sync_status">测试同步状态</string>
+    <string name="sync_status_dialog_title">同步状态</string>
+    <string name="sync_status_configured">Google Sheets 已配置并准备同步</string>
+    <string name="sync_status_not_configured">Google Sheets 未配置。请检查您的设置。</string>
+    <string name="sync_status_error">测试同步状态时出错：%1$s</string>
+    <string name="manual_sync_now">立即手动同步</string>
+    <string name="view_active_volunteers">查看活跃志愿者</string>
+    <string name="cleanup_inactive_volunteers">清理非活跃志愿者</string>
+    <string name="cleanup_choose_duration">选择志愿者需保持非活跃多久才会被删除：</string>
+    <string name="cleanup_inactive_for">非活跃时长：</string>
+    <string name="cleanup_years_value">%1$d 年</string>
+    <string name="cleanup_hide_preview">隐藏预览</string>
+    <string name="cleanup_preview_to_delete">预览将删除的志愿者（%1$d）</string>
+    <string name="cleanup_volunteers_to_be_deleted">将被删除的志愿者：</string>
+    <string name="cleanup_no_volunteers_found">未找到非活跃满 %1$d 年或以上的志愿者。</string>
+    
+    <!-- Advanced Settings -->
+    <string name="advanced_settings_title">高级设置</string>
+    <string name="show_advanced_settings">显示高级设置</string>
+    <string name="hide_advanced_settings">隐藏高级设置</string>
+    <string name="debug_mode_title">调试模式</string>
+    <string name="debug_mode_description">启用详细日志以进行故障排除</string>
+    <string name="debug_logs_title">调试日志</string>
+    <string name="debug_logs_location">位置：%1$s</string>
+    <string name="debug_logs_files_size">文件：%1$d | 大小：%2$s MB</string>
+    <string name="debug_logs_recent_files">最近的日志文件：</string>
+    <string name="debug_logs_view">查看</string>
+    <string name="debug_logs_share">分享</string>
+    <string name="debug_logs_view_latest">查看最新</string>
+    <string name="debug_logs_clear_all">清除全部</string>
+    <string name="debug_logs_content">日志内容</string>
+    <string name="debug_logs_no_content">无日志内容</string>
+    <string name="debug_logs_error_reading">读取日志文件时出错：%1$s</string>
+    <string name="debug_logs_error_reading_generic">读取日志文件时出错</string>
+    <string name="debug_logs_share_file">分享日志文件</string>
+    <string name="animated_background_title">动画背景</string>
+    <string name="animated_background_description">为欢迎界面和管理界面选择一种微妙的动画背景</string>
+    <string name="background_animation_none">无</string>
+    <string name="background_animation_arches">拱形</string>
+    <string name="background_animation_topographic">地形线</string>
+    <string name="background_animation_opacity_title">背景强度</string>
+    <string name="background_animation_opacity_description">降低不透明度，使动画线条更加柔和</string>
+    <string name="background_animation_opacity_apply">应用强度</string>
+    <string name="billeterie_background_animation_title">票务背景</string>
+    <string name="billeterie_background_animation_description">仅为票务界面选择背景动画</string>
+    <string name="page_animations_title">页面动画</string>
+    <string name="page_animations_description">切换页面和标签时启用滑动动画</string>
+    <string name="clear_app_cache">清除应用缓存</string>
+    <string name="app_cache_cleared">应用数据缓存已清除。设置和密钥已保留。</string>
+    <string name="check_for_updates">检查更新</string>
+    <string name="update_available_title">有可用更新：%1$s</string>
+    <string name="update_required_message">需要更新版本的应用程序才能继续。请更新至最新版本。</string>
+    <string name="update_available_message">有可用的新版本应用程序。您想立即更新吗？</string>
+    <string name="update_now">立即更新</string>
+    <string name="later">稍后</string>
+    <string name="up_to_date_title">您已使用最新版本</string>
+    <string name="up_to_date_message">您已安装最新版本。</string>
+    <string name="update_error_title">更新检查失败</string>
+    <string name="update_error_message">无法检查更新：%1$s</string>
+    <string name="checking_for_updates_title">正在检查更新</string>
+    <string name="checking_for_updates_message">正在联系更新服务器…</string>
+    <string name="downloading_update">正在下载更新…</string>
+    <string name="download_progress">下载中：%1$d%%</string>
+    <string name="download_complete">下载完成</string>
+    <string name="install_update">安装更新</string>
+    <string name="download_error_title">下载失败</string>
+    <string name="download_error_message">无法下载更新：%1$s</string>
+    <string name="change_update_sources">更改更新来源</string>
+    <string name="update_sources_title">更新来源</string>
+    <string name="update_sources_warning">GitHub URL 必须指向有效的 version.json 文件，更新检查才能正常工作。除非您知道自己在做什么，否则请勿修改这些设置。</string>
+    <string name="update_sources_github_label">GitHub 清单 URL</string>
+    <string name="update_sources_store_label">应用商店 URL（备用）</string>
+    <string name="update_sources_reset">重置为默认值</string>
+    <string name="update_sources_custom_url">自定义 URL</string>
+
+    <!-- Language Settings -->
+    <string name="language_title">语言</string>
+    <string name="language_description">选择您偏好的语言</string>
+    <string name="language_english">English</string>
+    <string name="language_french">Français</string>
+    <string name="language_spanish">Español</string>
+    <string name="language_chinese">繁體中文</string>
+    <string name="language_chinese_simplified">简体中文</string>
+    <string name="language_latin">Latina</string>
+    <string name="language_hindi">हिन्दी</string>
+    
+    <!-- Theme Settings -->
+    <string name="theme_title">主题</string>
+    <string name="theme_description">选择您偏好的主题外观</string>
+    <string name="theme_light">浅色</string>
+    <string name="theme_dark">深色</string>
+    <string name="theme_default">系统</string>
+    
+    <!-- Color Theme Settings -->
+    <string name="color_theme_title">颜色主题</string>
+    <string name="color_theme_description">为不支持动态颜色的设备选择颜色主题</string>
+    <string name="color_theme_system">系统</string>
+    <string name="color_theme_professional_blue">蓝色</string>
+    <string name="color_theme_neutral_green">绿色</string>
+    <string name="color_theme_warm_gray">暖灰</string>
+    <string name="color_theme_neutral_purple">紫色</string>
+    <string name="color_theme_rich_brown">棕色</string>
+    <string name="color_theme_sunset_mist">雾色</string>
+    <string name="color_theme_feminist_violet">紫罗兰</string>
+
+    <string name="color_theme_custom">自定义</string>
+    <string name="color_theme_customize">自定义主题颜色</string>    
+    <!-- Restart Dialog -->
+    <string name="restart_required_title">需要重新启动</string>
+    <string name="restart_required_message">颜色主题已更改。请重新启动应用程序以查看新主题。</string>
+    <string name="restart_now">立即重新启动</string>
+    <string name="restart_later">稍后</string>
+    
+    <!-- UI Size Settings -->
+    <string name="resolution_scale_title">分辨率缩放</string>
+    <string name="resolution_scale_description" formatted="false">调整分辨率缩放以使界面更小或更大。拖动滑块以从 80%（大）到 120%（小）更改缩放。</string>
+    <string name="resolution_small">大</string>
+    <string name="resolution_medium_small">中小</string>
+    <string name="resolution_normal">正常</string>
+    <string name="resolution_medium_large">中大</string>
+    <string name="resolution_large">小</string>
+    <string name="save_resolution_scale">保存分辨率缩放</string>
+    <string name="system_is_in_dark_mode">系统处于深色模式</string>
+    <string name="system_is_in_light_mode">系统处于浅色模式</string>
+    <string name="people_counter_visibility_title">显示人数计数器</string>
+    <string name="people_counter_visibility_description">在首页上显示或隐藏人数计数器</string>
+    <string name="statistics_visibility_title">显示统计图表</string>
+    <string name="statistics_visibility_description">在首页上显示或隐藏统计图表区段</string>
+    <string name="scroll_behavior_title">管理页面的滚动行为</string>
+    <string name="scroll_behavior_description">控制在滚动志愿者、来宾名单和班次页面时标题（添加、筛选、搜索）的行为。</string>
+    <string name="scroll_behavior_list_only_title">保持标题固定</string>
+    <string name="scroll_behavior_list_only_description">仅滚动列表。顶部操作（添加、筛选、搜索）保持在顶部可见。</string>
+    <string name="scroll_behavior_full_page_title">滚动整个页面</string>
+    <string name="scroll_behavior_full_page_description">标题和列表一起滚动。向下滚动时顶部操作会移开。</string>
+    <string name="scroll_behavior_sticky_filters_option">滚动时保持筛选器可见</string>
+    <string name="scroll_behavior_sticky_filters_description">筛选栏到达页面顶部后会固定在顶部，而标题和添加按钮会随页面滚动。</string>
+
+    <!-- Shift Type Management -->
+    <string name="shift_type_management_title">班次类型管理</string>
+    <string name="shift_type_management_description">配置班次类型及其等级资格</string>
+    <string name="manage_shift_types">管理班次类型</string>
+    <string name="shift_types_title">班次类型</string>
+    <string name="add_shift_type">添加班次类型</string>
+    <string name="search_shift_types_placeholder">搜索班次类型…</string>
+    <string name="filter_shift_types">班次类型</string>
+    <string name="filter_orion_types">Orion 类型</string>
+    <string name="shift_types_count">%1$d / %2$d 班次类型</string>
+    <string name="shift_job">班次工作</string>
+    <string name="orion_job">Orion 工作</string>
+    <string name="requires_time">需要时间</string>
+    <string name="stellar_benefits">优秀福利</string>
+    <string name="manual_rewards">手动奖励</string>
+    <string name="manual_rewards_details">手动奖励详情</string>
+    <string name="days_n">%1$d 天</string>
+    <string name="free_drinks_n">%1$d 杯免费饮料</string>
+    <string name="bar_discount_n">%1$d%% 酒吧折扣</string>
+    <string name="invites_n">%1$d 个邀请</string>
+    <string name="no_rewards_configured">未配置奖励</string>
+    <!-- Shift Type Dialog -->
+    <string name="add_shift_type_title_compact">添加班次类型</string>
+    <string name="add_shift_type_title_full">添加新班次类型</string>
+    <string name="edit_shift_type_title_compact">编辑班次类型</string>
+    <string name="edit_shift_type_title_full">编辑班次类型配置</string>
+    <string name="shift_type_name_label">班次类型名称</string>
+    <string name="shift_type_name_placeholder">例如：吧台员工</string>
+    <string name="description_label">描述</string>
+    <string name="description_placeholder">可选描述</string>
+    <string name="benefit_system_label">福利制度</string>
+    <string name="stellar_config_label">班次类型配置</string>
+    <string name="manual_rewards_config_label">手动奖励配置</string>
+    <string name="manual_rewards_warning_orion_automatic_enabled">此班次类型已启用 Orion 自动权益！会与人手奖励叠加—若非本意，请切回恒星模式并关闭「Orion 工作」。</string>
+    <string name="manual_rewards_warning_nova_stellar_automatic_enabled">已启用 Nova / Galaxie（计为恒星班次）自动权益！会与人手奖励叠加—若非本意，请切回恒星模式并关闭「班次工作」。</string>
+    <string name="shift_job_label">班次工作（Nova / Galaxie）</string>
+    <string name="orion_job_label">Orion 工作（委员会 / 协调）</string>
+    <string name="requires_shift_time_label">必填设置：可享受/不可享受当晚活动</string>
+    <string name="duration_days_label">有效天数</string>
+    <string name="free_drinks_label">免费饮品</string>
+    <string name="bar_discount_percent_label">酒吧折扣（%）</string>
+    <string name="free_entry_label">免费入场</string>
+    <string name="number_of_invites_label">邀请人数</string>
+    <string name="duration_invites_label">奖励有效期内的邀请人数</string>
+    <string name="future_single_use_entries_label">未来活动入场（一次性）</string>
+    <string name="future_entry_invites_label">每次未来入场的邀请人数（朋友）</string>
+    <string name="future_entry_invites_helper">该数值用于未来一次性入场显示的“+n inv.”。</string>
+    <string name="future_single_use_entries_with_invites_summary">未来一次性入场：%1$d（+%2$d inv.）</string>
+    <string name="future_event_entries_remaining_n">🎟️ %1$d 次未来活动入场（一次性）</string>
+    <string name="future_entry_remaining_with_invites">🎟️ 剩余 %1$d 次入场 (+%2$d 邀请)</string>
+    <string name="future_entries_remaining_with_invites">🎟️ 剩余 %1$d 次入场 (+%2$d 邀请)</string>
+    <string name="future_entry_solo">🎟️ 剩余 %1$d 次入场（单人）</string>
+    <string name="future_entries_solo">🎟️ 剩余 %1$d 次入场（单人）</string>
+    <string name="other_notes_label">其他备注</string>
+    <string name="other_notes_placeholder">其他附加说明…</string>
+    <string name="update_shift_type">更新班次类型</string>
+    <string name="stellar_benefits_info_title">福利速查</string>
+
+    <string name="benefits_help_dialog_title">福利速查</string>
+    <string name="benefits_help_dialog_subtitle">Collectif Nocturne · 2026-27</string>
+    <string name="benefits_help_intro">按真实班次选。恒星模式自动算；手动模式自己填。</string>
+
+    <string name="benefits_help_tab_modes">模式</string>
+    <string name="benefits_help_tab_nova">班次类型</string>
+    <string name="benefits_help_tab_extras">加成与时间</string>
+
+    <string name="benefits_help_app_stellar">开启班次工作 → 选 Nova 类型\n开启 Orion 工作 → 任期年（下一年 Veteran）\n饮品、名单、未来入场次数 → 自动算</string>
+    <string name="benefits_help_app_manual">自己填天数、饮品、酒吧折扣\u0025、邀请、额外项\n表格外的感谢用\n已在恒星里算过的同一班次别重复计</string>
+
+    <string name="benefits_help_section_profité_title">Profité / non-profité</string>
+    <string name="benefits_help_section_profité_body">仅默认班次 + 开启「能否享受当晚」。\n与是否付费入场无关：只看排班时间是否仍让人能享受当晚。\n其他 Nova 类型没有这项。</string>
+
+    <string name="benefits_help_section_nova_title">Nova（班次工作）- 权益一览</string>
+    <string name="benefits_help_nova_profité_title">默认班次 - profité</string>
+    <string name="benefits_help_nova_profité_rationale">仅限活动当晚。</string>
+    <string name="benefits_help_nova_profité_perks">免费入场 + 1 名同伴 - 活动当晚\n酒吧 50\u0025 - 活动当晚\n2 杯免费饮品（约 10 CHF）- 活动当晚</string>
+
+    <string name="benefits_help_nova_non_profité_title">默认班次 - non-profité</string>
+    <string name="benefits_help_nova_non_profité_rationale">当晚权益 + 一季免费入场（+1 同伴）。</string>
+    <string name="benefits_help_nova_non_profité_perks">与 profité 相同的当晚权益\n另 + 1 次季票免费入场 + 1 同伴（应用内跟踪）</string>
+
+    <string name="benefits_help_nova_photo_title">摄影 / 摄像（当晚）</string>
+    <string name="benefits_help_nova_photo_rationale">大致同默认 non-profité。</string>
+    <string name="benefits_help_nova_photo_perks">免费入场 + 1 名同伴 - 覆盖当晚\n酒吧 50\u0025 - 覆盖当晚\n2 杯免费饮品（约 10 CHF）- 覆盖当晚\n1 次季票免费入场 + 1 同伴</string>
+
+    <string name="benefits_help_nova_meeting_title">会议</string>
+    <string name="benefits_help_nova_meeting_rationale">一月内 3 场会议仍算 Galaxie - Orion 除外（会议不计）。</string>
+    <string name="benefits_help_nova_meeting_perks">1 次季票免费入场 + 1 同伴\n1 杯免费饮品（约 5 CHF）</string>
+
+    <string name="benefits_help_nova_gd_event_title">平面设计 - 单场活动</string>
+    <string name="benefits_help_nova_gd_event_rationale">当晚逻辑同摄影/摄像。</string>
+    <string name="benefits_help_nova_gd_event_perks">免费入场 + 1 同伴 - 活动当晚\n酒吧 50\u0025 - 活动当晚\n2 杯免费饮品（约 10 CHF）- 活动当晚\n1 次季票免费入场 + 1 同伴</string>
+
+    <string name="benefits_help_nova_gd_asso_title">平面设计 - 协会整体</string>
+    <string name="benefits_help_nova_gd_asso_rationale">不绑单场派对 → 多饮品，无酒吧\u0025。</string>
+    <string name="benefits_help_nova_gd_asso_perks">2 次季票免费入场，各 +1 同伴\n4 杯免费饮品（约 20 CHF）</string>
+
+    <string name="benefits_help_section_galaxie_title">Galaxie</string>
+    <string name="benefits_help_section_galaxie_body">同一自然月内 3 次贡献（班次 + 会议）\nOrion：会议不计入这 3 次\n该月：所有活动免费入场 + 整月酒吧 50\u0025 + 多 1 杯饮品\n与单次班次权益叠加</string>
+
+    <string name="benefits_help_section_orion_title">Orion</string>
+    <string name="benefits_help_section_orion_body">把工作标为 Orion\n自任期起 1 年：免费入场 + 酒吧 50\u0025 + 1 名同伴\n270 CHF 内部钱包（T 恤 + 饮品预算）</string>
+
+    <string name="benefits_help_section_veteran_title">Veteran</string>
+    <string name="benefits_help_section_veteran_body">Orion 后那一年\n仍有免费入场 + 酒吧 50\u0025\n钱包随任期结束停</string>
+
+    <string name="benefits_help_section_timing_title">应用何时启用权益</string>
+    <string name="benefits_help_section_timing_body">当晚权益 = 场地的活动日（设置里「换日时间」）\n未来入场从同一时刻起可用\nOrion / Galaxie / Veteran 时间窗更长</string>
+
+    <string name="benefits_help_footer_title">小提示</string>
+    <string name="benefits_help_footer_bullets">Profité / non-profité - 排班是否仍让人享受当晚（与入场无关）\n酒吧 50\u0025 跟 Lightspeed 价格走\nGalaxie 与班次权益可叠</string>
+
+    <string name="nova_job_type_label">Nova 权益类型</string>
+    <string name="nova_type_default_shift">默认班次</string>
+    <string name="nova_type_meeting">会议</string>
+    <string name="nova_type_graphic_designer_event">平面设计（活动）</string>
+    <string name="nova_type_photographer_videographer">摄影 / 摄像</string>
+    <string name="nova_type_graphic_designer_association">平面设计（协会）</string>
+
+    <!-- Venue Management -->
+    <string name="venue_management_title">场地管理</string>
+    <string name="venue_management_description">配置场地及其设置</string>
+    <string name="manage_venues">管理场地</string>
+    <string name="sales_items_management_title">销售项目管理</string>
+    <string name="sales_items_management_description">配置销售项目及其设置</string>
+    <string name="manage_sales_items">管理销售项目</string>
+    <string name="sales_items_title">销售项目</string>
+    <string name="add_sales_item">添加销售项目</string>
+    <string name="edit_sales_item">编辑销售项目</string>
+    <string name="sales_update_item">更新销售项目</string>
+    <string name="search_sales_items_placeholder">搜索销售项目...</string>
+    <string name="sales_items_count">销售项目：%1$d/%2$d</string>
+    <string name="sales_price_label">价格（CHF）</string>
+    <string name="sales_discount_label">适用折扣</string>
+    <string name="sales_required_rank_label">最低所需等级</string>
+    <string name="sales_rank_none_required">无需等级</string>
+    <string name="sales_item_summary_line">CHF %1$.2f • 折扣：%2$s • 最低等级：%3$s</string>
+    <string name="venues_title">场地</string>
+    <string name="add_venue">添加场地</string>
+    <string name="search_venues_placeholder">搜索场地…</string>
+    <string name="venues_count">%1$d / %2$d 场地</string>
+    <string name="venue_name">场地名称</string>
+    <string name="venue_description">描述</string>
+    <string name="venue_active">活跃</string>
+    <string name="venue_inactive">非活跃</string>
+    <string name="update_venue">更新场地</string>
+    <string name="venue_name_placeholder">例如：Groove</string>
+    <string name="venue_description_placeholder">可选描述</string>
+    <string name="add_new_venue">添加新场地</string>
+    <string name="edit_venue_configuration">编辑场地配置</string>
+    <string name="venue_all">全部</string>
+    <string name="venue_both">两者</string>
+
+    <!-- Temporary Guest List -->
+    <string name="temp_guest_artist_label">艺人 / 团体</string>
+    <string name="temp_guest_event_date_label">活动日期</string>
+    <string name="temp_guest_contact_phone_label">紧急联系电话</string>
+    <string name="temp_guest_chip_label">临时</string>
+    <string name="temp_guest_timeline_button">未来 / 历史</string>
+    <string name="temp_guest_timeline_title">临时来宾名单</string>
+    <string name="temp_guest_tab_temp">临时</string>
+    <string name="temp_guest_tab_volunteer">志愿者</string>
+    <string name="temp_guest_range_label">范围</string>
+    <string name="temp_guest_range_three_days">前后 3 天</string>
+    <string name="temp_guest_range_three_days_short">±3天</string>
+    <string name="temp_guest_range_one_week">1 周</string>
+    <string name="temp_guest_range_one_week_short">1周</string>
+    <string name="temp_guest_range_two_weeks">2 周</string>
+    <string name="temp_guest_range_two_weeks_short">2周</string>
+    <string name="temp_guest_range_one_month">1 个月</string>
+    <string name="temp_guest_range_one_month_short">1月</string>
+    <string name="temp_guest_range_six_months">6 个月</string>
+    <string name="temp_guest_range_six_months_short">6月</string>
+    <string name="temp_guest_range_one_year">1 年</string>
+    <string name="temp_guest_range_one_year_short">1年</string>
+    <string name="temp_guest_range_all_time">全部时间</string>
+    <string name="temp_guest_range_all_time_short">全部</string>
+    <string name="temp_guest_section_upcoming">未来来宾</string>
+    <string name="temp_guest_section_past">历史记录</string>
+    <string name="temp_guest_none_upcoming">该筛选下没有未来的临时来宾。</string>
+    <string name="temp_guest_none_past">该筛选下没有过去的临时来宾。</string>
+    
+    <!-- App Information -->
+    <string name="app_info_title">应用程序信息</string>
+    <string name="app_version">NoctuList 0.9</string>
+    <string name="app_designed_for">专为 Collectif Nocturne 场地设计</string>
+    <string name="app_developed_full">为 Collectif Nocturne 开发，开发者：Leonardo Mondada</string>
+    <string name="last_sync">上次更新：%1$s</string>
+    <string name="never">从未</string>
+    
+    <!-- Instructions Dialog -->
+    <string name="google_sheets_setup_instructions">Google Sheets 设置说明</string>
+    <string name="setup_instructions_intro">按照以下步骤设置 Google Sheets 同步：</string>
+    <string name="open_google_cloud_console">打开 Google Cloud Console</string>
+    <string name="got_it">知道了！</string>
+    
+    <!-- Instruction Steps -->
+    <string name="step_1_title">创建 Google Cloud 项目</string>
+    <string name="step_1_description">前往 Google Cloud Console 并创建新项目或选择现有项目。</string>
+    <string name="step_2_title">启用 Google Sheets API</string>
+    <string name="step_2_description">在您的项目中，从 APIs &amp; Services 部分启用 Google Sheets API。</string>
+    <string name="step_3_title">创建服务账号</string>
+    <string name="step_3_description">在 IAM &amp; Admin > Service Accounts 中创建服务账号。下载 JSON 密钥文件。</string>
+    <string name="step_4_title">将密钥添加至应用程序</string>
+    <string name="step_4_description">使用设置中的"上传密钥文件"按钮，或手动将 JSON 文件放置在 app/src/main/assets/ 中，命名为"service_account_key.json"</string>
+    <string name="step_5_title">创建 Google 电子表格</string>
+    <string name="step_5_description">创建新的 Google 电子表格并从网址复制其 ID。</string>
+    <string name="step_6_title">创建必要的工作表</string>
+    <string name="step_6_description">请创建以下工作表："Guest List"、"Volunteers"、"Shifts"、"Shift Types"、"Volunteer Guest List"、"Venues" 和 "Temp Guest List"（"Temp Guest List" 中的日期必须使用 YYYY-MM-DD 格式）。</string>
+    <string name="step_7_title">设置工作表标题</string>
+    <string name="step_7_description">为每个工作表添加标题。应用程序会自动创建它们，但您也可以根据需要手动设置。</string>
+    <string name="step_8_title">与服务账号共享</string>
+    <string name="step_8_description">与您的服务账号电子邮件（在 JSON 文件中找到）共享电子表格，并授予编辑者访问权限。</string>
+    <string name="step_9_title">配置应用程序设置</string>
+    <string name="step_9_description">在上方的设置中输入电子表格 ID 和工作表名称。</string>
+    
+    <!-- Test Connection Dialog -->
+    <string name="test_google_sheets_connection">测试 Google Sheets 连接</string>
+    <string name="testing_connection">正在测试连接…</string>
+    <string name="test_connection_description">这将使用当前设置测试与 Google Sheets 的连接。</string>
+    <string name="test">测试</string>
+    <string name="close">关闭</string>
+    
+    <!-- Active Volunteers Dialog -->
+    <string name="volunteer_activity_status">志愿者活动状态</string>
+    <string name="active_volunteers_count">活跃志愿者：%1$d</string>
+    <string name="inactive_volunteers_count">非活跃志愿者：%1$d</string>
+    <string name="inactive_volunteers_label">非活跃志愿者：</string>
+    <string name="active">活跃</string>
+    <string name="inactive">非活跃</string>
+    
+    <!-- Cleanup Dialog -->
+    <string name="warning">⚠️ 警告：</string>
+    <string name="cleanup_warning" formatted="false">此操作将永久删除 %1$d 名志愿者及其所有相关工作记录。此操作无法撤销！</string>
+    <string name="delete_volunteers" formatted="false">删除 %1$d 名志愿者</string>
+    <string name="cancel">取消</string>
+    
+    <!-- Delete Volunteer Dialog -->
+    <string name="delete_volunteer_title">删除志愿者</string>
+    <string name="delete_volunteer_confirm">您确定要删除 %1$s 吗？</string>
+    <string name="delete_volunteer_shift_count_one">此志愿者有 %1$d 个班次记录。</string>
+    <string name="delete_volunteer_shift_count_other">此志愿者有 %1$d 个班次记录。</string>
+    <string name="delete_volunteer_also_delete_shifts_one">同时删除该 %1$d 个班次</string>
+    <string name="delete_volunteer_also_delete_shifts_other">同时删除全部 %1$d 个班次</string>
+    <string name="delete_volunteer_warning">⚠️ 警告：此操作无法撤销！</string>
+    <string name="delete_volunteer_graph_warning">注意：暂停志愿者将影响首页统计图表。删除其班次将对图表准确性产生更大影响。</string>
+    
+    <!-- Upload Status Messages -->
+    <string name="validating_file">正在验证文件…</string>
+    <string name="file_validated_uploading">文件已验证！正在上传…</string>
+    <string name="file_uploaded_successfully">文件上传成功！</string>
+    <string name="upload_failed">上传失败：%1$s</string>
+    <string name="validation_failed">验证失败：%1$s</string>
+    <string name="key_file_found">已找到密钥文件</string>
+    <string name="unknown">未知</string>
+    
+    <!-- Common Actions -->
+    <string name="save">保存</string>
+    <string name="delete">删除</string>
+    <string name="edit">编辑</string>
+    <string name="add">添加</string>
+    <string name="remove">移除</string>
+    <string name="confirm">确认</string>
+    <string name="ok">确定</string>
+    <string name="yes">是</string>
+    <string name="no">否</string>
+    
+    <!-- Navigation -->
+    <string name="nav_dashboard">仪表板</string>
+    <string name="nav_guests">来宾</string>
+    <string name="nav_volunteers">志愿者</string>
+    <string name="nav_shifts">班次</string>
+    <string name="nav_benefits">福利</string>
+    <string name="nav_settings">设置</string>
+    
+    <!-- Dashboard -->
+    <string name="dashboard_title">仪表板</string>
+    <string name="dashboard_subtitle_phone">活动管理概览</string>
+    <string name="dashboard_subtitle_tablet">您的活动管理系统概览</string>
+    <string name="active_volunteers">活跃志愿者</string>
+    <string name="jobs_this_month">本月工作</string>
+    <string name="venues">场地</string>
+    <string name="volunteers_total">总志愿者数</string>
+    <string name="plus_one_invites">+1 邀请</string>
+    <string name="total_people">总名单</string>
+    <string name="shifts_past_month">过去一个月的班次</string>
+    <string name="inactive_volunteers">非活跃志愿者</string>
+    <string name="free_drinks_today">今日免费饮料</string>
+    <string name="recent_activity">最近活动</string>
+    <string name="recent_guests">最近来宾</string>
+    <string name="recent_volunteers">最近志愿者</string>
+    <string name="recent_shifts">最近班次</string>
+    <string name="latest_guest_phone">来宾：%1$s</string>
+    <string name="latest_guest_tablet">最新来宾：%1$s</string>
+    <string name="latest_volunteer_phone">志愿者：%1$s</string>
+    <string name="latest_volunteer_tablet">最新志愿者：%1$s</string>
+    <string name="latest_job_phone">工作：%1$s</string>
+    <string name="latest_job_tablet">最新工作：%1$s</string>
+    
+    <!-- Stats and Graphs -->
+    <string name="stats_and_graphs">统计与趋势</string>
+    
+    <!-- Sync Status -->
+    <string name="syncing">正在同步…</string>
+    <string name="last_update_just_now">刚刚</string>
+    <string name="last_update_never_brief">—</string>
+    <string name="last_update_seconds_ago">%1$d 秒前</string>
+    <string name="last_update_min_sec_ago">%1$d 分 %2$d 秒前</string>
+    <string name="last_update_hour_min_ago">%1$d 小时 %2$d 分前</string>
+    <string name="last_update_days_ago">%1$d 天前</string>
+    <string name="last_update_line">更新 · %1$s</string>
+    <string name="last_update_none_line">更新 · —</string>
+    <string name="sync_pill_minutes_ago">%1$d 分钟前</string>
+    <string name="sync_pill_hours_ago">%1$d 小时前</string>
+    <string name="sync_pill_hours_minutes_ago">%1$d 小时 %2$d 分钟前</string>
+    <string name="sync_pill_days_ago">%1$d 天前</string>
+    <string name="sync_pill_days_hours_ago">%1$d 天 %2$d 小时前</string>
+    <string name="sync_pill_days_minutes_ago">%1$d 天 %2$d 分钟前</string>
+    <string name="sync_pill_days_hours_minutes_ago">%1$d 天 %2$d 小时 %3$d 分钟前</string>
+    
+    <!-- Welcome Screen -->
+    <string name="start_admin">开始管理</string>
+    <string name="admin_mode">管理员</string>
+    <string name="ticket_check_mode">票务</string>
+    <string name="welcome_background_sync_content_description">正在与 Google 表格同步以验证管理员权限</string>
+
+    <!-- Admin Auth Screen -->
+    <string name="admin_auth_title">管理员认证</string>
+    <string name="admin_auth_description">扫描您的徽章或二维码以验证管理员权限</string>
+    <string name="admin_auth_syncing">正在从 Google Sheets 加载数据…</string>
+    <string name="admin_auth_syncing_title">正在准备管理员访问</string>
+    <string name="admin_auth_syncing_subtitle">正在与 Google Sheets 同步，以便准确验证您的徽章或二维码。</string>
+    <string name="admin_auth_sync_wait_hint">请勿扫描 — 同步完成后即可进行身份验证</string>
+    <string name="admin_auth_sync_step_sheet">检查表格结构</string>
+    <string name="admin_auth_sync_step_download">下载最新的宾客和志愿者数据</string>
+    <string name="admin_auth_sync_step_verify">刷新管理员资料</string>
+    <string name="admin_precheck_sync_loading">正在准备管理员访问：检查表格并同步…</string>
+    <string name="admin_precheck_sync_failed_title">无法完成管理员访问准备</string>
+    <string name="admin_precheck_sync_failed_message">无法修复或同步表格。请检查网络连接和电子表格设置后重试。</string>
+    <string name="admin_precheck_sync_retry">重试</string>
+    <string name="admin_auth_ready">将您的 NFC 徽章靠近设备或扫描二维码</string>
+    <string name="admin_auth_scan_qr">扫描二维码</string>
+    <string name="admin_auth_granted">欢迎，%1$s！管理员访问已授权</string>
+    <string name="admin_auth_denied">%1$s 没有管理员权限</string>
+    <string name="admin_auth_not_found">未找到匹配的个人资料</string>
+    <string name="admin_auth_try_again">重试</string>
+
+    <!-- 票务 -->
+    <string name="ticket_check_title">票务</string>
+    <string name="ticket_check_coming_soon">此功能即将推出</string>
+    <string name="ticket_check_description">在入口快速打开宾客名单和扫描。</string>
+    <string name="billeterie_stat_permanent_guests">常驻宾客</string>
+    <string name="billeterie_stat_temporary_guests_today">临时宾客（今日）</string>
+    <string name="billeterie_stat_volunteers_on_list">名单上的志愿者</string>
+    <string name="billeterie_stat_total_without_invites">名单人数（不含+1）</string>
+    <string name="billeterie_button_guest_list">宾客名单</string>
+    <string name="billeterie_button_scanner">扫描</string>
+
+    <!-- Setup Wizard -->
+    <string name="setup_continue">继续</string>
+    <string name="setup_back">返回</string>
+    <string name="setup_skip">跳过设置</string>
+    <string name="setup_finish">完成设置</string>
+    <string name="setup_welcome_title">欢迎使用 NoctuList</string>
+    <string name="setup_welcome_description">只需几个步骤即可设置您的活动管理应用。之后可在设置中随时更改。</string>
+    <string name="setup_get_started">开始</string>
+    <string name="setup_step_progress">第 %1$d 步，共 %2$d 步</string>
+    <string name="setup_phase_personalize">个性化</string>
+    <string name="setup_phase_connect">连接 Google 表格</string>
+    <string name="setup_phase_finish">完成</string>
+    <string name="setup_google_sheets_title">连接 Google 表格</string>
+    <string name="setup_google_sheets_description">关联您的电子表格并上传服务账号密钥，以便 NoctuList 同步活动数据。</string>
+    <string name="setup_sheets_defaults_hint">默认工作表名称适用于大多数活动。仅当您的表格使用不同标签名时才需展开下方选项。</string>
+    <string name="setup_sheets_customize">自定义工作表名称</string>
+    <string name="setup_start_sync">开始同步</string>
+    <string name="setup_first_sync_ready">一切就绪。点击下方从 Google 表格下载数据。</string>
+    <string name="setup_language_title">选择语言</string>
+    <string name="setup_language_description">选择您想在应用中使用的语言</string>
+    <string name="setup_theme_title">选择主题</string>
+    <string name="setup_theme_description">选择应用的外观 — 您随时可以在设置中更改</string>
+    <string name="setup_color_profile_title">色彩配置</string>
+    <string name="setup_color_profile_description">选择强调色。在支持的设备上，系统会跟随您的壁纸。</string>
+    <string name="setup_layout_size_title">布局大小</string>
+    <string name="setup_layout_size_description">调整界面显示大小 — 您可以随时在设置中微调。</string>
+    <string name="setup_layout_nvidia_hint">在 NVIDIA 平板电脑上，107% 通常更适合此屏幕。</string>
+    <string name="setup_layout_use_recommended">使用 107%</string>
+    <string name="setup_spreadsheet_title">Google Sheets ID</string>
+    <string name="setup_spreadsheet_description">输入 Google 电子表格的 ID 以同步您的活动数据</string>
+    <string name="setup_spreadsheet_hint">在 Google Sheets 网址中找到 ID：\nhttps://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit</string>
+    <string name="setup_json_key_title">服务账号密钥</string>
+    <string name="setup_json_key_description">上传 Google 服务账号的 JSON 密钥文件以启用同步功能</string>
+    <string name="setup_sheets_title">工作表名称</string>
+    <string name="setup_sheets_description">配置 Google 电子表格中每个工作表的名称 — 默认值已填入</string>
+    <string name="setup_wizard_first_sync_title">首次同步</string>
+    <string name="setup_wizard_first_sync_message">正在从 Google 表格下载活动数据…</string>
+    <string name="setup_wizard_first_sync_error_title">首次同步失败</string>
+    <string name="setup_wizard_first_sync_error_generic">无法与 Google 表格同步。请检查表格 ID、JSON 密钥和网络后重试。</string>
+    
+    <!-- Volunteer Screen -->
+    <string name="volunteers_title">志愿者</string>
+    <string name="volunteer_manager">志愿者管理</string>
+    <string name="add_volunteer">添加志愿者</string>
+    <string name="add_new_volunteer">添加新志愿者</string>
+    <string name="refresh">刷新</string>
+    <string name="search_volunteers_placeholder">按姓名或电子邮件搜索志愿者…</string>
+    <string name="filter_all">全部</string>
+    <string name="filter_active">活跃</string>
+    <string name="filter_inactive">非活跃</string>
+    <string name="active_status">活跃</string>
+    <string name="inactive_status">非活跃</string>
+    <string name="view_details">查看详情</string>
+    <string name="full_name">名字</string>
+    <string name="last_name_abbreviation">姓氏</string>
+    <string name="last_name_abbreviation_placeholder">例如：张</string>
+    <string name="email">电子邮件</string>
+    <string name="email_placeholder">name@example.com</string>
+    <string name="phone_number">电话号码</string>
+    <string name="date_of_birth">出生日期</string>
+    <string name="date_of_birth_placeholder">dd.mm.yyyy</string>
+    <string name="gender">性别</string>
+    <string name="select_gender">选择性别</string>
+    <string name="gender_female">女性</string>
+    <string name="gender_male">男性</string>
+    <string name="gender_non_binary">非二元性别</string>
+    <string name="gender_other">其他</string>
+    <string name="gender_prefer_not_to_disclose">不愿透露</string>
+    <string name="update_volunteer">更新志愿者</string>
+    <string name="edit_volunteer">编辑志愿者</string>
+    <string name="edit_volunteer_details">编辑志愿者详情</string>
+    
+    <!-- Guest List Screen -->
+    <string name="guest_list_title">来宾名单</string>
+    <string name="guest_list_management">来宾名单管理</string>
+    <string name="guest_list_description">管理所有已配置场地的来宾</string>
+    <string name="venue_groove">Groove</string>
+    <string name="venue_le_terreau">Le Terreau</string>
+    <string name="add_guest">添加来宾</string>
+    <string name="add_new_guest">添加新来宾</string>
+    <string name="add_guest_tab_permanent">常驻</string>
+    <string name="add_guest_tab_temporary">临时</string>
+    <string name="add_guest_add_another_name">添加另一位来宾姓名</string>
+    <string name="add_guest_additional_name_label">来宾姓名（%1$d）</string>
+    <string name="last_synced">上次更新：</string>
+    <string name="just_now">刚刚</string>
+    <string name="minutes_ago">%1$d 分钟前</string>
+    <string name="hours_ago">%1$d 小时前</string>
+    <string name="days_ago">%1$d 天前</string>
+    <string name="search_guests_placeholder">按姓名、邮箱或电话搜索…</string>
+    <string name="filter_volunteer_benefits">志愿者福利</string>
+    <string name="filter_permanent_guests">常驻来宾</string>
+    <string name="filter_temporary_guests">临时来宾</string>
+    <string name="guests_count">来宾</string>
+    <string name="total_guests_count">总来宾数</string>
+    <string name="invitations_count">邀请</string>
+    <string name="total_invitations_count">总邀请数</string>
+    <string name="volunteer_label">志愿者</string>
+    <string name="invitations_text">%1$d 个邀请</string>
+    <string name="view_benefits">查看福利</string>
+    <string name="delete_guest">删除来宾</string>
+    <string name="edit_guest">编辑来宾</string>
+    <string name="edit_guest_details">编辑来宾详情</string>
+    <string name="update_guest">更新来宾</string>
+    <string name="guest_information">来宾信息</string>
+    <string name="guest_name">来宾姓名</string>
+    <string name="guest_email">电子邮件</string>
+    <string name="guest_email_placeholder">email@example.com</string>
+    <string name="guest_phone_number">电话号码</string>
+    <string name="guest_phone_placeholder">+86 123 4567 8900</string>
+    <string name="number_of_invitations">邀请数量</string>
+    <string name="venue">场地</string>
+    <string name="notes">备注</string>
+    
+    <!-- Benefits Screen -->
+    <string name="benefits_title">福利</string>
+    <string name="volunteer_benefits_overview">志愿者福利概览</string>
+    <string name="benefits_description">查看志愿者福利的工作人员参考</string>
+    <string name="search_volunteers_benefits_placeholder">按姓名或电子邮件搜索志愿者…</string>
+    <string name="no_rank">无等级</string>
+    <string name="high_rank">高等级</string>
+    <string name="active_benefits">活跃福利</string>
+    <string name="benefits_overview_info_button">说明</string>
+    <string name="benefits_overview_totals_section">合计</string>
+    <string name="benefits_overview_ranks_section">等级</string>
+    <string name="benefits_overview_line_50_bar">酒吧50%%: %1$d</string>
+    <string name="benefits_overview_line_free_entry">免票: %1$d·%2$d邀</string>
+    <string name="benefits_overview_line_extraordinary">特别: %1$d</string>
+    <string name="benefits_overview_line_future_tickets">余票: %1$d·%2$d邀</string>
+    <string name="current_benefits">✨ 当前福利</string>
+    <string name="days_left">剩余 %1$d 天</string>
+    <string name="expires_soon">即将到期</string>
+    <string name="free_entry">✅ 免费入场</string>
+    <string name="friend_invitation">👥 朋友邀请</string>
+    <string name="drink_tokens">🍺 %1$d 个饮料券</string>
+    <string name="bar_discount">💰 %1$d%% 酒吧折扣</string>
+    <string name="extraordinary_benefits">💎 特别福利</string>
+    
+    <!-- Shifts Screen -->
+    <string name="shifts_title">班次</string>
+    <string name="shift_tracking">班次跟踪</string>
+    <string name="add_shift">添加班次</string>
+    <string name="add_new_shift">添加新班次</string>
+    <string name="search_shifts_placeholder">按志愿者姓名或备注搜索班次…</string>
+    <string name="unknown_volunteer">未知志愿者</string>
+    <string name="volunteer">志愿者</string>
+    <string name="search_volunteers_shift_placeholder">搜索志愿者…</string>
+    <string name="shift_type">班次类型</string>
+    <string name="no_shift_types_available">没有启用的班次类型。请在「班次类型管理」中添加或启用类型。</string>
+    <string name="select_shift_type">选择班次类型…</string>
+    <string name="shift_time">班次时间</string>
+    <string name="shift_time_evening_profited">可享</string>
+    <string name="shift_time_evening_non_profited">不可享</string>
+    <string name="shift_date_time">班次日期与时间</string>
+    <string name="notes_optional">备注（可选）</string>
+    <string name="add_job">添加工作</string>
+    <string name="edit_shift">编辑班次</string>
+    <string name="edit_shift_details">编辑班次详情</string>
+    <string name="update_job">更新工作</string>
+    
+    <!-- QR Code Related -->
+    <string name="qr_code">QR 码</string>
+    <string name="volunteer_qr_code">志愿者 QR 码</string>
+    <string name="qr_code_anonymized_label">已匿名</string>
+    <string name="edit_volunteer_button">编辑志愿者</string>
+    <string name="delete_volunteer_button">删除志愿者</string>
+    <string name="camera_permission_required">需要相机权限才能扫描 QR 码</string>
+    <string name="camera_permission_title">需要相机权限</string>
+    <string name="camera_permission_qr_nfc_body">需要相机权限才能扫描 QR 码。若设备支持，NFC 扫描会同时保持启用。</string>
+    <string name="camera_error">相机错误</string>
+    <string name="enter_id_manually">手动输入 ID</string>
+    <string name="add_nfc_card">添加 NFC 卡</string>
+    <string name="add_nfc_card_uid_title">添加 NFC 卡 UID</string>
+    <string name="enter_uid_manually">手动输入 UID</string>
+    <string name="read_uid_with_phone_nfc">使用手机读取 UID（NFC）</string>
+    <string name="read_uid_with_usb_reader">使用外接读卡器读取 UID（USB ACR122U 或蓝牙 ACR1255U-J1）</string>
+    <string name="usb_reader_not_connected">未检测到外接 USB NFC 读卡器。</string>
+    <string name="usb_reader_waiting_card">正在等待将 NFC 卡放到外接读卡器（USB 或蓝牙）上…</string>
+    <string name="enter_nfc_uid_title">输入 NFC UID</string>
+    <string name="uid_label">UID</string>
+    <string name="scan_nfc_card_title">扫描 NFC 卡</string>
+    <string name="place_nfc_card_on_phone">请将 NFC 卡贴在手机背面。</string>
+    <string name="nfc_card_detected">已检测到卡片。</string>
+    <string name="use_this_uid">使用此 UID</string>
+    <string name="nfc_uid_label">NFC UID</string>
+    <string name="nfc_uid_copied">NFC UID 已复制</string>
+    <string name="copy_nfc_uid">复制 NFC UID</string>
+    <string name="back">返回</string>
+    <string name="scan_qr_or_nfc_title">扫描 QR 码或 NFC 卡</string>
+    <string name="scan_qr_or_nfc_subtitle_enabled">相机 QR 扫描和 NFC 卡扫描均已启用。您可以任选其一。</string>
+    <string name="scan_qr_or_nfc_subtitle_phone_and_usb">可使用 QR 扫描、手机 NFC 与外接 NFC 读卡器（USB 或蓝牙）。</string>
+    <string name="scan_qr_or_nfc_subtitle_usb_only">可使用 QR 扫描与外接 NFC 读卡器（USB 或蓝牙）。手机 NFC 当前未启用。</string>
+    <string name="scan_qr_subtitle_nfc_disabled">相机 QR 扫描已启用。此设备上的 NFC 已关闭。</string>
+    <string name="scan_with_usb_reader">使用外接读卡器扫描</string>
+    <string name="usb_reader_waiting_card_short">等待卡片中...</string>
+    <string name="scanner_ble_reader_footer_label">蓝牙读卡器（ACR1255U-J1）</string>
+    <string name="scanner_ble_reader_footer_connected">链路已建立 — 可扫描</string>
+    <string name="scanner_ble_reader_footer_disconnected">链路未建立 — 请唤醒读卡器（按键）或等待重连</string>
+    <string name="scanner_ble_reader_footer_reading">正在读卡…</string>
+    <string name="nfc_not_supported_device">此设备不支持 NFC 扫描。</string>
+    <string name="nfc_unavailable_no_usb_hint">此设备无 NFC，且未连接外接读卡器（USB 或蓝牙）。</string>
+    <string name="nfc_phone_unavailable_use_usb_reader">此设备无内置 NFC。请使用下方外接读卡器选项（USB ACR122U 或蓝牙 ACR1255U-J1）。</string>
+    <string name="nfc_disabled_enable">NFC 已关闭。请在手机设置中启用 NFC 以扫描卡片。</string>
+    <string name="nfc_uid_read_failed">无法读取 NFC 卡 UID，请重试。</string>
+    <string name="nfc_uid_not_found">未找到与该 NFC UID 对应的志愿者或永久来宾：%1$s</string>
+    <string name="billeterie_nfc_no_match">未找到与该卡匹配的志愿者或永久来宾。</string>
+    <string name="nfc_reader_error">NFC 读取器错误：%1$s</string>
+    <string name="external_reader_bt_blocked_hint">外接读卡器的蓝牙访问被拒绝。轻触下方打开本应用的 Android 设置，并允许蓝牙或附近设备权限。若已选择「不再询问」，须在该处手动开启。</string>
+    <string name="open_app_settings_for_reader">打开应用设置</string>
+    <string name="last_nfc_uid_scanned">最近扫描的 NFC UID：%1$s</string>
+    <string name="invalid_qr_or_nfc_data">无效的 QR/NFC 数据。</string>
+    <string name="permanent_guest_label">永久来宾</string>
+    <string name="nfc_uid_multiple_matches_title">找到多个资料</string>
+    <string name="nfc_uid_multiple_matches_message">UID %1$s 匹配到 %2$d 个资料。请选择正确的一个。</string>
+    <string name="manual_volunteer_input">输入志愿者 ID</string>
+    <string name="enter_volunteer_id_manually">手动输入志愿者 ID：</string>
+    <string name="volunteer_id">志愿者 ID</string>
+    <string name="find_volunteer">查找志愿者</string>
+    <string name="please_enter_valid_volunteer_id">请输入有效的志愿者 ID</string>
+    <string name="volunteer_id_not_found">未找到 ID 为“%1$s”的志愿者</string>
+    <string name="available_volunteers">可用志愿者：</string>
+    <string name="error_processing_qr_code">处理 QR 码时出错：%1$s</string>
+    <string name="invalid_qr_code_format">无效的 QR 码格式：%1$s</string>
+    <string name="volunteer_not_found">在数据库中找不到志愿者"%1$s"（ID：%2$s）。请检查志愿者数据是否已从 Google Sheets 同步。</string>
+    <string name="qr_code_for_volunteer">志愿者 QR 码：%1$s</string>
+    <string name="qr_code_subject">志愿者 QR 码 - %1$s</string>
+    <string name="share_qr_code">分享 QR 码</string>
+    <string name="share">分享</string>
+    <string name="send_by_mail">通过邮件发送</string>
+    <string name="failed_to_generate_qr_code">无法生成 QR 码</string>
+    
+    <!-- Guest QR Code Related -->
+    <string name="guest_qr_code">来宾 QR 码</string>
+    <string name="qr_code_for_guest">来宾 QR 码：%1$s</string>
+    <string name="qr_code_subject_guest">来宾 QR 码 - %1$s</string>
+    <string name="scan_guest_qr_code">扫描来宾 QR 码</string>
+    <string name="invalid_guest_qr_code">无效的 QR 码。这不是来宾 QR 码。</string>
+    <string name="guest_not_found">在数据库中找不到来宾"%1$s"。</string>
+    <string name="enter_guest_name_manually">手动输入来宾姓名：</string>
+    <string name="manual_guest_input">输入来宾姓名</string>
+    <string name="find_guest">查找来宾</string>
+    <string name="available_guests">可用来宾：</string>
+    <string name="please_enter_guest_name">请输入有效的来宾姓名</string>
+    <string name="invalid_input">无效输入：%1$s</string>
+    <string name="guest_email_input_title">输入电子邮件地址</string>
+    <string name="guest_email_input_message">此来宾在数据库中没有电子邮件地址。请输入电子邮件地址以发送 QR 码：</string>
+    <string name="continue_button">继续</string>
+    <string name="grant_permission">授权</string>
+    
+    <!-- Guest Email Settings -->
+    <string name="guest_email_subject_default">您的来宾 QR 码</string>
+    <string name="guest_email_content_before_default">您好！\n\n这是您的来宾入场专用 QR 码。请妥善保管，并在到达入口时出示。</string>
+    <string name="guest_email_content_after_default">如果您有任何问题，请随时与我们联系。期待与您见面！</string>
+    <string name="guest_email_html_header">您的来宾 QR 码</string>
+    <string name="guest_email_html_footer">此邮件为自动发送。请妥善保管您的 QR 码。</string>
+    
+    <!-- Email QR Code Settings -->
+    <string name="settings_category_email">邮件设置</string>
+    <string name="email_qr_settings_title">QR 码邮件设置</string>
+    <string name="email_qr_settings_description">配置发送 QR 码时的邮件内容</string>
+    <string name="email_tab_volunteer">志愿者</string>
+    <string name="email_tab_guest">来宾</string>
+    <string name="email_shared_settings_title">共享设置</string>
+    <string name="email_shared_settings_description">这些设置适用于志愿者和来宾邮件</string>
+    <string name="email_subject_label">邮件主题</string>
+    <string name="email_subject_hint">QR 码邮件的主题行</string>
+    <string name="email_subject_default">您的志愿者资料 QR 码</string>
+    <string name="email_content_before_label">QR 码前的消息</string>
+    <string name="email_content_before_hint">可选的问候或介绍</string>
+    <string name="email_content_before_default">你好！\n\n这是您志愿者资料的个人 QR 码。此 QR 码适用于所有活动，请妥善保管，并在到达入口时出示。这有助于我们快速处理您的入场。</string>
+    <string name="email_include_qr_label">在邮件中包含 QR 码</string>
+    <string name="email_include_qr_description">将 QR 码图片附加到邮件中</string>
+    <string name="email_content_after_label">QR 码后的消息</string>
+    <string name="email_content_after_hint">可选的附加信息</string>
+    <string name="email_content_after_default">如果您有任何问题，请随时与我们联系。:)</string>
+    <string name="email_signature_label">签名</string>
+    <string name="email_signature_hint">您的署名（例如：此致敬礼，团队）</string>
+    <string name="email_signature_default">Collectif Nocturne</string>
+    <string name="email_association_name_label">协会名称</string>
+    <string name="email_association_name_hint">Collectif Nocturne</string>
+    <string name="email_association_name_description">用作 Digital Wallet Pass 品牌和发件人名称的默认签名。</string>
+    <string name="email_include_digital_wallet_pass_label">包含 Digital Wallet Pass</string>
+    <string name="email_include_digital_wallet_pass_description">附加已签名的 Digital Wallet Pass（.pkpass），配置 Pass Type ID 证书后可用于 Apple Wallet 和 Google Pay</string>
+    <string name="email_wallet_pass_cert_title">Apple Wallet 签名证书</string>
+    <string name="email_wallet_pass_cert_description">Apple Wallet 需要来自 Apple Developer 的 Pass Type ID 证书（.p12）。Google Pay 无需证书即可使用。</string>
+    <string name="email_wallet_pass_cert_upload">上传 Pass Type ID 证书（.p12）</string>
+    <string name="email_wallet_pass_cert_password_label">证书密码</string>
+    <string name="email_wallet_pass_cert_password_hint">.p12 文件密码</string>
+    <string name="email_wallet_pass_cert_configured">Apple Wallet 签名已就绪（%1$s · 团队 %2$s）。</string>
+    <string name="email_wallet_pass_cert_missing">未配置证书 — 通行证可用于 Google Pay，但无法在 Apple Wallet 中打开。</string>
+    <string name="email_include_logo_label">包含协会标志</string>
+    <string name="email_include_logo_description">在邮件中添加您组织的标志</string>
+    <string name="email_logo_upload">上传标志</string>
+    <string name="email_logo_change">更改标志</string>
+    <string name="email_logo_remove">删除标志</string>
+    <string name="email_logo_preview">标志预览</string>
+    <string name="email_settings_saved">邮件设置已保存</string>
+    <string name="email_reset_to_defaults">重置为默认值</string>
+    <string name="email_preview">预览邮件</string>
+    
+    <!-- Gmail OAuth -->
+    <string name="email_gmail_auth_title">Gmail API 身份验证</string>
+    <string name="email_gmail_auth_description">连接您的 Gmail 账户以通过 Gmail API 自动发送邮件</string>
+    <string name="email_gmail_oauth_client_description">桌面版需要 Google OAuth 客户端 JSON（桌面应用类型）并已启用 Gmail API。请从 Google Cloud Console 下载，然后在登录前上传。</string>
+    <string name="email_gmail_oauth_client_upload">上传 OAuth 客户端 JSON</string>
+    <string name="email_gmail_oauth_client_configured">OAuth 客户端已配置</string>
+    <string name="email_gmail_oauth_client_missing">缺少 OAuth 客户端 JSON — 请先上传再使用 Google 登录</string>
+    <string name="email_gmail_use_service_account">使用与 Google Sheets 相同的服务账号</string>
+    <string name="email_gmail_use_service_account_description">使用同步设置中的服务账号 JSON。需要启用 Gmail API 并在 Google Workspace 中配置全域委派。</string>
+    <string name="email_gmail_service_account_sender_label">发件人邮箱地址</string>
+    <string name="email_gmail_service_account_sender_description">代表服务账号发送邮件的 Gmail 或 Google Workspace 地址。</string>
+    <string name="email_gmail_service_account_missing">缺少服务账号密钥 — 请先在同步设置中上传</string>
+    <string name="email_gmail_service_account_configured">已找到服务账号密钥</string>
+    <string name="email_gmail_oauth_help_title">Gmail API 帮助</string>
+    <string name="email_gmail_help_tab_oauth">OAuth 客户端</string>
+    <string name="email_gmail_help_tab_service_account">服务账号</string>
+    <string name="email_gmail_oauth_help_intro">请按以下步骤获取并配置 OAuth 客户端 JSON，以便在桌面版通过 Gmail API 发送邮件。</string>
+    <string name="email_gmail_oauth_step_1_title">打开 Google Cloud Console</string>
+    <string name="email_gmail_oauth_step_1_description">访问 console.cloud.google.com，选择您的项目（或创建新项目）。</string>
+    <string name="email_gmail_oauth_step_2_title">启用 Gmail API</string>
+    <string name="email_gmail_oauth_step_2_description">在 API 和服务 &gt; 库 中搜索「Gmail API」并启用。</string>
+    <string name="email_gmail_oauth_step_3_title">配置 OAuth 同意屏幕</string>
+    <string name="email_gmail_oauth_step_3_description">在 API 和服务 &gt; OAuth 同意屏幕 中填写必填项。若应用处于测试模式，请将您的 Gmail 地址添加为测试用户。</string>
+    <string name="email_gmail_oauth_step_4_title">创建桌面 OAuth 客户端</string>
+    <string name="email_gmail_oauth_step_4_description">在 API 和服务 &gt; 凭据 中，点击创建凭据 &gt; OAuth 客户端 ID。选择应用类型：桌面应用，然后创建并下载 JSON 文件。</string>
+    <string name="email_gmail_oauth_step_5_title">上传 JSON 文件</string>
+    <string name="email_gmail_oauth_step_5_description">使用本设置中的「上传 OAuth 客户端 JSON」按钮导入下载的文件。</string>
+    <string name="email_gmail_oauth_step_6_title">使用 Google 登录</string>
+    <string name="email_gmail_oauth_step_6_description">点击「使用 Google 登录」。浏览器将打开以授权 NoctuList。授权后，应用将自动获得访问权限（本地端口 8888、8765 或 9090）。</string>
+    <string name="email_gmail_service_account_help_intro">启用「使用与 Google Sheets 相同的服务账号」后，请输入实际用于发送邮件的邮箱地址。服务账号通过 Google Workspace 全域委派代表该邮箱发送。</string>
+    <string name="email_gmail_service_account_help_sender_title">应填写什么</string>
+    <string name="email_gmail_service_account_help_sender_body">可见的发件地址——您域名下的 Gmail 或 Google Workspace 邮箱，例如 contact@your-association.org 或 no-reply@your-domain.org。</string>
+    <string name="email_gmail_service_account_help_not_title">不要填写</string>
+    <string name="email_gmail_service_account_help_not_body">同步设置中显示的服务账号邮箱（以 .iam.gserviceaccount.com 结尾）。该地址仅用于 API 认证，不能用于发送。</string>
+    <string name="email_gmail_service_account_help_requirements_title">前提条件</string>
+    <string name="email_gmail_service_account_help_requirements_body">此模式仅适用于 Google Workspace（单独的 personal @gmail.com 不可用）。须在同一个 Google Cloud 项目中启用 Gmail API，并配置全域委派。</string>
+    <string name="email_gmail_service_account_help_step_1_title">启用 Gmail API</string>
+    <string name="email_gmail_service_account_help_step_1_description">在 Google Cloud Console 中，于与服务账号相同的项目中启用 Gmail API。</string>
+    <string name="email_gmail_service_account_help_step_2_title">配置全域委派</string>
+    <string name="email_gmail_service_account_help_step_2_description">在 Google Workspace 管理控制台：安全 &gt; API 控制 &gt; 全域委派。添加服务账号 Client ID，scope 为 https://www.googleapis.com/auth/gmail.send</string>
+    <string name="email_gmail_service_account_help_step_3_title">填写发件人地址</string>
+    <string name="email_gmail_service_account_help_step_3_description">在邮件设置中启用服务账号开关，输入应发送邮件的 Workspace 地址，然后点击「使用 Google 登录」进行验证。</string>
+    <string name="email_gmail_service_account_help_no_workspace">没有 Google Workspace？请关闭服务账号开关，改用 OAuth 客户端选项卡。</string>
+    <string name="invalid_gmail_oauth_client_json">Gmail OAuth 客户端 JSON 无效。请使用 Google Cloud Console 的桌面 OAuth 客户端文件。</string>
+    <string name="email_gmail_sign_in">使用 Google 登录</string>
+    <string name="email_gmail_sign_out">退出登录</string>
+    <string name="email_gmail_signed_in_as">已登录为：%1$s</string>
+    <string name="email_gmail_not_signed_in">未登录</string>
+    <string name="email_gmail_auth_success">Gmail 身份验证成功</string>
+    <string name="email_gmail_auth_error">Gmail 身份验证失败：%1$s</string>
+    <string name="email_gmail_auth_revoked">Gmail 访问权限已撤销</string>
+    
+    <!-- Email Send Dialog -->
+    <string name="email_confirm_send_title">通过邮件发送 QR 码</string>
+    <string name="email_confirm_send_message">将 QR 码发送给 %1$s？</string>
+    <string name="email_send_manual">手动发送 (HTML)</string>
+    <string name="email_send_api">通过 Gmail API 发送</string>
+    <string name="email_send_manual_description">打开邮件应用，包含 HTML 内容和 QR 码附件</string>
+    <string name="email_send_api_description">通过 Gmail API 自动发送，包含嵌入图片</string>
+    <string name="email_no_email_title">无电子邮件地址</string>
+    <string name="email_no_email_message">此志愿者没有电子邮件地址。请先添加一个。</string>
+    <string name="email_no_email_guest_staff_message">此来宾没有存档的电子邮件地址。须由管理员添加后，才能从此界面发送二维码。</string>
+    <string name="email_send">发送</string>
+    <string name="email_sending">正在发送…</string>
+    <string name="email_error_title">邮件错误</string>
+    <string name="email_error_message">无法打开邮件应用：%1$s</string>
+    <string name="email_api_error_message">通过 Gmail API 发送邮件失败：%1$s</string>
+    <string name="email_api_success">通过 Gmail API 成功发送邮件</string>
+    <string name="email_api_not_authenticated">Gmail API 未认证。请先在设置中登录。</string>
+    <string name="email_open_settings">配置邮件</string>
+    
+    <!-- Email HTML Template -->
+    <string name="email_html_header">您的志愿者 QR 码</string>
+    <string name="email_html_footer">此邮件为自动发送。请妥善保管您的 QR 码。</string>
+    <string name="email_qr_attachment_text">QR 码\n已附加</string>
+    <string name="email_qr_attachment_note">QR 码作为附件提供</string>
+    <string name="email_wallet_section_title">添加到钱包</string>
+    <string name="email_wallet_section_description">此邮件已附上您的 Digital Wallet Pass。可保存到 Apple Wallet 或兼容的 Android 钱包应用，以便更快完成入场核验。</string>
+    <string name="email_wallet_section_compatibility">Digital Wallet Pass（.pkpass）：Apple Wallet + 兼容的 Android 应用。</string>
+    <string name="personal_information">个人信息</string>
+    <string name="name">姓名</string>
+    <string name="abbreviation">姓氏</string>
+    <string name="female">女性</string>
+    <string name="male">男性</string>
+    <string name="non_binary">非二元性别</string>
+    <string name="other">其他</string>
+    <string name="prefer_not_to_disclose">不愿透露</string>
+    <string name="not_specified">未指定</string>
+    <string name="birthday">生日</string>
+    <string name="age">年龄</string>
+    <string name="phone">电话</string>
+    <string name="volunteer_information">志愿者信息</string>
+    <string name="current_rank">当前等级</string>
+    <string name="status">状态：</string>
+    <string name="total_shifts">总班次数</string>
+    <string name="last_shift">最后班次</string>
+    <string name="shift_history">班次历史（%1$d 个班次）</string>
+    <string name="no_shifts_recorded">无记录班次</string>
+    <string name="actions">操作</string>
+    <string name="not_provided">未提供</string>
+    
+    <!-- Additional Volunteer Panel Strings -->
+    <string name="expired">已过期</string>
+    <string name="benefit_details">福利详情</string>
+    <string name="more_shifts">… 以及 %1$d 个更多班次</string>
+    <string name="years_old">%1$d 岁</string>
+    
+    <!-- Date & Time Format Settings -->
+    <string name="date_time_format_title">日期与时间格式</string>
+    <string name="date_time_format_description">选择日期和时间在整个应用程序中的显示方式</string>
+    <string name="date_format_dd_mm_yyyy">25/12/2025 (dd/MM/yyyy)</string>
+    <string name="date_format_mm_dd_yyyy">12/25/2025 (MM/dd/yyyy)</string>
+    <string name="date_format_yyyy_mm_dd">2025-12-25 (yyyy-MM-dd)</string>
+    <string name="time_format_hh_mm">14:30 (HH:mm)</string>
+    <string name="time_format_hh_mm_ss">14:30:45 (HH:mm:ss)</string>
+    <string name="time_format_hh_mm_ss_sss">14:30:45.123 (HH:mm:ss.SSS)</string>
+    <string name="date_change_offset_title">日期更改偏移</string>
+    <string name="date_change_offset_description">日期更改前要添加的小时数（例如：+3 小时 = 03:00）。福利和班次将持续到此时间而非午夜。</string>
+    <string name="date_change_offset_hours">%1$d 小时</string>
+    <string name="date_change_offset_zero">0 小时（午夜）</string>
+    <string name="date_change_offset_time">%1$s</string>
+    <string name="date_change_offset_previous_day">前一天 %1$s</string>
+    <string name="date_change_offset_increase">增加小时数</string>
+    <string name="date_change_offset_decrease">减少小时数</string>
+    <string name="dashboard_calculation_time_info">计算时间：%1$s（日期变更偏移：%2$s）</string>
+    <string name="dashboard_date_offset_hours">%1$s 小时</string>
+    <string name="dashboard_date_offset_zero">0 小时（午夜）</string>
+    
+    <!-- Multiple Benefits -->
+    <string name="active_benefits_multiple_ranks">来自多个等级的活跃福利：</string>
+    
+    <!-- People Counter -->
+    <string name="people_counter_title">人数计数器</string>
+    <string name="people_counter_hint">跟踪来宾出席</string>
+    <string name="people_counter_hint_tap_plus_minus">点击 +/- 以调整计数</string>
+    <string name="people_counter_hint_long_press">长按 ±10 人</string>
+    <string name="people_counter_reset">重置计数器</string>
+    <string name="people_counter_priority">优先</string>
+    <string name="people_counter_sheet_synced">计数器最后更新</string>
+    <string name="people_counter_priority_lost">其他设备已优先。您的已关闭。若要在本机夺回优先权，请长按“优先”开关 3 秒。</string>
+    <string name="people_counter_another_device">其他设备已拥有此场地的优先权。若要在本机夺回优先权，请长按“优先”开关 3 秒。</string>
+    <string name="people_counter_no_sheet_row">此场地在表格中尚无行。请在设置中同步场地。</string>
+    <string name="people_counter_need_sheets">请先连接 Google 表格再控制计数器。</string>
+    <string name="people_counter_select_venue">场地加载后请选择一个场地。</string>
+    <string name="people_counter_no_venues">请在设置中添加启用的场地以使用计数器。</string>
+    
+    <!-- QR Code Scanner -->
+    <string name="camera_not_available">此设备上的相机硬件不可用或无法工作</string>
+    
+    <!-- Statistics and Graphs Labels -->
+    <string name="terreau_average">Terreau 平均</string>
+    <string name="groove_average">Groove 平均</string>
+    <string name="total_average">总平均</string>
+    <string name="guest_metrics">来宾指标</string>
+    <string name="invitations">邀请</string>
+    <string name="volunteers">志愿者</string>
+    <string name="permanent_guests">常客</string>
+    <string name="count">计数</string>
+    <string name="shift_statistics">班次统计</string>
+    <string name="guest_list_statistics">来宾名单统计</string>
+    <string name="free_drinks_statistics">免费饮料统计</string>
+    <string name="free_drinks">免费饮料</string>
+    
+    <!-- Graph Descriptions -->
+    <string name="active_volunteers_description">在每个时间点过去一年内有班次的志愿者数量</string>
+    <string name="active_volunteers_graph_description">显示在每个日期有多少志愿者被视为活跃（过去一年内有班次）</string>
+    <string name="shift_statistics_description">志愿者随时间完成的班次数量，按场地组织</string>
+    <string name="venue_shifts_description">在 %1$s 随时间完成的班次数量</string>
+    <string name="total_shifts_description">所有场地随时间完成的总班次数量</string>
+    <string name="guest_list_statistics_description">来宾名单统计，显示有访问权的志愿者及其可用邀请</string>
+    <string name="volunteer_guests_description">在每个时间点有来宾名单访问权的志愿者数量</string>
+    <string name="volunteer_invites_description">有来宾名单访问权的志愿者在每个时间点可以给出的邀请总数</string>
+    <string name="total_guests_description">来宾名单上的总人数（有访问权的志愿者 + 其可用邀请）在每个时间点</string>
+    <string name="free_drinks_statistics_description">随时间可用的免费饮料数量</string>
+    <string name="gender_parity">性别平等</string>
+    <string name="gender_parity_description">活跃志愿者中的性别分布</string>
+    <string name="gender_distribution">性别分布</string>
+    <string name="unspecified">未指定</string>
+    <string name="no_gender_data">无可用性别数据</string>
+    <string name="age_distribution">年龄分布</string>
+    <string name="age_distribution_description">活跃志愿者中的年龄分布</string>
+    <string name="age_distribution_title">年龄分布</string>
+    <string name="age_under_18">18 岁以下</string>
+    <string name="age_18_20">18-20 岁</string>
+    <string name="age_21_23">21-23 岁</string>
+    <string name="age_24_26">24-26 岁</string>
+    <string name="age_27_30">27-30 岁</string>
+    <string name="age_over_31">31 岁以上</string>
+    <string name="age_unknown">年龄未知</string>
+    <string name="no_age_data">活跃志愿者无可用年龄数据</string>
+    <string name="not_enough_data">数据不足</string>
+    <string name="total">总计</string>
+    
+    <!-- Sync Error Messages -->
+    <string name="sync_error_title">⚠️ 同步错误</string>
+    <string name="sync_error_occurred">同步期间出现错误</string>
+    <string name="sync_not_synced_title">应用程序未同步</string>
+    <string name="sync_not_synced_message">应用程序已不再同步。请使用重新同步按钮来更新您的数据。</string>
+    <string name="sync_error_details">错误：%1$s</string>
+    <string name="sync_error_retry">重试同步</string>
+    <string name="sync_error_dismiss">关闭</string>
+    <string name="sync_error_dont_tell_today">今天不再告诉我</string>
+    
+    <!-- Sleep/Resume Sync Warning -->
+    <string name="sync_warning_sleep_resume_title">⚠️ 应用未同步</string>
+    <string name="sync_warning_sleep_resume_message">应用已不再同步。请按底部的重新同步按钮进行同步。</string>
+    <string name="sync_error_sleep_resume_detail">📱 您的设备处于休眠状态，因此需要重新同步。请按页面底部的重新同步按钮。</string>
+    
+    <!-- Device Time/Date Error -->
+    <string name="sync_error_device_time_title">⏰ 设备时间/日期不正确</string>
+    <string name="sync_error_device_time_message">您的设备时间或日期不正确。Google Sheets API 需要准确的时间同步才能正常工作。</string>
+    <string name="sync_error_device_time_solution">如何修复：\n\n1. 前往设置\n2. 查找"日期与时间"或"系统"\n3. 启用"自动日期与时间"或"自动设置时间"\n4. 如果不可用，请手动设置正确的日期和时间\n5. 重新启动应用程序并再次尝试同步\n\n在旧平板电脑上常见 - 请检查您的设备设置！</string>
+    <string name="sync_error_device_time_open_settings">打开设置</string>
+    
+    <!-- Specific Sync Error Types -->
+    <string name="sync_error_rate_limit">超过速率限制。请等待 1-2 分钟后再试。</string>
+    <string name="sync_error_authentication">身份验证失败。请检查您的 Google Sheets 配置。</string>
+    <string name="sync_error_permission">权限被拒绝。请确保您的服务账号对电子表格具有编辑者访问权限。</string>
+    <string name="sync_error_network">网络错误。请检查您的互联网连接。</string>
+    <string name="sync_error_invalid_config">无效配置。请检查您的设置。</string>
+    <string name="sync_error_spreadsheet_not_found">找不到电子表格。请检查电子表格 ID。</string>
+    <string name="sync_error_sheet_not_found">找不到工作表。请检查配置中的工作表名称。</string>
+    <string name="sync_error_invalid_data">无效数据格式。请检查您的 Google Sheets 结构。</string>
+    <string name="sync_error_unknown">发生未知错误。请稍后再试。</string>
+    
+    <!-- Full Sync Errors -->
+    <string name="sync_error_full_sync_failed">完整同步失败</string>
+    <string name="sync_error_page_change_failed">页面更改同步失败</string>
+    <string name="sync_error_volunteer_sync_failed">志愿者同步失败</string>
+    <string name="sync_error_guest_sync_failed">来宾同步失败</string>
+    <string name="sync_error_job_sync_failed">工作同步失败</string>
+    <string name="sync_error_job_type_sync_failed">工作类型同步失败</string>
+    <string name="sync_error_venue_sync_failed">场地同步失败</string>
+    <string name="sync_error_backup_failed">备份失败</string>
+    
+    <!-- Sync Success Messages -->
+    <string name="sync_success_title">同步成功</string>
+    <string name="sync_success_message">同步已成功完成</string>
+    <string name="sync_retrying">正在重试同步…</string>
+    
+    <!-- Sync Error Dialog Labels -->
+    <string name="sync_error_details_label">错误详情：</string>
+    <string name="sync_error_what_to_do">💡 如何处理：</string>
+    
+    <!-- Sync Error Advice Messages -->
+    <string name="sync_advice_rate_limit">• 等待1-2分钟后重试\n• 应用程序将自动重试\n• 考虑在设置中降低同步频率</string>
+    <string name="sync_advice_authentication">• 检查您的服务账户密钥文件\n• 确认密钥已在设置中上传\n• 如需要请重新上传密钥</string>
+    <string name="sync_advice_permission">• 与服务账户邮箱共享您的电子表格\n• 授予服务账户编辑者权限\n• 在密钥文件中检查账户邮箱</string>
+    <string name="sync_advice_network">• 检查您的网络连接\n• 确认Wi-Fi或移动数据已启用\n• 连接稳定后再试\n• 确保未开启飞行模式</string>
+    <string name="sync_advice_not_found">• 在设置中检查电子表格ID\n• 确认工作表名称存在\n• 确保电子表格可访问</string>
+    <string name="sync_advice_generic">• 再次尝试同步\n• 检查您的Google表格设置\n• 访问设置以验证您的配置</string>
+
+    <!-- Seasonal Fun -->
+    <string name="seasonal_fun_title">季节乐趣</string>
+    <string name="seasonal_fun_description">启用特殊季节功能和装饰</string>
+    
+    <!-- Settings Categories -->
+    <string name="settings_category_sync">同步与数据</string>
+    <string name="settings_category_appearance">外观与显示</string>
+    <string name="settings_category_localization">本地化</string>
+    <string name="settings_category_animations">动画与效果</string>
+    <string name="settings_category_developer">开发者与调试</string>
+    <string name="settings_category_maintenance">维护</string>
+    
+    <!-- App Icon Settings -->
+    <string name="app_icon_title">应用程序图标</string>
+    <string name="app_icon_description">选择您偏好的图标样式</string>
+    <string name="app_icon_white">白色</string>
+    <string name="app_icon_black">黑色</string>
+    <string name="app_icon_brown">棕色</string>
+    <string name="app_icon_creme_black">米色与黑</string>
+    <string name="app_icon_dark_blue">深蓝</string>
+    <string name="app_icon_dark_legacy">深色经典</string>
+    <string name="app_icon_dark_turquoise">深青绿</string>
+    <string name="app_icon_dark_violet">深紫</string>
+    <string name="app_icon_light_blue">浅蓝</string>
+    <string name="app_icon_light_legacy">浅色经典</string>
+    <string name="app_icon_light_violet">浅紫</string>
+    <string name="app_icon_orange">橙色</string>
+    <string name="app_icon_pink">粉色</string>
+    <string name="app_icon_selected">✓ 已选择</string>
+    <string name="app_icon_auto_adapt_title">根据系统主题自动调整图标</string>
+    <string name="app_icon_auto_adapt_description">根据您的系统主题自动在浅色和深色图标之间切换</string>
+    <string name="app_icon_white_applied">白色图标已应用。</string>
+    <string name="app_icon_black_applied">黑色图标已应用。</string>
+    <string name="app_icon_brown_applied">棕色图标已应用。</string>
+    <string name="app_icon_creme_black_applied">米色与黑图标已应用。</string>
+    <string name="app_icon_dark_blue_applied">深蓝图标已应用。</string>
+    <string name="app_icon_dark_legacy_applied">深色经典图标已应用。</string>
+    <string name="app_icon_dark_turquoise_applied">深青绿图标已应用。</string>
+    <string name="app_icon_dark_violet_applied">深紫图标已应用。</string>
+    <string name="app_icon_light_blue_applied">浅蓝图标已应用。</string>
+    <string name="app_icon_light_legacy_applied">浅色经典图标已应用。</string>
+    <string name="app_icon_light_violet_applied">浅紫图标已应用。</string>
+    <string name="app_icon_orange_applied">橙色图标已应用。</string>
+    <string name="app_icon_pink_applied">粉色图标已应用。</string>
+    <string name="app_icon_auto_adapt_enabled">自动调整已启用。图标将根据系统主题更新。</string>
+    <string name="app_icon_restart_title">重新启动应用程序</string>
+    <string name="app_icon_restart_message">请重新启动应用程序以使图标更改生效。</string>
+    <string name="app_icon_restart_now">立即重新启动</string>
+    <string name="app_icon_restart_later">稍后</string>
+    
+    <!-- Graph Export -->
+    <string name="exporting">正在导出…</string>
+    <string name="export_graph">导出图表</string>
+    <string name="choose_export_format">选择导出格式：</string>
+    <string name="export_as_xlsx">导出为 XLSX</string>
+    <string name="export_xlsx_description">包含所有数据和图表</string>
+    <string name="export_as_jpg">导出为 JPG</string>
+    <string name="export_jpg_description">仅图表图片</string>
+    <string name="export_complete">导出完成</string>
+    <string name="xlsx_export_complete">XLSX 导出完成</string>
+    <string name="xlsx_export_success_message">您的电子表格已成功创建并准备分享</string>
+    <string name="file_name">文件名</string>
+    <string name="file_size">大小：%1$s</string>
+    <string name="graph_preview">图表预览</string>
+    <string name="share_graph">分享图表</string>
+    
+    <!-- POS Accounting PDF Report -->
+    <string name="pos_report_title">POS accounting report</string>
+    <string name="pos_report_entry_title">POS accounting PDF</string>
+    <string name="pos_report_entry_subtitle">Evening or period breakdown for accounting (sales, transfers, adjustments)</string>
+    <string name="pos_report_mode_evening">Single evening</string>
+    <string name="pos_report_mode_period">Date range</string>
+    <string name="pos_report_select_date">Evening date</string>
+    <string name="pos_report_period_start">Start date</string>
+    <string name="pos_report_period_end">End date</string>
+    <string name="pos_report_closure_time">Closure time</string>
+    <string name="pos_report_closure_override">Override closure for this report only</string>
+    <string name="pos_report_evening_help">Evening of %1$s · closure at %2$s\nPeriod: %3$s</string>
+    <string name="pos_report_period_help">Period: %1$s</string>
+    <string name="pos_report_preview_transfers">%1$d transfers (%2$d POS sales)</string>
+    <string name="pos_report_preview_cash">Cash/card collected: %1$s</string>
+    <string name="pos_report_preview_credit">Internal credit used: %1$s</string>
+    <string name="pos_report_generate">Generate PDF</string>
+    <string name="pos_report_generating">Generating PDF…</string>
+    <string name="pos_report_preview_title">Report ready</string>
+    <string name="pos_report_preview_summary">%1$d POS sales · %2$s cash/card · %3$d transfers total</string>
+    <string name="pos_report_share">Share report</string>
+    <string name="pos_report_open">Open report</string>
+    <string name="pos_report_file_size">Size</string>
+    <string name="pos_report_venue_scope_all">Total (all venues)</string>
+    <string name="pos_report_venue_scope_global">Global</string>
+    <string name="pos_report_venue_label">Venue</string>
+    <string name="pos_venue_global">Global</string>
+    <string name="pos_venue_selector_label">Sales venue</string>
+    <string name="pos_venue_current">Current venue: %1$s</string>
+    <string name="sales_item_venues_label">Sales venues</string>
+    <string name="sales_item_venues_hint">Select where this item is available for POS sales.</string>
+    <string name="pos_report_preview_period">Period covered</string>
+    <string name="pos_report_save_as">Save as…</string>
+
+    <string name="open_with">打开方式</string>
+    <string name="active_volunteers_graph">活跃志愿者图表</string>
+    
+    <!-- Tablet-specific strings (also in default locale for lint) -->
+    <string name="tablet_optimized">优化平板电脑查看</string>
+    <string name="large_screen_experience">大屏幕增强体验</string>
+    <string name="nav_dashboard_tablet">仪表板概览</string>
+    <string name="nav_guests_tablet">来宾管理</string>
+    <string name="nav_volunteers_tablet">志愿者管理</string>
+    <string name="nav_shifts_tablet">班次跟踪</string>
+    <string name="nav_benefits_tablet">福利概览</string>
+    <string name="nav_settings_tablet">设置与配置</string>
+    <string name="volunteer_manager_tablet">综合志愿者管理系统</string>
+    <string name="guest_list_management_tablet">所有已配置场地的完整来宾名单管理</string>
+    <string name="volunteer_benefits_overview_tablet">详细的志愿者福利和状态跟踪</string>
+    <string name="shift_tracking_tablet">完整的班次跟踪和工作管理</string>
+    <string name="shield_optimized">优化 NVIDIA Shield 平板电脑</string>
+    <string name="enhanced_touch_targets">增强触控目标以获得更好的交互</string>
+    
+    <!-- Easter Egg Games -->
+    <string name="easter_egg_hextris">Hextris</string>
+    <string name="easter_egg_pizza_undelivery">Pizza Undelivery</string>
+    <string name="easter_egg_scroll">Scroll!</string>
+    <string name="easter_egg_wendol_village">Wendol Village</string>
+    <string name="easter_egg_catculus">Catculus</string>
+    <string name="arcade_title">★ 街机 ★</string>
+    <string name="arcade_subtitle">▶ 投入快乐 ◀</string>
+    <string name="arcade_pick_game">选择游戏！</string>
+    <string name="arcade_credits_title">★ 创作者鸣谢 ★</string>
+    <string name="arcade_exit">[ ESC ] 退出</string>
+    <string name="arcade_credit_wendol_village">Wendol Village — a js13kGames 2024 game by @sanojian.</string>
+    <string name="arcade_credit_scroll">👆Scroll! — TypeScript game using Web Components for JS13K. © 2019 Zeev Katz. All rights reserved.</string>
+    <string name="arcade_credit_hextris">Hextris — An addictive puzzle game inspired by Tetris. hextris.io · By Logan Engstrom, Garrett Finucane, Noah Moroze &amp; Michael Yang.</string>
+    <string name="arcade_credit_pizza_undelivery">Pizza Undelivery — A game made for the 2019 js13kGames competition. nilsgawlik.github.io/js13k2019/ · @nikigawlik</string>
+    <string name="arcade_credit_catculus">Catculus — a js13kGames 2025 game by @anttihaavikko.</string>
+    
+    <!-- Entry Validation -->
+    <string name="validate_entry">验证入场</string>
+    <string name="validate_entry_description">该志愿者有一次未使用的免费入场权益（来自“不可享受当晚活动”班次）。滑动以确认入场。</string>
+    <string name="validate_entry_description_one_future">该志愿者还剩一次未来活动入场（单次使用）。滑动以确认此次入场。</string>
+    <string name="validate_entry_description_n_remaining">该志愿者还剩 %1$d 次未来活动入场（单次使用）。滑动以确认一次入场。</string>
+    <string name="validate_entry_description_with_invites">志愿者入场 + %1$d 位来宾。滑动确认。</string>
+    <string name="validate_entry_description_solo">单人入场（无来宾）。滑动确认。</string>
+    <string name="slide_to_confirm">滑动确认入场</string>
+    <string name="future_entry_group_label_invites">剩余 %1$d 次入场 (+%2$d 邀请)</string>
+    <string name="future_entries_group_label_invites">剩余 %1$d 次入场 (+%2$d 邀请)</string>
+    <string name="future_entry_group_label_solo">剩余 %1$d 次入场（单人）</string>
+    <string name="future_entries_group_label_solo">剩余 %1$d 次入场（单人）</string>
+    
+    <!-- Activity Status -->
+    <string name="activity_status_never_worked">从未工作过</string>
+    <string name="activity_status_active_today">活跃（今天）</string>
+    <string name="activity_status_active_days_ago">活跃（%1$d天前）</string>
+    <string name="activity_status_active_months_ago">活跃（%1$d个月前）</string>
+    <string name="activity_status_inactive_years_ago">不活跃（%1$d年前）</string>
+    <string name="legend_badge_label">传奇</string>
+
+    <!-- Billeterie Scanner -->
+    <string name="billeterie_scanner_tap_to_activate">点击启用相机</string>
+    <string name="billeterie_scanner_tap_to_pause">点击暂停</string>
+    <string name="billeterie_scanner_entry_approved">准许入场</string>
+    <string name="billeterie_scanner_entry_validated">入场已验证！</string>
+    <string name="billeterie_scanner_scan_next">扫描下一位</string>
+    <string name="billeterie_scanner_no_entry">无法入场</string>
+    <string name="billeterie_scanner_no_benefits">此人没有入场权益</string>
+    <string name="billeterie_scanner_guest_found">已找到宾客</string>
+    <string name="billeterie_scanner_validate_ticket">验证门票</string>
+    <string name="billeterie_scanner_ready">准备扫描…</string>
+    <string name="billeterie_scanner_with_invites">+%1$d 位邀请</string>
+    <string name="billeterie_scanner_error">错误</string>
+
+    <!-- Admin Setup (first admin creation) -->
+    <string name="admin_setup_title">创建首位管理员</string>
+    <string name="admin_setup_description">目前没有管理员。请创建首位管理员来管理应用。</string>
+    <string name="admin_setup_type_title">管理员类型</string>
+    <string name="admin_setup_type_description">您希望将首位管理员添加为永久宾客还是志愿者？</string>
+    <string name="admin_setup_type_guest">永久宾客</string>
+    <string name="admin_setup_type_guest_desc">添加具有管理员权限的宾客</string>
+    <string name="admin_setup_type_volunteer">志愿者</string>
+    <string name="admin_setup_type_volunteer_desc">添加具有管理员权限的志愿者</string>
+    <string name="admin_setup_create_guest_title">创建管理员宾客</string>
+    <string name="admin_setup_create_guest_desc">填写新管理员宾客的详细信息</string>
+    <string name="admin_setup_create_volunteer_title">创建管理员志愿者</string>
+    <string name="admin_setup_create_volunteer_desc">填写新管理员志愿者的详细信息</string>
+    <string name="admin_setup_access_title">如何登录？</string>
+    <string name="admin_setup_access_desc">您希望如何以首位管理员身份登录？</string>
+    <string name="admin_setup_access_explained">请在下方选择一项。\n\n• 二维码 — 在欢迎界面扫描。适合分享给其他工作人员或其他手机。\n\n• NFC 卡 — 绑定一张卡或标签，在本机贴近即可快速进入管理模式。</string>
+    <string name="admin_setup_created_line">已将 %1$s 添加为管理员。</string>
+    <string name="admin_setup_done_title">已完成</string>
+    <string name="admin_setup_done_message">%1$s 可在欢迎界面使用您选择的方式进入管理模式。稍后可随时在应用中添加或更改方式。</string>
+    <string name="admin_setup_btn_skip">跳过</string>
+    <string name="admin_setup_btn_qr">二维码</string>
+    <string name="admin_setup_btn_nfc">NFC 卡</string>
+    <string name="admin_setup_nfc_linked_title">已绑定 NFC</string>
+    <string name="admin_setup_use_qr">使用二维码</string>
+    <string name="admin_setup_use_qr_desc">生成并分享管理员登录二维码</string>
+    <string name="admin_setup_use_nfc">添加NFC卡</string>
+    <string name="admin_setup_use_nfc_desc">分配NFC卡用于管理员登录</string>
+    <string name="admin_setup_creating">正在创建管理员…</string>
+    <string name="admin_setup_success">管理员创建成功！</string>
+    <string name="admin_setup_error">创建管理员失败：%1$s</string>
+    <string name="admin_setup_qr_title">管理员二维码</string>
+    <string name="admin_setup_qr_description">分享此二维码用于管理员登录。您可以通过下方按钮分享或手动输入邮箱。</string>
+    <string name="admin_setup_nfc_assigned">NFC卡已分配！您现在可以使用此卡进行管理员登录。</string>
+    <string name="admin_setup_done">完成</string>
+    <string name="admin_setup_skip">暂时跳过</string>
+    <string name="admin_setup_no_admin_warning">警告：没有管理员将无法访问管理模式。</string>
+
+    <!-- Announcements -->
+    <string name="settings_category_announcements">公告</string>
+    <string name="announcements_reception_title">启用接收</string>
+    <string name="announcements_reception_description">显示或隐藏传入的公告</string>
+    <string name="announcements_tracked_venues_title">关注的场所</string>
+    <string name="announcements_tracked_venues_description">选择您希望接收公告的场所</string>
+    <string name="announcements_tracked_venues_all">所有场所</string>
+    <string name="announcements_validity_title">有效期</string>
+    <string name="announcements_validity_description">超过此时长的消息将不再显示</string>
+    <string name="announcements_validity_15min">15分钟</string>
+    <string name="announcements_validity_30min">30分钟</string>
+    <string name="announcements_validity_1h">1小时</string>
+    <string name="announcements_validity_2h">2小时</string>
+    <string name="announcements_validity_4h">4小时</string>
+    <string name="announcements_non_admin_send_title">允许非管理员发送</string>
+    <string name="announcements_non_admin_send_description">允许售票界面发送公告</string>
+    <string name="announcement_button_label">发布公告</string>
+    <string name="announcement_send_title">发送公告</string>
+    <string name="announcement_destination_label">目标场所</string>
+    <string name="announcement_all_venues">所有场所</string>
+    <string name="announcement_title_label">收件人 / 标题</string>
+    <string name="announcement_title_placeholder">简短主题…</string>
+    <string name="announcement_message_label">消息</string>
+    <string name="announcement_message_placeholder">消息内容…</string>
+    <string name="announcement_send_button">发送</string>
+    <string name="announcement_cancel_button">取消</string>
+    <string name="announcement_sending">发送中…</string>
+    <string name="announcement_sent_success">公告已发送！</string>
+    <string name="announcement_sent_error">发送公告失败</string>
+    <string name="announcement_popup_title">公告</string>
+    <string name="announcement_popup_close">关闭</string>
+    <string name="announcement_popup_from">来自：%1$s</string>
+
+    <!-- 外部蓝牙 NFC 读卡器（ACR1255U-J1） -->
+    <string name="settings_category_external_reader">蓝牙 NFC 读卡器</string>
+    <string name="settings_category_pcsc_reader">USB NFC 读卡器</string>
+    <string name="pcsc_reader_description">连接 ACS ACR122U 或兼容的 USB NFC 读卡器。macOS 和 Windows 自带 PC/SC；Linux 请安装并启动 pcscd。</string>
+    <string name="desktop_external_reader_description">USB 读卡器（ACR122U）插入即可使用。蓝牙读卡器（ACR1255U-J1）请先在系统蓝牙设置中配对，再在下方的列表中选择。配置完成后即可自动扫描。</string>
+    <string name="desktop_ble_reader_picker_subtitle">请先在系统蓝牙中配对 ACR1255U-J1，再在此选择。已出现在 PC/SC 中的读卡器可立即使用。</string>
+    <string name="desktop_ble_reader_not_found">未找到 ACR1255U-J1。请开机、在蓝牙中配对并安装 ACS PC/SC 驱动。</string>
+    <string name="desktop_ble_reader_pcsc_ready">PC/SC 就绪 · %1$s</string>
+    <string name="external_reader_description">请在此选择外部 NFC 读卡器。读卡器可能会出现在 Android 蓝牙设置中，但无法从该处与本应用建立连接。</string>
+    <string name="external_reader_connected_label">已选择读卡器</string>
+    <string name="external_reader_pick_button">扫描蓝牙读卡器</string>
+    <string name="external_reader_change">更换读卡器</string>
+    <string name="external_reader_forget">忘记</string>
+    <string name="external_reader_saved_toast">已保存：%1$s</string>
+    <string name="external_reader_cleared_toast">已清除外部读卡器</string>
+    <string name="external_reader_test_button">测试连接</string>
+    <string name="external_reader_testing">正在测试\u2026</string>
+    <string name="external_reader_test_success_title">读卡器正常</string>
+    <string name="external_reader_test_failure_title">测试失败</string>
+    <string name="external_reader_test_close">关闭</string>
+
+    <string name="ble_reader_picker_title">选择蓝牙 NFC 读卡器</string>
+    <string name="ble_reader_picker_subtitle">请确保 ACR1255U-J1 已开机且在附近。ACR 读卡器会优先显示。</string>
+    <string name="ble_reader_section_acr_title">ACS NFC 读卡器</string>
+    <string name="ble_reader_section_acr_hint">推荐 · ACR1255U-J1 及兼容 ACS 设备</string>
+    <string name="ble_reader_section_acr_empty">未检测到 ACS 读卡器。请打开 ACR1255U-J1 并在扫描时靠近本设备。</string>
+    <string name="ble_reader_section_other_title">其他蓝牙设备</string>
+    <string name="ble_reader_show_other_devices">显示其他蓝牙设备（%1$d）</string>
+    <string name="ble_reader_hide_other_devices">隐藏其他蓝牙设备</string>
+    <string name="ble_reader_search_other_hint">按名称或 MAC 地址筛选…</string>
+    <string name="ble_reader_other_truncated">显示 %1$d / %2$d 个设备（信号最强优先）</string>
+    <string name="ble_reader_rssi_label">%1$d dBm</string>
+    <string name="ble_reader_scanning">正在扫描蓝牙设备…</string>
+    <string name="ble_reader_scanning_hint">此对话框打开期间会持续扫描。</string>
+    <string name="ble_reader_show_all">显示所有蓝牙设备</string>
+    <string name="ble_reader_show_acr_only">仅显示 ACR 读卡器</string>
+    <string name="ble_reader_unnamed">未命名设备</string>
+    <string name="ble_reader_bonded_label">已配对</string>
+    <string name="ble_reader_row_subtitle">%1$s · %2$s</string>
+    <string name="ble_reader_row_subtitle_bonded">%1$s · %2$s · 已配对</string>
+    <string name="ble_reader_bluetooth_off">蓝牙已关闭。请开启后再扫描读卡器。</string>
+    <string name="ble_reader_bluetooth_unavailable">此设备不支持蓝牙。</string>
+    <string name="ble_reader_scan_permission_denied">需要蓝牙扫描权限。</string>
+    <string name="ble_reader_connect_permission_denied">需要蓝牙连接权限。</string>
+    <string name="ble_reader_location_permission_denied">在此 Android 版本上，扫描蓝牙设备需要位置权限。</string>
+    <string name="ble_reader_scanner_unavailable">蓝牙低功耗扫描器不可用。</string>
+    <string name="ble_reader_low_level_error">蓝牙扫描失败。请关闭并重新开启蓝牙后重试。</string>
+    <string name="ble_reader_enable_bluetooth">开启蓝牙</string>
+    <string name="ble_reader_not_acr1255">所选蓝牙设备不是 ACS ACR1255U-J1 读卡器。</string>
+    <string name="ble_reader_verification_inconclusive_saved">读卡器验证结果不确定，设备仍已保存。</string>
+
+    <!-- UI strings (shared components / desktop) -->
+    <string name="noctulist_admin_title">NoctuList 管理</string>
+    <string name="download">下载</string>
+    <string name="download_complete_opening_installer">下载完成 — 正在打开安装程序…</string>
+    <string name="select_date">选择日期</string>
+    <string name="select_time">选择时间</string>
+    <string name="date_time_label">日期和时间</string>
+    <string name="dropdown_no_volunteers_found">未找到志愿者</string>
+    <string name="open_in_browser">在浏览器中打开：%1$s</string>
+    <string name="desktop_app_icon_unavailable">桌面版不支持自定义应用图标。</string>
+    <string name="minutes_short">分钟</string>
+    <string name="selecting_file">正在选择文件…</string>
+    <string name="action_cancelled">已取消</string>
+    <string name="invalid_service_account_json">无效的服务账号 JSON</string>
+    <string name="upload_failed_generic">上传失败</string>
+
+    <!-- Desktop admin navigation -->
+    <string name="desktop_admin_nav_layout_title">管理菜单布局</string>
+    <string name="desktop_admin_nav_layout_description">选择在桌面版中管理导航的显示位置</string>
+    <string name="desktop_admin_nav_layout_bottom">底部（平板风格）</string>
+    <string name="desktop_admin_nav_layout_left">左侧边栏</string>
+    <string name="desktop_admin_nav_layout_right">右侧边栏</string>
+    <string name="desktop_admin_nav_expand">展开菜单</string>
+    <string name="desktop_admin_nav_collapse">收起菜单</string>
+
+    <!-- POS profile switch -->
+    <string name="pos_profile_switch_title">更换档案？</string>
+    <string name="pos_profile_switch_message">已扫描 %1$s，但当前订单属于 %2$s。</string>
+    <string name="pos_profile_switch_keep_cart">更换档案 — 保留购物车</string>
+    <string name="pos_profile_switch_clear_cart">更换档案 — 清空购物车</string>
+    <string name="pos_profile_switch_keep_current">取消 — 保留当前档案和购物车</string>
+
+    <!-- Missing POS / biometric / desktop / account strings (i18n fill) -->
+    <string name="account_add_money">添加金额</string>
+    <string name="account_amount_label">账户金额</string>
+    <string name="account_credit_tooltip">添加余额</string>
+    <string name="account_debit_tooltip">扣除余额</string>
+    <string name="account_remove_money">扣除金额</string>
+    <string name="adjust_account_button">调整账户</string>
+    <string name="adjust_account_title">调整账户余额</string>
+    <string name="admin_auth_biometric_cancel">改用二维码 / NFC</string>
+    <string name="admin_auth_biometric_error">生物识别验证失败：%1$s</string>
+    <string name="admin_auth_biometric_prompt_subtitle">请使用生物识别验证身份</string>
+    <string name="admin_auth_biometric_prompt_title">管理员验证</string>
+    <string name="admin_auth_fingerprint_description">使用指纹验证以进入管理员模式</string>
+    <string name="admin_auth_use_fingerprint">使用指纹</string>
+    <string name="amount_label">金额</string>
+    <string name="biometric_admin_login_description">允许使用此设备的指纹传感器进入管理员模式</string>
+    <string name="biometric_admin_login_disabled">指纹管理员登录已禁用</string>
+    <string name="biometric_admin_login_enabled">指纹管理员登录已启用</string>
+    <string name="biometric_admin_login_none_enrolled">此设备尚未注册指纹。请先在设备设置中添加指纹。</string>
+    <string name="biometric_admin_login_not_available">此设备不支持生物识别验证</string>
+    <string name="biometric_admin_login_title">指纹管理员登录</string>
+    <string name="biometric_enrollment_prompt_subtitle">确认指纹以启用管理员登录</string>
+    <string name="biometric_enrollment_prompt_title">注册生物识别</string>
+    <string name="biometric_enrollment_success">已启用指纹登录以访问管理员功能</string>
+    <string name="biometric_enrollment_verify_description">请先扫描管理员徽章或二维码确认身份，再启用生物识别登录</string>
+    <string name="biometric_enrollment_verify_title">验证管理员访问权限</string>
+    <string name="biometric_warning_accept">我了解相关风险</string>
+    <string name="biometric_warning_cancel">取消</string>
+    <string name="biometric_warning_message">任何持有此设备解锁密码的人都可以添加指纹，从而进入管理员页面。\n\n严禁在可被公众或其他不应访问私人信息者使用的设备上启用此功能。\n\n此功能仅供理解并接受相关风险的用户使用。\n\n继续操作前，将先通过二维码或 NFC 徽章验证您的管理员身份。</string>
+    <string name="biometric_warning_title">安全警告</string>
+    <string name="continue_label">继续</string>
+    <string name="currency_setting_description">账户余额与 POS 显示的货币</string>
+    <string name="currency_setting_label">货币</string>
+    <string name="desktop_billeterie_camera_stop">停止网络摄像头</string>
+    <string name="desktop_billeterie_nfc_connected">读卡器已连接 — 准备扫描</string>
+    <string name="desktop_billeterie_nfc_disconnected">未检测到 NFC 读卡器 — 请在设置中连接 USB 或蓝牙读卡器</string>
+    <string name="desktop_billeterie_nfc_reading">正在读取卡片…</string>
+    <string name="desktop_billeterie_nfc_section">NFC 读卡器</string>
+    <string name="desktop_billeterie_scan_next_shortcut">按 Enter ↵ 扫描下一位</string>
+    <string name="desktop_billeterie_webcam_section">二维码（网络摄像头）</string>
+    <string name="desktop_ble_supported_windows">蓝牙（ACR1255U-J1）：请安装 ACS 蓝牙 PC/SC 驱动程序，在 Windows 蓝牙设置中配对读卡器，然后在下方选择。</string>
+    <string name="desktop_ble_unsupported_linux">Linux 不支持蓝牙（无 ACS BLE PC/SC 驱动程序）。请改用 USB 模式，并搭配 pcscd 与 ACS USB 驱动程序。</string>
+    <string name="desktop_ble_unsupported_macos">macOS 不支持蓝牙（无 ACS BLE PC/SC 驱动程序）。请改用 USB 模式与 ACS USB 驱动程序。</string>
+    <string name="desktop_list_pcsc_readers">列出 PC/SC 读卡器</string>
+    <string name="desktop_qr_no_frames">相机已打开但未收到图像。请检查相机权限。</string>
+    <string name="desktop_qr_no_webcam_generic">未检测到网络摄像头。请检查相机权限，或打开二维码图片。</string>
+    <string name="desktop_qr_no_webcam_linux">未检测到网络摄像头。请检查相机权限（V4L2/PipeWire）以及是否属于 video 组，或打开二维码图片。</string>
+    <string name="desktop_qr_no_webcam_mac">未检测到网络摄像头。请在系统设置中授予相机访问权限，或打开二维码图片。</string>
+    <string name="desktop_qr_open_image">打开二维码图片…</string>
+    <string name="desktop_qr_opening_camera">正在打开相机…</string>
+    <string name="desktop_qr_opening_file_picker">选择图片文件…</string>
+    <string name="desktop_qr_point_at_code">将二维码对准相机</string>
+    <string name="desktop_qr_start_webcam">启动网络摄像头</string>
+    <string name="desktop_usb_reader_test_button">测试 USB 读卡器</string>
+    <string name="emoji_picker_choose">选择</string>
+    <string name="emoji_picker_title">选择表情符号</string>
+    <string name="manual_adjustment_default_note">手动调整</string>
+    <string name="note_label">备注</string>
+    <string name="numpad_add_to_cart">加入购物车</string>
+    <string name="numpad_backspace">退格</string>
+    <string name="numpad_clear">清除</string>
+    <string name="pos_background_animation_description">仅为 POS 屏幕选择动态背景</string>
+    <string name="pos_background_animation_title">POS 背景</string>
+    <string name="pos_bar_discount_at_bar">吧台优惠</string>
+    <string name="pos_bar_discount_badge">吧台 -%1$d\u0025</string>
+    <string name="pos_bar_discount_cash_hint">适用于现金或刷卡付款</string>
+    <string name="pos_cart_empty">购物车为空 — 点击商品以添加</string>
+    <string name="pos_cart_title">购物车</string>
+    <string name="pos_cash_payment_bar_discount_applied">已对差额应用吧台折扣 -%1$d\u0025</string>
+    <string name="pos_cash_payment_cancel">取消销售</string>
+    <string name="pos_cash_payment_confirm">支付并确认</string>
+    <string name="pos_cash_payment_credit_covers">账户可支付 %1$s。</string>
+    <string name="pos_cash_payment_due_label">请以现金或刷卡支付</string>
+    <string name="pos_cash_payment_message">账户可支付 %1$s。是否要以现金或刷卡支付 %2$s 以完成销售？</string>
+    <string name="pos_cash_payment_title">余额不足</string>
+    <string name="pos_category_all">全部</string>
+    <string name="pos_clear_cart">清空</string>
+    <string name="pos_clear_customer">更换个人资料</string>
+    <string name="pos_customer_balance">余额：%1$s</string>
+    <string name="pos_customer_guest_label">宾客</string>
+    <string name="pos_customer_recognized">已识别 %1$s</string>
+    <string name="pos_insufficient_funds">余额不足</string>
+    <string name="pos_items_count">%1$d 件商品</string>
+    <string name="pos_manual_amount">手动金额</string>
+    <string name="pos_manual_default_label">手动</string>
+    <string name="pos_pay_cash_card">以现金或刷卡支付 %1$s</string>
+    <string name="pos_reader_active">读卡器启用中</string>
+    <string name="pos_reader_not_connected">未连接读卡器</string>
+    <string name="pos_reader_scanning">正在进行 NFC 扫描</string>
+    <string name="pos_reader_waiting">等待卡片</string>
+    <string name="pos_remaining_credit_label">剩余余额</string>
+    <string name="pos_sale_next">下一位</string>
+    <string name="pos_sale_next_hint">扫描下一张卡</string>
+    <string name="pos_sale_next_shortcut">Enter ↵</string>
+    <string name="pos_sale_remaining_credit">剩余余额：%1$s</string>
+    <string name="pos_sale_success">销售完成！</string>
+    <string name="pos_scan_customer">扫描卡片或二维码</string>
+    <string name="pos_scan_next">扫描下一张卡</string>
+    <string name="pos_select_customer_first">请先扫描个人资料</string>
+    <string name="pos_step_add">添加商品</string>
+    <string name="pos_step_scan">扫描卡片</string>
+    <string name="pos_step_validate">确认</string>
+    <string name="pos_title">POS</string>
+    <string name="pos_total">合计：%1$s</string>
+    <string name="pos_unknown_card">无法识别的卡片</string>
+    <string name="pos_use_qr">使用二维码</string>
+    <string name="pos_validate_sale">确认销售</string>
+    <string name="pos_waiting_card">请将卡片靠近读卡器</string>
+    <string name="pos_welcome_button">内部 POS</string>
+    <string name="recent_transfers_label">最近转账</string>
+    <string name="sales_categories_label">分类</string>
+    <string name="sales_category_bar">吧台</string>
+    <string name="sales_category_entry">入场</string>
+    <string name="sales_category_merch">周边</string>
+    <string name="sales_category_other">其他</string>
+    <string name="sales_emoji_label">表情符号</string>
+    <string name="show_all_transfers">显示全部转账</string>
+    <string name="show_fewer_transfers">显示较少转账</string>
+    <string name="transfers_sheet_label">转账工作表</string>
+
+    <!-- Hardcoded / desktop / POS message strings (i18n) -->
+    <string name="account_reversal_description">撤销：%1$s</string>
+    <string name="custom_theme_editor_title">自定义主题编辑器</string>
+    <string name="desktop_bluetooth_nfc_reader">蓝牙 NFC 读卡器</string>
+    <string name="desktop_bluetooth_nfc_reader_offline">蓝牙 NFC 读卡器（离线）</string>
+    <string name="desktop_no_external_reader">无外部读卡器</string>
+    <string name="desktop_pcsc_error">PC/SC 错误</string>
+    <string name="desktop_pcsc_library_unavailable">PC/SC 库不可用</string>
+    <string name="desktop_pcsc_no_ble_reader">PC/SC 中没有蓝牙 NFC 读卡器。
+请在系统蓝牙设置中配对 ACR1255U-J1，并安装 ACS 驱动程序。</string>
+    <string name="desktop_pcsc_no_card_on_reader">读卡器上未检测到卡片</string>
+    <string name="desktop_pcsc_no_card_present">没有卡片</string>
+    <string name="desktop_pcsc_no_reader">无 PC/SC 读卡器</string>
+    <string name="desktop_pcsc_no_readers_found">未找到 PC/SC 读卡器。</string>
+    <string name="desktop_pcsc_no_readers_hint">未找到 PC/SC 读卡器。
+请接上 USB 读卡器，或配对蓝牙 ACR1255U-J1。</string>
+    <string name="desktop_pcsc_provider_failed">无法加载 PC/SC 提供程序。
+请确认已安装 PC/SC 并重新启动应用。</string>
+    <string name="desktop_pcsc_reader_disconnected">读卡器已断开连接。</string>
+    <string name="desktop_pcsc_reader_error">读卡器错误</string>
+    <string name="desktop_pcsc_reader_ok_place_card">正常 — 读卡器已连接。
+请将卡片放在读卡器上再测试一次以读取 UID。</string>
+    <string name="desktop_pcsc_readers_header">读卡器（%1$d）：</string>
+    <string name="desktop_pcsc_unable_select_reader">无法选择读卡器。</string>
+    <string name="desktop_pcsc_unavailable">PC/SC 不可用</string>
+    <string name="desktop_pcsc_using_reader">使用中：%1$s</string>
+    <string name="desktop_pcsc_waiting_card">等待卡片（最长 %1$d 秒）…</string>
+    <string name="desktop_pcsc_waiting_removal">等待移除卡片</string>
+    <string name="desktop_usb_nfc_reader">USB NFC 读卡器</string>
+    <string name="done">完成</string>
+    <string name="email_gmail_connect_activity_unavailable">无法连接：Activity 上下文不可用</string>
+    <string name="email_gmail_connect_api">连接 Gmail API</string>
+    <string name="email_gmail_connect_api_hint">您的 Google 账号已保存。在 Android TV 与较旧设备上，还需额外授权步骤才能连接 Gmail API。</string>
+    <string name="pos_sale_complete_message">销售完成</string>
+    <string name="rate_limit_action_auto_retry">应用会自动以退避策略重试</string>
+    <string name="rate_limit_action_check_quota">检查是否有其他应用使用相同 API 配额</string>
+    <string name="rate_limit_action_reduce_freq">考虑在设置中降低同步频率</string>
+    <string name="rate_limit_action_wait">等待 1-2 分钟后再试</string>
+    <string name="rate_limit_current_limits">当前 API 限制：</string>
+    <string name="rate_limit_dialog_title">超过 API 速率限制</string>
+    <string name="rate_limit_per_100_seconds">每 100 秒</string>
+    <string name="rate_limit_per_100_value">每项目 500 次请求</string>
+    <string name="rate_limit_per_user_requests">每位用户请求</string>
+    <string name="rate_limit_per_user_value">每位用户每分钟 60 次</string>
+    <string name="rate_limit_read_requests">读取请求</string>
+    <string name="rate_limit_read_value">每项目每分钟 300 次</string>
+    <string name="rate_limit_retry_sync">重试同步</string>
+    <string name="rate_limit_tips_body">• 高峰时段改用手动同步而非自动同步
+• 若经常达到限制，请降低同步频率
+• 到 Google Cloud Console 查看配额使用情况</string>
+    <string name="rate_limit_tips_title">提示：</string>
+    <string name="rate_limit_too_many_requests">请求过多</string>
+    <string name="rate_limit_wait_message">您已达到 Google Sheets API 速率限制。请等待 1-2 分钟后再试。</string>
+    <string name="rate_limit_what_to_do">该怎么做：</string>
+    <string name="rate_limit_write_requests">写入请求</string>
+    <string name="rate_limit_write_value">每项目每分钟 300 次</string>
+    <string name="theme_hue_label">色相（彩虹）：%1$d°</string>
+    <string name="theme_luminosity_label">亮度：%1$d%%</string>
+    <string name="theme_saturation_label">饱和度：%1$d%%</string>
+</resources>

@@ -10,9 +10,11 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        maven { url = uri("https://mvn.javacard.pro/maven/") }
     }
 }
 
 rootProject.name = "Event Manager"
 include ':app'
-
+include ':shared'
+include ':desktopApp'

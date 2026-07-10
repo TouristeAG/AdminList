@@ -92,7 +92,10 @@
     <string name="debug_logs_error_reading_generic">Error reading log file</string>
     <string name="debug_logs_share_file">Share log file</string>
     <string name="animated_background_title">Animated Background</string>
-    <string name="animated_background_description">Disable animated arches for better performance on older devices</string>
+    <string name="animated_background_description">Choose a subtle animated background for welcome and admin screens</string>
+    <string name="background_animation_none">None</string>
+    <string name="background_animation_arches">Arches</string>
+    <string name="background_animation_topographic">Topographic lines</string>
     <string name="page_animations_title">Page Animations</string>
     <string name="page_animations_description">Enable slide animations when switching pages and tabs</string>
     <string name="clear_app_cache">Clear App Cache</string>
@@ -131,6 +134,8 @@
     <string name="language_spanish">Español</string>
     <string name="language_chinese">繁體中文</string>
     <string name="language_chinese_simplified">简体中文</string>
+    <string name="language_latin">Latina</string>
+    <string name="language_hindi">हिन्दी</string>
     
     <!-- Theme Settings -->
     <string name="theme_title">Theme</string>
@@ -309,6 +314,11 @@
     <string name="venues_title">Venues</string>
     <string name="add_venue">Add Venue</string>
     <string name="sales_items_sheet_label">Sales Items Sheet</string>
+    <string name="transfers_sheet_label">Transfers Sheet</string>
+    <string name="account_amount_label">Account amount</string>
+    <string name="currency_setting_label">Currency</string>
+    <string name="currency_setting_description">Currency shown for account balances and POS</string>
+    <string name="pos_welcome_button">Internal POS</string>
     <string name="sales_items_management_title">Sales Items Management</string>
     <string name="sales_items_management_description">Configure sales items synced from Google Sheets</string>
     <string name="manage_sales_items">Manage Sales Items</string>
@@ -623,7 +633,7 @@
     <!-- Guest List Screen -->
     <string name="guest_list_title">Guest List</string>
     <string name="guest_list_management">Guest List Management</string>
-    <string name="guest_list_description">Manage guests for Groove and Le Terreau venues</string>
+    <string name="guest_list_description">Manage guests across all configured venues</string>
     <string name="venue_groove">Groove</string>
     <string name="venue_le_terreau">Le Terreau</string>
     <string name="add_guest">Add Guest</string>
@@ -1114,6 +1124,8 @@
     <string name="file_size">Size: %s</string>
     <string name="graph_preview">Graph preview</string>
     <string name="share_graph">Share graph</string>
+    <string name="pos_report_share">Share report</string>
+    <string name="pos_report_open">Open report</string>
     <string name="open_with">Open with</string>
     <string name="active_volunteers_graph">Active Volunteers Graph</string>
     
@@ -1127,7 +1139,7 @@
     <string name="nav_benefits_tablet">Benefits Overview</string>
     <string name="nav_settings_tablet">Settings &amp; Configuration</string>
     <string name="volunteer_manager_tablet">Comprehensive volunteer management system</string>
-    <string name="guest_list_management_tablet">Complete guest list management for both venues</string>
+    <string name="guest_list_management_tablet">Complete guest list management across all configured venues</string>
     <string name="volunteer_benefits_overview_tablet">Detailed volunteer benefits and status tracking</string>
     <string name="shift_tracking_tablet">Complete shift tracking and job management</string>
     <string name="shield_optimized">Optimized for NVIDIA Shield tablets</string>
@@ -1290,4 +1302,36 @@
     <string name="ble_reader_enable_bluetooth">Enable Bluetooth</string>
     <string name="ble_reader_not_acr1255">Selected Bluetooth device is not an ACS ACR1255U-J1 reader.</string>
     <string name="ble_reader_verification_inconclusive_saved">Reader check was inconclusive. Device saved anyway.</string>
+
+    <!-- Hardcoded UI strings (i18n) -->
+    <string name="custom_theme_editor_title">Custom Theme Editor</string>
+    <string name="done">Done</string>
+    <string name="email_gmail_connect_activity_unavailable">Cannot connect: Activity context not available</string>
+    <string name="email_gmail_connect_api">Connect Gmail API</string>
+    <string name="email_gmail_connect_api_hint">Your Google account is saved. On Android TV and older devices, an additional authorization step is needed to connect the Gmail API.</string>
+    <string name="rate_limit_action_auto_retry">The app will automatically retry with backoff</string>
+    <string name="rate_limit_action_check_quota">Check if other apps are using the same API quota</string>
+    <string name="rate_limit_action_reduce_freq">Consider reducing sync frequency in settings</string>
+    <string name="rate_limit_action_wait">Wait 1-2 minutes before trying again</string>
+    <string name="rate_limit_current_limits">Current API Limits:</string>
+    <string name="rate_limit_dialog_title">API Rate Limit Exceeded</string>
+    <string name="rate_limit_per_100_seconds">Per 100 seconds</string>
+    <string name="rate_limit_per_100_value">500 requests per project</string>
+    <string name="rate_limit_per_user_requests">Per user requests</string>
+    <string name="rate_limit_per_user_value">60 per minute per user</string>
+    <string name="rate_limit_read_requests">Read requests</string>
+    <string name="rate_limit_read_value">300 per minute per project</string>
+    <string name="rate_limit_retry_sync">Retry Sync</string>
+    <string name="rate_limit_tips_body">• Use manual sync instead of auto-sync during peak usage
+• Sync less frequently if you\'re hitting limits often
+• Check your Google Cloud Console for quota usage</string>
+    <string name="rate_limit_tips_title">Tips:</string>
+    <string name="rate_limit_too_many_requests">Too Many Requests</string>
+    <string name="rate_limit_wait_message">You\'ve hit the Google Sheets API rate limit. Please wait 1-2 minutes before trying again.</string>
+    <string name="rate_limit_what_to_do">What to do:</string>
+    <string name="rate_limit_write_requests">Write requests</string>
+    <string name="rate_limit_write_value">300 per minute per project</string>
+    <string name="theme_hue_label">Hue (rainbow): %1$d°</string>
+    <string name="theme_luminosity_label">Brightness: %1$d%%</string>
+    <string name="theme_saturation_label">Saturation: %1$d%%</string>
 </resources>
