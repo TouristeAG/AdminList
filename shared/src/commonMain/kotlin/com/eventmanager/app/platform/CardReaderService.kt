@@ -10,9 +10,17 @@ sealed class UidReadResult {
 /**
  * NFC card reader abstraction (phone NFC, USB ACR122U, BLE ACR1255 on Android; PC/SC on desktop).
  */
+enum class NfcInputAvailability {
+    ExternalReader,
+    BuiltIn,
+    BuiltInDisabled,
+    Unavailable,
+}
+
 interface CardReaderService {
     fun isReaderConnected(): Boolean
     fun shouldSuppressBuiltInNfc(): Boolean
+    fun getNfcInputAvailability(): NfcInputAvailability
     suspend fun readUid(): UidReadResult
     fun readerDescription(): String
 }

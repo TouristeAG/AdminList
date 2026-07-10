@@ -63,9 +63,10 @@ class TwoWaySyncService(
             val jobTypeConfigs = repository.getAllJobTypeConfigs().first()
             val venues = repository.getAllVenues().first()
             val salesSheetItems = repository.getAllSalesSheetItems().first()
+            val transfers = repository.getAllAccountTransfersOnce()
             
             println("Starting backup to Google Sheets...")
-            println("Backing up: ${guests.size} guests, ${volunteers.size} volunteers, ${jobs.size} jobs, ${jobTypeConfigs.size} job types, ${venues.size} venues, ${salesSheetItems.size} sales items")
+            println("Backing up: ${guests.size} guests, ${volunteers.size} volunteers, ${jobs.size} jobs, ${jobTypeConfigs.size} job types, ${venues.size} venues, ${salesSheetItems.size} sales items, ${transfers.size} transfers")
             
             // Read current remote data in parallel for merge
             val (remoteJobTypeConfigs, remoteGuests, remoteVolunteers, remoteVenues, remoteSalesSheetItems) = try {
@@ -82,6 +83,13 @@ class TwoWaySyncService(
                 Quint(emptyList<JobTypeConfig>(), emptyList<Guest>(), emptyList<Volunteer>(), emptyList<VenueEntity>(), emptyList<SalesSheetItem>())
             }
 
+            val remoteTransfers = try {
+                googleSheetsService.syncTransfersFromSheets()
+            } catch (e: Exception) {
+                println("⚠️ Could not read remote transfers for merge: ${e.message}")
+                emptyList()
+            }
+
             val remoteJobs = try {
                 val configsForParsing = remoteJobTypeConfigs.ifEmpty { jobTypeConfigs }
                 googleSheetsService.syncJobsFromSheets(configsForParsing, remoteVolunteers)
@@ -94,6 +102,7 @@ class TwoWaySyncService(
             val delJobType = deletionTracker.getDeletedBusinessKeys("job_type")
             val delVenue = deletionTracker.getDeletedBusinessKeys("venue")
             val delSalesItem = deletionTracker.getDeletedBusinessKeys("sales_item")
+            val delTransfer = deletionTracker.getDeletedBusinessKeys("transfer")
 
             // Merge each entity type
             val mergedJobTypeConfigs = mergeLocalWithRemote(
@@ -123,8 +132,11 @@ class TwoWaySyncService(
             val mergedSalesSheetItems = mergeLocalWithRemote(
                 salesSheetItems, remoteSalesSheetItems, { it.name }, { it.lastModified }, delSalesItem
             )
+            val mergedTransfers = mergeLocalWithRemote(
+                transfers, remoteTransfers, { it.transferId }, { it.lastModified }, delTransfer
+            )
 
-            println("📊 After merge: ${mergedRegularGuests.size} guests, ${mergedVolunteers.size} volunteers, ${mergedJobs.size} jobs, ${mergedJobTypeConfigs.size} job types, ${mergedVenues.size} venues, ${mergedSalesSheetItems.size} sales items")
+            println("📊 After merge: ${mergedRegularGuests.size} guests, ${mergedVolunteers.size} volunteers, ${mergedJobs.size} jobs, ${mergedJobTypeConfigs.size} job types, ${mergedVenues.size} venues, ${mergedSalesSheetItems.size} sales items, ${mergedTransfers.size} transfers")
             
             // Upload merged datasets
             googleSheetsService.syncJobTypeConfigsToSheets(mergedJobTypeConfigs)
@@ -136,6 +148,7 @@ class TwoWaySyncService(
             googleSheetsService.syncJobsToSheets(mergedJobs, mergedVenues, mergedJobTypeConfigs, mergedVolunteers)
             googleSheetsService.syncVenuesToSheets(mergedVenues)
             googleSheetsService.syncSalesSheetItemsToSheets(mergedSalesSheetItems)
+            googleSheetsService.syncTransfersToSheets(mergedTransfers)
 
             // Reflect merged snapshot locally so UI updates without a second sync.
             applyMergedSnapshotToLocal(
@@ -144,7 +157,8 @@ class TwoWaySyncService(
                 jobs = mergedJobs,
                 jobTypeConfigs = mergedJobTypeConfigs,
                 venues = mergedVenues,
-                salesSheetItems = mergedSalesSheetItems
+                salesSheetItems = mergedSalesSheetItems,
+                transfers = mergedTransfers
             )
 
             println("Backup to Google Sheets completed successfully")
@@ -195,12 +209,19 @@ class TwoWaySyncService(
             
             // Jobs depend on job type configs, so download after
             val remoteJobs = googleSheetsService.syncJobsFromSheets(remoteJobTypeConfigs, remoteVolunteers)
+            val remoteTransfers = try {
+                googleSheetsService.syncTransfersFromSheets()
+            } catch (e: Exception) {
+                println("⚠️ Could not download transfers: ${e.message}")
+                emptyList()
+            }
             
-            println("Downloaded from sheets: ${remoteGuests.size} guests, ${remoteVolunteers.size} volunteers, ${remoteJobs.size} jobs, ${remoteJobTypeConfigs.size} job types, ${remoteVenues.size} venues, ${remoteSalesSheetItems.size} sales items")
+            println("Downloaded from sheets: ${remoteGuests.size} guests, ${remoteVolunteers.size} volunteers, ${remoteJobs.size} jobs, ${remoteJobTypeConfigs.size} job types, ${remoteVenues.size} venues, ${remoteSalesSheetItems.size} sales items, ${remoteTransfers.size} transfers")
             
             // Safety check: Only replace local data if we have remote data to prevent data loss
             val hasRemoteData = remoteGuests.isNotEmpty() || remoteVolunteers.isNotEmpty() || 
-                               remoteJobs.isNotEmpty() || remoteJobTypeConfigs.isNotEmpty() || remoteVenues.isNotEmpty() || remoteSalesSheetItems.isNotEmpty()
+                               remoteJobs.isNotEmpty() || remoteJobTypeConfigs.isNotEmpty() || remoteVenues.isNotEmpty() ||
+                               remoteSalesSheetItems.isNotEmpty() || remoteTransfers.isNotEmpty()
             
             if (!hasRemoteData) {
                 println("⚠️ No data found in Google Sheets - keeping existing local data")
@@ -228,6 +249,12 @@ class TwoWaySyncService(
             repository.clearAllSalesSheetItems()
             if (remoteSalesSheetItems.isNotEmpty()) {
                 repository.insertSalesSheetItemsAll(remoteSalesSheetItems)
+            }
+
+            // Merge account transfers (batch insert)
+            repository.clearAllAccountTransfers()
+            if (remoteTransfers.isNotEmpty()) {
+                repository.insertAccountTransfersAll(remoteTransfers)
             }
             
             // Merge guests (batch insert)
@@ -294,7 +321,7 @@ class TwoWaySyncService(
                 repository.insertJobsAll(remoteJobs)
             }
             
-            println("✅ Successfully replaced local data with ${remoteGuests.size} guests, ${remoteVolunteers.size} volunteers, ${remoteJobs.size} jobs, ${remoteJobTypeConfigs.size} job types, ${remoteVenues.size} venues and ${remoteSalesSheetItems.size} sales items from Google Sheets")
+            println("✅ Successfully replaced local data with ${remoteGuests.size} guests, ${remoteVolunteers.size} volunteers, ${remoteJobs.size} jobs, ${remoteJobTypeConfigs.size} job types, ${remoteVenues.size} venues, ${remoteSalesSheetItems.size} sales items and ${remoteTransfers.size} transfers from Google Sheets")
             
             // Update last sync time
             updateLastSyncTime()
@@ -524,7 +551,8 @@ class TwoWaySyncService(
         jobs: List<Job>? = null,
         jobTypeConfigs: List<JobTypeConfig>? = null,
         venues: List<VenueEntity>? = null,
-        salesSheetItems: List<SalesSheetItem>? = null
+        salesSheetItems: List<SalesSheetItem>? = null,
+        transfers: List<AccountTransfer>? = null
     ) {
         if (jobTypeConfigs != null) {
             repository.clearAllJobTypeConfigs()
@@ -537,6 +565,10 @@ class TwoWaySyncService(
         if (salesSheetItems != null) {
             repository.clearAllSalesSheetItems()
             if (salesSheetItems.isNotEmpty()) repository.insertSalesSheetItemsAll(salesSheetItems)
+        }
+        if (transfers != null) {
+            repository.clearAllAccountTransfers()
+            if (transfers.isNotEmpty()) repository.insertAccountTransfersAll(transfers)
         }
         if (guests != null) {
             repository.clearAllGuests()
@@ -1432,6 +1464,56 @@ class TwoWaySyncService(
         }
         }
     }
+
+    suspend fun backupTransfersToSheets() = withContext(Dispatchers.IO) {
+        sheetsOpMutex.withLock {
+            try {
+                if (!isGoogleSheetsConfigured()) throw IOException("Google Sheets not configured")
+                googleSheetsService.initializeSheetsService()
+                val transfers = repository.getAllAccountTransfersOnce()
+                val remoteTransfers = try {
+                    googleSheetsService.syncTransfersFromSheets()
+                } catch (e: Exception) {
+                    println("⚠️ Could not read remote transfers for merge: ${e.message}")
+                    emptyList()
+                }
+                val deletedKeys = deletionTracker.getDeletedBusinessKeys("transfer")
+                val merged = mergeLocalWithRemote(
+                    local = transfers,
+                    remote = remoteTransfers,
+                    keyExtractor = { it.transferId },
+                    lastModifiedExtractor = { it.lastModified },
+                    deletedKeys = deletedKeys
+                )
+                googleSheetsService.syncTransfersToSheets(merged)
+                applyMergedSnapshotToLocal(transfers = merged)
+                println("✅ Successfully backed up ${merged.size} transfers to Google Sheets")
+            } catch (e: Exception) {
+                println("❌ Failed to backup transfers: ${e.message}")
+                throw e
+            }
+        }
+    }
+
+    suspend fun syncTransfersWithDifferentialUpdate(): DifferentialSyncService.SyncChanges<AccountTransfer> =
+        withContext(Dispatchers.IO) {
+            sheetsOpMutex.withLock {
+                try {
+                    val remoteTransfers = googleSheetsService.syncTransfersFromSheets()
+                    val mainTransfers = repository.getAllAccountTransfersOnce()
+                    val changes = differentialSyncService.compareTransfers(remoteTransfers, mainTransfers)
+                    if (changes.hasChanges) {
+                        changes.new.forEach { repository.insertAccountTransfer(it) }
+                        changes.modified.forEach { repository.updateAccountTransfer(it) }
+                        changes.deleted.forEach { repository.deleteAccountTransfer(it) }
+                    }
+                    updateLastSyncTime()
+                    changes
+                } catch (e: Exception) {
+                    throw IOException("Differential transfer sync failed: ${e.message}", e)
+                }
+            }
+        }
     
     /**
      * UTILITY METHODS

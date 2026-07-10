@@ -139,6 +139,8 @@
     <string name="language_spanish">Español</string>
     <string name="language_chinese">繁體中文</string>
     <string name="language_chinese_simplified">简体中文</string>
+    <string name="language_latin">Latina</string>
+    <string name="language_hindi">हिन्दी</string>
     
     <!-- Theme Settings -->
     <string name="theme_title">主題</string>
@@ -1166,6 +1168,41 @@
     <string name="file_size">大小：%1$s</string>
     <string name="graph_preview">圖表預覽</string>
     <string name="share_graph">分享圖表</string>
+    
+    <!-- POS Accounting PDF Report -->
+    <string name="pos_report_title">POS accounting report</string>
+    <string name="pos_report_entry_title">POS accounting PDF</string>
+    <string name="pos_report_entry_subtitle">Evening or period breakdown for accounting (sales, transfers, adjustments)</string>
+    <string name="pos_report_mode_evening">Single evening</string>
+    <string name="pos_report_mode_period">Date range</string>
+    <string name="pos_report_select_date">Evening date</string>
+    <string name="pos_report_period_start">Start date</string>
+    <string name="pos_report_period_end">End date</string>
+    <string name="pos_report_closure_time">Closure time</string>
+    <string name="pos_report_closure_override">Override closure for this report only</string>
+    <string name="pos_report_evening_help">Evening of %1$s · closure at %2$s\nPeriod: %3$s</string>
+    <string name="pos_report_period_help">Period: %1$s</string>
+    <string name="pos_report_preview_transfers">%1$d transfers (%2$d POS sales)</string>
+    <string name="pos_report_preview_cash">Cash/card collected: %1$s</string>
+    <string name="pos_report_preview_credit">Internal credit used: %1$s</string>
+    <string name="pos_report_generate">Generate PDF</string>
+    <string name="pos_report_generating">Generating PDF…</string>
+    <string name="pos_report_preview_title">Report ready</string>
+    <string name="pos_report_preview_summary">%1$d POS sales · %2$s cash/card · %3$d transfers total</string>
+    <string name="pos_report_share">Share report</string>
+    <string name="pos_report_open">Open report</string>
+    <string name="pos_report_file_size">Size</string>
+    <string name="pos_report_venue_scope_all">Total (all venues)</string>
+    <string name="pos_report_venue_scope_global">Global</string>
+    <string name="pos_report_venue_label">Venue</string>
+    <string name="pos_venue_global">Global</string>
+    <string name="pos_venue_selector_label">Sales venue</string>
+    <string name="pos_venue_current">Current venue: %1$s</string>
+    <string name="sales_item_venues_label">Sales venues</string>
+    <string name="sales_item_venues_hint">Select where this item is available for POS sales.</string>
+    <string name="pos_report_preview_period">Period covered</string>
+    <string name="pos_report_save_as">Save as…</string>
+
     <string name="open_with">開啟方式</string>
     <string name="active_volunteers_graph">活躍志工圖表</string>
     
@@ -1330,6 +1367,15 @@
 
     <string name="ble_reader_picker_title">選擇藍牙 NFC 讀卡機</string>
     <string name="ble_reader_picker_subtitle">請確認 ACR1255U-J1 已開機且在附近。ACR 讀卡機會優先顯示。</string>
+    <string name="ble_reader_section_acr_title">ACS NFC 讀卡機</string>
+    <string name="ble_reader_section_acr_hint">建議 · ACR1255U-J1 及相容 ACS 裝置</string>
+    <string name="ble_reader_section_acr_empty">未偵測到 ACS 讀卡機。請開啟 ACR1255U-J1 並在掃描時靠近本裝置。</string>
+    <string name="ble_reader_section_other_title">其他藍牙裝置</string>
+    <string name="ble_reader_show_other_devices">顯示其他藍牙裝置（%1$d）</string>
+    <string name="ble_reader_hide_other_devices">隱藏其他藍牙裝置</string>
+    <string name="ble_reader_search_other_hint">依名稱或 MAC 位址篩選…</string>
+    <string name="ble_reader_other_truncated">顯示 %1$d / %2$d 個裝置（訊號最強優先）</string>
+    <string name="ble_reader_rssi_label">%1$d dBm</string>
     <string name="ble_reader_scanning">正在掃描藍牙裝置…</string>
     <string name="ble_reader_scanning_hint">此對話框開啟期間會持續掃描。</string>
     <string name="ble_reader_show_all">顯示所有藍牙裝置</string>
@@ -1373,7 +1419,191 @@
     <string name="desktop_admin_nav_layout_right">右側邊欄</string>
     <string name="desktop_admin_nav_expand">展開選單</string>
     <string name="desktop_admin_nav_collapse">收合選單</string>
+
+    <!-- POS profile switch -->
+    <string name="pos_profile_switch_title">更換檔案？</string>
+    <string name="pos_profile_switch_message">已掃描 %1$s，但目前訂單屬於 %2$s。</string>
+    <string name="pos_profile_switch_keep_cart">更換檔案 — 保留購物車</string>
+    <string name="pos_profile_switch_clear_cart">更換檔案 — 清空購物車</string>
+    <string name="pos_profile_switch_keep_current">取消 — 保留目前檔案與購物車</string>
+
+    <!-- Missing POS / biometric / desktop / account strings (i18n fill) -->
+    <string name="account_add_money">新增金額</string>
+    <string name="account_amount_label">帳戶金額</string>
+    <string name="account_credit_tooltip">新增餘額</string>
+    <string name="account_debit_tooltip">扣除餘額</string>
+    <string name="account_remove_money">扣除金額</string>
+    <string name="adjust_account_button">調整帳戶</string>
+    <string name="adjust_account_title">調整帳戶餘額</string>
+    <string name="admin_auth_biometric_cancel">改用 QR / NFC</string>
+    <string name="admin_auth_biometric_error">生物辨識驗證失敗：%1$s</string>
+    <string name="admin_auth_biometric_prompt_subtitle">請以生物辨識驗證身分</string>
+    <string name="admin_auth_biometric_prompt_title">管理員驗證</string>
+    <string name="admin_auth_fingerprint_description">以指紋驗證以進入管理員模式</string>
+    <string name="admin_auth_use_fingerprint">使用指紋</string>
+    <string name="amount_label">金額</string>
+    <string name="biometric_admin_login_description">允許使用此裝置的指紋感應器進入管理員模式</string>
+    <string name="biometric_admin_login_disabled">指紋管理員登入已停用</string>
+    <string name="biometric_admin_login_enabled">指紋管理員登入已啟用</string>
+    <string name="biometric_admin_login_none_enrolled">此裝置尚未登錄指紋。請先在裝置設定中新增指紋。</string>
+    <string name="biometric_admin_login_not_available">此裝置不支援生物辨識驗證</string>
+    <string name="biometric_admin_login_title">指紋管理員登入</string>
+    <string name="biometric_enrollment_prompt_subtitle">確認指紋以啟用管理員登入</string>
+    <string name="biometric_enrollment_prompt_title">登錄生物辨識</string>
+    <string name="biometric_enrollment_success">已啟用指紋登入以存取管理員功能</string>
+    <string name="biometric_enrollment_verify_description">請先掃描管理員徽章或 QR 碼確認身分，再啟用生物辨識登入</string>
+    <string name="biometric_enrollment_verify_title">驗證管理員存取權</string>
+    <string name="biometric_warning_accept">我了解相關風險</string>
+    <string name="biometric_warning_cancel">取消</string>
+    <string name="biometric_warning_message">任何持有此裝置解鎖密碼的人都可以新增指紋，進而進入管理員頁面。\n\n嚴禁在可被公眾或其他不應存取私人資訊者使用的裝置上啟用此功能。\n\n此功能僅供理解並接受相關風險的使用者使用。\n\n繼續操作前，將先透過 QR 碼或 NFC 徽章驗證您的管理員身分。</string>
+    <string name="biometric_warning_title">安全警告</string>
+    <string name="continue_label">繼續</string>
+    <string name="currency_setting_description">帳戶餘額與 POS 顯示的貨幣</string>
+    <string name="currency_setting_label">貨幣</string>
+    <string name="desktop_billeterie_camera_stop">停止網路攝影機</string>
+    <string name="desktop_billeterie_nfc_connected">讀卡機已連線 — 準備掃描</string>
+    <string name="desktop_billeterie_nfc_disconnected">未偵測到 NFC 讀卡機 — 請在設定中連接 USB 或藍牙讀卡機</string>
+    <string name="desktop_billeterie_nfc_reading">正在讀取卡片…</string>
+    <string name="desktop_billeterie_nfc_section">NFC 讀卡機</string>
+    <string name="desktop_billeterie_scan_next_shortcut">按 Enter ↵ 掃描下一位</string>
+    <string name="desktop_billeterie_webcam_section">QR 碼（網路攝影機）</string>
+    <string name="desktop_ble_supported_windows">藍牙（ACR1255U-J1）：請安裝 ACS 藍牙 PC/SC 驅動程式，在 Windows 藍牙設定中配對讀卡機，然後在下方選取。</string>
+    <string name="desktop_ble_unsupported_linux">Linux 不支援藍牙（無 ACS BLE PC/SC 驅動程式）。請改用 USB 模式，並搭配 pcscd 與 ACS USB 驅動程式。</string>
+    <string name="desktop_ble_unsupported_macos">macOS 不支援藍牙（無 ACS BLE PC/SC 驅動程式）。請改用 USB 模式與 ACS USB 驅動程式。</string>
+    <string name="desktop_list_pcsc_readers">列出 PC/SC 讀卡機</string>
+    <string name="desktop_qr_no_frames">相機已開啟但未收到影像。請檢查相機權限。</string>
+    <string name="desktop_qr_no_webcam_generic">未偵測到網路攝影機。請檢查相機權限，或開啟 QR 圖片。</string>
+    <string name="desktop_qr_no_webcam_linux">未偵測到網路攝影機。請檢查相機權限（V4L2/PipeWire）以及是否屬於 video 群組，或開啟 QR 圖片。</string>
+    <string name="desktop_qr_no_webcam_mac">未偵測到網路攝影機。請在系統設定中授予相機存取權，或開啟 QR 圖片。</string>
+    <string name="desktop_qr_open_image">開啟 QR 圖片…</string>
+    <string name="desktop_qr_opening_camera">正在開啟相機…</string>
+    <string name="desktop_qr_opening_file_picker">選擇圖片檔案…</string>
+    <string name="desktop_qr_point_at_code">將 QR 碼對準相機</string>
+    <string name="desktop_qr_start_webcam">啟動網路攝影機</string>
+    <string name="desktop_usb_reader_test_button">測試 USB 讀卡機</string>
+    <string name="emoji_picker_choose">選擇</string>
+    <string name="emoji_picker_title">選擇表情符號</string>
+    <string name="manual_adjustment_default_note">手動調整</string>
+    <string name="note_label">備註</string>
+    <string name="numpad_add_to_cart">加入購物車</string>
+    <string name="numpad_backspace">退格</string>
+    <string name="numpad_clear">清除</string>
+    <string name="pos_background_animation_description">僅為 POS 畫面選擇動態背景</string>
+    <string name="pos_background_animation_title">POS 背景</string>
+    <string name="pos_bar_discount_at_bar">吧台優惠</string>
+    <string name="pos_bar_discount_badge">吧台 -%1$d\u0025</string>
+    <string name="pos_bar_discount_cash_hint">適用於現金或刷卡付款</string>
+    <string name="pos_cart_empty">購物車是空的 — 點選商品以加入</string>
+    <string name="pos_cart_title">購物車</string>
+    <string name="pos_cash_payment_bar_discount_applied">已對差額套用吧台折扣 -%1$d\u0025</string>
+    <string name="pos_cash_payment_cancel">取消銷售</string>
+    <string name="pos_cash_payment_confirm">付款並確認</string>
+    <string name="pos_cash_payment_credit_covers">帳戶可支付 %1$s。</string>
+    <string name="pos_cash_payment_due_label">請以現金或刷卡支付</string>
+    <string name="pos_cash_payment_message">帳戶可支付 %1$s。是否要以現金或刷卡支付 %2$s 以完成銷售？</string>
+    <string name="pos_cash_payment_title">餘額不足</string>
+    <string name="pos_category_all">全部</string>
+    <string name="pos_clear_cart">清空</string>
+    <string name="pos_clear_customer">更換個人檔案</string>
+    <string name="pos_customer_balance">餘額：%1$s</string>
+    <string name="pos_customer_guest_label">賓客</string>
+    <string name="pos_customer_recognized">已辨識 %1$s</string>
+    <string name="pos_insufficient_funds">餘額不足</string>
+    <string name="pos_items_count">%1$d 件商品</string>
+    <string name="pos_manual_amount">手動金額</string>
+    <string name="pos_manual_default_label">手動</string>
+    <string name="pos_pay_cash_card">以現金或刷卡支付 %1$s</string>
+    <string name="pos_reader_active">讀卡機啟用中</string>
+    <string name="pos_reader_not_connected">未連接讀卡機</string>
+    <string name="pos_reader_scanning">正在進行 NFC 掃描</string>
+    <string name="pos_reader_waiting">等待卡片</string>
+    <string name="pos_remaining_credit_label">剩餘餘額</string>
+    <string name="pos_sale_next">下一位</string>
+    <string name="pos_sale_next_hint">掃描下一張卡</string>
+    <string name="pos_sale_next_shortcut">Enter ↵</string>
+    <string name="pos_sale_remaining_credit">剩餘餘額：%1$s</string>
+    <string name="pos_sale_success">銷售完成！</string>
+    <string name="pos_scan_customer">掃描卡片或 QR</string>
+    <string name="pos_scan_next">掃描下一張卡</string>
+    <string name="pos_select_customer_first">請先掃描個人檔案</string>
+    <string name="pos_step_add">新增商品</string>
+    <string name="pos_step_scan">掃描卡片</string>
+    <string name="pos_step_validate">確認</string>
+    <string name="pos_title">POS</string>
+    <string name="pos_total">合計：%1$s</string>
+    <string name="pos_unknown_card">無法辨識的卡片</string>
+    <string name="pos_use_qr">使用 QR</string>
+    <string name="pos_validate_sale">確認銷售</string>
+    <string name="pos_waiting_card">請將卡片靠近讀卡機</string>
+    <string name="pos_welcome_button">內部 POS</string>
+    <string name="recent_transfers_label">最近轉帳</string>
+    <string name="sales_categories_label">分類</string>
+    <string name="sales_category_bar">吧台</string>
+    <string name="sales_category_entry">入場</string>
+    <string name="sales_category_merch">周邊</string>
+    <string name="sales_category_other">其他</string>
+    <string name="sales_emoji_label">表情符號</string>
+    <string name="show_all_transfers">顯示全部轉帳</string>
+    <string name="show_fewer_transfers">顯示較少轉帳</string>
+    <string name="transfers_sheet_label">轉帳工作表</string>
+
+    <!-- Hardcoded / desktop / POS message strings (i18n) -->
+    <string name="account_reversal_description">撤銷：%1$s</string>
+    <string name="custom_theme_editor_title">自訂主題編輯器</string>
+    <string name="desktop_bluetooth_nfc_reader">藍牙 NFC 讀卡機</string>
+    <string name="desktop_bluetooth_nfc_reader_offline">藍牙 NFC 讀卡機（離線）</string>
+    <string name="desktop_no_external_reader">無外部讀卡機</string>
+    <string name="desktop_pcsc_error">PC/SC 錯誤</string>
+    <string name="desktop_pcsc_library_unavailable">PC/SC 程式庫無法使用</string>
+    <string name="desktop_pcsc_no_ble_reader">PC/SC 中沒有藍牙 NFC 讀卡機。
+請在系統藍牙設定中配對 ACR1255U-J1，並安裝 ACS 驅動程式。</string>
+    <string name="desktop_pcsc_no_card_on_reader">讀卡機上未偵測到卡片</string>
+    <string name="desktop_pcsc_no_card_present">沒有卡片</string>
+    <string name="desktop_pcsc_no_reader">無 PC/SC 讀卡機</string>
+    <string name="desktop_pcsc_no_readers_found">找不到 PC/SC 讀卡機。</string>
+    <string name="desktop_pcsc_no_readers_hint">找不到 PC/SC 讀卡機。
+請接上 USB 讀卡機，或配對藍牙 ACR1255U-J1。</string>
+    <string name="desktop_pcsc_provider_failed">無法載入 PC/SC 提供者。
+請確認已安裝 PC/SC 並重新啟動應用程式。</string>
+    <string name="desktop_pcsc_reader_disconnected">讀卡機已中斷連線。</string>
+    <string name="desktop_pcsc_reader_error">讀卡機錯誤</string>
+    <string name="desktop_pcsc_reader_ok_place_card">正常 — 讀卡機已連線。
+請將卡片放在讀卡機上再測試一次以讀取 UID。</string>
+    <string name="desktop_pcsc_readers_header">讀卡機（%1$d）：</string>
+    <string name="desktop_pcsc_unable_select_reader">無法選取讀卡機。</string>
+    <string name="desktop_pcsc_unavailable">PC/SC 無法使用</string>
+    <string name="desktop_pcsc_using_reader">使用中：%1$s</string>
+    <string name="desktop_pcsc_waiting_card">等待卡片（最長 %1$d 秒）…</string>
+    <string name="desktop_pcsc_waiting_removal">等待移除卡片</string>
+    <string name="desktop_usb_nfc_reader">USB NFC 讀卡機</string>
+    <string name="done">完成</string>
+    <string name="email_gmail_connect_activity_unavailable">無法連接：Activity 內容不可用</string>
+    <string name="email_gmail_connect_api">連接 Gmail API</string>
+    <string name="email_gmail_connect_api_hint">您的 Google 帳戶已儲存。在 Android TV 與較舊裝置上，還需額外授權步驟才能連接 Gmail API。</string>
+    <string name="pos_sale_complete_message">銷售完成</string>
+    <string name="rate_limit_action_auto_retry">應用程式會自動以退避策略重試</string>
+    <string name="rate_limit_action_check_quota">檢查是否有其他應用程式使用相同 API 配額</string>
+    <string name="rate_limit_action_reduce_freq">考慮在設定中降低同步頻率</string>
+    <string name="rate_limit_action_wait">等待 1-2 分鐘後再試</string>
+    <string name="rate_limit_current_limits">目前 API 限制：</string>
+    <string name="rate_limit_dialog_title">超過 API 速率限制</string>
+    <string name="rate_limit_per_100_seconds">每 100 秒</string>
+    <string name="rate_limit_per_100_value">每專案 500 次請求</string>
+    <string name="rate_limit_per_user_requests">每位使用者請求</string>
+    <string name="rate_limit_per_user_value">每位使用者每分鐘 60 次</string>
+    <string name="rate_limit_read_requests">讀取請求</string>
+    <string name="rate_limit_read_value">每專案每分鐘 300 次</string>
+    <string name="rate_limit_retry_sync">重試同步</string>
+    <string name="rate_limit_tips_body">• 尖峰時段改用手動同步而非自動同步
+• 若經常達到限制，請降低同步頻率
+• 到 Google Cloud Console 查看配額使用情況</string>
+    <string name="rate_limit_tips_title">提示：</string>
+    <string name="rate_limit_too_many_requests">請求過多</string>
+    <string name="rate_limit_wait_message">您已達到 Google Sheets API 速率限制。請等待 1-2 分鐘後再試。</string>
+    <string name="rate_limit_what_to_do">該怎麼做：</string>
+    <string name="rate_limit_write_requests">寫入請求</string>
+    <string name="rate_limit_write_value">每專案每分鐘 300 次</string>
+    <string name="theme_hue_label">色相（彩虹）：%1$d°</string>
+    <string name="theme_luminosity_label">亮度：%1$d%%</string>
+    <string name="theme_saturation_label">飽和度：%1$d%%</string>
 </resources>
-
-
-

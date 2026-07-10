@@ -24,8 +24,13 @@ class DataStructureValidator(
         "guests" to listOf("Name", "Email", "Phone", "Invitations", "Venue", "Notes", "Volunteer Benefit", "Last Modified", "NFC UID", "ID", "Admin"),
         "volunteers" to listOf("ID", "Name", "Abbreviation", "Email", "Phone", "Date of Birth", "Gender", "Rank", "Active", "Last Modified", "NFC UID", "Admin"),
         "jobs" to listOf("Volunteer ID", "Volunteer Name", "Job Type", "Venue", "Date", "Shift Time", "Notes", "Last Modified", "Entries left"),
-        "job_types" to listOf("Name", "Status", "Shift Type", "Orion Type", "Requires Time", "Benefit System", "Manual Rewards", "Description", "Last Modified", "Nova Job Type"),
-        "sales_items" to listOf("Name", "Price", "Discount", "Required Rank", "Status", "Last Modified"),
+        "job_types" to listOf("Name", "Status", "Shift Type", "Orion Type", "Requires Time", "Benefit System", "Manual Rewards", "Description", "Last Modified", "Nova Job Type", "Account Credit (CHF)"),
+        "sales_items" to listOf("Name", "Price", "Discount", "Required Rank", "Status", "Last Modified", "Categories", "Emoji"),
+        "transfers" to listOf(
+            "Transfer ID", "Holder Type", "Holder ID", "Holder Name", "Amount", "Currency", "Type",
+            "Source Reference", "Job Reference Key", "Job Type", "Job Date", "Description",
+            "Credit Paid", "Cash Paid", "Bar Discount %", "POS Items", "Created At", "Last Modified"
+        ),
         "venues" to listOf(
             "Name",
             "Description",
@@ -60,6 +65,7 @@ class DataStructureValidator(
             results["jobs"] = validateSheet("jobs", settingsManager.getJobsSheet())
             results["job_types"] = validateSheet("job_types", settingsManager.getJobTypesSheet())
             results["sales_items"] = validateSheet("sales_items", settingsManager.getSalesItemsSheet())
+            results["transfers"] = validateSheet("transfers", settingsManager.getTransfersSheet())
             results["venues"] = validateSheet("venues", settingsManager.getVenuesSheet())
             
             val allValid = results.values.all { it.isValid }
@@ -191,6 +197,7 @@ class DataStructureValidator(
             results["jobs"] = createOrFixSheet("jobs", settingsManager.getJobsSheet())
             results["job_types"] = createOrFixSheet("job_types", settingsManager.getJobTypesSheet())
             results["sales_items"] = createOrFixSheet("sales_items", settingsManager.getSalesItemsSheet())
+            results["transfers"] = createOrFixSheet("transfers", settingsManager.getTransfersSheet())
             results["venues"] = createOrFixSheet("venues", settingsManager.getVenuesSheet())
             
             val allValid = results.values.all { it.isValid }

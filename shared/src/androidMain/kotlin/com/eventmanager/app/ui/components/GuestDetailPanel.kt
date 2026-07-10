@@ -41,6 +41,7 @@ import java.io.File
 import java.io.FileOutputStream
 import com.eventmanager.app.data.models.*
 import com.eventmanager.app.ui.utils.*
+import com.eventmanager.app.ui.viewmodel.EventManagerViewModel
 import com.eventmanager.app.utils.QRCodeUtils
 import com.eventmanager.app.R
 import com.eventmanager.app.data.sync.settingsManagerFor
@@ -72,7 +73,13 @@ actual fun GuestDetailPanel(
     onClose: () -> Unit,
     modifier: Modifier,
     /** When true (e.g. Billeterie guest list), hide identifiers and all mutation actions. */
-    readOnly: Boolean) {
+    readOnly: Boolean,
+    accountBalance: Double,
+    currencyCode: String,
+    recentTransfers: List<AccountTransfer>,
+    onManualAccountAdjust: ((Double, String) -> Unit)?,
+    viewModel: EventManagerViewModel?
+) {
     val context = LocalContext.current
     val isPhone = !isTablet()
     val responsivePadding = if (isPhone) getPhonePortraitPadding() else getResponsivePadding()
@@ -96,11 +103,10 @@ actual fun GuestDetailPanel(
     var showQrDialog by remember { mutableStateOf(false) }
     var showNfcDialog by remember { mutableStateOf(false) }
     
-    Box(
-        modifier = modifier.fillMaxSize()
+    ProfileEasterEggHost(
+        enabled = leonardoEasterEggEnabled,
+        modifier = modifier.fillMaxSize(),
     ) {
-        ProfileEasterEggBackground(enabled = leonardoEasterEggEnabled)
-
         // Background
         Card(
             modifier = Modifier
@@ -165,6 +171,20 @@ actual fun GuestDetailPanel(
                             }
                         )
                     }
+
+                    if (!readOnly && !guest.isTemporaryGuest && !guest.isVolunteerBenefit && onManualAccountAdjust != null && viewModel != null) {
+                        item {
+                            AccountInfoSection(
+                                balance = accountBalance,
+                                currencyCode = currencyCode,
+                                recentTransfers = recentTransfers,
+                                onManualAdjust = onManualAccountAdjust,
+                                viewModel = viewModel,
+                                allowAdjustment = true,
+                                compactAdjust = true
+                            )
+                        }
+                    }
                     
                     // Action Buttons Section
                     if (!readOnly) {
@@ -182,7 +202,6 @@ actual fun GuestDetailPanel(
                 }
             }
         }
-        ProfileEasterEggConfetti(enabled = leonardoEasterEggEnabled)
     }
     
     // Email confirmation dialog state
@@ -201,21 +220,13 @@ actual fun GuestDetailPanel(
         
         Dialog(
             onDismissRequest = { showQrDialog = false },
-            properties = DialogProperties(
-                usePlatformDefaultWidth = !isTabletDevice,
-                dismissOnBackPress = true,
-                dismissOnClickOutside = true
-            )
+            properties = phoneFractionDialogProperties(),
         ) {
+            DialogFractionSizer(profile = FractionalDialogProfile.Card) { maxDialogWidth, maxDialogHeight ->
             Card(
                 modifier = Modifier
-                    .then(
-                        if (isTabletDevice) {
-                            Modifier.widthIn(max = tabletMaxWidth)
-                        } else {
-                            Modifier.fillMaxWidth(0.92f)
-                        }
-                    )
+                    .widthIn(max = if (isTabletDevice) tabletMaxWidth else maxDialogWidth)
+                    .heightIn(max = maxDialogHeight)
                     .padding(tabletDialogPadding),
                 shape = RoundedCornerShape(28.dp),
                 colors = CardDefaults.cardColors(
@@ -384,6 +395,7 @@ actual fun GuestDetailPanel(
                     }
                 }
             }
+        }
         }
     }
     

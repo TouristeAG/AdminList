@@ -28,6 +28,7 @@ class DeletionTracker(platformContext: PlatformContext) {
         private const val KEY_DELETED_JOB_TYPES = "deleted_job_types"
         private const val KEY_DELETED_VENUES = "deleted_venues"
         private const val KEY_DELETED_SALES_ITEMS = "deleted_sales_items"
+        private const val KEY_DELETED_TRANSFERS = "deleted_transfers"
         private const val MAX_AGE_MS = 30L * 24 * 60 * 60 * 1000 // 30 days
     }
     
@@ -67,6 +68,11 @@ class DeletionTracker(platformContext: PlatformContext) {
     suspend fun trackSalesSheetItemDeletion(itemId: String, sheetsId: String?, deletionTime: Long = System.currentTimeMillis(), businessKey: String? = null) = withContext(Dispatchers.IO) {
         val deletedItem = DeletedItem(itemId, sheetsId, deletionTime, "sales_item", businessKey)
         addDeletedItem(KEY_DELETED_SALES_ITEMS, deletedItem)
+    }
+
+    suspend fun trackTransferDeletion(transferId: String, sheetsId: String?, deletionTime: Long = System.currentTimeMillis(), businessKey: String? = null) = withContext(Dispatchers.IO) {
+        val deletedItem = DeletedItem(transferId, sheetsId, deletionTime, "transfer", businessKey ?: transferId)
+        addDeletedItem(KEY_DELETED_TRANSFERS, deletedItem)
     }
     
     private fun addDeletedItem(key: String, deletedItem: DeletedItem) {
@@ -114,6 +120,7 @@ class DeletionTracker(platformContext: PlatformContext) {
             "job_type" -> KEY_DELETED_JOB_TYPES
             "venue" -> KEY_DELETED_VENUES
             "sales_item" -> KEY_DELETED_SALES_ITEMS
+            "transfer" -> KEY_DELETED_TRANSFERS
             else -> return@withContext emptySet()
         }
         getDeletedItems(key).mapNotNull { it.businessKey?.takeIf(String::isNotEmpty) }.toSet()
@@ -136,6 +143,7 @@ class DeletionTracker(platformContext: PlatformContext) {
             "job_type" -> KEY_DELETED_JOB_TYPES
             "venue" -> KEY_DELETED_VENUES
             "sales_item" -> KEY_DELETED_SALES_ITEMS
+            "transfer" -> KEY_DELETED_TRANSFERS
             else -> return@withContext false
         }
         
@@ -151,6 +159,7 @@ class DeletionTracker(platformContext: PlatformContext) {
             "job_type" -> KEY_DELETED_JOB_TYPES
             "venue" -> KEY_DELETED_VENUES
             "sales_item" -> KEY_DELETED_SALES_ITEMS
+            "transfer" -> KEY_DELETED_TRANSFERS
             else -> return@withContext false
         }
         

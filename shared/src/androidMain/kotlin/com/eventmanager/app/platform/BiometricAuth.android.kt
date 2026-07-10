@@ -4,6 +4,7 @@ import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
+import com.eventmanager.app.R
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
@@ -50,7 +51,7 @@ private class AndroidBiometricAuth(private val context: PlatformContext) : Biome
                 BiometricPrompt.PromptInfo.Builder()
                     .setTitle(title)
                     .setSubtitle(subtitle)
-                    .setNegativeButtonText("Cancel")
+                    .setNegativeButtonText(activity.getString(R.string.cancel))
                     .build()
             )
         }

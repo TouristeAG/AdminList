@@ -47,6 +47,7 @@ class DifferentialSyncService(
 
     private fun venueSyncKey(venue: VenueEntity): String = venue.name
     private fun salesSheetItemSyncKey(item: SalesSheetItem): String = item.name
+    private fun transferSyncKey(transfer: AccountTransfer): String = transfer.transferId
     
     /**
      * Data class to hold sync changes for a specific entity type
@@ -70,12 +71,13 @@ class DifferentialSyncService(
         val jobs: SyncChanges<Job> = SyncChanges(),
         val jobTypeConfigs: SyncChanges<JobTypeConfig> = SyncChanges(),
         val salesSheetItems: SyncChanges<SalesSheetItem> = SyncChanges(),
+        val transfers: SyncChanges<AccountTransfer> = SyncChanges(),
         val venues: SyncChanges<VenueEntity> = SyncChanges(),
         val syncTime: Long = System.currentTimeMillis()
     ) {
         fun hasAnyChanges(): Boolean =
             guests.hasChanges || volunteers.hasChanges || jobs.hasChanges || 
-            jobTypeConfigs.hasChanges || salesSheetItems.hasChanges || venues.hasChanges
+            jobTypeConfigs.hasChanges || salesSheetItems.hasChanges || transfers.hasChanges || venues.hasChanges
         
         fun summary(): String = buildString {
             append("Guests: ${guests.new.size} new, ${guests.modified.size} modified, ${guests.deleted.size} deleted")
@@ -83,6 +85,7 @@ class DifferentialSyncService(
             append(" | Jobs: ${jobs.new.size} new, ${jobs.modified.size} modified, ${jobs.deleted.size} deleted")
             append(" | JobTypes: ${jobTypeConfigs.new.size} new, ${jobTypeConfigs.modified.size} modified, ${jobTypeConfigs.deleted.size} deleted")
             append(" | SalesItems: ${salesSheetItems.new.size} new, ${salesSheetItems.modified.size} modified, ${salesSheetItems.deleted.size} deleted")
+            append(" | Transfers: ${transfers.new.size} new, ${transfers.modified.size} modified, ${transfers.deleted.size} deleted")
             append(" | Venues: ${venues.new.size} new, ${venues.modified.size} modified, ${venues.deleted.size} deleted")
         }
     }
@@ -353,7 +356,52 @@ class DifferentialSyncService(
             old.price != new.price ||
             old.hasDiscount != new.hasDiscount ||
             old.requiredRank != new.requiredRank ||
-            old.isActive != new.isActive
+            old.isActive != new.isActive ||
+            old.categories != new.categories ||
+            old.emoji != new.emoji ||
+            old.availableVenues != new.availableVenues
+
+    // ========== ACCOUNT TRANSFER COMPARISON ==========
+
+    suspend fun compareTransfers(
+        tempTransfers: List<AccountTransfer>,
+        mainTransfers: List<AccountTransfer>
+    ): SyncChanges<AccountTransfer> = withContext(Dispatchers.Default) {
+        val mainMap = mainTransfers.associateBy { transferSyncKey(it) }
+        val tempMap = tempTransfers.associateBy { transferSyncKey(it) }
+
+        val new = mutableListOf<AccountTransfer>()
+        val modified = mutableListOf<AccountTransfer>()
+        val unchanged = mutableListOf<AccountTransfer>()
+
+        for ((_, tempTransfer) in tempMap) {
+            val mainTransfer = mainMap[transferSyncKey(tempTransfer)]
+            if (mainTransfer == null) {
+                new.add(tempTransfer)
+            } else if (hasTransferChanged(mainTransfer, tempTransfer)) {
+                modified.add(tempTransfer.copy(id = mainTransfer.id))
+            } else {
+                unchanged.add(tempTransfer)
+            }
+        }
+
+        val deleted = mainTransfers.filter { mainTransfer ->
+            !tempMap.containsKey(transferSyncKey(mainTransfer))
+        }
+
+        SyncChanges(new, modified, deleted, unchanged)
+    }
+
+    private fun hasTransferChanged(old: AccountTransfer, new: AccountTransfer): Boolean =
+        old.amount != new.amount ||
+            old.holderName != new.holderName ||
+            old.description != new.description ||
+            old.type != new.type ||
+            old.creditAmountPaid != new.creditAmountPaid ||
+            old.cashAmountPaid != new.cashAmountPaid ||
+            old.posBarDiscountPercent != new.posBarDiscountPercent ||
+            old.posVenueName != new.posVenueName ||
+            old.lastModified != new.lastModified
     
     // ========== APPLY CHANGES ==========
     
@@ -426,6 +474,16 @@ class DifferentialSyncService(
         }
         if (result.venues.deleted.isNotEmpty()) {
             repository.deleteVenuesAll(result.venues.deleted)
+        }
+
+        if (result.transfers.new.isNotEmpty()) {
+            repository.insertAccountTransfersAll(result.transfers.new)
+        }
+        if (result.transfers.modified.isNotEmpty()) {
+            repository.updateAccountTransfersAll(result.transfers.modified)
+        }
+        if (result.transfers.deleted.isNotEmpty()) {
+            repository.deleteAccountTransfersAll(result.transfers.deleted)
         }
     }
 }

@@ -29,6 +29,7 @@ enum class BilleterieSection {
     Home,
     GuestList,
     Scanner,
+    Pos,
     Settings
 }
 

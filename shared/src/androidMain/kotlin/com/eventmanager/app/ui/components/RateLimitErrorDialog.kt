@@ -9,10 +9,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.eventmanager.app.data.sync.ApiRateLimitHandler
+import com.eventmanager.app.R
 
 @Composable
 fun RateLimitErrorDialog(
@@ -22,6 +23,7 @@ fun RateLimitErrorDialog(
     modifier: Modifier = Modifier
 ) {
     if (isVisible) {
+        val context = LocalContext.current
         AlertDialog(
             onDismissRequest = onDismiss,
             title = {
@@ -34,7 +36,7 @@ fun RateLimitErrorDialog(
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.error
                     )
-                    Text("API Rate Limit Exceeded")
+                    Text(context.getString(R.string.rate_limit_dialog_title))
                 }
             },
             text = {
@@ -42,7 +44,6 @@ fun RateLimitErrorDialog(
                     modifier = Modifier.verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Brief message
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(
@@ -53,53 +54,62 @@ fun RateLimitErrorDialog(
                             modifier = Modifier.padding(12.dp)
                         ) {
                             Text(
-                                text = "⚠️ Too Many Requests",
+                                text = "⚠️ ${context.getString(R.string.rate_limit_too_many_requests)}",
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onErrorContainer
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "You've hit the Google Sheets API rate limit. Please wait 1-2 minutes before trying again.",
+                                text = context.getString(R.string.rate_limit_wait_message),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onErrorContainer
                             )
                         }
                     }
-                    
-                    // Detailed information
+
                     Text(
-                        text = "Current API Limits:",
+                        text = context.getString(R.string.rate_limit_current_limits),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold
                     )
-                    
+
                     Column(
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        LimitInfoItem("Read requests", "300 per minute per project")
-                        LimitInfoItem("Write requests", "300 per minute per project")
-                        LimitInfoItem("Per user requests", "60 per minute per user")
-                        LimitInfoItem("Per 100 seconds", "500 requests per project")
+                        LimitInfoItem(
+                            context.getString(R.string.rate_limit_read_requests),
+                            context.getString(R.string.rate_limit_read_value),
+                        )
+                        LimitInfoItem(
+                            context.getString(R.string.rate_limit_write_requests),
+                            context.getString(R.string.rate_limit_write_value),
+                        )
+                        LimitInfoItem(
+                            context.getString(R.string.rate_limit_per_user_requests),
+                            context.getString(R.string.rate_limit_per_user_value),
+                        )
+                        LimitInfoItem(
+                            context.getString(R.string.rate_limit_per_100_seconds),
+                            context.getString(R.string.rate_limit_per_100_value),
+                        )
                     }
-                    
-                    // What to do section
+
                     Text(
-                        text = "What to do:",
+                        text = context.getString(R.string.rate_limit_what_to_do),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold
                     )
-                    
+
                     Column(
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        ActionItem("⏰", "Wait 1-2 minutes before trying again")
-                        ActionItem("🔄", "The app will automatically retry with backoff")
-                        ActionItem("⚙️", "Consider reducing sync frequency in settings")
-                        ActionItem("📊", "Check if other apps are using the same API quota")
+                        ActionItem("⏰", context.getString(R.string.rate_limit_action_wait))
+                        ActionItem("🔄", context.getString(R.string.rate_limit_action_auto_retry))
+                        ActionItem("⚙️", context.getString(R.string.rate_limit_action_reduce_freq))
+                        ActionItem("📊", context.getString(R.string.rate_limit_action_check_quota))
                     }
-                    
-                    // Tips section
+
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(
@@ -110,16 +120,14 @@ fun RateLimitErrorDialog(
                             modifier = Modifier.padding(12.dp)
                         ) {
                             Text(
-                                text = "💡 Tips:",
+                                text = "💡 ${context.getString(R.string.rate_limit_tips_title)}",
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "• Use manual sync instead of auto-sync during peak usage\n" +
-                                      "• Sync less frequently if you're hitting limits often\n" +
-                                      "• Check your Google Cloud Console for quota usage",
+                                text = context.getString(R.string.rate_limit_tips_body),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
@@ -134,12 +142,12 @@ fun RateLimitErrorDialog(
                 ) {
                     Icon(Icons.Default.Refresh, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Retry Sync")
+                    Text(context.getString(R.string.rate_limit_retry_sync))
                 }
             },
             dismissButton = {
                 TextButton(onClick = onDismiss) {
-                    Text("Close")
+                    Text(context.getString(R.string.close))
                 }
             },
             modifier = modifier

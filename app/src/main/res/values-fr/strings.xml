@@ -32,6 +32,11 @@
     <string name="shift_types_sheet_label">Feuille types de Shifts</string>
     <string name="venues_sheet_label">Feuille Lieux</string>
     <string name="sales_items_sheet_label">Feuille des articles de vente</string>
+    <string name="transfers_sheet_label">Feuille des transferts</string>
+    <string name="account_amount_label">Montant du compte</string>
+    <string name="currency_setting_label">Devise</string>
+    <string name="currency_setting_description">Devise affichée pour les soldes et le POS</string>
+    <string name="pos_welcome_button">POS interne</string>
     <string name="admin_label">Admin</string>
     <string name="admin_yes">Oui</string>
     <string name="admin_no">Non</string>
@@ -107,6 +112,8 @@
     <string name="language_spanish">Español</string>
     <string name="language_chinese">繁體中文</string>
     <string name="language_chinese_simplified">简体中文</string>
+    <string name="language_latin">Latina</string>
+    <string name="language_hindi">हिन्दी</string>
     
     <!-- Theme Settings -->
     <string name="theme_title">Thème</string>
@@ -1109,6 +1116,8 @@
     <string name="file_size">Taille : %s</string>
     <string name="graph_preview">Aperçu du graphique</string>
     <string name="share_graph">Partager le graphique</string>
+    <string name="pos_report_share">Partager le rapport</string>
+    <string name="pos_report_open">Ouvrir le rapport</string>
     <string name="open_with">Ouvrir avec</string>
     <string name="active_volunteers_graph">Graphique des bénévoles actif·ve·s</string>
     
@@ -1293,4 +1302,36 @@
     <string name="ble_reader_enable_bluetooth">Activer le Bluetooth</string>
     <string name="ble_reader_not_acr1255">L\'appareil Bluetooth sélectionné n\'est pas un lecteur ACS ACR1255U-J1.</string>
     <string name="ble_reader_verification_inconclusive_saved">La vérification du lecteur est restée inconclusive. L\'appareil a quand même été enregistré.</string>
+
+    <!-- Hardcoded UI strings (i18n) -->
+    <string name="custom_theme_editor_title">Éditeur de thème personnalisé</string>
+    <string name="done">Terminé</string>
+    <string name="email_gmail_connect_activity_unavailable">Connexion impossible : contexte Activity indisponible</string>
+    <string name="email_gmail_connect_api">Connecter l\'API Gmail</string>
+    <string name="email_gmail_connect_api_hint">Votre compte Google est enregistré. Sur Android TV et les appareils plus anciens, une étape d\'autorisation supplémentaire est nécessaire pour connecter l\'API Gmail.</string>
+    <string name="rate_limit_action_auto_retry">L\'application réessaiera automatiquement avec backoff</string>
+    <string name="rate_limit_action_check_quota">Vérifiez si d\'autres applications utilisent le même quota API</string>
+    <string name="rate_limit_action_reduce_freq">Réduisez la fréquence de synchronisation dans les paramètres</string>
+    <string name="rate_limit_action_wait">Attendez 1 à 2 minutes avant de réessayer</string>
+    <string name="rate_limit_current_limits">Limites API actuelles :</string>
+    <string name="rate_limit_dialog_title">Limite de débit API dépassée</string>
+    <string name="rate_limit_per_100_seconds">Par 100 secondes</string>
+    <string name="rate_limit_per_100_value">500 requêtes par projet</string>
+    <string name="rate_limit_per_user_requests">Requêtes par utilisateur</string>
+    <string name="rate_limit_per_user_value">60 par minute et par utilisateur</string>
+    <string name="rate_limit_read_requests">Requêtes en lecture</string>
+    <string name="rate_limit_read_value">300 par minute et par projet</string>
+    <string name="rate_limit_retry_sync">Réessayer la synchro</string>
+    <string name="rate_limit_tips_body">• Utilisez la synchronisation manuelle au lieu de l\'auto-sync en période de forte charge
+• Synchronisez moins souvent si vous atteignez souvent les limites
+• Consultez la console Google Cloud pour l\'utilisation du quota</string>
+    <string name="rate_limit_tips_title">Astuces :</string>
+    <string name="rate_limit_too_many_requests">Trop de requêtes</string>
+    <string name="rate_limit_wait_message">Vous avez atteint la limite de débit de l\'API Google Sheets. Veuillez attendre 1 à 2 minutes avant de réessayer.</string>
+    <string name="rate_limit_what_to_do">Que faire :</string>
+    <string name="rate_limit_write_requests">Requêtes en écriture</string>
+    <string name="rate_limit_write_value">300 par minute et par projet</string>
+    <string name="theme_hue_label">Teinte (arc-en-ciel) : %1$d°</string>
+    <string name="theme_luminosity_label">Luminosité : %1$d%%</string>
+    <string name="theme_saturation_label">Saturation : %1$d%%</string>
 </resources>

@@ -223,6 +223,8 @@ data class JobTypeConfig(
     val novaJobType: NovaJobType = NovaJobType.DEFAULT_SHIFT, // Sub-type of NOVA shift determining the benefits package
     val benefitSystemType: BenefitSystemType = BenefitSystemType.STELLAR, // Type of benefit system
     val manualRewards: ManualRewards? = null, // Manual rewards configuration (only used if benefitSystemType is MANUAL)
+    /** null = use default drink-equivalent CHF; 0 = no credit; >0 = override per shift */
+    val accountCreditChf: Double? = null,
     val description: String = "",
     val lastModified: Long = System.currentTimeMillis()
 ) 
@@ -278,9 +280,31 @@ data class SalesSheetItem(
     val price: Double,
     val hasDiscount: Boolean = false,
     val requiredRank: VolunteerRank? = null,
+    val categories: String = "", // Comma-separated SalesCategory names
+    val emoji: String = "",
+    val availableVenues: String = "",
     val isActive: Boolean = true,
     val lastModified: Long = System.currentTimeMillis()
-) 
+)
+
+enum class SalesCategory {
+    MERCH,
+    ENTRY,
+    BAR,
+    OTHER;
+
+    companion object {
+        fun parseList(raw: String): Set<SalesCategory> =
+            raw.split(",")
+                .map { it.trim().uppercase() }
+                .filter { it.isNotEmpty() }
+                .mapNotNull { name -> entries.find { it.name == name } }
+                .toSet()
+
+        fun formatList(categories: Set<SalesCategory>): String =
+            categories.joinToString(",") { it.name }
+    }
+} 
 
 enum class ShiftTime {
     BEFORE_MIDNIGHT,
@@ -431,7 +455,8 @@ data class ManualRewards(
     /** Future event self-entries (each swipe at the door consumes one); only for MANUAL shift types. */
     val futureSingleUseEntries: Int = 0,
     /** How many friends/invites the holder gets with each future entry; only meaningful when futureSingleUseEntries > 0. */
-    val futureSingleUseEntryInvites: Int = 1
+    val futureSingleUseEntryInvites: Int = 1,
+    val accountCreditChf: Double = 0.0
 ) 
 
 // Type converters for Room database
@@ -479,7 +504,7 @@ class Converters {
     @TypeConverter
     fun fromManualRewards(manualRewards: ManualRewards?): String? {
         return manualRewards?.let {
-            "${it.durationDays}|${it.freeDrinks}|${it.barDiscountPercentage}|${it.freeEntry}|${it.invites}|${it.otherNotes}|${it.futureSingleUseEntries}|${it.futureSingleUseEntryInvites}"
+            "${it.durationDays}|${it.freeDrinks}|${it.barDiscountPercentage}|${it.freeEntry}|${it.invites}|${it.otherNotes}|${it.futureSingleUseEntries}|${it.futureSingleUseEntryInvites}|${it.accountCreditChf}"
         }
     }
 
@@ -488,6 +513,17 @@ class Converters {
         return manualRewards?.let { data ->
             val parts = data.split("|")
             when {
+                parts.size >= 9 -> ManualRewards(
+                    durationDays = parts[0].toIntOrNull() ?: 1,
+                    freeDrinks = parts[1].toIntOrNull() ?: 0,
+                    barDiscountPercentage = parts[2].toIntOrNull() ?: 0,
+                    freeEntry = parts[3].toBooleanStrictOrNull() ?: false,
+                    invites = parts[4].toIntOrNull() ?: 0,
+                    otherNotes = parts[5],
+                    futureSingleUseEntries = parts[6].toIntOrNull() ?: 0,
+                    futureSingleUseEntryInvites = parts[7].toIntOrNull() ?: 1,
+                    accountCreditChf = parts[8].toDoubleOrNull() ?: 0.0
+                )
                 parts.size >= 8 -> ManualRewards(
                     durationDays = parts[0].toIntOrNull() ?: 1,
                     freeDrinks = parts[1].toIntOrNull() ?: 0,
@@ -522,6 +558,18 @@ class Converters {
             }
         }
     }
+
+    @TypeConverter
+    fun fromAccountHolderType(type: AccountHolderType): String = type.name
+
+    @TypeConverter
+    fun toAccountHolderType(type: String): AccountHolderType = AccountHolderType.valueOf(type)
+
+    @TypeConverter
+    fun fromAccountTransferType(type: AccountTransferType): String = type.name
+
+    @TypeConverter
+    fun toAccountTransferType(type: String): AccountTransferType = AccountTransferType.valueOf(type)
 }
 
 object BenefitCalculator {

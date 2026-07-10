@@ -50,6 +50,7 @@ import com.eventmanager.app.data.utils.DateTimeUtils
 import com.eventmanager.app.data.sync.DateFormatUtils
 import com.eventmanager.app.ui.utils.*
 import com.eventmanager.app.ui.util.shiftTimeLabelIfRelevant
+import com.eventmanager.app.ui.viewmodel.EventManagerViewModel
 import com.eventmanager.app.R
 import com.eventmanager.app.utils.QRCodeUtils
 import com.eventmanager.app.data.sync.formatDate
@@ -165,7 +166,12 @@ actual fun VolunteerBenefitsPanel(
     modifier: Modifier,
     onConfirmEntry: ((Job, Int) -> Unit)?,
     onAssignNfcUid: ((Volunteer, String) -> Unit)?,
-    readOnly: Boolean
+    readOnly: Boolean,
+    accountBalance: Double,
+    currencyCode: String,
+    recentTransfers: List<AccountTransfer>,
+    onManualAccountAdjust: ((Double, String) -> Unit)?,
+    viewModel: EventManagerViewModel?
 ) {
     val context = LocalContext.current
     val isPhone = !isTablet()
@@ -283,10 +289,10 @@ actual fun VolunteerBenefitsPanel(
             .filterNot { meetingNovaBenefitsExcludedForOrion && it.isNovaMeetingOnlyStylePerk() }
     }
     
-    Box(
-        modifier = modifier.fillMaxSize()
+    ProfileEasterEggHost(
+        enabled = leonardoEasterEggEnabled,
+        modifier = modifier.fillMaxSize(),
     ) {
-        ProfileEasterEggBackground(enabled = leonardoEasterEggEnabled)
         // Background
         Card(
             modifier = Modifier
@@ -797,6 +803,19 @@ actual fun VolunteerBenefitsPanel(
                             )
                         }
                     }
+
+                    if (!readOnly && viewModel != null) {
+                        item {
+                            AccountInfoSection(
+                                balance = accountBalance,
+                                currencyCode = currencyCode,
+                                recentTransfers = recentTransfers,
+                                onManualAdjust = onManualAccountAdjust ?: { _, _ -> },
+                                viewModel = viewModel,
+                                allowAdjustment = onManualAccountAdjust != null
+                            )
+                        }
+                    }
                     
                     // Shift History Section
                     if (!readOnly) {
@@ -818,7 +837,6 @@ actual fun VolunteerBenefitsPanel(
                 }
             }
         }
-        ProfileEasterEggConfetti(enabled = leonardoEasterEggEnabled)
     }
 
     // Email confirmation dialog state
@@ -833,21 +851,13 @@ actual fun VolunteerBenefitsPanel(
         
         Dialog(
             onDismissRequest = { showQrDialog = false },
-            properties = DialogProperties(
-                usePlatformDefaultWidth = !isTabletDevice,
-                dismissOnBackPress = true,
-                dismissOnClickOutside = true
-            )
+            properties = phoneFractionDialogProperties(),
         ) {
+            DialogFractionSizer(profile = FractionalDialogProfile.Card) { maxDialogWidth, maxDialogHeight ->
             Card(
                 modifier = Modifier
-                    .then(
-                        if (isTabletDevice) {
-                            Modifier.widthIn(max = tabletMaxWidth)
-                        } else {
-                            Modifier.fillMaxWidth(0.92f)
-                        }
-                    )
+                    .widthIn(max = if (isTabletDevice) tabletMaxWidth else maxDialogWidth)
+                    .heightIn(max = maxDialogHeight)
                     .padding(tabletDialogPadding),
                 shape = RoundedCornerShape(28.dp),
                 colors = CardDefaults.cardColors(
@@ -1014,6 +1024,7 @@ actual fun VolunteerBenefitsPanel(
                     }
                 }
             }
+        }
         }
     }
 

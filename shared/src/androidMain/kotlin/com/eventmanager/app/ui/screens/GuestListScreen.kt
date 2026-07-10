@@ -31,6 +31,7 @@ import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.ui.components.SearchBarWithFilter
 import com.eventmanager.app.ui.components.VolunteerBenefitsPanel
 import com.eventmanager.app.ui.components.GuestDetailPanel
+import com.eventmanager.app.ui.components.fullScreenDialogProperties
 import com.eventmanager.app.ui.utils.*
 import com.eventmanager.app.R
 import androidx.compose.ui.platform.LocalContext
@@ -43,6 +44,8 @@ import java.time.temporal.ChronoUnit
 import java.time.format.DateTimeFormatter
 import com.eventmanager.app.ui.utils.GuestListDefaultZoneId
 import com.eventmanager.app.ui.utils.rememberGuestListEffectiveToday
+import com.eventmanager.app.data.utils.formatMoney
+import com.eventmanager.app.ui.viewmodel.EventManagerViewModel
 
 /** Billeterie (read-only) guest/volunteer profile on phone: shorter card-style window vs. full-screen admin. */
 private const val READ_ONLY_PROFILE_PHONE_HEIGHT_FRACTION = 0.60f
@@ -104,10 +107,15 @@ actual fun GuestListScreen(
     scrollBehavior: String,
     /** Billeterie: view-only list and detail panels (no add/edit/delete/NFC/QR); history/future timeline and future-entry validate allowed. */
     readOnly: Boolean,
-    @Suppress("UNUSED_PARAMETER") searchFocusTick: Int) {
+    @Suppress("UNUSED_PARAMETER") searchFocusTick: Int,
+    viewModel: EventManagerViewModel?
+) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val settingsManager = remember { settingsManagerFor(context) }
+    val currencyCode = remember { settingsManager.getCurrencyCode() }
+    val accountTransfers by viewModel?.accountTransfers?.collectAsState()
+        ?: remember { mutableStateOf(emptyList()) }
     var selectedVenueName by remember { mutableStateOf<String?>(null) }
     var showAddDialog by remember { mutableStateOf(false) }
     var showVolunteerBenefits by remember { mutableStateOf<Volunteer?>(null) }
@@ -765,9 +773,7 @@ actual fun GuestListScreen(
         val compactReadOnlyVolunteerProfile = !benefitsTablet && readOnly
         Dialog(
             onDismissRequest = { showVolunteerBenefits = null },
-            properties = DialogProperties(
-                usePlatformDefaultWidth = !benefitsTablet && !readOnly
-            )
+            properties = fullScreenDialogProperties(),
         ) {
             Box(
                 modifier = Modifier
@@ -799,7 +805,14 @@ actual fun GuestListScreen(
                                 )
                             )
                             showVolunteerBenefits = updatedVolunteer.copy(nfcCardUid = uid)
-                        }
+                        },
+                        accountBalance = viewModel?.getVolunteerAccountBalance(volunteer.id) ?: 0.0,
+                        currencyCode = currencyCode,
+                        recentTransfers = accountTransfers.filter {
+                            it.holderType == AccountHolderType.VOLUNTEER && it.holderId == volunteer.id
+                        },
+                        onManualAccountAdjust = null,
+                        viewModel = viewModel
                     )
                 }
             }
@@ -808,13 +821,12 @@ actual fun GuestListScreen(
     
     // Guest Detail Panel
     if (showGuestDetailPanel != null) {
+        val detailGuest = showGuestDetailPanel!!
         val guestDetailTablet = isTablet()
         val compactReadOnlyGuestProfile = !guestDetailTablet && readOnly
         Dialog(
             onDismissRequest = { showGuestDetailPanel = null },
-            properties = DialogProperties(
-                usePlatformDefaultWidth = !guestDetailTablet && !readOnly
-            )
+            properties = fullScreenDialogProperties(),
         ) {
             Box(
                 modifier = Modifier
@@ -830,7 +842,7 @@ actual fun GuestListScreen(
                 ReadOnlyPhoneProfileFrame(enabled = compactReadOnlyGuestProfile) {
                     GuestDetailPanel(
                         modifier = Modifier.fillMaxSize(),
-                        guest = showGuestDetailPanel!!,
+                        guest = detailGuest,
                         venues = venues,
                         readOnly = readOnly,
                         onEdit = { guest ->
@@ -850,7 +862,22 @@ actual fun GuestListScreen(
                             showGuestDetailPanel = null
                             onDeleteGuest(guest)
                         },
-                        onClose = { showGuestDetailPanel = null }
+                        onClose = { showGuestDetailPanel = null },
+                        accountBalance = viewModel?.getGuestAccountBalance(detailGuest.nanoId) ?: 0.0,
+                        currencyCode = currencyCode,
+                        recentTransfers = accountTransfers.filter {
+                            it.holderType == AccountHolderType.GUEST && it.holderId == detailGuest.nanoId
+                        },
+                        onManualAccountAdjust = if (viewModel != null && !readOnly) { amount, note ->
+                            viewModel.applyManualAccountAdjustment(
+                                AccountHolderType.GUEST,
+                                detailGuest.nanoId,
+                                detailGuest.name,
+                                amount,
+                                note
+                            )
+                        } else null,
+                        viewModel = viewModel
                     )
                 }
             }

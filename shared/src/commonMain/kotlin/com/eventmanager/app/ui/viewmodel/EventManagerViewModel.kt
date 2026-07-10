@@ -22,9 +22,14 @@ import com.eventmanager.app.data.sync.GuestSyncResult
 import com.eventmanager.app.data.sync.JobSyncResult
 import com.eventmanager.app.data.sync.JobTypeSyncResult
 import com.eventmanager.app.data.sync.SalesSheetItemSyncResult
+import com.eventmanager.app.data.sync.TransferSyncResult
 import com.eventmanager.app.data.sync.VenueSyncResult
 import com.eventmanager.app.data.sync.SyncErrorManager
 import com.eventmanager.app.data.sync.AppLogger
+import com.eventmanager.app.data.utils.AccountBalanceService
+import com.eventmanager.app.data.utils.AccountCreditService
+import com.eventmanager.app.data.utils.PosCartLine
+import com.eventmanager.app.data.utils.PosSaleResult
 import com.eventmanager.app.data.utils.effectiveBenefitFutureEntriesRemaining
 import com.eventmanager.app.data.utils.effectiveBenefitFutureEntryInvites
 import com.eventmanager.app.data.utils.jobTypeSupportsTrackedFutureEntries
@@ -93,6 +98,18 @@ class EventManagerViewModel(
     private val _salesSheetItems = MutableStateFlow<List<SalesSheetItem>>(emptyList())
     val salesSheetItems: StateFlow<List<SalesSheetItem>> = _salesSheetItems
 
+    private val _accountTransfers = MutableStateFlow<List<AccountTransfer>>(emptyList())
+    val accountTransfers: StateFlow<List<AccountTransfer>> = _accountTransfers
+
+    private val _accountBalances = MutableStateFlow<Map<AccountHolderKey, Double>>(emptyMap())
+    val accountBalances: StateFlow<Map<AccountHolderKey, Double>> = _accountBalances
+
+    private val accountCreditService: AccountCreditService by lazy {
+        AccountCreditService(repository) {
+            platformContext?.let { SettingsManager(it).getCurrencyCode() } ?: "CHF"
+        }
+    }
+
     private val _peopleCounterSelectedVenueId = MutableStateFlow(0L)
     val peopleCounterSelectedVenueId: StateFlow<Long> = _peopleCounterSelectedVenueId.asStateFlow()
 
@@ -122,6 +139,8 @@ class EventManagerViewModel(
     // State for sync error
     private val _syncError = MutableStateFlow<String?>(null)
     val syncError: StateFlow<String?> = _syncError.asStateFlow()
+
+    private var posSessionBootstrapDone = false
     
     // State for sync error dialog visibility
     private val _showSyncErrorDialog = MutableStateFlow(false)
@@ -176,6 +195,10 @@ class EventManagerViewModel(
         viewModelScope.launch {
             delay(800) // Small delay to ensure all data is loaded
             updateVolunteerActivityFromCurrentJobs()
+        }
+        viewModelScope.launch {
+            delay(1200)
+            evaluatePendingShiftCreditsIfNeeded()
         }
         platformContext?.let { ctx ->
             val sm = SettingsManager(ctx)
@@ -472,6 +495,39 @@ class EventManagerViewModel(
                 println("Failed to load sales sheet items: ${e.message}")
                 _salesSheetItems.value = emptyList()
             }
+        }
+        viewModelScope.launch {
+            try {
+                repository.getAllAccountTransfers().collect { transfers ->
+                    _accountTransfers.value = transfers
+                    _accountBalances.value = AccountBalanceService.computeAllBalances(transfers)
+                }
+            } catch (e: Exception) {
+                println("Failed to load account transfers: ${e.message}")
+                _accountTransfers.value = emptyList()
+                _accountBalances.value = emptyMap()
+            }
+        }
+    }
+
+    fun getVolunteerAccountBalance(volunteerId: String): Double =
+        _accountBalances.value[AccountHolderKey(AccountHolderType.VOLUNTEER, volunteerId)] ?: 0.0
+
+    fun getGuestAccountBalance(guestNanoId: String): Double =
+        _accountBalances.value[AccountHolderKey(AccountHolderType.GUEST, guestNanoId)] ?: 0.0
+
+    private suspend fun refreshAccountBalancesFromDb() {
+        val transfers = repository.getAllAccountTransfersOnce()
+        _accountTransfers.value = transfers
+        _accountBalances.value = AccountBalanceService.computeAllBalances(transfers)
+    }
+
+    private suspend fun evaluatePendingShiftCreditsIfNeeded() {
+        val offset = platformContext?.let { SettingsManager(it).getDateChangeOffsetHours() } ?: 0
+        val created = accountCreditService.evaluatePendingShiftCredits(_jobTypeConfigs.value, offset)
+        if (created.isNotEmpty()) {
+            refreshAccountBalancesFromDb()
+            twoWaySyncService?.backupTransfersToSheets()
         }
     }
     
@@ -851,6 +907,15 @@ class EventManagerViewModel(
                 println("Successfully added job to Google Sheets with sheetsId: $sheetsId")
                 
                 println("Successfully added job: ${job.jobTypeName}")
+                val volunteer = repository.getVolunteerById(jobWithSheetsId.volunteerId)
+                if (volunteer != null) {
+                    val offset = platformContext?.let { SettingsManager(it).getDateChangeOffsetHours() } ?: 0
+                    accountCreditService.applyShiftCredits(
+                        jobWithSheetsId, volunteer, _jobTypeConfigs.value, offset
+                    )
+                    refreshAccountBalancesFromDb()
+                    twoWaySyncService?.backupTransfersToSheets()
+                }
                 recalcAndUploadVolunteerGuestList()
             } catch (e: Exception) {
                 println("Failed to add job: ${e.message}")
@@ -921,6 +986,13 @@ class EventManagerViewModel(
                 }
                 
                 println("Successfully deleted job: ${job.jobTypeName}")
+                val volunteer = repository.getVolunteerById(job.volunteerId)
+                if (volunteer != null) {
+                    val offset = platformContext?.let { SettingsManager(it).getDateChangeOffsetHours() } ?: 0
+                    accountCreditService.reverseShiftCredits(job, volunteer, _jobTypeConfigs.value, offset)
+                    refreshAccountBalancesFromDb()
+                    twoWaySyncService?.backupTransfersToSheets()
+                }
                 recalcAndUploadVolunteerGuestList()
             } catch (e: Exception) {
                 println("Failed to delete job: ${e.message}")
@@ -4476,6 +4548,7 @@ class EventManagerViewModel(
                     if (changes.hasChanges) {
                         updateVolunteerActivityFromJobs()
                         recalcAndUpdateVolunteerBenefits()
+                        evaluatePendingShiftCreditsIfNeeded()
                     }
                     
                     // Update sync time
@@ -4708,6 +4781,88 @@ class EventManagerViewModel(
                 _isSyncing.value = false
             }
         }
+    }
+
+    fun applyManualAccountAdjustment(
+        holderType: AccountHolderType,
+        holderId: String,
+        holderName: String,
+        amount: Double,
+        note: String
+    ) {
+        viewModelScope.launch {
+            try {
+                accountCreditService.applyManualAdjustment(holderType, holderId, holderName, amount, note)
+                refreshAccountBalancesFromDb()
+                twoWaySyncService?.backupTransfersToSheets()
+            } catch (e: Exception) {
+                _syncError.value = "Failed to adjust account: ${e.message}"
+            }
+        }
+    }
+
+    suspend fun completePosSale(
+        holderType: AccountHolderType,
+        holderId: String,
+        holderName: String,
+        cart: List<PosCartLine>,
+        barDiscountPercent: Int = 0,
+        posVenueName: String = PosVenueScope.GLOBAL,
+    ): PosSaleResult {
+        val result = accountCreditService.completePosSale(
+            holderType, holderId, holderName, cart, barDiscountPercent, posVenueName
+        )
+        refreshAccountBalancesFromDb()
+        twoWaySyncService?.backupTransfersToSheets()
+        return result
+    }
+
+    fun endPosSession() {
+        posSessionBootstrapDone = false
+    }
+
+    fun bootstrapPosSession() {
+        if (posSessionBootstrapDone) return
+        posSessionBootstrapDone = true
+        syncSalesSheetItemsWithTargetedUpdates()
+        syncTransfersWithTargetedUpdates()
+    }
+
+    fun syncTransfersWithTargetedUpdates() {
+        viewModelScope.launch {
+            _isSyncing.value = true
+            try {
+                if (!isGoogleSheetsConfigured()) return@launch
+                googleSheetsService.initializeSheetsService()
+                val result = syncManager?.performTransferDifferentialSync()
+                if (result is TransferSyncResult.Success) {
+                    applyTransferUIUpdates(result.changes)
+                    updateSyncTime()
+                }
+            } catch (e: Exception) {
+                println("Transfer sync error: ${e.message}")
+            } finally {
+                _isSyncing.value = false
+            }
+        }
+    }
+
+    private fun applyTransferUIUpdates(changes: DifferentialSyncService.SyncChanges<AccountTransfer>) {
+        val current = _accountTransfers.value.toMutableList()
+        changes.deleted.forEach { deleted ->
+            current.removeAll { it.transferId == deleted.transferId }
+        }
+        changes.modified.forEach { modified ->
+            val idx = current.indexOfFirst { it.transferId == modified.transferId }
+            if (idx >= 0) current[idx] = modified else current.add(modified)
+        }
+        changes.new.forEach { newTransfer ->
+            if (current.none { it.transferId == newTransfer.transferId }) {
+                current.add(0, newTransfer)
+            }
+        }
+        _accountTransfers.value = current.sortedByDescending { it.createdAt }
+        _accountBalances.value = AccountBalanceService.computeAllBalances(_accountTransfers.value)
     }
 
     fun syncSalesSheetItemsWithTargetedUpdates() {

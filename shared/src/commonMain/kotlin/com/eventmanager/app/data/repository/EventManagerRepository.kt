@@ -1,5 +1,6 @@
 package com.eventmanager.app.data.repository
 
+import com.eventmanager.app.data.dao.AccountTransferDao
 import com.eventmanager.app.data.dao.GuestDao
 import com.eventmanager.app.data.dao.JobDao
 import com.eventmanager.app.data.dao.JobTypeConfigDao
@@ -24,7 +25,8 @@ class EventManagerRepository(
     private val jobDao: JobDao,
     private val jobTypeConfigDao: JobTypeConfigDao,
     private val venueDao: VenueDao,
-    private val salesSheetItemDao: SalesSheetItemDao
+    private val salesSheetItemDao: SalesSheetItemDao,
+    private val accountTransferDao: AccountTransferDao
 ) {
     // Guest operations
     fun getAllGuests(): Flow<List<Guest>> = guestDao.getAllGuests()
@@ -287,6 +289,30 @@ class EventManagerRepository(
     suspend fun updateSalesSheetItemsAll(items: List<SalesSheetItem>) = salesSheetItemDao.updateSalesSheetItemsAll(items)
     suspend fun deleteSalesSheetItemsAll(items: List<SalesSheetItem>) = salesSheetItemDao.deleteSalesSheetItemsAll(items)
 
+    // Account transfer operations
+    fun getAllAccountTransfers(): Flow<List<AccountTransfer>> = accountTransferDao.getAllAccountTransfers()
+    suspend fun getAllAccountTransfersOnce(): List<AccountTransfer> = accountTransferDao.getAllAccountTransfersOnce()
+    suspend fun getTransfersForHolder(holderType: AccountHolderType, holderId: String): List<AccountTransfer> =
+        accountTransferDao.getTransfersForHolder(holderType, holderId)
+    suspend fun getRecentTransfersForHolder(holderType: AccountHolderType, holderId: String, limit: Int): List<AccountTransfer> =
+        accountTransferDao.getRecentTransfersForHolder(holderType, holderId, limit)
+    suspend fun getAccountTransferBySourceReference(sourceReference: String): AccountTransfer? =
+        accountTransferDao.getBySourceReference(sourceReference)
+    suspend fun getTransfersBetween(startMs: Long, endMs: Long): List<AccountTransfer> =
+        accountTransferDao.getTransfersBetween(startMs, endMs)
+    suspend fun insertAccountTransfer(transfer: AccountTransfer): Long = accountTransferDao.insertAccountTransfer(transfer)
+    suspend fun updateAccountTransfer(transfer: AccountTransfer) = accountTransferDao.updateAccountTransfer(transfer)
+    suspend fun deleteAccountTransfer(transfer: AccountTransfer) = accountTransferDao.deleteAccountTransfer(transfer)
+    suspend fun insertAccountTransfersAll(transfers: List<AccountTransfer>): List<Long> =
+        accountTransferDao.insertAccountTransfersAll(transfers)
+    suspend fun updateAccountTransfersAll(transfers: List<AccountTransfer>) =
+        accountTransferDao.updateAccountTransfersAll(transfers)
+    suspend fun deleteAccountTransfersAll(transfers: List<AccountTransfer>) =
+        accountTransferDao.deleteAccountTransfersAll(transfers)
+    suspend fun clearAllAccountTransfers() = accountTransferDao.deleteAllAccountTransfers()
+
+    fun getJobsByVolunteer(volunteerId: String): Flow<List<Job>> = jobDao.getJobsByVolunteer(volunteerId)
+
     // Get volunteer benefit status with time-based calculations
     suspend fun getVolunteerBenefitStatus(volunteerId: String, offsetHours: Int = 0): VolunteerBenefitStatus? {
         val volunteer = getVolunteerById(volunteerId) ?: return null
@@ -329,6 +355,7 @@ class EventManagerRepository(
         jobTypeConfigDao.deleteAllJobTypeConfigs()
         venueDao.deleteAllVenues()
         salesSheetItemDao.deleteAllSalesSheetItems()
+        accountTransferDao.deleteAllAccountTransfers()
     }
     
     suspend fun clearAllGuests() {

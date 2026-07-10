@@ -8,12 +8,14 @@ import androidx.room.migration.Migration
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.execSQL
 import androidx.sqlite.SQLiteStatement
+import com.eventmanager.app.data.dao.AccountTransferDao
 import com.eventmanager.app.data.dao.GuestDao
 import com.eventmanager.app.data.dao.JobDao
 import com.eventmanager.app.data.dao.JobTypeConfigDao
 import com.eventmanager.app.data.dao.SalesSheetItemDao
 import com.eventmanager.app.data.dao.VenueDao
 import com.eventmanager.app.data.dao.VolunteerDao
+import com.eventmanager.app.data.models.AccountTransfer
 import com.eventmanager.app.data.models.Converters
 import com.eventmanager.app.data.models.Guest
 import com.eventmanager.app.data.models.Job
@@ -36,8 +38,8 @@ private fun SQLiteConnection.query(sql: String): MigrationCursor =
     MigrationCursor(prepare(sql))
 
 @Database(
-    entities = [Guest::class, Volunteer::class, Job::class, JobTypeConfig::class, VenueEntity::class, SalesSheetItem::class],
-    version = 32,
+    entities = [Guest::class, Volunteer::class, Job::class, JobTypeConfig::class, VenueEntity::class, SalesSheetItem::class, AccountTransfer::class],
+    version = 36,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -48,6 +50,7 @@ abstract class EventManagerDatabase : RoomDatabase() {
     abstract fun jobTypeConfigDao(): JobTypeConfigDao
     abstract fun venueDao(): VenueDao
     abstract fun salesSheetItemDao(): SalesSheetItemDao
+    abstract fun accountTransferDao(): AccountTransferDao
 
     companion object {
         @Volatile
@@ -1191,6 +1194,103 @@ abstract class EventManagerDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * MIGRATION 32→33: Account transfers ledger, job type account credit, sales item categories/emoji.
+         */
+        private val MIGRATION_32_33 = object : Migration(32, 33) {
+            override fun migrate(connection: SQLiteConnection) {
+                try {
+                    println("Starting migration 32→33: account_transfers + schema updates")
+                    connection.execSQL("""
+                        CREATE TABLE IF NOT EXISTS account_transfers (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                            sheetsId TEXT,
+                            transferId TEXT NOT NULL,
+                            holderType TEXT NOT NULL,
+                            holderId TEXT NOT NULL,
+                            holderName TEXT NOT NULL,
+                            amount REAL NOT NULL,
+                            currencyCode TEXT NOT NULL,
+                            type TEXT NOT NULL,
+                            sourceReference TEXT NOT NULL,
+                            jobReferenceKey TEXT NOT NULL DEFAULT '',
+                            jobTypeName TEXT NOT NULL DEFAULT '',
+                            jobDate INTEGER,
+                            description TEXT NOT NULL DEFAULT '',
+                            creditAmountPaid REAL,
+                            posItemsJson TEXT NOT NULL DEFAULT '',
+                            createdAt INTEGER NOT NULL,
+                            lastModified INTEGER NOT NULL
+                        )
+                    """.trimIndent())
+                    connection.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_account_transfers_transferId ON account_transfers(transferId)")
+                    connection.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_account_transfers_sourceReference ON account_transfers(sourceReference)")
+                    connection.execSQL("CREATE INDEX IF NOT EXISTS index_account_transfers_sheetsId ON account_transfers(sheetsId)")
+                    connection.execSQL("CREATE INDEX IF NOT EXISTS index_account_transfers_holderType_holderId ON account_transfers(holderType, holderId)")
+                    connection.execSQL("CREATE INDEX IF NOT EXISTS index_account_transfers_lastModified ON account_transfers(lastModified)")
+                    connection.execSQL("CREATE INDEX IF NOT EXISTS index_account_transfers_createdAt ON account_transfers(createdAt)")
+                    connection.execSQL("ALTER TABLE job_type_configs ADD COLUMN accountCreditChf REAL")
+                    connection.execSQL("ALTER TABLE sales_sheet_items ADD COLUMN categories TEXT NOT NULL DEFAULT ''")
+                    connection.execSQL("ALTER TABLE sales_sheet_items ADD COLUMN emoji TEXT NOT NULL DEFAULT ''")
+                    println("Migration 32→33 completed successfully")
+                } catch (e: Exception) {
+                    println("Migration 32→33 failed: ${e.message}")
+                    e.printStackTrace()
+                    throw e
+                }
+            }
+        }
+
+        private val MIGRATION_33_34 = object : Migration(33, 34) {
+            override fun migrate(connection: SQLiteConnection) {
+                try {
+                    println("Starting migration 33→34: MEETING novaJobType fix")
+                    connection.execSQL(
+                        "UPDATE job_type_configs SET novaJobType = 'MEETING' WHERE UPPER(name) = 'MEETING' AND novaJobType = 'DEFAULT_SHIFT'"
+                    )
+                    println("Migration 33→34 completed successfully")
+                } catch (e: Exception) {
+                    println("Migration 33→34 failed: ${e.message}")
+                    e.printStackTrace()
+                    throw e
+                }
+            }
+        }
+
+        private val MIGRATION_34_35 = object : Migration(34, 35) {
+            override fun migrate(connection: SQLiteConnection) {
+                try {
+                    println("Starting migration 34→35: POS cash paid + bar discount audit columns")
+                    connection.execSQL("ALTER TABLE account_transfers ADD COLUMN cashAmountPaid REAL")
+                    connection.execSQL("ALTER TABLE account_transfers ADD COLUMN posBarDiscountPercent INTEGER")
+                    println("Migration 34→35 completed successfully")
+                } catch (e: Exception) {
+                    println("Migration 34→35 failed: ${e.message}")
+                    e.printStackTrace()
+                    throw e
+                }
+            }
+        }
+
+        private val MIGRATION_35_36 = object : Migration(35, 36) {
+            override fun migrate(connection: SQLiteConnection) {
+                try {
+                    println("Starting migration 35→36: POS venue on transfers and sales items")
+                    connection.execSQL(
+                        "ALTER TABLE account_transfers ADD COLUMN posVenueName TEXT NOT NULL DEFAULT ''"
+                    )
+                    connection.execSQL(
+                        "ALTER TABLE sales_sheet_items ADD COLUMN availableVenues TEXT NOT NULL DEFAULT ''"
+                    )
+                    println("Migration 35→36 completed successfully")
+                } catch (e: Exception) {
+                    println("Migration 35→36 failed: ${e.message}")
+                    e.printStackTrace()
+                    throw e
+                }
+            }
+        }
+
         val ALL_MIGRATIONS: Array<Migration> = arrayOf(
             MIGRATION_1_2,
             MIGRATION_2_3,
@@ -1222,7 +1322,11 @@ abstract class EventManagerDatabase : RoomDatabase() {
             MIGRATION_28_29,
             MIGRATION_29_30,
             MIGRATION_30_31,
-            MIGRATION_31_32
+            MIGRATION_31_32,
+            MIGRATION_32_33,
+            MIGRATION_33_34,
+            MIGRATION_34_35,
+            MIGRATION_35_36
         )
     }
 }

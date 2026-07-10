@@ -49,6 +49,7 @@ import com.eventmanager.app.data.utils.DateTimeUtils
 import com.eventmanager.app.data.utils.VolunteerActivityManager
 import com.eventmanager.app.data.utils.getActivityStatusText
 import com.eventmanager.app.ui.utils.*
+import com.eventmanager.app.ui.viewmodel.EventManagerViewModel
 import com.eventmanager.app.ui.util.shiftTimeLabelIfRelevant
 import com.eventmanager.app.utils.QRCodeUtils
 import com.eventmanager.app.R
@@ -95,7 +96,12 @@ actual fun VolunteerDetailPanel(
     onClose: () -> Unit,
     modifier: Modifier,
     jobTypeConfigs: List<JobTypeConfig>,
-    onConfirmFutureEntry: ((Job, Int) -> Unit)?
+    onConfirmFutureEntry: ((Job, Int) -> Unit)?,
+    accountBalance: Double,
+    currencyCode: String,
+    recentTransfers: List<AccountTransfer>,
+    onManualAccountAdjust: ((Double, String) -> Unit)?,
+    viewModel: EventManagerViewModel?
 ) {
     val context = LocalContext.current
     val isPhone = !isTablet()
@@ -144,11 +150,10 @@ actual fun VolunteerDetailPanel(
     }
     val currentRank = volunteerBenefitStatus.rank
     
-    Box(
-        modifier = modifier.fillMaxSize()
+    ProfileEasterEggHost(
+        enabled = leonardoEasterEggEnabled,
+        modifier = modifier.fillMaxSize(),
     ) {
-        ProfileEasterEggBackground(enabled = leonardoEasterEggEnabled)
-
         // Background
         Card(
             modifier = Modifier
@@ -291,6 +296,20 @@ actual fun VolunteerDetailPanel(
                         )
                     }
 
+                    if (onManualAccountAdjust != null && viewModel != null) {
+                        item {
+                            AccountInfoSection(
+                                balance = accountBalance,
+                                currencyCode = currencyCode,
+                                recentTransfers = recentTransfers,
+                                onManualAdjust = onManualAccountAdjust,
+                                viewModel = viewModel,
+                                allowAdjustment = true,
+                                compactAdjust = true
+                            )
+                        }
+                    }
+
                     item {
                         VolunteerFutureEntriesSection(
                             volunteerJobs = volunteerJobs,
@@ -325,7 +344,6 @@ actual fun VolunteerDetailPanel(
                 }
             }
         }
-        ProfileEasterEggConfetti(enabled = leonardoEasterEggEnabled)
     }
 
     // Email confirmation dialog state
@@ -340,21 +358,13 @@ actual fun VolunteerDetailPanel(
         
         Dialog(
             onDismissRequest = { showQrDialog = false },
-            properties = DialogProperties(
-                usePlatformDefaultWidth = !isTabletDevice,
-                dismissOnBackPress = true,
-                dismissOnClickOutside = true
-            )
+            properties = phoneFractionDialogProperties(),
         ) {
+            DialogFractionSizer(profile = FractionalDialogProfile.Card) { maxDialogWidth, maxDialogHeight ->
             Card(
                 modifier = Modifier
-                    .then(
-                        if (isTabletDevice) {
-                            Modifier.widthIn(max = tabletMaxWidth)
-                        } else {
-                            Modifier.fillMaxWidth(0.92f)
-                        }
-                    )
+                    .widthIn(max = if (isTabletDevice) tabletMaxWidth else maxDialogWidth)
+                    .heightIn(max = maxDialogHeight)
                     .padding(tabletDialogPadding),
                 shape = RoundedCornerShape(28.dp),
                 colors = CardDefaults.cardColors(
@@ -495,6 +505,7 @@ actual fun VolunteerDetailPanel(
                     }
                 }
             }
+        }
         }
     }
     

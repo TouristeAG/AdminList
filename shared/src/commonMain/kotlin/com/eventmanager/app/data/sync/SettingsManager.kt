@@ -24,7 +24,9 @@ class SettingsManager(private val storage: AppStorage) {
         private const val KEY_VOLUNTEER_GUEST_LIST_SHEET = "volunteer_guest_list_sheet"
         private const val KEY_VENUES_SHEET = "venues_sheet"
         private const val KEY_SALES_ITEMS_SHEET = "sales_items_sheet"
+        private const val KEY_TRANSFERS_SHEET = "transfers_sheet"
         private const val KEY_TEMP_GUEST_LIST_SHEET = "temp_guest_list_sheet"
+        private const val KEY_CURRENCY_CODE = "currency_code"
         private const val KEY_SYNC_ENABLED = "sync_enabled"
         private const val KEY_AUTO_SYNC = "auto_sync"
         private const val KEY_SYNC_INTERVAL = "sync_interval"
@@ -34,6 +36,11 @@ class SettingsManager(private val storage: AppStorage) {
         private const val KEY_BACKGROUND_ANIMATION_OPACITY = "background_animation_opacity"
         private const val KEY_BILLETTERIE_BACKGROUND_ANIMATION_STYLE = "billeterie_background_animation_style"
         private const val KEY_BILLETTERIE_BACKGROUND_ANIMATION_OPACITY = "billeterie_background_animation_opacity"
+        private const val KEY_POS_BACKGROUND_ANIMATION_STYLE = "pos_background_animation_style"
+        private const val KEY_POS_BACKGROUND_ANIMATION_OPACITY = "pos_background_animation_opacity"
+        private const val KEY_POS_SELECTED_CATEGORY = "pos_selected_category"
+        private const val KEY_POS_SELECTED_VENUE = "pos_selected_venue"
+        private const val KEY_POS_LANGUAGE = "pos_language"
         private const val KEY_PAGE_ANIMATIONS = "page_animations"
         /** Legacy: was also updated on upload-only paths; still read for migration. */
         private const val KEY_LAST_SYNC_TIME = "last_sync_time"
@@ -218,6 +225,23 @@ class SettingsManager(private val storage: AppStorage) {
         storage.putString(KEY_SALES_ITEMS_SHEET, sheet)
     }
 
+    fun getTransfersSheet(): String {
+        return storage.getString(KEY_TRANSFERS_SHEET, GoogleSheetsConfig.TRANSFERS_SHEET)
+            ?: GoogleSheetsConfig.TRANSFERS_SHEET
+    }
+
+    fun saveTransfersSheet(sheet: String) {
+        storage.putString(KEY_TRANSFERS_SHEET, sheet)
+    }
+
+    fun getCurrencyCode(): String {
+        return storage.getString(KEY_CURRENCY_CODE, "CHF") ?: "CHF"
+    }
+
+    fun saveCurrencyCode(code: String) {
+        storage.putString(KEY_CURRENCY_CODE, code.trim().uppercase())
+    }
+
     fun getTempGuestListSheet(): String {
         return storage.getString(KEY_TEMP_GUEST_LIST_SHEET, GoogleSheetsConfig.TEMP_GUEST_LIST_SHEET)
             ?: GoogleSheetsConfig.TEMP_GUEST_LIST_SHEET
@@ -322,6 +346,61 @@ class SettingsManager(private val storage: AppStorage) {
             KEY_BILLETTERIE_BACKGROUND_ANIMATION_OPACITY,
             opacity.coerceIn(0.05f, 1.0f),
         )
+    }
+
+    fun getPosBackgroundAnimationStyle(): String {
+        val stored = storage.getString(KEY_POS_BACKGROUND_ANIMATION_STYLE, "")
+        if (stored.isNotEmpty()) {
+            return normalizeBackgroundAnimationStyle(stored, default = "none")
+        }
+        return "none"
+    }
+
+    fun setPosBackgroundAnimationStyle(style: String) {
+        val normalized = normalizeBackgroundAnimationStyle(style, default = "none")
+        storage.putString(KEY_POS_BACKGROUND_ANIMATION_STYLE, normalized)
+    }
+
+    fun getPosBackgroundAnimationOpacity(): Float {
+        val default = BackgroundAnimationStyle.defaultOpacity(getPosBackgroundAnimationStyle())
+        if (!storage.contains(KEY_POS_BACKGROUND_ANIMATION_OPACITY)) {
+            return default
+        }
+        return storage.getFloat(KEY_POS_BACKGROUND_ANIMATION_OPACITY, default).coerceIn(0.05f, 1.0f)
+    }
+
+    fun setPosBackgroundAnimationOpacity(opacity: Float) {
+        storage.putFloat(
+            KEY_POS_BACKGROUND_ANIMATION_OPACITY,
+            opacity.coerceIn(0.05f, 1.0f),
+        )
+    }
+
+    fun getPosSelectedCategoryName(): String? {
+        val stored = storage.getString(KEY_POS_SELECTED_CATEGORY, "").orEmpty()
+        return stored.ifEmpty { null }
+    }
+
+    fun setPosSelectedCategoryName(name: String?) {
+        storage.putString(KEY_POS_SELECTED_CATEGORY, name.orEmpty())
+    }
+
+    fun getPosSelectedVenue(): String {
+        val stored = storage.getString(KEY_POS_SELECTED_VENUE, "").orEmpty()
+        return stored.ifEmpty { com.eventmanager.app.data.models.PosVenueScope.GLOBAL }
+    }
+
+    fun setPosSelectedVenue(venue: String) {
+        storage.putString(KEY_POS_SELECTED_VENUE, venue)
+    }
+
+    fun getPosLanguage(): String {
+        val stored = storage.getString(KEY_POS_LANGUAGE, "").orEmpty()
+        return stored.ifEmpty { getLanguage() }
+    }
+
+    fun savePosLanguage(language: String) {
+        storage.putString(KEY_POS_LANGUAGE, language)
     }
 
     private fun normalizeBackgroundAnimationStyle(style: String, default: String): String {

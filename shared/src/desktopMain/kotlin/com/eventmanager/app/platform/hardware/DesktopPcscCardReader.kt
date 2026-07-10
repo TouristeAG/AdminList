@@ -2,11 +2,30 @@ package com.eventmanager.app.platform.hardware
 
 import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.platform.UidReadResult
+import com.eventmanager.app.resources.Res
+import com.eventmanager.app.resources.desktop_pcsc_error
+import com.eventmanager.app.resources.desktop_pcsc_library_unavailable
+import com.eventmanager.app.resources.desktop_pcsc_no_ble_reader
+import com.eventmanager.app.resources.desktop_pcsc_no_reader
+import com.eventmanager.app.resources.desktop_pcsc_no_readers_found
+import com.eventmanager.app.resources.desktop_pcsc_no_readers_hint
+import com.eventmanager.app.resources.desktop_pcsc_provider_failed
+import com.eventmanager.app.resources.desktop_pcsc_reader_disconnected
+import com.eventmanager.app.resources.desktop_pcsc_reader_error
+import com.eventmanager.app.resources.desktop_pcsc_reader_ok_place_card
+import com.eventmanager.app.resources.desktop_pcsc_readers_header
+import com.eventmanager.app.resources.desktop_pcsc_unable_select_reader
+import com.eventmanager.app.resources.desktop_pcsc_unavailable
+import com.eventmanager.app.resources.desktop_pcsc_using_reader
+import com.eventmanager.app.resources.desktop_pcsc_waiting_card
 import jnasmartcardio.Smartcardio
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.getString
 import java.security.Security
 import java.util.Locale
 import javax.smartcardio.Card
@@ -14,10 +33,12 @@ import javax.smartcardio.CardException
 import javax.smartcardio.CardNotPresentException
 import javax.smartcardio.CardTerminal
 import javax.smartcardio.CommandAPDU
+import javax.smartcardio.ResponseAPDU
 import javax.smartcardio.TerminalFactory
 
 /**
- * PC/SC NFC readers on desktop: USB (ACR122U) and Bluetooth (ACR1255U-J1 after OS pairing).
+ * PC/SC NFC readers on desktop: USB (ACR122U, ACR1255U-J1 USB) and Bluetooth (ACR1255U-J1
+ * after OS pairing on Windows).
  */
 class DesktopPcscCardReader {
 
@@ -38,6 +59,8 @@ class DesktopPcscCardReader {
     @Volatile private var lastDispatchAtMs: Long = 0L
     @Volatile private var awaitingCardRemoval: Boolean = false
 
+    private fun tr(block: suspend () -> String): String = runBlocking { block() }
+
     fun isReaderAvailable(): Boolean = pcscAvailable && listTerminals().isNotEmpty()
 
     fun hasUsbReader(): Boolean = listTerminalInfos().any { it.kind == ReaderKind.USB }
@@ -45,10 +68,9 @@ class DesktopPcscCardReader {
     fun firstUsbTerminalName(): String? =
         listTerminalInfos().firstOrNull { it.kind == ReaderKind.USB }?.name
 
-    fun readerName(): String = selectTerminal(null)?.name ?: if (pcscAvailable) {
-        "No PC/SC reader"
-    } else {
-        "PC/SC unavailable"
+    fun readerName(): String = selectTerminal(null)?.name ?: tr {
+        if (pcscAvailable) getString(Res.string.desktop_pcsc_no_reader)
+        else getString(Res.string.desktop_pcsc_unavailable)
     }
 
     fun listReaderNames(): List<String> = listTerminals().map { it.name }
@@ -56,6 +78,22 @@ class DesktopPcscCardReader {
     fun listTerminalInfos(): List<TerminalInfo> = listTerminals().map { terminal ->
         val name = terminal.name.orEmpty()
         TerminalInfo(terminal = terminal, name = name, kind = classifyTerminal(name))
+    }
+
+    fun formatTerminalListing(): String = tr {
+        val terminals = listTerminalInfos()
+        if (terminals.isEmpty()) return@tr getString(Res.string.desktop_pcsc_no_readers_found)
+        buildString {
+            appendLine(getString(Res.string.desktop_pcsc_readers_header, terminals.size))
+            terminals.forEach { info ->
+                val tag = when (info.kind) {
+                    ReaderKind.USB -> "USB"
+                    ReaderKind.BLE -> "BLE"
+                    ReaderKind.OTHER -> "PC/SC"
+                }
+                appendLine(" • [$tag] ${info.name}")
+            }
+        }.trimEnd()
     }
 
     fun findBleTerminal(savedReaderId: String, savedReaderName: String): CardTerminal? =
@@ -75,9 +113,13 @@ class DesktopPcscCardReader {
 
     suspend fun readUid(settings: SettingsManager? = null): UidReadResult = accessMutex.withLock {
         withContext(Dispatchers.IO) {
-            if (!pcscAvailable) return@withContext UidReadResult.Fatal("PC/SC library unavailable")
+            if (!pcscAvailable) {
+                return@withContext UidReadResult.Fatal(
+                    getString(Res.string.desktop_pcsc_library_unavailable)
+                )
+            }
             val terminal = selectTerminal(settings) ?: return@withContext UidReadResult.NoReader
-            readUidFromTerminal(terminal)
+            readUidFromTerminal(terminal, cardWaitMs = CARD_WAIT_MS)
         }
     }
 
@@ -100,7 +142,7 @@ class DesktopPcscCardReader {
             if (!pcscAvailable) {
                 return@withContext DiagnosticResult(
                     success = false,
-                    details = "PC/SC provider failed to load.\nEnsure PC/SC is installed and restart the app."
+                    details = getString(Res.string.desktop_pcsc_provider_failed)
                 )
             }
             val terminals = listTerminalInfos()
@@ -108,13 +150,13 @@ class DesktopPcscCardReader {
                 return@withContext DiagnosticResult(
                     success = false,
                     details = if (bleOnly) {
-                        "No Bluetooth NFC reader in PC/SC.\nPair the ACR1255U-J1 in system Bluetooth settings and install the ACS driver."
+                        getString(Res.string.desktop_pcsc_no_ble_reader)
                     } else {
-                        "No PC/SC readers found.\nPlug in a USB reader or pair a Bluetooth ACR1255U-J1."
+                        getString(Res.string.desktop_pcsc_no_readers_hint)
                     }
                 )
             }
-            details.appendLine("Readers (${terminals.size}):")
+            details.appendLine(getString(Res.string.desktop_pcsc_readers_header, terminals.size))
             terminals.forEach { info ->
                 val tag = when (info.kind) {
                     ReaderKind.USB -> "USB"
@@ -125,26 +167,63 @@ class DesktopPcscCardReader {
             }
             val selected = terminal ?: return@withContext DiagnosticResult(
                 success = false,
-                details = details.appendLine("Unable to select a reader.").toString().trimEnd()
+                details = details.appendLine(getString(Res.string.desktop_pcsc_unable_select_reader))
+                    .toString().trimEnd()
             )
-            details.appendLine("Using: ${selected.name}")
-            when (val result = readUidFromTerminal(selected)) {
+            details.appendLine(getString(Res.string.desktop_pcsc_using_reader, selected.name))
+            details.appendLine(
+                getString(Res.string.desktop_pcsc_waiting_card, DIAGNOSTIC_CARD_WAIT_MS / 1000)
+            )
+
+            val deadline = System.currentTimeMillis() + DIAGNOSTIC_CARD_WAIT_MS
+            var result: UidReadResult = UidReadResult.Retryable(ERR_NO_CARD_PRESENT)
+            while (System.currentTimeMillis() < deadline) {
+                result = readUidFromTerminal(selected, cardWaitMs = DIAGNOSTIC_POLL_MS)
+                when (result) {
+                    is UidReadResult.Success -> break
+                    is UidReadResult.Fatal -> break
+                    is UidReadResult.Retryable -> {
+                        val retryable = result.error == ERR_NO_CARD_PRESENT ||
+                            result.error == ERR_NO_CARD_ON_READER ||
+                            result.error == ERR_WAITING_REMOVAL ||
+                            result.error?.startsWith("No card detected (SW=") == true
+                        if (!retryable) break
+                        delay(250)
+                    }
+                    UidReadResult.NoReader -> break
+                }
+            }
+
+            when (result) {
                 is UidReadResult.Success -> {
                     details.appendLine("UID: ${result.uid}")
                     DiagnosticResult(success = true, details = details.toString().trimEnd())
                 }
-                is UidReadResult.Retryable -> DiagnosticResult(
-                    success = false,
-                    details = details.appendLine(result.error ?: "Place a card on the reader and test again.")
-                        .toString().trimEnd()
-                )
+                is UidReadResult.Retryable -> {
+                    val noCard = result.error == ERR_NO_CARD_PRESENT ||
+                        result.error == ERR_NO_CARD_ON_READER
+                    if (noCard) {
+                        details.appendLine(getString(Res.string.desktop_pcsc_reader_ok_place_card))
+                        DiagnosticResult(success = true, details = details.toString().trimEnd())
+                    } else {
+                        DiagnosticResult(
+                            success = false,
+                            details = details.appendLine(
+                                result.error ?: getString(Res.string.desktop_pcsc_reader_error)
+                            ).toString().trimEnd()
+                        )
+                    }
+                }
                 is UidReadResult.Fatal -> DiagnosticResult(
                     success = false,
-                    details = details.appendLine(result.error ?: "Reader error").toString().trimEnd()
+                    details = details.appendLine(
+                        result.error ?: getString(Res.string.desktop_pcsc_reader_error)
+                    ).toString().trimEnd()
                 )
                 UidReadResult.NoReader -> DiagnosticResult(
                     success = false,
-                    details = details.appendLine("Reader disconnected.").toString().trimEnd()
+                    details = details.appendLine(getString(Res.string.desktop_pcsc_reader_disconnected))
+                        .toString().trimEnd()
                 )
             }
         }
@@ -163,8 +242,9 @@ class DesktopPcscCardReader {
     }.getOrDefault(emptyList())
 
     private fun selectTerminal(settings: SettingsManager?): CardTerminal? {
-        val usb = listTerminalInfos().firstOrNull { it.kind == ReaderKind.USB }
-        if (usb != null) return usb.terminal
+        val infos = listTerminalInfos()
+        infos.firstOrNull { it.kind == ReaderKind.USB }?.terminal?.let { return it }
+        infos.firstOrNull { it.kind == ReaderKind.OTHER }?.terminal?.let { return it }
 
         val savedId = settings?.getExternalBleReaderMac()?.trim().orEmpty()
         val savedName = settings?.getExternalBleReaderName()?.trim().orEmpty()
@@ -198,51 +278,86 @@ class DesktopPcscCardReader {
             info.name.uppercase(Locale.US).contains(normalizedMac)
     }
 
-    private fun readUidFromTerminal(terminal: CardTerminal): UidReadResult {
+    private fun readUidFromTerminal(
+        terminal: CardTerminal,
+        cardWaitMs: Long = CARD_WAIT_MS
+    ): UidReadResult {
         return try {
             if (awaitingCardRemoval) {
-                if (terminal.isCardPresent) {
-                    return UidReadResult.Retryable("Waiting for card removal")
+                val removed = runCatching { terminal.waitForCardAbsent(CARD_ABSENT_WAIT_MS) }
+                    .getOrDefault(false)
+                if (!removed && terminal.isCardPresent) {
+                    return UidReadResult.Retryable(ERR_WAITING_REMOVAL)
                 }
                 awaitingCardRemoval = false
                 lastDispatchedUid = null
             }
 
-            if (!terminal.isCardPresent) {
-                return UidReadResult.Retryable("No card present")
+            val cardPresent = runCatching { terminal.waitForCardPresent(cardWaitMs) }
+                .getOrElse { e ->
+                    if (e is CardNotPresentException) return UidReadResult.Retryable(ERR_NO_CARD_PRESENT)
+                    return UidReadResult.Retryable(e.message ?: tr { getString(Res.string.desktop_pcsc_error) })
+                }
+            if (!cardPresent) {
+                return UidReadResult.Retryable(ERR_NO_CARD_PRESENT)
             }
 
-            val card = terminal.connect("*")
-            try {
-                val response = card.basicChannel.transmit(GET_UID_APDU)
-                if (response.sw != SW_SUCCESS) {
-                    return UidReadResult.Retryable("No card detected (SW=${String.format("%04X", response.sw)})")
-                }
-                val uidBytes = response.data
-                if (uidBytes.isEmpty()) return UidReadResult.Retryable("Empty UID")
-                val uid = uidBytes.toHexUid()
+            var lastSw: Int? = null
+            for (protocol in CONNECT_PROTOCOLS) {
+                val card = runCatching { terminal.connect(protocol) }.getOrNull() ?: continue
+                try {
+                    Thread.sleep(POST_CONNECT_DELAY_MS)
+                    val uidResult = transmitUidApduVariants(card)
+                    if (uidResult == null) continue
+                    lastSw = uidResult.sw
+                    if (uidResult.sw != SW_SUCCESS || uidResult.data.isEmpty()) continue
 
-                val now = System.currentTimeMillis()
-                val normalized = uid.uppercase(Locale.US)
-                if (normalized == lastDispatchedUid && now - lastDispatchAtMs < UID_REPLAY_GAP_MS) {
-                    return UidReadResult.Retryable("Duplicate tap")
-                }
+                    val uid = uidResult.data.toHexUid()
+                    val now = System.currentTimeMillis()
+                    val normalized = uid.uppercase(Locale.US)
+                    if (normalized == lastDispatchedUid && now - lastDispatchAtMs < UID_REPLAY_GAP_MS) {
+                        return UidReadResult.Retryable("Duplicate tap")
+                    }
 
-                awaitingCardRemoval = true
-                waitForCardAbsentQuietly(terminal, card)
-                lastDispatchedUid = normalized
-                lastDispatchAtMs = now
-                UidReadResult.Success(uid)
-            } finally {
-                runCatching { card.disconnect(false) }
+                    awaitingCardRemoval = true
+                    waitForCardAbsentQuietly(terminal, card)
+                    lastDispatchedUid = normalized
+                    lastDispatchAtMs = now
+                    return UidReadResult.Success(uid)
+                } finally {
+                    runCatching { card.disconnect(true) }
+                }
+            }
+
+            return if (lastSw != null) {
+                UidReadResult.Retryable("No card detected (SW=${String.format("%04X", lastSw)})")
+            } else {
+                UidReadResult.Retryable(ERR_NO_CARD_ON_READER)
             }
         } catch (_: CardNotPresentException) {
-            UidReadResult.Retryable("No card present")
+            UidReadResult.Retryable(ERR_NO_CARD_PRESENT)
         } catch (e: CardException) {
-            UidReadResult.Retryable(e.message ?: "PC/SC error")
+            UidReadResult.Retryable(e.message ?: tr { getString(Res.string.desktop_pcsc_error) })
         } catch (e: Exception) {
-            UidReadResult.Fatal(e.message ?: "PC/SC error")
+            UidReadResult.Fatal(e.message ?: tr { getString(Res.string.desktop_pcsc_error) })
         }
+    }
+
+    /**
+     * ACS pseudo-APDU Get UID. Raw 5-byte frames match Android/CCID; Le variants follow the
+     * ACR122U API (00 = max, 04 = typical MIFARE UID length). PC/SC stacks on macOS often need
+     * T=CL + Le=04 where Le=00 returns SW=6300 even with a card on the antenna.
+     */
+    private fun transmitUidApduVariants(card: Card): ResponseAPDU? {
+        val channel = card.basicChannel ?: return null
+        var lastResponse: ResponseAPDU? = null
+        for (apduBytes in GET_UID_APDU_VARIANTS) {
+            val response = runCatching { channel.transmit(CommandAPDU(apduBytes)) }.getOrNull()
+                ?: continue
+            lastResponse = response
+            if (response.sw == SW_SUCCESS && response.data.isNotEmpty()) return response
+        }
+        return lastResponse
     }
 
     private fun waitForCardAbsentQuietly(terminal: CardTerminal, card: Card) {
@@ -259,8 +374,9 @@ class DesktopPcscCardReader {
     private fun classifyTerminal(name: String): ReaderKind {
         val lower = name.lowercase(Locale.US)
         return when {
+            lower.contains("bluetooth") || lower.contains(" ble") -> ReaderKind.BLE
             lower.contains("acr122") || lower.contains("usb") -> ReaderKind.USB
-            lower.contains("acr125") || lower.contains("1255") || lower.contains("bluetooth") -> ReaderKind.BLE
+            lower.contains("acr125") || lower.contains("1255") -> ReaderKind.USB
             lower.contains("acs") && lower.contains("nfc") -> ReaderKind.USB
             else -> ReaderKind.OTHER
         }
@@ -273,7 +389,26 @@ class DesktopPcscCardReader {
         private const val PCSC_ID_PREFIX = "pcsc:"
         private const val UID_REPLAY_GAP_MS = 850L
         private const val CARD_ABSENT_WAIT_MS = 400L
-        private val GET_UID_APDU = CommandAPDU(0xFF, 0xCA, 0x00, 0x00, 0)
+        private const val CARD_WAIT_MS = 3_000L
+        private const val DIAGNOSTIC_CARD_WAIT_MS = 8_000L
+        private const val DIAGNOSTIC_POLL_MS = 1_500L
+        private const val POST_CONNECT_DELAY_MS = 120L
+
+        /** Internal machine-readable status codes (not shown as final UX copy). */
+        private const val ERR_NO_CARD_PRESENT = "No card present"
+        private const val ERR_NO_CARD_ON_READER = "No card detected on reader"
+        private const val ERR_WAITING_REMOVAL = "Waiting for card removal"
+
+        /** Contactless first — required by many ACS drivers for PICC pseudo-APDUs. */
+        private val CONNECT_PROTOCOLS = arrayOf("T=CL", "*", "T=1", "T=0")
+
+        /** ACS Get UID pseudo-APDUs (see ACR122U / ACR1255 API §Get Data). */
+        private val GET_UID_APDU_VARIANTS = arrayOf(
+            byteArrayOf(0xFF.toByte(), 0xCA.toByte(), 0x00, 0x00, 0x04),
+            byteArrayOf(0xFF.toByte(), 0xCA.toByte(), 0x00, 0x00, 0x00),
+            byteArrayOf(0xFF.toByte(), 0xCA.toByte(), 0x00, 0x00, 0x08),
+            byteArrayOf(0xFF.toByte(), 0xCA.toByte(), 0x00, 0x00, 0x10),
+        )
 
         fun terminalId(terminalName: String): String = "$PCSC_ID_PREFIX$terminalName"
 

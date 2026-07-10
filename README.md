@@ -188,11 +188,17 @@ JDK 17+ is required. Linux package formats (`.deb`, AppImage) are enabled automa
 
 | Feature | Requirement |
 |---------|-------------|
-| USB NFC reader (ACR122U) | `pcscd` running, ACS driver, udev rules |
-| BLE NFC reader (ACR1255U-J1) | Pair in system Bluetooth; reader visible in PC/SC |
-| BLE reader discovery list | `bluez` + `bluetoothctl` in PATH |
+| USB NFC reader (ACR122U, ACR1255U-J1 USB) | `pcscd` running, [ACS USB PC/SC driver](https://www.acs.com.hk/en/driver/403/acr1255u-j1-secure-bluetooth%C2%AE-nfc-reader/), udev rules |
+| BLE NFC reader (ACR1255U-J1) | **Windows only**: [ACS Bluetooth PC/SC driver](https://www.acs.com.hk/en/driver/403/acr1255u-j1-secure-bluetooth%C2%AE-nfc-reader/) + system Bluetooth pairing. Not supported on macOS/Linux (use USB mode). |
+| BLE reader discovery list | Windows: PowerShell Bluetooth devices; macOS/Linux: paired-device listing for setup hints only |
 | Webcam QR scan | V4L2/PipeWire; user in `video` group or portal permission |
 | Biometric admin login | Polkit + enrolled fingerprint (`fprintd`) |
+
+### macOS / Windows USB NFC setup
+
+1. Install the ACS USB PC/SC driver for your reader model.
+2. For ACR1255U-J1: switch the reader to **USB mode** (physical toggle), connect the cable.
+3. In app Settings → External reader: use **List PC/SC readers** to verify detection, then **Test USB reader** with a card on the antenna.
 
 ### Release checklist (all platforms)
 
@@ -209,10 +215,10 @@ JDK 17+ is required. Linux package formats (`.deb`, AppImage) are enabled automa
 
 | Feature | Android | Desktop |
 |---------|---------|---------|
-| NFC | Built-in phone NFC + optional BLE ACS reader | USB **PC/SC** card reader (+ BLE via PC/SC after pairing) |
+| NFC | Built-in phone NFC + optional BLE ACS reader | USB **PC/SC** card reader (+ BLE via PC/SC on Windows after pairing) |
 | QR scan | Camera preview | Webcam (ZXing) or file picker |
 | Admin auth | NFC, QR, optional biometrics | NFC (PC/SC), QR, optional biometrics (Touch ID / Windows Hello / Linux Polkit) |
-| BLE external reader | Supported | Supported via PC/SC + system Bluetooth pairing |
+| BLE external reader | Supported (ACS SDK) | Windows: PC/SC + pairing; macOS/Linux: USB only |
 | Dynamic app icon | 12 launcher icons | Not supported |
 | Resolution scale slider | Phone/tablet layout | Not used |
 | Seasonal animations / haptics | Optional | Not included |

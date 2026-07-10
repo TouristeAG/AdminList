@@ -91,11 +91,13 @@ actual fun AppRootContent(
         var showSetupWizard by nav::showSetupWizard
         var showAdminAuth by nav::showAdminAuth
         var showTicketCheck by nav::showTicketCheck
+        var showPos by nav::showPos
         var selectedTab by nav::selectedTab
         var previousTab by nav::previousTab
         var showJobTypeManagement by nav::showJobTypeManagement
         var showVenueManagement by nav::showVenueManagement
         var showSalesSheetItemManagement by nav::showSalesSheetItemManagement
+        var showPosAccountingReport by nav::showPosAccountingReport
         var showQRScanner by nav::showQRScanner
         var showVolunteerBenefits by remember { mutableStateOf<Volunteer?>(null) }
         var showScannedGuestDetail by remember { mutableStateOf<Guest?>(null) }
@@ -135,7 +137,8 @@ actual fun AppRootContent(
         val repository = remember(db) {
             EventManagerRepository(
                 db.guestDao(), db.volunteerDao(), db.jobDao(),
-                db.jobTypeConfigDao(), db.venueDao(), db.salesSheetItemDao()
+                db.jobTypeConfigDao(), db.venueDao(), db.salesSheetItemDao(),
+                db.accountTransferDao()
             )
         }
         val sheets = remember { GoogleSheetsService(platformContext) }
@@ -224,6 +227,10 @@ actual fun AppRootContent(
                             showWelcome = false
                             showTicketCheck = true
                         },
+                        onPosSelected = {
+                            showWelcome = false
+                            showPos = true
+                        },
                         showAdminAccessSyncIndicator = !adminPrecheckComplete
                     )
                 }
@@ -246,15 +253,17 @@ actual fun AppRootContent(
                 var showUpdateDialog by remember { mutableStateOf(false) }
                 var hasCheckedUpdate by remember { mutableStateOf(false) }
 
-                val adminSurfaceActive = !showWelcome && !showAdminAuth && !showTicketCheck
+                val adminSurfaceActive = !showWelcome && !showAdminAuth && !showTicketCheck && !showPos
                 val endAdminSession by rememberUpdatedState {
                     showWelcome = true
                     showAdminAuth = false
                     showTicketCheck = false
+                    showPos = false
                     selectedTab = AdminTab.Dashboard.index
                     showJobTypeManagement = false
                     showVenueManagement = false
                     showSalesSheetItemManagement = false
+                    showPosAccountingReport = false
                 }
 
                 LaunchedEffect(adminSurfaceActive) {
@@ -291,8 +300,8 @@ actual fun AppRootContent(
                     }
                 }
 
-                DisposableEffect(showAdminAuth, showTicketCheck, selectedTab, showQRScanner, showSyncErrorDialog) {
-                    val inAdmin = !showAdminAuth && !showTicketCheck
+                DisposableEffect(showAdminAuth, showTicketCheck, showPos, selectedTab, showQRScanner, showSyncErrorDialog) {
+                    val inAdmin = !showAdminAuth && !showTicketCheck && !showPos
                     DesktopNavigationHooks.openSettingsTab = if (inAdmin) {
                         { selectedTab = AdminTab.Settings.index; touchAdminSession() }
                     } else null
@@ -310,6 +319,7 @@ actual fun AppRootContent(
                             showJobTypeManagement = false
                             showVenueManagement = false
                             showSalesSheetItemManagement = false
+                            showPosAccountingReport = false
                             if (showQRScanner) showQRScanner = false
                             if (showSyncErrorDialog) viewModel.dismissSyncErrorDialog()
                             showVolunteerBenefits = null
@@ -346,6 +356,16 @@ actual fun AppRootContent(
                             showAdminAuth = false
                             showWelcome = true
                         }
+                    )
+                } else if (showPos) {
+                    val salesItems by viewModel.salesSheetItems.collectAsState()
+                    PosFlow(
+                        viewModel = viewModel,
+                        salesItems = salesItems,
+                        volunteers = volunteers,
+                        guests = guests,
+                        onBack = { showPos = false; showWelcome = true },
+                        restoreLanguageCode = settingsManager.getLanguage(),
                     )
                 } else if (showTicketCheck) {
                     DesktopBilleterieFlow(
@@ -404,6 +424,7 @@ actual fun AppRootContent(
                             showJobTypeManagement = false
                             showVenueManagement = false
                             showSalesSheetItemManagement = false
+                            showPosAccountingReport = false
                         },
                         modifier = Modifier.fillMaxSize()
                     ) { padding ->
@@ -423,6 +444,20 @@ actual fun AppRootContent(
                                 showJobTypeManagement -> DesktopJobTypeManagement(viewModel) { showJobTypeManagement = false }
                                 showVenueManagement -> DesktopVenueManagement(viewModel) { showVenueManagement = false }
                                 showSalesSheetItemManagement -> DesktopSalesSheetManagement(viewModel) { showSalesSheetItemManagement = false }
+                                showPosAccountingReport -> {
+                                    val accountTransfers by viewModel.accountTransfers.collectAsState()
+                                    val salesSheetItems by viewModel.salesSheetItems.collectAsState()
+                                    val venues by viewModel.venues.collectAsState()
+                                    PosAccountingReportScreen(
+                                        transfers = accountTransfers,
+                                        salesItems = salesSheetItems,
+                                        venues = venues,
+                                        settingsManager = settingsManager,
+                                        isPhone = false,
+                                        onBack = { showPosAccountingReport = false },
+                                        modifier = Modifier.fillMaxSize(),
+                                    )
+                                }
                                 else -> when (AdminTab.fromIndex(selectedTab)) {
                                     AdminTab.Dashboard -> DashboardScreen(
                                         guests = guests,
@@ -438,6 +473,7 @@ actual fun AppRootContent(
                                             showAdminAuth = false
                                             selectedTab = AdminTab.Dashboard.index
                                         },
+                                        onOpenPosReport = { showPosAccountingReport = true },
                                         modifier = Modifier.fillMaxSize()
                                     )
                                     AdminTab.Guests -> DesktopGuestListWithViewModel(viewModel, searchFocusTick)
@@ -448,6 +484,7 @@ actual fun AppRootContent(
                                         jobTypeConfigs = jobTypeConfigs,
                                         onConfirmFutureEntry = { job, invites -> viewModel.markBenefitAsUsed(job, invites) },
                                         scrollBehavior = settingsManager.getScrollBehavior(),
+                                        viewModel = viewModel,
                                         onAddVolunteer = { viewModel.addVolunteer(it) },
                                         onUpdateVolunteer = { viewModel.updateVolunteer(it) },
                                         onDeleteVolunteer = { volunteer, deleteShifts ->
@@ -641,6 +678,7 @@ actual fun AppRootContent(
 private fun DesktopWelcomeScreen(
     onAdminSelected: () -> Unit,
     onTicketCheckSelected: () -> Unit,
+    onPosSelected: () -> Unit,
     showAdminAccessSyncIndicator: Boolean
 ) {
     Box(
@@ -671,6 +709,15 @@ private fun DesktopWelcomeScreen(
                 Spacer(Modifier.width(8.dp))
                 Text(stringResource(Res.string.ticket_check_mode))
             }
+            Spacer(Modifier.height(12.dp))
+            WelcomeSecondaryButton(
+                onClick = onPosSelected,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(Icons.Default.PointOfSale, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(Res.string.pos_welcome_button))
+            }
         }
     }
 }
@@ -698,6 +745,9 @@ private fun DesktopBilleterieFlow(
         delay(250)
         viewModel.updateSyncInterval()
         viewModel.syncGuestsWithTargetedUpdates()
+        if (settingsManager.isPeopleCounterVisible()) {
+            viewModel.refreshVenuesForPeopleCounterQuietly()
+        }
     }
 
     PlatformBackHandler(enabled = true) {
@@ -705,6 +755,10 @@ private fun DesktopBilleterieFlow(
             showBilleterieSettings -> showBilleterieSettings = false
             section == BilleterieSection.Scanner.name -> section = scannerReturnSection
             section == BilleterieSection.GuestList.name -> section = BilleterieSection.Home.name
+            section == BilleterieSection.Pos.name -> performPosFlowExit(
+                viewModel,
+                settingsManager.getLanguage(),
+            ) { section = BilleterieSection.Home.name }
             else -> onExit()
         }
     }
@@ -732,6 +786,7 @@ private fun DesktopBilleterieFlow(
                             scannerReturnSection = BilleterieSection.Home.name
                             section = BilleterieSection.Scanner.name
                         },
+                        onOpenPos = { section = BilleterieSection.Pos.name },
                         onOpenSettings = { showBilleterieSettings = true }
                     )
                 }
@@ -744,6 +799,17 @@ private fun DesktopBilleterieFlow(
                     jobTypeConfigs = jobTypeConfigs,
                     onBack = { section = scannerReturnSection },
                     onConfirmEntry = { job, invites -> viewModel.markBenefitAsUsed(job, invites) }
+                )
+            }
+            BilleterieSection.Pos.name -> {
+                val salesItems by viewModel.salesSheetItems.collectAsState()
+                PosFlow(
+                    viewModel = viewModel,
+                    salesItems = salesItems,
+                    volunteers = volunteers,
+                    guests = guests,
+                    onBack = { section = BilleterieSection.Home.name },
+                    restoreLanguageCode = settingsManager.getLanguage(),
                 )
             }
             else -> {
@@ -817,7 +883,8 @@ private fun DesktopGuestListWithViewModel(
         onDeleteGuest = { scope.launch { viewModel.deleteGuest(it) } },
         onRefreshTemporaryGuests = { viewModel.refreshTemporaryGuests() },
         onConfirmEntry = { job, invites -> scope.launch { viewModel.markBenefitAsUsed(job, invites) } },
-        searchFocusTick = searchFocusTick
+        searchFocusTick = searchFocusTick,
+        viewModel = viewModel
     )
 }
 
@@ -959,10 +1026,12 @@ private fun DesktopVenueManagement(viewModel: EventManagerViewModel, onBack: () 
 @Composable
 private fun DesktopSalesSheetManagement(viewModel: EventManagerViewModel, onBack: () -> Unit) {
     val items by viewModel.salesSheetItems.collectAsState()
+    val venues by viewModel.venues.collectAsState()
     val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) { viewModel.syncSalesSheetItemsWithTargetedUpdates() }
     SalesSheetItemManagementScreen(
         items = items,
+        venues = venues,
         onAddItem = { scope.launch { viewModel.addSalesSheetItem(it) } },
         onUpdateItem = { scope.launch { viewModel.updateSalesSheetItem(it) } },
         onDeleteItem = { scope.launch { viewModel.deleteSalesSheetItem(it) } },

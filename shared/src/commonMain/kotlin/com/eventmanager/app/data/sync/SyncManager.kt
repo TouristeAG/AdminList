@@ -8,6 +8,7 @@ import com.eventmanager.app.data.models.Guest
 import com.eventmanager.app.data.models.Job
 import com.eventmanager.app.data.models.JobTypeConfig
 import com.eventmanager.app.data.models.SalesSheetItem
+import com.eventmanager.app.data.models.AccountTransfer
 import com.eventmanager.app.data.models.VenueEntity
 import kotlinx.coroutines.flow.first
 
@@ -151,6 +152,15 @@ class SyncManager(
         }
     }
     
+    suspend fun performTransferDifferentialSync(): TransferSyncResult {
+        return try {
+            val changes = twoWaySyncService.syncTransfersWithDifferentialUpdate()
+            TransferSyncResult.Success(changes)
+        } catch (e: Exception) {
+            TransferSyncResult.Error("Transfer differential sync failed: ${e.message}")
+        }
+    }
+    
     /**
      * PAGE CHANGE SYNC: Download only current page and new page data
      * This is used when user changes pages in the app
@@ -272,6 +282,7 @@ class SyncManager(
             "jobs" to listOf("jobs", "job_list"),
             "job_types" to listOf("job_types", "job_type_configs"),
             "sales_items" to listOf("sales_items", "management:sales-items"),
+            "transfers" to listOf("transfers", "pos", "management:transfers"),
             "venues" to listOf("venues", "venue_management", "management:venue")
         )
     }
@@ -334,6 +345,7 @@ class SyncManager(
                     "jobs" -> twoWaySyncService.syncJobsOnly()
                     "job_types" -> twoWaySyncService.syncJobTypesOnly()
                     "sales_items" -> twoWaySyncService.syncSalesSheetItemsWithDifferentialUpdate()
+                    "transfers" -> twoWaySyncService.syncTransfersWithDifferentialUpdate()
                     "venues" -> twoWaySyncService.syncVenuesWithDifferentialUpdate()
                 }
             }
@@ -435,6 +447,14 @@ sealed class VenueSyncResult {
 sealed class SalesSheetItemSyncResult {
     data class Success(val changes: DifferentialSyncService.SyncChanges<SalesSheetItem>) : SalesSheetItemSyncResult()
     data class Error(val message: String) : SalesSheetItemSyncResult()
+
+    val isSuccess: Boolean get() = this is Success
+    val isError: Boolean get() = this is Error
+}
+
+sealed class TransferSyncResult {
+    data class Success(val changes: DifferentialSyncService.SyncChanges<AccountTransfer>) : TransferSyncResult()
+    data class Error(val message: String) : TransferSyncResult()
 
     val isSuccess: Boolean get() = this is Success
     val isError: Boolean get() = this is Error

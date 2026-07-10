@@ -16,6 +16,9 @@ private class DesktopCardReaderService(private val context: PlatformContext) : C
 
     override fun shouldSuppressBuiltInNfc(): Boolean = false
 
+    override fun getNfcInputAvailability(): NfcInputAvailability =
+        if (isReaderConnected()) NfcInputAvailability.ExternalReader else NfcInputAvailability.Unavailable
+
     override suspend fun readUid(): UidReadResult = DesktopExternalNfcReader.readUid(settings)
 
     override fun readerDescription(): String = DesktopExternalNfcReader.readerDescription(settings)

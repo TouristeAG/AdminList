@@ -44,6 +44,7 @@ import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.LocalBar
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.ConfirmationNumber
+import androidx.compose.material.icons.filled.PointOfSale
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
@@ -130,6 +131,9 @@ import com.eventmanager.app.ui.screens.AdminType
 import com.eventmanager.app.ui.screens.BilleterieHomeScreen
 import com.eventmanager.app.ui.screens.BilleterieScannerScreen
 import com.eventmanager.app.ui.screens.BilleterieSettingsScreen
+import com.eventmanager.app.ui.screens.PosAccountingReportScreen
+import com.eventmanager.app.ui.screens.PosFlow
+import com.eventmanager.app.ui.screens.performPosFlowExit
 import com.eventmanager.app.ui.screens.SalesSheetItemManagementScreen
 import com.eventmanager.app.ui.screens.VenueManagementScreen
 import com.eventmanager.app.ui.screens.VolunteerScreen
@@ -197,12 +201,14 @@ actual fun AppRootContent(
     var showSetupWizard by rememberSaveable { mutableStateOf(settingsManager.shouldShowSetupWizard()) }
     var showAdminAuth by rememberSaveable { mutableStateOf(false) }
     var showTicketCheck by rememberSaveable { mutableStateOf(false) }
+    var showPos by rememberSaveable { mutableStateOf(false) }
     var selectedTab by rememberSaveable { mutableStateOf(0) }
     var previousTab by rememberSaveable { mutableStateOf(0) }
     val pageAnimationsEnabled = settingsManager.isPageAnimationsEnabled()
     var showJobTypeManagement by rememberSaveable { mutableStateOf(false) }
     var showVenueManagement by rememberSaveable { mutableStateOf(false) }
     var showSalesSheetItemManagement by rememberSaveable { mutableStateOf(false) }
+    var showPosAccountingReport by rememberSaveable { mutableStateOf(false) }
     var showQRScanner by rememberSaveable { mutableStateOf(false) }
     var showVolunteerBenefits: Volunteer? by remember { mutableStateOf(null) }
     var showScannedGuestDetail: Guest? by remember { mutableStateOf(null) }
@@ -253,7 +259,8 @@ actual fun AppRootContent(
                     db.jobDao(),
                     db.jobTypeConfigDao(),
                     db.venueDao(),
-                    db.salesSheetItemDao()
+                    db.salesSheetItemDao(),
+                    db.accountTransferDao()
                 )
             }
             val googleSheetsService = remember { GoogleSheetsService(platformContext) }
@@ -348,6 +355,10 @@ actual fun AppRootContent(
                         showWelcome = false
                         showTicketCheck = true
                     },
+                    onPosSelected = {
+                        showWelcome = false
+                        showPos = true
+                    },
                     showAdminAccessSyncIndicator = !adminPrecheckComplete
                 )
                 }
@@ -392,15 +403,17 @@ actual fun AppRootContent(
         val isAnnouncementSending by viewModel.isAnnouncementSending.collectAsState()
 
         // Admin session: auto-return to welcome after idle timeout or after screen was turned off (sleep).
-        val adminSurfaceActive = !showWelcome && !showAdminAuth && !showTicketCheck
+        val adminSurfaceActive = !showWelcome && !showAdminAuth && !showTicketCheck && !showPos
         val endAdminSession by rememberUpdatedState {
             showWelcome = true
             showAdminAuth = false
             showTicketCheck = false
+            showPos = false
             selectedTab = 0
             showJobTypeManagement = false
             showVenueManagement = false
             showSalesSheetItemManagement = false
+            showPosAccountingReport = false
         }
         val adminSessionHost = getAdminSessionHost(platformContext)
         DisposableEffect(adminSurfaceActive, adminSessionHost) {
@@ -529,7 +542,20 @@ actual fun AppRootContent(
                 }
             )
         } else {
-        if (showTicketCheck) {
+        if (showPos) {
+            val salesItems by viewModel.salesSheetItems.collectAsState()
+            PosFlow(
+                viewModel = viewModel,
+                salesItems = salesItems,
+                volunteers = volunteers,
+                guests = guests,
+                onBack = {
+                    showPos = false
+                    showWelcome = true
+                },
+                restoreLanguageCode = settingsManager.getLanguage(),
+            )
+        } else if (showTicketCheck) {
             var billeterieSection by rememberSaveable { mutableStateOf("home") }
             var billeterieScannerReturnSection by rememberSaveable { mutableStateOf("home") }
             var showBilleterieSettings by rememberSaveable { mutableStateOf(false) }
@@ -542,6 +568,9 @@ actual fun AppRootContent(
                     // Same background auto-sync as admin (interval from Settings); ensure loop is running after Billeterie entry.
                     viewModel.updateSyncInterval()
                     viewModel.syncGuestsWithTargetedUpdates()
+                    if (settingsManager.isPeopleCounterVisible()) {
+                        viewModel.refreshVenuesForPeopleCounterQuietly()
+                    }
                 }
             }
 
@@ -556,6 +585,10 @@ actual fun AppRootContent(
                     showBilleterieSettings -> showBilleterieSettings = false
                     billeterieSection == "scanner" -> billeterieSection = billeterieScannerReturnSection
                     billeterieSection == "guests" -> billeterieSection = "home"
+                    billeterieSection == "pos" -> performPosFlowExit(
+                        viewModel,
+                        settingsManager.getLanguage(),
+                    ) { billeterieSection = "home" }
                     else -> {
                         showTicketCheck = false
                         showWelcome = true
@@ -596,9 +629,21 @@ actual fun AppRootContent(
                                     billeterieScannerReturnSection = "home"
                                     billeterieSection = "scanner"
                                 },
+                                onOpenPos = { billeterieSection = "pos" },
                                 onOpenSettings = { showBilleterieSettings = true }
                             )
                         }
+                    }
+                    "pos" -> {
+                        val salesItems by viewModel.salesSheetItems.collectAsState()
+                        PosFlow(
+                            viewModel = viewModel,
+                            salesItems = salesItems,
+                            volunteers = volunteers,
+                            guests = guests,
+                            onBack = { billeterieSection = "home" },
+                            restoreLanguageCode = settingsManager.getLanguage(),
+                        )
                     }
                     "scanner" -> {
                         BilleterieScannerScreen(
@@ -756,6 +801,7 @@ actual fun AppRootContent(
                                                 showJobTypeManagement = false
                                                 showVenueManagement = false
                                                 showSalesSheetItemManagement = false
+                                                showPosAccountingReport = false
                                                 // Very subtle haptic feedback for page change
                                                 performSubtleHaptic(vibrator)
                                             }
@@ -837,6 +883,7 @@ actual fun AppRootContent(
                                             showJobTypeManagement = false
                                             showVenueManagement = false
                                             showSalesSheetItemManagement = false
+                                            showPosAccountingReport = false
                                             // Very subtle haptic feedback for page change
                                             performSubtleHaptic(vibrator)
                                         }
@@ -885,10 +932,12 @@ actual fun AppRootContent(
                         showWelcome = true
                         showAdminAuth = false
                         showTicketCheck = false
+                        showPos = false
                         selectedTab = 0
                         showJobTypeManagement = false
                         showVenueManagement = false
                         showSalesSheetItemManagement = false
+                        showPosAccountingReport = false
                     }
                     // Animated background
                     AppBackgroundAnimation(
@@ -974,6 +1023,7 @@ actual fun AppRootContent(
                                                 showJobTypeManagement = false
                                                 showVenueManagement = false
                                                 showSalesSheetItemManagement = false
+                                                showPosAccountingReport = false
                                                 // Very subtle haptic feedback for page change
                                                 performSubtleHaptic(capturedVibrator)
                                                 previousTab = selectedTab
@@ -988,6 +1038,7 @@ actual fun AppRootContent(
                                                 showJobTypeManagement = false
                                                 showVenueManagement = false
                                                 showSalesSheetItemManagement = false
+                                                showPosAccountingReport = false
                                                 // Very subtle haptic feedback for page change
                                                 performSubtleHaptic(capturedVibrator)
                                                 previousTab = selectedTab
@@ -1011,6 +1062,7 @@ actual fun AppRootContent(
                     showJobTypeManagement -> "management:jobtype"
                     showVenueManagement -> "management:venue"
                     showSalesSheetItemManagement -> "management:sales-items"
+                    showPosAccountingReport -> "management:pos-report"
                     else -> "tab:$selectedTab"
                 }
                 
@@ -1085,6 +1137,19 @@ if (pageAnimationsEnabled) {
                                     showSalesSheetItemManagement = false
                                 }
                             }
+                            screenState == "management:pos-report" -> key("pos_accounting_report") {
+                                val accountTransfers by viewModel.accountTransfers.collectAsState()
+                                val salesSheetItems by viewModel.salesSheetItems.collectAsState()
+                                val venues by viewModel.venues.collectAsState()
+                                PosAccountingReportScreen(
+                                    transfers = accountTransfers,
+                                    salesItems = salesSheetItems,
+                                    venues = venues,
+                                    settingsManager = settingsManager,
+                                    isPhone = !isTablet(),
+                                    onBack = { showPosAccountingReport = false },
+                                )
+                            }
                             screenState == "tab:0" -> key("dashboard") {
                                 DashboardScreenWithViewModel(
                                     viewModel = viewModel,
@@ -1092,8 +1157,10 @@ if (pageAnimationsEnabled) {
                                         showWelcome = true
                                         showAdminAuth = false
                                         showTicketCheck = false
+                                        showPos = false
                                         selectedTab = 0
-                                    }
+                                    },
+                                    onOpenPosReport = { showPosAccountingReport = true },
                                 )
                             }
                             screenState == "tab:1" -> key("guest_list") { GuestListScreenWithViewModel(viewModel) }
@@ -1144,6 +1211,19 @@ if (pageAnimationsEnabled) {
                                 showSalesSheetItemManagement = false
                             }
                         }
+                        showPosAccountingReport -> key("pos_accounting_report") {
+                            val accountTransfers by viewModel.accountTransfers.collectAsState()
+                            val salesSheetItems by viewModel.salesSheetItems.collectAsState()
+                            val venues by viewModel.venues.collectAsState()
+                            PosAccountingReportScreen(
+                                transfers = accountTransfers,
+                                salesItems = salesSheetItems,
+                                venues = venues,
+                                settingsManager = settingsManager,
+                                isPhone = !isTablet(),
+                                onBack = { showPosAccountingReport = false },
+                            )
+                        }
                         selectedTab == 0 -> key("dashboard") {
                             DashboardScreenWithViewModel(
                                 viewModel = viewModel,
@@ -1151,8 +1231,10 @@ if (pageAnimationsEnabled) {
                                     showWelcome = true
                                     showAdminAuth = false
                                     showTicketCheck = false
+                                    showPos = false
                                     selectedTab = 0
-                                }
+                                },
+                                onOpenPosReport = { showPosAccountingReport = true },
                             )
                         }
                         selectedTab == 1 -> key("guest_list") { GuestListScreenWithViewModel(viewModel) }
@@ -1681,7 +1763,8 @@ fun QRScannerButton(
 @Composable
 fun DashboardScreenWithViewModel(
     viewModel: EventManagerViewModel,
-    onLogout: () -> Unit = {}
+    onLogout: () -> Unit = {},
+    onOpenPosReport: () -> Unit = {},
 ) {
     val guests by viewModel.guests.collectAsState()
     val volunteers by viewModel.volunteers.collectAsState()
@@ -1707,7 +1790,8 @@ fun DashboardScreenWithViewModel(
         lastSyncTime = settingsManager.getLastSyncTime(),
         repository = viewModel.repository,
         viewModel = viewModel,
-        onLogout = onLogout
+        onLogout = onLogout,
+        onOpenPosReport = onOpenPosReport,
     )
 }
 
@@ -1722,7 +1806,8 @@ fun DashboardScreen(
     @Suppress("UNUSED_PARAMETER") lastSyncTime: Long = 0L,
     @Suppress("UNUSED_PARAMETER") repository: com.eventmanager.app.data.repository.EventManagerRepository? = null,
     viewModel: com.eventmanager.app.ui.viewmodel.EventManagerViewModel? = null,
-    onLogout: () -> Unit = {}
+    onLogout: () -> Unit = {},
+    onOpenPosReport: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val platformContext = remember(context) { createPlatformContext(context) }
@@ -1752,8 +1837,8 @@ fun DashboardScreen(
                 .padding(responsivePadding)
         ) {
         // Visibility settings
-        val isPeopleCounterVisible = remember { settingsManager.isPeopleCounterVisible() }
-        val isStatisticsVisible = remember { settingsManager.isStatisticsVisible() }
+        val isPeopleCounterVisible = settingsManager.isPeopleCounterVisible()
+        val isStatisticsVisible = settingsManager.isStatisticsVisible()
         val dateChangeOffsetHours = remember { settingsManager.getDateChangeOffsetHours() }
         val guestListZone = GuestListDefaultZoneId
         val guestListEffectiveToday = rememberGuestListEffectiveToday(
@@ -2037,7 +2122,8 @@ fun DashboardScreen(
                 jobs = jobs,
                 venues = venues,
                 jobTypeConfigs = jobTypeConfigs,
-                isPhone = isPhone
+                isPhone = isPhone,
+                onOpenPosReport = onOpenPosReport,
             )
         }
         
@@ -2259,7 +2345,8 @@ fun GuestListScreenWithViewModel(
                     println("Benefit confirmation failed: ${e.message}")
                 }
             }
-        }
+        },
+        viewModel = viewModel
     )
 }
 
@@ -2310,7 +2397,8 @@ fun VolunteerScreenWithViewModel(viewModel: EventManagerViewModel) {
                     println("Volunteer deletion failed: ${e.message}")
                 }
             } 
-        }
+        },
+        viewModel = viewModel
     )
 }
 
@@ -2389,6 +2477,7 @@ fun BenefitsScreenWithViewModel(viewModel: EventManagerViewModel) {
 fun WelcomeScreen(
     onAdminSelected: () -> Unit,
     onTicketCheckSelected: () -> Unit,
+    onPosSelected: () -> Unit = {},
     showAdminAccessSyncIndicator: Boolean = false
 ) {
     val context = LocalContext.current
@@ -2683,6 +2772,30 @@ fun WelcomeScreen(
                         WelcomeSecondaryButton(
                             onClick = {
                                 performStrongHaptic(vibrator)
+                                onPosSelected()
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(if (isLandscape) 44.dp else 56.dp),
+                        ) {
+                            Icon(
+                                Icons.Default.PointOfSale,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = context.getString(R.string.pos_welcome_button),
+                                style = if (isLandscape) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        Spacer(Modifier.height(12.dp))
+
+                        WelcomeSecondaryButton(
+                            onClick = {
+                                performStrongHaptic(vibrator)
                                 onAdminSelected()
                             },
                             modifier = Modifier
@@ -2852,6 +2965,7 @@ fun SalesSheetItemManagementScreenWithViewModel(
     _onBack: () -> Unit
 ) {
     val items by viewModel.salesSheetItems.collectAsState()
+    val venues by viewModel.venues.collectAsState()
     val coroutineScope = rememberCoroutineScope()
     var isInitialized by remember { mutableStateOf(false) }
 
@@ -2869,6 +2983,7 @@ fun SalesSheetItemManagementScreenWithViewModel(
 
     SalesSheetItemManagementScreen(
         items = items,
+        venues = venues,
         onAddItem = { item ->
             coroutineScope.launch {
                 try {

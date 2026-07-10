@@ -98,9 +98,13 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
         private const val SHEET_LAST_COL_VOLUNTEER_GUEST_DATA = 7 // H
         private const val SHEET_LAST_COL_VOLUNTEER = 11 // L
         private const val SHEET_LAST_COL_JOBS = 8 // I (v2 shifts sheet)
-        private const val SHEET_LAST_COL_JOB_TYPES = 9 // J
+        private const val SHEET_LAST_COL_JOB_TYPES = 10 // K
         private const val SHEET_LAST_COL_VENUES = 10 // K
-        private const val SHEET_LAST_COL_SALES_ITEMS = 5 // F
+        private const val SHEET_LAST_COL_SALES_ITEMS = 8 // I
+        private const val SHEET_LAST_COL_TRANSFERS = 18 // S
+
+        /** 0-based column where the 2-column epoch helper starts (last data col + 2 blanks). */
+        private fun epochPanelColumn0(lastDataColumnZeroBased: Int) = lastDataColumnZeroBased + 3
 
         /** Epoch helper: 0-based column index, 1-based top row (product layout per tab). */
         private const val EPOCH_COL_GUEST_LIST = 13 // N
@@ -115,8 +119,8 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
         private const val EPOCH_ROW_VENUES = 2
         private const val EPOCH_COL_JOB_TYPES = 12 // M
         private const val EPOCH_ROW_JOB_TYPES = 2
-        private const val EPOCH_COL_SALES = 8 // I
         private const val EPOCH_ROW_SALES = 2
+        private const val EPOCH_ROW_TRANSFERS = 2
 
         /**
          * Parse a lastModified timestamp from a Google Sheets cell value.
@@ -254,8 +258,8 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
         lastStructureValidationAtMs = System.currentTimeMillis()
     }
 
-    private fun epochPanelCacheKey(spreadsheetId: String, tabTitle: String): String =
-        "$spreadsheetId|$tabTitle"
+    private fun epochPanelCacheKey(spreadsheetId: String, tabTitle: String, leftCol0: Int): String =
+        "$spreadsheetId|$tabTitle|$leftCol0"
 
     private fun volunteerGuestBannerCacheKey(spreadsheetId: String, tabTitle: String): String =
         "$spreadsheetId|$tabTitle"
@@ -347,6 +351,32 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
     }
 
     /**
+     * Clears values in the sidecar zone (blank columns + epoch panel area) so a misplaced
+     * epoch helper from an older schema does not overlap new data columns.
+     */
+    private suspend fun clearStaleEpochSidecar(sheetName: String, lastDataColumnZeroBased: Int) {
+        val tab = quoteSheetTabForRange(sheetName)
+        val startLetter = a1ColumnLetterFromIndex0(lastDataColumnZeroBased + 1)
+        val endLetter = a1ColumnLetterFromIndex0(lastDataColumnZeroBased + 5)
+        clearSheetRange("$tab!${startLetter}1:${endLetter}10")
+    }
+
+    private suspend fun repairEpochCalculatorPanel(
+        spreadsheetId: String,
+        sheetTitle: String,
+        lastDataColumnZeroBased: Int,
+        topRow1Based: Int,
+    ) {
+        clearStaleEpochSidecar(sheetTitle, lastDataColumnZeroBased)
+        applyEpochCalculatorPanel(
+            spreadsheetId,
+            sheetTitle,
+            epochPanelColumn0(lastDataColumnZeroBased),
+            topRow1Based,
+        )
+    }
+
+    /**
      * Two-column epoch helper in a fixed 4-row block (e.g. N2:O5): merged section titles (with short hints),
      * then input | formula for ms→datetime and date→ms. [leftCol0] is 0-based column (N=13); [topRow1Based] is the first row.
      */
@@ -364,7 +394,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
         // Skip entirely when we already wrote this purely-decorative panel to
         // this tab in this process session. The panel layout never changes, so
         // re-running it on every upload just burns 3-4 API calls per tab.
-        val cacheKey = epochPanelCacheKey(spreadsheetId, sheetTitle)
+        val cacheKey = epochPanelCacheKey(spreadsheetId, sheetTitle, leftCol0)
         if (epochPanelAppliedTabs.contains(cacheKey)) {
             return@withContext
         }
@@ -645,7 +675,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
 
         // Remember that this tab is now set up so subsequent uploads in the
         // same session skip the ~4 API calls above.
-        epochPanelAppliedTabs.add(epochPanelCacheKey(spreadsheetId, sheetTitle))
+        epochPanelAppliedTabs.add(epochPanelCacheKey(spreadsheetId, sheetTitle, leftCol0))
     }
 
     private fun requiresShiftTimeForJobType(jobTypeName: String, jobTypeConfigs: List<JobTypeConfig>): Boolean {
@@ -2100,11 +2130,12 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
         if (config.requiresShiftTime) "Yes" else "No",
         config.benefitSystemType.name,
         config.manualRewards?.let { rewards ->
-            "${rewards.durationDays}|${rewards.freeDrinks}|${rewards.barDiscountPercentage}|${rewards.freeEntry}|${rewards.invites}|${rewards.otherNotes}|${rewards.futureSingleUseEntries}|${rewards.futureSingleUseEntryInvites}"
+            "${rewards.durationDays}|${rewards.freeDrinks}|${rewards.barDiscountPercentage}|${rewards.freeEntry}|${rewards.invites}|${rewards.otherNotes}|${rewards.futureSingleUseEntries}|${rewards.futureSingleUseEntryInvites}|${rewards.accountCreditChf}"
         } ?: "",
         config.description,
         config.lastModified.toString(),
-        config.novaJobType.name
+        config.novaJobType.name,
+        config.accountCreditChf?.toString().orEmpty()
     )
 
     // Single Job Type Operations (App Priority)
@@ -2201,7 +2232,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
                 val values = jobTypeConfigs.map { config -> jobTypeConfigToSheetRow(config) }
                 
                 val valueRange = ValueRange()
-                    .setValues(listOf(listOf("Name", "Status", "Shift Type", "Orion Type", "Requires Time", "Benefit System", "Manual Rewards", "Description", "Last Modified", "Nova Job Type")) + values)
+                    .setValues(listOf(listOf("Name", "Status", "Shift Type", "Orion Type", "Requires Time", "Benefit System", "Manual Rewards", "Description", "Last Modified", "Nova Job Type", "Account Credit (CHF)")) + values)
                 
                 println("📤 Sending ${values.size + 1} rows (including header) to Google Sheets...")
                 
@@ -2249,7 +2280,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
                 operation = {
                 val response = sheetsService?.spreadsheets()?.values()?.get(
                     settingsManager.getSpreadsheetId(),
-                    "${settingsManager.getJobTypesSheet()}!A2:J"
+                    "${settingsManager.getJobTypesSheet()}!A2:K"
                 )?.execute()
                 
                 if (response == null) {
@@ -2274,6 +2305,17 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
                                 try {
                                     val parts = row[6].toString().split("|")
                                     when {
+                                        parts.size >= 9 -> ManualRewards(
+                                            durationDays = parts[0].toIntOrNull() ?: 1,
+                                            freeDrinks = parts[1].toIntOrNull() ?: 0,
+                                            barDiscountPercentage = parts[2].toIntOrNull() ?: 0,
+                                            freeEntry = parts[3].toBooleanStrictOrNull() ?: false,
+                                            invites = parts[4].toIntOrNull() ?: 0,
+                                            otherNotes = parts[5],
+                                            futureSingleUseEntries = parts[6].toIntOrNull() ?: 0,
+                                            futureSingleUseEntryInvites = parts[7].toIntOrNull() ?: 1,
+                                            accountCreditChf = parts[8].toDoubleOrNull() ?: 0.0
+                                        )
                                         parts.size >= 8 -> ManualRewards(
                                             durationDays = parts[0].toIntOrNull() ?: 1,
                                             freeDrinks = parts[1].toIntOrNull() ?: 0,
@@ -2316,6 +2358,10 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
                                 try { NovaJobType.valueOf(row[9].toString()) } catch (_: Exception) { NovaJobType.DEFAULT_SHIFT }
                             } else NovaJobType.DEFAULT_SHIFT
 
+                            val accountCreditChf = if (row.size >= 11) {
+                                row[10].toString().trim().takeIf { it.isNotEmpty() }?.toDoubleOrNull()
+                            } else null
+
                             JobTypeConfig(
                                 id = 0,
                                 name = row[0].toString(),
@@ -2326,6 +2372,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
                                 novaJobType = novaJobType,
                                 benefitSystemType = benefitSystemType,
                                 manualRewards = manualRewards,
+                                accountCreditChf = accountCreditChf,
                                 description = row[7].toString(),
                                 lastModified = parseLastModified(row[8].toString())
                             )
@@ -2547,7 +2594,10 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
                             if (item.hasDiscount) "Yes" else "No",
                             item.requiredRank?.name.orEmpty(),
                             if (item.isActive) "Active" else "Inactive",
-                            item.lastModified.toString()
+                            item.lastModified.toString(),
+                            item.categories,
+                            item.emoji,
+                            item.availableVenues,
                         )
                     }
 
@@ -2560,7 +2610,10 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
                                     "Discount",
                                     "Required Rank",
                                     "Status",
-                                    "Last Modified"
+                                    "Last Modified",
+                                    "Categories",
+                                    "Emoji",
+                                    "Available Venues",
                                 )
                             ) + values
                         )
@@ -2576,11 +2629,11 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
                     }
                     println("✅ Successfully synced ${items.size} sales items to Google Sheets")
                     try {
-                        applyEpochCalculatorPanel(
+                        repairEpochCalculatorPanel(
                             settingsManager.getSpreadsheetId(),
                             settingsManager.getSalesItemsSheet(),
-                            EPOCH_COL_SALES,
-                            EPOCH_ROW_SALES
+                            SHEET_LAST_COL_SALES_ITEMS,
+                            EPOCH_ROW_SALES,
                         )
                     } catch (e: Exception) {
                         println("⚠️ Epoch calculator on sales items sheet: ${e.message}")
@@ -2608,7 +2661,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
                 operation = {
                     val response = sheetsService?.spreadsheets()?.values()?.get(
                         settingsManager.getSpreadsheetId(),
-                        "${settingsManager.getSalesItemsSheet()}!A2:F"
+                        "${settingsManager.getSalesItemsSheet()}!A2:I"
                     )?.execute()
 
                     if (response == null) {
@@ -2647,7 +2700,10 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
                                     hasDiscount = hasDiscount,
                                     requiredRank = requiredRank,
                                     isActive = row.getOrNull(4)?.toString()?.equals("Inactive", ignoreCase = true) != true,
-                                    lastModified = parseLastModified(row.getOrNull(5)?.toString().orEmpty())
+                                    lastModified = parseLastModified(row.getOrNull(5)?.toString().orEmpty()),
+                                    categories = row.getOrNull(6)?.toString().orEmpty(),
+                                    emoji = row.getOrNull(7)?.toString().orEmpty(),
+                                    availableVenues = row.getOrNull(8)?.toString().orEmpty(),
                                 )
                             } catch (e: Exception) {
                                 println("Failed to parse sales sheet item row ${index + 2}: ${e.message}")
@@ -2671,6 +2727,144 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
             } else {
                 throw IOException(createNetworkErrorMessage("sync sales sheet items from Google Sheets", e), e)
             }
+        }
+    }
+
+    // Account Transfer Operations
+    private val TRANSFER_SHEET_HEADERS = listOf(
+        "Transfer ID", "Holder Type", "Holder ID", "Holder Name", "Amount", "Currency", "Type",
+        "Source Reference", "Job Reference Key", "Job Type", "Job Date", "Description",
+        "Credit Paid", "Cash Paid", "Bar Discount %", "POS Items", "Created At", "Last Modified",
+        "Venue",
+    )
+
+    suspend fun syncTransfersToSheets(transfers: List<AccountTransfer>) = withContext(Dispatchers.IO) {
+        try {
+            if (sheetsService == null) initializeSheetsService()
+            ApiRateLimitHandler.executeWithRetry(
+                operation = {
+                    clearSheetDataColumns(settingsManager.getTransfersSheet(), SHEET_LAST_COL_TRANSFERS)
+                    val values = transfers.map { transfer ->
+                        listOf(
+                            transfer.transferId,
+                            transfer.holderType.name,
+                            transfer.holderId,
+                            transfer.holderName,
+                            transfer.amount.toString(),
+                            transfer.currencyCode,
+                            transfer.type.name,
+                            transfer.sourceReference,
+                            transfer.jobReferenceKey,
+                            transfer.jobTypeName,
+                            transfer.jobDate?.toString().orEmpty(),
+                            transfer.description,
+                            transfer.creditAmountPaid?.toString().orEmpty(),
+                            transfer.cashAmountPaid?.toString().orEmpty(),
+                            transfer.posBarDiscountPercent?.toString().orEmpty(),
+                            transfer.posItemsJson,
+                            transfer.createdAt.toString(),
+                            transfer.lastModified.toString(),
+                            transfer.posVenueName,
+                        )
+                    }
+                    val valueRange = ValueRange().setValues(listOf(TRANSFER_SHEET_HEADERS) + values)
+                    sheetsService?.spreadsheets()?.values()?.update(
+                        settingsManager.getSpreadsheetId(),
+                        "${settingsManager.getTransfersSheet()}!A1",
+                        valueRange
+                    )?.setValueInputOption("RAW")?.execute()
+                        ?: throw IOException("Failed to update transfers in Google Sheets")
+                    try {
+                        repairEpochCalculatorPanel(
+                            settingsManager.getSpreadsheetId(),
+                            settingsManager.getTransfersSheet(),
+                            SHEET_LAST_COL_TRANSFERS,
+                            EPOCH_ROW_TRANSFERS,
+                        )
+                    } catch (e: Exception) {
+                        println("⚠️ Epoch calculator on transfers sheet: ${e.message}")
+                    }
+                },
+                operationName = "sync transfers to sheets"
+            )
+        } catch (e: Exception) {
+            if (e.message?.contains("429") == true) throw IOException(ApiRateLimitHandler.getBriefRateLimitMessage(), e)
+            throw IOException(createNetworkErrorMessage("sync transfers to Google Sheets", e), e)
+        }
+    }
+
+    suspend fun syncTransfersFromSheets(): List<AccountTransfer> = withContext(Dispatchers.IO) {
+        try {
+            if (sheetsService == null) initializeSheetsService()
+            ApiRateLimitHandler.executeWithRetry(
+                operation = {
+                    val response = sheetsService?.spreadsheets()?.values()?.get(
+                        settingsManager.getSpreadsheetId(),
+                        "${settingsManager.getTransfersSheet()}!A2:S"
+                    )?.execute() ?: throw IOException("Failed to retrieve transfers from Google Sheets")
+                    val values = response.getValues() ?: emptyList()
+                    values.mapIndexedNotNull { index, row ->
+                        if (row.size < 8) return@mapIndexedNotNull null
+                        try {
+                            val hasVenueColumn = row.size >= 19
+                            val hasNewFormat = row.size >= 18
+                            val hasCashOnlyFormat = row.size == 17
+                            val cashAmountPaid = when {
+                                hasNewFormat || hasCashOnlyFormat ->
+                                    row.getOrNull(13)?.toString()?.toDoubleOrNull()
+                                else -> null
+                            }
+                            val posBarDiscountPercent = if (hasNewFormat) {
+                                row.getOrNull(14)?.toString()?.toIntOrNull()
+                            } else {
+                                null
+                            }
+                            val posItemsIndex = when {
+                                hasNewFormat -> 15
+                                hasCashOnlyFormat -> 14
+                                else -> 13
+                            }
+                            val createdAtIndex = posItemsIndex + 1
+                            val lastModifiedIndex = posItemsIndex + 2
+                            AccountTransfer(
+                                id = 0,
+                                sheetsId = (index + 2).toString(),
+                                transferId = row[0].toString(),
+                                holderType = AccountHolderType.valueOf(row[1].toString()),
+                                holderId = row[2].toString(),
+                                holderName = row[3].toString(),
+                                amount = row[4].toString().toDoubleOrNull() ?: 0.0,
+                                currencyCode = row.getOrNull(5)?.toString()?.ifBlank { "CHF" } ?: "CHF",
+                                type = AccountTransferType.valueOf(row[6].toString()),
+                                sourceReference = row[7].toString(),
+                                jobReferenceKey = row.getOrNull(8)?.toString().orEmpty(),
+                                jobTypeName = row.getOrNull(9)?.toString().orEmpty(),
+                                jobDate = row.getOrNull(10)?.toString()?.toLongOrNull(),
+                                description = row.getOrNull(11)?.toString().orEmpty(),
+                                creditAmountPaid = row.getOrNull(12)?.toString()?.toDoubleOrNull(),
+                                cashAmountPaid = cashAmountPaid,
+                                posBarDiscountPercent = posBarDiscountPercent,
+                                posItemsJson = row.getOrNull(posItemsIndex)?.toString().orEmpty(),
+                                posVenueName = if (hasVenueColumn) {
+                                    row.getOrNull(18)?.toString().orEmpty()
+                                } else {
+                                    ""
+                                },
+                                createdAt = row.getOrNull(createdAtIndex)?.toString()?.toLongOrNull()
+                                    ?: parseLastModified(row.getOrNull(lastModifiedIndex)?.toString().orEmpty()),
+                                lastModified = parseLastModified(row.getOrNull(lastModifiedIndex)?.toString().orEmpty())
+                            )
+                        } catch (e: Exception) {
+                            println("Failed to parse transfer row ${index + 2}: ${e.message}")
+                            null
+                        }
+                    }
+                },
+                operationName = "sync transfers from sheets"
+            )
+        } catch (e: Exception) {
+            if (e.message?.contains("429") == true) throw IOException(ApiRateLimitHandler.getBriefRateLimitMessage(), e)
+            throw IOException(createNetworkErrorMessage("sync transfers from Google Sheets", e), e)
         }
     }
 
@@ -2930,7 +3124,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
         ),
         SheetDefinition(
             settingsManager.getJobTypesSheet(),
-            listOf("Name", "Status", "Shift Type", "Orion Type", "Requires Time", "Benefit System", "Manual Rewards", "Description", "Last Modified", "Nova Job Type")
+            listOf("Name", "Status", "Shift Type", "Orion Type", "Requires Time", "Benefit System", "Manual Rewards", "Description", "Last Modified", "Nova Job Type", "Account Credit (CHF)")
         ),
         SheetDefinition(
             settingsManager.getVenuesSheet(),
@@ -2962,7 +3156,11 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
         ),
         SheetDefinition(
             settingsManager.getSalesItemsSheet(),
-            listOf("Name", "Price", "Discount", "Required Rank", "Status", "Last Modified")
+            listOf("Name", "Price", "Discount", "Required Rank", "Status", "Last Modified", "Categories", "Emoji", "Available Venues")
+        ),
+        SheetDefinition(
+            settingsManager.getTransfersSheet(),
+            TRANSFER_SHEET_HEADERS
         )
     )
 
@@ -3247,6 +3445,37 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
     }
 
     /**
+     * Repositions the ms↔date helper on Sales (columns L–M) and Transfers (V–W) after schema
+     * column changes (e.g. Available Venues, Venue). Clears stale panels in the sidecar zone first.
+     */
+    suspend fun repairSalesAndTransfersEpochPanels(): Boolean = withContext(Dispatchers.IO) {
+        try {
+            if (sheetsService == null) initializeSheetsService()
+            val spreadsheetId = settingsManager.getSpreadsheetId()
+            if (spreadsheetId.isBlank() || spreadsheetId == "YOUR_SPREADSHEET_ID_HERE") {
+                return@withContext false
+            }
+            repairEpochCalculatorPanel(
+                spreadsheetId,
+                settingsManager.getSalesItemsSheet(),
+                SHEET_LAST_COL_SALES_ITEMS,
+                EPOCH_ROW_SALES,
+            )
+            repairEpochCalculatorPanel(
+                spreadsheetId,
+                settingsManager.getTransfersSheet(),
+                SHEET_LAST_COL_TRANSFERS,
+                EPOCH_ROW_TRANSFERS,
+            )
+            println("✅ Sales/Transfers epoch calculator panels repaired")
+            true
+        } catch (e: Exception) {
+            println("⚠️ repairSalesAndTransfersEpochPanels: ${e.message}")
+            false
+        }
+    }
+
+    /**
      * Validates every expected sheet tab exists with correct headers, repairing
      * as needed.  Row 1 is always **overwritten** when it does not match the
      * expected header — a new row is never inserted.  Inserting would shift
@@ -3279,6 +3508,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
             // clears it when the target spreadsheet/tab names change, and the
             // TTL bounds staleness for long-running processes.
             if (structureValidationCacheIsFresh(spreadsheetId)) {
+                repairSalesAndTransfersEpochPanels()
                 return@withContext true
             }
 
@@ -3382,6 +3612,9 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
                 println("⚠️ Volunteer guest list banner during structure validation: ${e.message}")
                 e.printStackTrace()
             }
+
+            // Step 7 — reposition epoch helpers on tabs whose data columns grew (Sales, Transfers).
+            repairSalesAndTransfersEpochPanels()
 
             // Structure and headers are verified/repaired for this spreadsheet;
             // subsequent calls in the same session (or within the TTL) will

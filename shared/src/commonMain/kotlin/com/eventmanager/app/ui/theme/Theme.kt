@@ -155,17 +155,17 @@ fun EventManagerTheme(
             val raw = if (isWomensDay && sm.isSeasonalFunEnabled()) "feminist_violet" else sm.getColorTheme()
             if (platformContext?.isDesktop == true && raw == "custom") "system" else raw
         }
-        remember(themeMode, darkTheme, themeRefreshNonce, colorThemeName) {
-            when {
-                colorThemeName == "custom" -> loadCustomThemeColorScheme(sm, darkTheme)
-                colorThemeName != "system" -> ColorThemes.getThemeByName(colorThemeName).toColorScheme(darkTheme)
-                darkTheme -> DarkColorScheme
-                else -> LightColorScheme
-            }
+        when {
+            colorThemeName == "custom" -> loadCustomThemeColorScheme(sm, darkTheme)
+            colorThemeName != "system" -> ColorThemes.getThemeByName(colorThemeName).toColorScheme(darkTheme)
+            else -> platformSystemColorScheme(darkTheme)
+                ?: if (darkTheme) DarkColorScheme else LightColorScheme
         }
     } else {
         if (darkTheme) DarkColorScheme else LightColorScheme
     }
+
+    PlatformThemeSideEffects(darkTheme = darkTheme, colorScheme = colorScheme)
 
     MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
 }

@@ -124,4 +124,33 @@ actual class PlatformFileManager actual constructor(private val context: Platfor
             }.getOrNull()
         }
     }
+
+    actual suspend fun saveFileToUserLocation(
+        sourceFile: File,
+        suggestedName: String,
+        mimeType: String,
+    ): Boolean = withContext(Dispatchers.IO) {
+        val destination = suspendCoroutine<File?> { cont ->
+            SwingUtilities.invokeLater {
+                val chooser = JFileChooser().apply {
+                    dialogTitle = "Enregistrer le rapport"
+                    selectedFile = File(suggestedName)
+                    fileFilter = FileNameExtensionFilter("PDF files", "pdf")
+                    isAcceptAllFileFilterUsed = false
+                }
+                val file = if (chooser.showSaveDialog(null) == JFileChooser.APPROVE_OPTION) {
+                    chooser.selectedFile.let { selected ->
+                        if (!selected.name.lowercase().endsWith(".pdf")) {
+                            File(selected.parentFile, "${selected.name}.pdf")
+                        } else selected
+                    }
+                } else null
+                cont.resume(file)
+            }
+        } ?: return@withContext false
+        runCatching {
+            sourceFile.copyTo(destination, overwrite = true)
+            true
+        }.getOrDefault(false)
+    }
 }

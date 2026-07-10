@@ -23,4 +23,5 @@ expect class PlatformFileManager(context: PlatformContext) {
     fun getWalletPassCertificateFile(): File?
     fun saveWalletPassCertificate(bytes: ByteArray): Boolean
     suspend fun pickWalletPassCertificateFile(): ByteArray?
+    suspend fun saveFileToUserLocation(sourceFile: File, suggestedName: String, mimeType: String): Boolean
 }

@@ -45,7 +45,7 @@ compose.desktop {
             }
             targetFormats(*packageFormats.toTypedArray())
             packageName = "NoctuList"
-            packageVersion = "1.0.3"
+            packageVersion = "1.1.0"
             description = "NoctuList — Guest list and volunteer management"
             vendor = "Collectif Nocturne"
             val desktopIcon = project.file("../app/src/main/res/mipmap-xxxhdpi/ic_launcher.png")

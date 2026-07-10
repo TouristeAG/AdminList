@@ -56,4 +56,10 @@ actual class PlatformFileManager actual constructor(private val context: Platfor
     }.getOrDefault(false)
 
     actual suspend fun pickWalletPassCertificateFile(): ByteArray? = null
+
+    actual suspend fun saveFileToUserLocation(
+        sourceFile: File,
+        suggestedName: String,
+        mimeType: String,
+    ): Boolean = false
 }

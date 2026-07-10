@@ -56,6 +56,7 @@ kotlin {
             }
         }
         val androidMain by getting {
+            dependsOn(commonMain)
             dependencies {
                 implementation(libs.kotlinx.coroutines.android)
                 implementation(files("${rootProject.projectDir}/app/libs/smartcardio-0.1.7.aar"))
@@ -95,7 +96,9 @@ kotlin {
             }
         }
         val desktopMain by getting {
+            dependsOn(commonMain)
             dependencies {
+                implementation("com.github.librepdf:openpdf:1.3.30")
                 implementation(compose.desktop.currentOs)
                 implementation(files("${rootProject.projectDir}/shared/libs/smartcardio-api-0.1.7.jar"))
                 implementation(libs.apdu4j.jnasmartcardio)

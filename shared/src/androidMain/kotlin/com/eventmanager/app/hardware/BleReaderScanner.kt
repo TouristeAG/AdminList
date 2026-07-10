@@ -78,7 +78,11 @@ object BleReaderScanner {
     /** Name match for ACR1255U / ACR1255U-J1 / 1255U variants reported by ACS. */
     fun nameMatchesAcr1255(name: String?): Boolean {
         val n = name?.lowercase(Locale.US).orEmpty()
-        return n.contains("acr1255") || n.contains("1255u-j1") || n.contains("1255u")
+        if (n.isBlank()) return false
+        return n.contains("acr1255") ||
+            n.contains("1255u-j1") ||
+            n.contains("1255u") ||
+            (n.contains("acr") && n.contains("1255"))
     }
 
     /**

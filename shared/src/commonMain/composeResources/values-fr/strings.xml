@@ -32,6 +32,80 @@
     <string name="shift_types_sheet_label">Feuille types de Shifts</string>
     <string name="venues_sheet_label">Feuille Lieux</string>
     <string name="sales_items_sheet_label">Feuille des articles de vente</string>
+    <string name="transfers_sheet_label">Feuille des transferts</string>
+    <string name="account_amount_label">Montant du compte</string>
+    <string name="currency_setting_label">Devise</string>
+    <string name="currency_setting_description">Devise affichée pour les soldes et le POS</string>
+    <string name="pos_title">POS</string>
+    <string name="pos_welcome_button">POS interne</string>
+    <string name="pos_background_animation_title">Arrière-plan POS</string>
+    <string name="pos_background_animation_description">Choisissez un arrière-plan animé pour les écrans POS uniquement</string>
+    <string name="pos_scan_customer">Scanner carte ou QR</string>
+    <string name="pos_category_all">Tout</string>
+    <string name="pos_manual_amount">Montant manuel</string>
+    <string name="pos_cart_title">Panier</string>
+    <string name="pos_validate_sale">Valider la vente</string>
+    <string name="pos_sale_success">Vente terminée !</string>
+    <string name="pos_sale_remaining_credit">Crédit restant : %1$s</string>
+    <string name="pos_remaining_credit_label">Crédit restant</string>
+    <string name="pos_sale_next">Suivant</string>
+    <string name="pos_sale_next_hint">Scannez la prochaine carte</string>
+    <string name="pos_sale_next_shortcut">Entrée ↵</string>
+    <string name="pos_insufficient_funds">Crédit insuffisant</string>
+    <string name="pos_cash_payment_title">Crédit insuffisant</string>
+    <string name="pos_cash_payment_message">Le compte couvre %1$s. Souhaitez-vous payer %2$s en espèces ou carte pour valider la vente ?</string>
+    <string name="pos_cash_payment_credit_covers">Le compte couvre %1$s.</string>
+    <string name="pos_cash_payment_due_label">À payer en espèces ou carte</string>
+    <string name="pos_cash_payment_bar_discount_applied">Rabais bar -%1$d\u0025 appliqué sur la différence</string>
+    <string name="pos_cash_payment_confirm">Payer et valider</string>
+    <string name="pos_cash_payment_cancel">Annuler la vente</string>
+    <string name="pos_pay_cash_card">Payer %1$s en espèces ou carte</string>
+    <string name="pos_customer_balance">Solde : %1$s</string>
+    <string name="pos_total">Total : %1$s</string>
+    <string name="pos_clear_cart">Vider</string>
+    <string name="pos_use_qr">Utiliser un QR</string>
+    <string name="pos_manual_default_label">Manuel</string>
+    <string name="pos_step_scan">Scanner la carte</string>
+    <string name="pos_step_add">Ajouter articles</string>
+    <string name="pos_step_validate">Valider</string>
+    <string name="pos_waiting_card">Approchez la carte du lecteur</string>
+    <string name="pos_reader_active">Lecteur actif</string>
+    <string name="pos_reader_not_connected">Aucun lecteur connecté</string>
+    <string name="pos_reader_waiting">En attente de carte</string>
+    <string name="pos_unknown_card">Carte non reconnue</string>
+    <string name="pos_customer_recognized">%1$s reconnu·e</string>
+    <string name="pos_clear_customer">Changer de profil</string>
+    <string name="pos_profile_switch_title">Changer de profil ?</string>
+    <string name="pos_profile_switch_message">%1$s a été scanné, mais la commande en cours est au nom de %2$s.</string>
+    <string name="pos_profile_switch_keep_cart">Changer de profil — garder le panier</string>
+    <string name="pos_profile_switch_clear_cart">Changer de profil — vider le panier</string>
+    <string name="pos_profile_switch_keep_current">Annuler — garder le profil et le panier actuels</string>
+    <string name="pos_reader_scanning">Lecture NFC en cours</string>
+    <string name="pos_bar_discount_badge">-%1$d\u0025 au bar</string>
+    <string name="pos_bar_discount_at_bar">au bar</string>
+    <string name="pos_bar_discount_cash_hint">Sur paiement en espèces ou carte</string>
+    <string name="pos_scan_next">Scannez la prochaine carte</string>
+    <string name="pos_cart_empty">Panier vide — touchez les produits pour ajouter</string>
+    <string name="pos_select_customer_first">Scannez d\'abord un profil</string>
+    <string name="pos_customer_guest_label">Invité·e</string>
+    <string name="pos_items_count">%1$d articles</string>
+    <string name="numpad_clear">Effacer</string>
+    <string name="numpad_backspace">Retour arrière</string>
+    <string name="numpad_add_to_cart">Ajouter au panier</string>
+    <string name="emoji_picker_title">Choisir un emoji</string>
+    <string name="emoji_picker_choose">Choisir</string>
+    <string name="account_credit_tooltip">Ajouter du crédit</string>
+    <string name="account_debit_tooltip">Retirer du crédit</string>
+    <string name="recent_transfers_label">Transferts récents</string>
+    <string name="show_all_transfers">Montrer tous les transferts</string>
+    <string name="show_fewer_transfers">Montrer moins de transferts</string>
+    <string name="adjust_account_button">Ajuster le compte</string>
+    <string name="sales_categories_label">Catégories</string>
+    <string name="sales_emoji_label">Emoji</string>
+    <string name="sales_category_merch">Merch</string>
+    <string name="sales_category_entry">Entrée</string>
+    <string name="sales_category_bar">Bar</string>
+    <string name="sales_category_other">Autre</string>
     <string name="admin_label">Admin</string>
     <string name="admin_yes">Oui</string>
     <string name="admin_no">Non</string>
@@ -113,6 +187,8 @@
     <string name="language_spanish">Español</string>
     <string name="language_chinese">繁體中文</string>
     <string name="language_chinese_simplified">简体中文</string>
+    <string name="language_latin">Latina</string>
+    <string name="language_hindi">हिन्दी</string>
     
     <!-- Theme Settings -->
     <string name="theme_title">Thème</string>
@@ -153,7 +229,7 @@
     <string name="system_is_in_dark_mode">Le système est en mode sombre</string>
     <string name="system_is_in_light_mode">Le système est en mode clair</string>
     <string name="people_counter_visibility_title">Afficher le compteur de personnes</string>
-    <string name="people_counter_visibility_description">Afficher ou masquer le compteur de personnes sur la page d'accueil</string>
+    <string name="people_counter_visibility_description">Afficher ou masquer le compteur de personnes sur l'accueil billetterie et le tableau de bord admin</string>
     <string name="statistics_visibility_title">Afficher les graphiques statistiques</string>
     <string name="statistics_visibility_description">Afficher ou masquer la section des graphiques statistiques sur la page d'accueil</string>
     <string name="scroll_behavior_title">Comportement du défilement pour les pages de gestion</string>
@@ -1186,6 +1262,40 @@
     <string name="graph_preview">Aperçu du graphique</string>
     <string name="share_graph">Partager le graphique</string>
     <string name="open_with">Ouvrir avec</string>
+
+    <!-- POS Accounting PDF Report -->
+    <string name="pos_report_title">Décompte comptable POS</string>
+    <string name="pos_report_entry_title">PDF décompte POS</string>
+    <string name="pos_report_entry_subtitle">Décompte d'une soirée ou d'une période pour la comptabilité (ventes, transferts, ajustements)</string>
+    <string name="pos_report_mode_evening">Une soirée</string>
+    <string name="pos_report_mode_period">Période</string>
+    <string name="pos_report_select_date">Date de la soirée</string>
+    <string name="pos_report_period_start">Date de début</string>
+    <string name="pos_report_period_end">Date de fin</string>
+    <string name="pos_report_closure_time">Heure de fermeture</string>
+    <string name="pos_report_closure_override">Modifier la fermeture pour ce rapport uniquement</string>
+    <string name="pos_report_evening_help">Soirée du %1$s · fermeture à %2$s\nPériode : %3$s</string>
+    <string name="pos_report_period_help">Période : %1$s</string>
+    <string name="pos_report_preview_transfers">%1$d transferts (%2$d ventes POS)</string>
+    <string name="pos_report_preview_cash">Espèces/carte encaissées : %1$s</string>
+    <string name="pos_report_preview_credit">Crédit interne consommé : %1$s</string>
+    <string name="pos_report_generate">Générer le PDF</string>
+    <string name="pos_report_generating">Génération du PDF…</string>
+    <string name="pos_report_preview_title">Rapport prêt</string>
+    <string name="pos_report_preview_summary">%1$d ventes POS · %2$s espèces/carte · %3$d transferts au total</string>
+    <string name="pos_report_share">Partager le rapport</string>
+    <string name="pos_report_open">Ouvrir le rapport</string>
+    <string name="pos_report_save_as">Enregistrer sous…</string>
+    <string name="pos_report_preview_period">Période couverte</string>
+    <string name="pos_report_venue_scope_all">Total (tous les lieux)</string>
+    <string name="pos_report_venue_scope_global">Global</string>
+    <string name="pos_report_venue_label">Lieu</string>
+    <string name="pos_venue_global">Global</string>
+    <string name="pos_venue_selector_label">Lieu de vente</string>
+    <string name="pos_venue_current">Lieu actuel : %1$s</string>
+    <string name="sales_item_venues_label">Lieux de vente</string>
+    <string name="sales_item_venues_hint">Choisissez dans quels lieux cet article est proposé au POS.</string>
+    <string name="pos_report_file_size">Taille</string>
     <string name="active_volunteers_graph">Graphique des bénévoles actif·ve·s</string>
     
     <!-- Tablet-specific strings -->
@@ -1237,6 +1347,10 @@
     <string name="validate_entry_description_with_invites">Entrée pour le bénévole + %1$d invité(s). Glissez pour confirmer.</string>
     <string name="validate_entry_description_solo">Entrée seule (sans invités). Glissez pour confirmer.</string>
     <string name="slide_to_confirm">Glisser pour confirmer</string>
+    <string name="desktop_confirm_entry_button">Valider l'entrée</string>
+    <string name="desktop_entry_confirmed">Entrée validée</string>
+    <string name="validate_entry_description_solo_desktop">Entrée seule (sans invités). Cliquez ci-dessous pour confirmer.</string>
+    <string name="validate_entry_description_with_invites_desktop">Entrée pour le bénévole + %1$d invité(s). Cliquez ci-dessous pour confirmer.</string>
     <string name="future_entry_group_label_invites">%1$d entrée restante (+%2$d inv.)</string>
     <string name="future_entries_group_label_invites">%1$d entrées restantes (+%2$d inv.)</string>
     <string name="future_entry_group_label_solo">%1$d entrée restante (seul)</string>
@@ -1349,7 +1463,12 @@
     <string name="settings_category_external_reader">Lecteur NFC Bluetooth</string>
     <string name="settings_category_pcsc_reader">Lecteur NFC USB</string>
     <string name="pcsc_reader_description">Branchez un lecteur NFC USB ACS ACR122U ou compatible. macOS et Windows incluent PC/SC ; sous Linux, installez et démarrez pcscd.</string>
-    <string name="desktop_external_reader_description">Les lecteurs USB (ACR122U) fonctionnent branchés. Pour le Bluetooth (ACR1255U-J1), associez le lecteur dans les réglages Bluetooth du Mac/PC, puis sélectionnez-le ci-dessous. Une fois configuré, la lecture est automatique.</string>
+    <string name="desktop_external_reader_description">Les lecteurs USB (ACR122U, ACR1255U-J1 en mode USB) fonctionnent branchés avec le driver PC/SC ACS installé. Basculez le lecteur en mode USB, branchez le câble, puis utilisez Tester la connexion ci-dessous.</string>
+    <string name="desktop_ble_supported_windows">Bluetooth (ACR1255U-J1) : installez le driver PC/SC Bluetooth ACS, associez le lecteur dans les réglages Bluetooth Windows, puis sélectionnez-le ci-dessous.</string>
+    <string name="desktop_ble_unsupported_macos">Le Bluetooth n'est pas pris en charge sur macOS (pas de driver PC/SC BLE ACS). Utilisez le mode USB avec le driver USB ACS.</string>
+    <string name="desktop_ble_unsupported_linux">Le Bluetooth n'est pas pris en charge sur Linux (pas de driver PC/SC BLE ACS). Utilisez le mode USB avec pcscd et le driver USB ACS.</string>
+    <string name="desktop_list_pcsc_readers">Lister les lecteurs PC/SC</string>
+    <string name="desktop_usb_reader_test_button">Tester le lecteur USB</string>
     <string name="desktop_ble_reader_picker_subtitle">Associez l'ACR1255U-J1 dans le Bluetooth système, puis choisissez-le ici. Les lecteurs déjà visibles par PC/SC sont prêts immédiatement.</string>
     <string name="desktop_ble_reader_not_found">Aucun ACR1255U-J1 trouvé. Allumez-le, associez-le au Bluetooth et installez le pilote ACS PC/SC.</string>
     <string name="desktop_ble_reader_pcsc_ready">PC/SC prêt · %1$s</string>
@@ -1368,6 +1487,15 @@
 
     <string name="ble_reader_picker_title">Choisir un lecteur NFC Bluetooth</string>
     <string name="ble_reader_picker_subtitle">Vérifiez que le lecteur ACR1255U-J1 est allumé et à proximité. Les lecteurs ACR apparaissent en premier.</string>
+    <string name="ble_reader_section_acr_title">Lecteurs NFC ACS</string>
+    <string name="ble_reader_section_acr_hint">Recommandé · ACR1255U-J1 et appareils ACS compatibles</string>
+    <string name="ble_reader_section_acr_empty">Aucun lecteur ACS détecté. Allumez l'ACR1255U-J1 et rapprochez-le de l'appareil pendant la recherche.</string>
+    <string name="ble_reader_section_other_title">Autres appareils Bluetooth</string>
+    <string name="ble_reader_show_other_devices">Afficher les autres appareils Bluetooth (%1$d)</string>
+    <string name="ble_reader_hide_other_devices">Masquer les autres appareils Bluetooth</string>
+    <string name="ble_reader_search_other_hint">Filtrer par nom ou adresse MAC…</string>
+    <string name="ble_reader_other_truncated">%1$d sur %2$d appareils affichés (signal le plus fort en premier)</string>
+    <string name="ble_reader_rssi_label">%1$d dBm</string>
     <string name="ble_reader_scanning">Recherche d'appareils Bluetooth…</string>
     <string name="ble_reader_scanning_hint">La recherche reste active tant que cette fenêtre est ouverte.</string>
     <string name="ble_reader_show_all">Afficher tous les appareils Bluetooth</string>
@@ -1411,4 +1539,78 @@
     <string name="desktop_admin_nav_layout_right">Barre latérale droite</string>
     <string name="desktop_admin_nav_expand">Développer le menu</string>
     <string name="desktop_admin_nav_collapse">Réduire le menu</string>
+
+    <!-- Account adjustment + desktop QR (i18n fill) -->
+    <string name="adjust_account_title">Ajuster le solde du compte</string>
+    <string name="account_add_money">Ajouter de l'argent</string>
+    <string name="account_remove_money">Retirer de l'argent</string>
+    <string name="amount_label">Montant</string>
+    <string name="note_label">Note</string>
+    <string name="continue_label">Continuer</string>
+    <string name="manual_adjustment_default_note">Ajustement manuel</string>
+    <string name="desktop_qr_start_webcam">Démarrer la webcam</string>
+    <string name="desktop_qr_open_image">Ouvrir une image QR…</string>
+    <string name="desktop_qr_opening_camera">Ouverture de la caméra…</string>
+    <string name="desktop_qr_point_at_code">Présentez le code QR devant la caméra</string>
+    <string name="desktop_qr_opening_file_picker">Choisissez un fichier image…</string>
+
+    <!-- Hardcoded / desktop / POS message strings (i18n) -->
+    <string name="account_reversal_description">Annulation : %1$s</string>
+    <string name="custom_theme_editor_title">Éditeur de thème personnalisé</string>
+    <string name="desktop_bluetooth_nfc_reader">Lecteur NFC Bluetooth</string>
+    <string name="desktop_bluetooth_nfc_reader_offline">Lecteur NFC Bluetooth (hors ligne)</string>
+    <string name="desktop_no_external_reader">Aucun lecteur externe</string>
+    <string name="desktop_pcsc_error">Erreur PC/SC</string>
+    <string name="desktop_pcsc_library_unavailable">Bibliothèque PC/SC indisponible</string>
+    <string name="desktop_pcsc_no_ble_reader">Aucun lecteur NFC Bluetooth dans PC/SC.
+Associez l\'ACR1255U-J1 dans les réglages Bluetooth du système et installez le driver ACS.</string>
+    <string name="desktop_pcsc_no_card_on_reader">Aucune carte détectée sur le lecteur</string>
+    <string name="desktop_pcsc_no_card_present">Aucune carte présente</string>
+    <string name="desktop_pcsc_no_reader">Aucun lecteur PC/SC</string>
+    <string name="desktop_pcsc_no_readers_found">Aucun lecteur PC/SC trouvé.</string>
+    <string name="desktop_pcsc_no_readers_hint">Aucun lecteur PC/SC trouvé.
+Branchez un lecteur USB ou associez un ACR1255U-J1 Bluetooth.</string>
+    <string name="desktop_pcsc_provider_failed">Échec du chargement du fournisseur PC/SC.
+Assurez-vous que PC/SC est installé et redémarrez l\'application.</string>
+    <string name="desktop_pcsc_reader_disconnected">Lecteur déconnecté.</string>
+    <string name="desktop_pcsc_reader_error">Erreur du lecteur</string>
+    <string name="desktop_pcsc_reader_ok_place_card">OK — lecteur connecté.
+Placez une carte sur le lecteur et testez à nouveau pour lire un UID.</string>
+    <string name="desktop_pcsc_readers_header">Lecteurs (%1$d) :</string>
+    <string name="desktop_pcsc_unable_select_reader">Impossible de sélectionner un lecteur.</string>
+    <string name="desktop_pcsc_unavailable">PC/SC indisponible</string>
+    <string name="desktop_pcsc_using_reader">Utilisation : %1$s</string>
+    <string name="desktop_pcsc_waiting_card">En attente de carte (jusqu\'à %1$d s)…</string>
+    <string name="desktop_pcsc_waiting_removal">En attente du retrait de la carte</string>
+    <string name="desktop_usb_nfc_reader">Lecteur NFC USB</string>
+    <string name="done">Terminé</string>
+    <string name="email_gmail_connect_activity_unavailable">Connexion impossible : contexte Activity indisponible</string>
+    <string name="email_gmail_connect_api">Connecter l\'API Gmail</string>
+    <string name="email_gmail_connect_api_hint">Votre compte Google est enregistré. Sur Android TV et les appareils plus anciens, une étape d\'autorisation supplémentaire est nécessaire pour connecter l\'API Gmail.</string>
+    <string name="pos_sale_complete_message">Vente terminée</string>
+    <string name="rate_limit_action_auto_retry">L\'application réessaiera automatiquement avec backoff</string>
+    <string name="rate_limit_action_check_quota">Vérifiez si d\'autres applications utilisent le même quota API</string>
+    <string name="rate_limit_action_reduce_freq">Réduisez la fréquence de synchronisation dans les paramètres</string>
+    <string name="rate_limit_action_wait">Attendez 1 à 2 minutes avant de réessayer</string>
+    <string name="rate_limit_current_limits">Limites API actuelles :</string>
+    <string name="rate_limit_dialog_title">Limite de débit API dépassée</string>
+    <string name="rate_limit_per_100_seconds">Par 100 secondes</string>
+    <string name="rate_limit_per_100_value">500 requêtes par projet</string>
+    <string name="rate_limit_per_user_requests">Requêtes par utilisateur</string>
+    <string name="rate_limit_per_user_value">60 par minute et par utilisateur</string>
+    <string name="rate_limit_read_requests">Requêtes en lecture</string>
+    <string name="rate_limit_read_value">300 par minute et par projet</string>
+    <string name="rate_limit_retry_sync">Réessayer la synchro</string>
+    <string name="rate_limit_tips_body">• Utilisez la synchronisation manuelle au lieu de l\'auto-sync en période de forte charge
+• Synchronisez moins souvent si vous atteignez souvent les limites
+• Consultez la console Google Cloud pour l\'utilisation du quota</string>
+    <string name="rate_limit_tips_title">Astuces :</string>
+    <string name="rate_limit_too_many_requests">Trop de requêtes</string>
+    <string name="rate_limit_wait_message">Vous avez atteint la limite de débit de l\'API Google Sheets. Veuillez attendre 1 à 2 minutes avant de réessayer.</string>
+    <string name="rate_limit_what_to_do">Que faire :</string>
+    <string name="rate_limit_write_requests">Requêtes en écriture</string>
+    <string name="rate_limit_write_value">300 par minute et par projet</string>
+    <string name="theme_hue_label">Teinte (arc-en-ciel) : %1$d°</string>
+    <string name="theme_luminosity_label">Luminosité : %1$d%%</string>
+    <string name="theme_saturation_label">Saturation : %1$d%%</string>
 </resources>

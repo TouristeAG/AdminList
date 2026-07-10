@@ -261,6 +261,7 @@ private fun CustomThemeEditorDialog(
     onColorChanged: () -> Unit = {},
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
     var editDark by remember { mutableStateOf(false) }
     var selectedRoleKey by remember { mutableStateOf("primary") }
     var editorVersion by remember { mutableIntStateOf(0) }
@@ -311,7 +312,7 @@ private fun CustomThemeEditorDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = "Custom Theme Editor",
+                    text = context.getString(R.string.custom_theme_editor_title),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
@@ -321,13 +322,13 @@ private fun CustomThemeEditorDialog(
                         colors = ButtonDefaults.buttonColors(
                             containerColor = if (!editDark) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
                         )
-                    ) { Text("Light") }
+                    ) { Text(context.getString(R.string.theme_light)) }
                     Button(
                         onClick = { editDark = true },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = if (editDark) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
                         )
-                    ) { Text("Dark") }
+                    ) { Text(context.getString(R.string.theme_dark)) }
                 }
 
                 Row(
@@ -371,7 +372,7 @@ private fun CustomThemeEditorDialog(
                         )
                 )
 
-                Text("Teinte (arc-en-ciel): ${hue.roundToInt()}°")
+                Text(context.getString(R.string.theme_hue_label, hue.roundToInt()))
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -409,7 +410,7 @@ private fun CustomThemeEditorDialog(
                     )
                 }
 
-                Text("Saturation: ${(saturation * 100f).roundToInt()}%")
+                Text(context.getString(R.string.theme_saturation_label, (saturation * 100f).roundToInt()))
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -436,7 +437,7 @@ private fun CustomThemeEditorDialog(
                     )
                 }
 
-                Text("Luminosite: ${(value * 100f).roundToInt()}%")
+                Text(context.getString(R.string.theme_luminosity_label, (value * 100f).roundToInt()))
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -470,7 +471,7 @@ private fun CustomThemeEditorDialog(
                 )
 
                 TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
-                    Text("Done")
+                    Text(context.getString(R.string.done))
                 }
             }
         }
@@ -1372,8 +1373,7 @@ private fun GmailAuthSection(
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Your Google account is saved. On Android TV and older devices, " +
-                                "an additional authorization step is needed to connect the Gmail API.",
+                        text = context.getString(R.string.email_gmail_connect_api_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1392,12 +1392,12 @@ private fun GmailAuthSection(
                         }
                         Icon(Icons.Default.Email, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Connect Gmail API")
+                        Text(context.getString(R.string.email_gmail_connect_api))
                     }
                     if (activity == null) {
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Cannot connect: Activity context not available",
+                            text = context.getString(R.string.email_gmail_connect_activity_unavailable),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error
                         )
@@ -1492,6 +1492,7 @@ actual fun SettingsScreen(
     var jobTypesSheet by remember { mutableStateOf(settingsManager.getJobTypesSheet()) }
     var venuesSheet by remember { mutableStateOf(settingsManager.getVenuesSheet()) }
     var salesItemsSheet by remember { mutableStateOf(settingsManager.getSalesItemsSheet()) }
+    var transfersSheet by remember { mutableStateOf(settingsManager.getTransfersSheet()) }
     var tempGuestListSheet by remember { mutableStateOf(settingsManager.getTempGuestListSheet()) }
     var showInstructions by remember { mutableStateOf(false) }
     var jsonKeyInfo by remember { mutableStateOf<JsonKeyInfo?>(null) }
@@ -1585,6 +1586,15 @@ actual fun SettingsScreen(
                 settingsManager = settingsManager,
                 isDesktop = false,
                 target = BackgroundAnimationSettingsTarget.Billeterie,
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        if (variant == SettingsScreenVariant.PosBasic) {
+            BackgroundAnimationSettingsSection(
+                settingsManager = settingsManager,
+                isDesktop = false,
+                target = BackgroundAnimationSettingsTarget.Pos,
             )
             Spacer(modifier = Modifier.height(24.dp))
         }
@@ -1777,6 +1787,18 @@ actual fun SettingsScreen(
                             Icon(Icons.Default.PointOfSale, contentDescription = null)
                         }
                     )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    OutlinedTextField(
+                        value = transfersSheet,
+                        onValueChange = { transfersSheet = it },
+                        label = { Text(context.getString(R.string.transfers_sheet_label)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        leadingIcon = {
+                            Icon(Icons.Default.SwapHoriz, contentDescription = null)
+                        }
+                    )
                     
                     Spacer(modifier = Modifier.height(24.dp))
                     
@@ -1792,6 +1814,7 @@ actual fun SettingsScreen(
                             settingsManager.saveJobTypesSheet(jobTypesSheet)
                             settingsManager.saveVenuesSheet(venuesSheet)
                             settingsManager.saveSalesItemsSheet(salesItemsSheet)
+                            settingsManager.saveTransfersSheet(transfersSheet)
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -2003,7 +2026,7 @@ actual fun SettingsScreen(
         
         }
         
-        if (variant == SettingsScreenVariant.BilleterieBasic) {
+        if (variant == SettingsScreenVariant.BilleterieBasic || variant == SettingsScreenVariant.PosBasic) {
             ExpandableSettingsCategory(
                 title = context.getString(R.string.settings_category_sync),
                 icon = Icons.Default.CloudSync,
@@ -2953,8 +2976,24 @@ actual fun SettingsScreen(
             }
         ) {
             // Language Selection
-            var selectedLanguage by remember { mutableStateOf(settingsManager.getLanguage()) }
+            val usesPosLanguage = variant == SettingsScreenVariant.PosBasic
+            var selectedLanguage by remember(variant) {
+                mutableStateOf(
+                    if (usesPosLanguage) settingsManager.getPosLanguage() else settingsManager.getLanguage()
+                )
+            }
             var showLanguageMenu by remember { mutableStateOf(false) }
+            val persistLanguageSelection: (String) -> Unit = { code ->
+                selectedLanguage = code
+                showLanguageMenu = false
+                if (usesPosLanguage) {
+                    settingsManager.savePosLanguage(code)
+                    AppAppearanceState.notifyLocaleChanged(code)
+                } else {
+                    settingsManager.saveLanguage(code)
+                    (context as? android.app.Activity)?.recreate()
+                }
+            }
             
             Column(
                 modifier = Modifier.fillMaxWidth()
@@ -2985,6 +3024,8 @@ actual fun SettingsScreen(
                                 "es" -> context.getString(R.string.language_spanish)
                                 "zh-TW" -> context.getString(R.string.language_chinese)
                                 "zh-CN" -> context.getString(R.string.language_chinese_simplified)
+                                "la" -> context.getString(R.string.language_latin)
+                                "hi" -> context.getString(R.string.language_hindi)
                                 else -> context.getString(R.string.language_english)
                             },
                             modifier = Modifier.weight(1f),
@@ -3004,49 +3045,79 @@ actual fun SettingsScreen(
                     ) {
                         DropdownMenuItem(
                             text = { Text(context.getString(R.string.language_english)) },
-                            onClick = {
-                                selectedLanguage = "en"
-                                settingsManager.saveLanguage("en")
-                                showLanguageMenu = false
-                                (context as? android.app.Activity)?.recreate()
-                            }
+                            onClick = { persistLanguageSelection("en") }
                         )
                         DropdownMenuItem(
                             text = { Text(context.getString(R.string.language_french)) },
-                            onClick = {
-                                selectedLanguage = "fr"
-                                settingsManager.saveLanguage("fr")
-                                showLanguageMenu = false
-                                (context as? android.app.Activity)?.recreate()
-                            }
+                            onClick = { persistLanguageSelection("fr") }
                         )
                         DropdownMenuItem(
                             text = { Text(context.getString(R.string.language_spanish)) },
-                            onClick = {
-                                selectedLanguage = "es"
-                                settingsManager.saveLanguage("es")
-                                showLanguageMenu = false
-                                (context as? android.app.Activity)?.recreate()
-                            }
+                            onClick = { persistLanguageSelection("es") }
                         )
                         DropdownMenuItem(
                             text = { Text(context.getString(R.string.language_chinese)) },
-                            onClick = {
-                                selectedLanguage = "zh-TW"
-                                settingsManager.saveLanguage("zh-TW")
-                                showLanguageMenu = false
-                                (context as? android.app.Activity)?.recreate()
-                            }
+                            onClick = { persistLanguageSelection("zh-TW") }
                         )
                         DropdownMenuItem(
                             text = { Text(context.getString(R.string.language_chinese_simplified)) },
-                            onClick = {
-                                selectedLanguage = "zh-CN"
-                                settingsManager.saveLanguage("zh-CN")
-                                showLanguageMenu = false
-                                (context as? android.app.Activity)?.recreate()
-                            }
+                            onClick = { persistLanguageSelection("zh-CN") }
                         )
+                        DropdownMenuItem(
+                            text = { Text(context.getString(R.string.language_latin)) },
+                            onClick = { persistLanguageSelection("la") }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(context.getString(R.string.language_hindi)) },
+                            onClick = { persistLanguageSelection("hi") }
+                        )
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+
+            var selectedCurrency by remember { mutableStateOf(settingsManager.getCurrencyCode()) }
+            var showCurrencyMenu by remember { mutableStateOf(false) }
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = context.getString(R.string.currency_setting_label),
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    text = context.getString(R.string.currency_setting_description),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedButton(
+                        onClick = { showCurrencyMenu = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
+                    ) {
+                        Text(
+                            text = selectedCurrency,
+                            modifier = Modifier.weight(1f),
+                            textAlign = TextAlign.Start
+                        )
+                        Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(20.dp))
+                    }
+                    DropdownMenu(
+                        expanded = showCurrencyMenu,
+                        onDismissRequest = { showCurrencyMenu = false },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        listOf("CHF", "EUR", "USD", "GBP").forEach { code ->
+                            DropdownMenuItem(
+                                text = { Text(code) },
+                                onClick = {
+                                    selectedCurrency = code
+                                    settingsManager.saveCurrencyCode(code)
+                                    showCurrencyMenu = false
+                                }
+                            )
+                        }
                     }
                 }
             }

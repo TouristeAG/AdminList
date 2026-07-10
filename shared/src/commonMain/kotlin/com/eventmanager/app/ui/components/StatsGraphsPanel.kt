@@ -2,6 +2,7 @@ package com.eventmanager.app.ui.components
 
 import com.eventmanager.app.platform.LocalPlatformContext
 import com.eventmanager.app.platform.PlatformFileManager
+import com.eventmanager.app.platform.isDesktop
 import com.eventmanager.app.resources.Res
 import com.eventmanager.app.resources.*
 import org.jetbrains.compose.resources.getString
@@ -142,6 +143,7 @@ fun StatsGraphsPanel(
     venues: List<VenueEntity>,
     jobTypeConfigs: List<JobTypeConfig>,
     isPhone: Boolean,
+    onOpenPosReport: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val settingsManager = remember(platformContext) { com.eventmanager.app.data.sync.settingsManagerFor(platformContext) }
@@ -175,6 +177,17 @@ fun StatsGraphsPanel(
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.padding(horizontal = if (isPhone) 4.dp else 8.dp)
+        )
+
+        PosAccountingReportEntryCard(
+            onClick = onOpenPosReport,
+            isPhone = isPhone,
+            modifier = Modifier.padding(horizontal = if (isPhone) 4.dp else 8.dp),
+        )
+
+        HorizontalDivider(
+            modifier = Modifier.padding(horizontal = if (isPhone) 4.dp else 8.dp, vertical = 4.dp),
+            color = MaterialTheme.colorScheme.outlineVariant,
         )
 
         // Time Period Selector
@@ -468,24 +481,7 @@ private fun ActiveVolunteersGraph(
 
     // Loading indicator
     if (isExporting) {
-        Dialog(onDismissRequest = {}) {
-            Card(
-                modifier = Modifier.padding(16.dp),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    CircularProgressIndicator()
-                    Text(
-                        text = stringResource(Res.string.exporting),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            }
-        }
+        ExportLoadingDialog()
     }
 }
 
@@ -599,24 +595,7 @@ private fun GraphCardWithExport(
 
     // Loading indicator
     if (isExporting) {
-        Dialog(onDismissRequest = {}) {
-            Card(
-                modifier = Modifier.padding(16.dp),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    CircularProgressIndicator()
-                    Text(
-                        text = stringResource(Res.string.exporting),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            }
-        }
+        ExportLoadingDialog()
     }
 }
 
@@ -1111,24 +1090,7 @@ private fun GenderParityGraph(
 
     // Loading indicator
     if (isExporting) {
-        Dialog(onDismissRequest = {}) {
-            Card(
-                modifier = Modifier.padding(16.dp),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    CircularProgressIndicator()
-                    Text(
-                        text = stringResource(Res.string.exporting),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            }
-        }
+        ExportLoadingDialog()
     }
 }
 
@@ -1463,24 +1425,7 @@ private fun AgeDistributionGraph(
 
     // Loading indicator
     if (isExporting) {
-        Dialog(onDismissRequest = {}) {
-            Card(
-                modifier = Modifier.padding(16.dp),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    CircularProgressIndicator()
-                    Text(
-                        text = stringResource(Res.string.exporting),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            }
-        }
+        ExportLoadingDialog()
     }
 }
 
@@ -1904,24 +1849,7 @@ private fun MultiLineGraph(
 
     // Loading indicator
     if (isExporting) {
-        Dialog(onDismissRequest = {}) {
-            Card(
-                modifier = Modifier.padding(16.dp),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    CircularProgressIndicator()
-                    Text(
-                        text = stringResource(Res.string.exporting),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            }
-        }
+        ExportLoadingDialog()
     }
 }
 
@@ -2678,24 +2606,7 @@ private fun InteractiveLineGraph(
 
     // Loading indicator
     if (isExporting) {
-        Dialog(onDismissRequest = {}) {
-            Card(
-                modifier = Modifier.padding(16.dp),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    CircularProgressIndicator()
-                    Text(
-                        text = stringResource(Res.string.exporting),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            }
-        }
+        ExportLoadingDialog()
     }
 }
 
@@ -3258,6 +3169,36 @@ private fun calculateNearestPoint(xPosition: Float, width: Float, dataPoints: Li
 }
 
 /**
+ * Dialog shell for graph export / preview.
+ * Phones keep platform default width (works with resolution scaling).
+ * Desktop / tablet keep the centered custom-width layout.
+ */
+@Composable
+private fun GraphExportDialogShell(
+    onDismiss: () -> Unit,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    ExportDialogShell(onDismiss = onDismiss, content = content)
+}
+
+@Composable
+private fun ExportLoadingDialog() {
+    GraphExportDialogShell(onDismiss = {}) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            CircularProgressIndicator()
+            Text(
+                text = stringResource(Res.string.exporting),
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+    }
+}
+
+/**
  * Export options dialog
  */
 @Composable
@@ -3266,27 +3207,7 @@ private fun ExportOptionsDialog(
     onExportXLSX: () -> Unit,
     onExportJPG: () -> Unit
 ) {
-    val platformContext = LocalPlatformContext.current
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
-    ) {
-        BoxWithConstraints {
-            val isLandscape = maxWidth > maxHeight
-            val maxDialogWidth = if (isLandscape) maxWidth * 0.6f else maxWidth * 0.9f
-            val maxDialogHeight = if (isLandscape) maxHeight * 0.8f else maxHeight * 0.9f
-            
-            Card(
-                modifier = Modifier
-                    .widthIn(max = maxDialogWidth)
-                    .heightIn(max = maxDialogHeight)
-                    .padding(16.dp),
-                shape = RoundedCornerShape(20.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
+    GraphExportDialogShell(onDismiss = onDismiss) {
                 Text(
                     text = stringResource(Res.string.export_graph),
                     style = MaterialTheme.typography.titleLarge,
@@ -3382,9 +3303,6 @@ private fun ExportOptionsDialog(
                 ) {
                     Text(stringResource(Res.string.cancel))
                 }
-            }
-        }
-        }
     }
 }
 
@@ -3399,20 +3317,20 @@ private fun PreviewDialog(
     onShare: () -> Unit
 ) {
     val platformContext = LocalPlatformContext.current
+    val useFixedLayout = platformContext.isDesktop || isTablet()
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        properties = phoneFractionDialogProperties(),
     ) {
-        BoxWithConstraints {
-            val isLandscape = maxWidth > maxHeight
-            val maxDialogWidth = if (isLandscape) maxWidth * 0.7f else maxWidth * 0.9f
-            val maxDialogHeight = if (isLandscape) maxHeight * 0.85f else maxHeight * 0.95f
-            val imageMaxHeight = if (isLandscape) maxHeight * 0.5f else maxHeight * 0.4f
-            
+        DialogFractionSizer(profile = FractionalDialogProfile.Preview) { dialogWidth, dialogHeight ->
+            val isWideLayout = useFixedLayout && dialogWidth > dialogHeight && dialogWidth >= 600.dp
+            val imageMaxHeight = if (isWideLayout) dialogHeight * 0.45f else dialogHeight * 0.32f
+            val scrollState = rememberScrollState()
+
             Card(
                 modifier = Modifier
-                    .widthIn(max = maxDialogWidth)
-                    .heightIn(max = maxDialogHeight)
+                    .widthIn(max = dialogWidth)
+                    .heightIn(max = dialogHeight)
                     .padding(16.dp),
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(
@@ -3420,8 +3338,9 @@ private fun PreviewDialog(
                 )
             ) {
                 Column(
-                    modifier = Modifier.padding(24.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    modifier = Modifier
+                        .then(if (useFixedLayout) Modifier.fillMaxSize() else Modifier.fillMaxWidth())
+                        .padding(20.dp)
                 ) {
                     // Header with close button
                     Row(
@@ -3431,9 +3350,10 @@ private fun PreviewDialog(
                     ) {
                         Text(
                             text = stringResource(Res.string.export_complete),
-                            style = if (isLandscape) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineSmall,
+                            style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f)
                         )
                         IconButton(
                             onClick = onDismiss,
@@ -3446,11 +3366,14 @@ private fun PreviewDialog(
                             )
                         }
                     }
-                    
-                    // Content area - scrollable if needed
-                    val scrollState = rememberScrollState()
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Scrollable preview content
                     Column(
                         modifier = Modifier
+                            .then(if (useFixedLayout) Modifier.weight(1f) else Modifier)
+                            .fillMaxWidth()
                             .verticalScroll(scrollState),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
@@ -3534,7 +3457,7 @@ private fun PreviewDialog(
                                 ),
                                 shape = RoundedCornerShape(16.dp)
                             ) {
-                                if (isLandscape) {
+                                if (isWideLayout) {
                                     // Landscape: horizontal layout
                                     Row(
                                         modifier = Modifier
@@ -3724,14 +3647,16 @@ private fun PreviewDialog(
                                 }
                             }
                         }
-                    } // End of scrollable content
-                    
-                    // Share button
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Share button — always visible at bottom
                     Button(
                         onClick = onShare,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp),
+                            .height(52.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary
@@ -3740,12 +3665,12 @@ private fun PreviewDialog(
                         Icon(
                             Icons.Default.Share,
                             contentDescription = null,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(22.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            stringResource(Res.string.share),
-                            style = MaterialTheme.typography.bodyLarge
+                            stringResource(Res.string.share_graph),
+                            style = MaterialTheme.typography.titleMedium
                         )
                     }
                 }
