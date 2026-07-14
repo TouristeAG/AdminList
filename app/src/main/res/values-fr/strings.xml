@@ -718,7 +718,7 @@
     
     <!-- App Information -->
     <string name="app_info_title">Informations sur l\'application</string>
-    <string name="app_version">NoctuList 0.9</string>
+    <string name="app_version">NoctuList 1.1.1</string>
     <string name="app_designed_for">Conçu pour les lieux du Collectif Nocturne</string>
     <string name="app_developed_full">Développé pour le Collectif Nocturne par Leonardo Mondada</string>
     <string name="last_sync">Dernière mise à jour : %s</string>
