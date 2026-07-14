@@ -553,7 +553,6 @@ actual fun AppRootContent(
                     showPos = false
                     showWelcome = true
                 },
-                restoreLanguageCode = settingsManager.getLanguage(),
             )
         } else if (showTicketCheck) {
             var billeterieSection by rememberSaveable { mutableStateOf("home") }
@@ -585,10 +584,9 @@ actual fun AppRootContent(
                     showBilleterieSettings -> showBilleterieSettings = false
                     billeterieSection == "scanner" -> billeterieSection = billeterieScannerReturnSection
                     billeterieSection == "guests" -> billeterieSection = "home"
-                    billeterieSection == "pos" -> performPosFlowExit(
-                        viewModel,
-                        settingsManager.getLanguage(),
-                    ) { billeterieSection = "home" }
+                    billeterieSection == "pos" -> performPosFlowExit(viewModel) {
+                        billeterieSection = "home"
+                    }
                     else -> {
                         showTicketCheck = false
                         showWelcome = true
@@ -642,7 +640,6 @@ actual fun AppRootContent(
                             volunteers = volunteers,
                             guests = guests,
                             onBack = { billeterieSection = "home" },
-                            restoreLanguageCode = settingsManager.getLanguage(),
                         )
                     }
                     "scanner" -> {
@@ -1184,7 +1181,18 @@ if (pageAnimationsEnabled) {
                                         println("Navigating to Sales Sheet Item Management")
                                         viewModel.syncSalesSheetItemsWithTargetedUpdates()
                                         showSalesSheetItemManagement = true
-                                    }
+                                    },
+                                    onFactoryResetComplete = {
+                                        showJobTypeManagement = false
+                                        showVenueManagement = false
+                                        showSalesSheetItemManagement = false
+                                        showPosAccountingReport = false
+                                        showWelcome = false
+                                        showAdminAuth = false
+                                        showTicketCheck = false
+                                        selectedTab = 0
+                                        showSetupWizard = true
+                                    },
                                 )
                             }
                         }
@@ -1258,7 +1266,18 @@ if (pageAnimationsEnabled) {
                                     println("Navigating to Sales Sheet Item Management")
                                     viewModel.syncSalesSheetItemsWithTargetedUpdates()
                                     showSalesSheetItemManagement = true
-                                }
+                                },
+                                onFactoryResetComplete = {
+                                    showJobTypeManagement = false
+                                    showVenueManagement = false
+                                    showSalesSheetItemManagement = false
+                                    showPosAccountingReport = false
+                                    showWelcome = false
+                                    showAdminAuth = false
+                                    showTicketCheck = false
+                                    selectedTab = 0
+                                    showSetupWizard = true
+                                },
                             )
                         }
                     }

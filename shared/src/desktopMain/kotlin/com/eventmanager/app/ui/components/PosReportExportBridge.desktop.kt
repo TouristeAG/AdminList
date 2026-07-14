@@ -1,21 +1,17 @@
 package com.eventmanager.app.ui.components
 
+import com.eventmanager.app.platform.DesktopFileActions
 import com.eventmanager.app.platform.PlatformContext
 import com.eventmanager.app.platform.PlatformFileManager
-import java.awt.Desktop
 import java.io.File
 
 internal actual object PosReportExportBridge {
     actual fun shareReport(platformContext: PlatformContext, file: File, title: String) {
-        openReport(platformContext, file)
+        DesktopFileActions.share(file)
     }
 
     actual fun openReport(platformContext: PlatformContext, file: File) {
-        runCatching {
-            if (Desktop.isDesktopSupported()) {
-                Desktop.getDesktop().open(file)
-            }
-        }
+        DesktopFileActions.openWith(file)
     }
 
     actual suspend fun saveReportToUserLocation(

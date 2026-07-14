@@ -53,6 +53,13 @@ internal expect object GraphExportBridge {
         file: File,
         exportType: GraphExportType
     )
+
+    suspend fun saveExportedFileToUserLocation(
+        platformContext: PlatformContext,
+        file: File,
+        suggestedName: String,
+        exportType: GraphExportType,
+    ): Boolean
 }
 
 internal expect fun decodeJpgPreview(file: File): ImageBitmap?

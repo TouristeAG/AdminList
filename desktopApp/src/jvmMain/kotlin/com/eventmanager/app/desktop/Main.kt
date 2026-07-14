@@ -16,6 +16,9 @@ import com.eventmanager.app.ui.desktop.DesktopNavigationHooks
 import com.eventmanager.app.ui.desktop.DesktopWindowAppearance
 import com.eventmanager.app.ui.platform.bootstrapAppLocale
 
+private val isMacOs: Boolean =
+    System.getProperty("os.name").orEmpty().contains("mac", ignoreCase = true)
+
 fun main() {
     DesktopWindowAppearance.initBeforeUiToolkit()
     DesktopWebcamSupport.ensureInitialized()
@@ -35,15 +38,32 @@ fun main() {
                 window.minimumSize = java.awt.Dimension(1024, 768)
                 DesktopAppIcon.loadAwtIcon()?.let { window.iconImage = it }
             }
-            MenuBar {
-                Menu("File") {
-                    Item("Preferences", shortcut = androidx.compose.ui.input.key.KeyShortcut(androidx.compose.ui.input.key.Key.Comma, meta = true)) {
-                        DesktopNavigationHooks.openSettingsTab?.invoke()
+            // Native-feeling system menu on macOS only; on Windows/Linux the in-window
+            // File/Help bar is redundant with in-app navigation.
+            if (isMacOs) {
+                MenuBar {
+                    Menu("File") {
+                        Item(
+                            "Preferences",
+                            shortcut = androidx.compose.ui.input.key.KeyShortcut(
+                                androidx.compose.ui.input.key.Key.Comma,
+                                meta = true,
+                            ),
+                        ) {
+                            DesktopNavigationHooks.openSettingsTab?.invoke()
+                        }
+                        Item(
+                            "Quit",
+                            shortcut = androidx.compose.ui.input.key.KeyShortcut(
+                                androidx.compose.ui.input.key.Key.Q,
+                                meta = true,
+                            ),
+                            onClick = ::exitApplication,
+                        )
                     }
-                    Item("Quit", shortcut = androidx.compose.ui.input.key.KeyShortcut(androidx.compose.ui.input.key.Key.Q, meta = true), onClick = ::exitApplication)
-                }
-                Menu("Help") {
-                    Item("About NoctuList", onClick = { })
+                    Menu("Help") {
+                        Item("About NoctuList", onClick = { })
+                    }
                 }
             }
             AppRoot(platformContext = platformContext)

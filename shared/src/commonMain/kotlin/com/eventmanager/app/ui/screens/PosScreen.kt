@@ -78,7 +78,9 @@ import com.eventmanager.app.ui.platform.NfcUidListenerEffect
 import com.eventmanager.app.ui.viewmodel.EventManagerViewModel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
 
 data class PosCartEntry(
@@ -86,19 +88,91 @@ data class PosCartEntry(
     val key: String = "${line.itemId ?: "m"}:${line.name}:${System.nanoTime()}"
 )
 
-private data class PosGridLayout(
-    val columns: GridCells,
-    val tileMinHeight: Dp,
-    val largeTiles: Boolean
+private data class PosItemGridSpec(
+    val columns: Int,
+    val tileHeight: Dp,
+    val largeTiles: Boolean,
+    val scrollEnabled: Boolean,
 )
 
-private fun posGridLayout(itemCount: Int, isCompact: Boolean): PosGridLayout {
-    val total = itemCount + 1
-    return when {
-        total <= 4 -> PosGridLayout(GridCells.Fixed(2), 130.dp, largeTiles = true)
-        total <= 12 -> PosGridLayout(GridCells.Fixed(if (isCompact) 2 else 3), 100.dp, largeTiles = false)
-        else -> PosGridLayout(GridCells.Adaptive(140.dp), 80.dp, largeTiles = false)
+private val PosGridGap = 8.dp
+private val PosGridContentPadding = 4.dp
+private val PosMinCellWidth = 120.dp
+private val PosMinCellHeightFloor = 88.dp
+private val PosMinCellHeightCap = 160.dp
+private val PosLargeTileHeightThreshold = 130.dp
+
+/**
+ * Picks column count + tile height to maximize cell area within the viewport.
+ * Stretches tiles to fill height while they stay at/above a width-derived floor;
+ * once that floor can no longer fit all cells, locks tile size and enables scroll.
+ */
+private fun resolvePosItemGridSpec(
+    availableWidth: Dp,
+    availableHeight: Dp,
+    cellCount: Int,
+    gap: Dp = PosGridGap,
+    contentPadding: Dp = PosGridContentPadding,
+): PosItemGridSpec {
+    val count = cellCount.coerceAtLeast(1)
+    val usableWidth = (availableWidth - contentPadding * 2).coerceAtLeast(1.dp)
+    val usableHeight = (availableHeight - contentPadding * 2).coerceAtLeast(1.dp)
+
+    val maxColsByWidth = maxOf(1, (usableWidth / PosMinCellWidth).toInt())
+    val maxCols = maxColsByWidth.coerceIn(1, 4)
+
+    data class Candidate(
+        val columns: Int,
+        val tileHeight: Dp,
+        val scrollEnabled: Boolean,
+        val area: Float,
+    )
+
+    var bestFit: Candidate? = null
+    var bestScroll: Candidate? = null
+
+    for (cols in 1..maxCols) {
+        val rows = (count + cols - 1) / cols
+        val hGaps = if (cols > 1) gap * (cols - 1) else 0.dp
+        val vGaps = if (rows > 1) gap * (rows - 1) else 0.dp
+        val cellW = (usableWidth - hGaps) / cols
+        val minCellH = (cellW * 0.85f).coerceIn(PosMinCellHeightFloor, PosMinCellHeightCap)
+        val minNeededHeight = minCellH * rows + vGaps
+
+        if (minNeededHeight <= usableHeight) {
+            val tileH = (usableHeight - vGaps) / rows
+            val candidate = Candidate(
+                columns = cols,
+                tileHeight = tileH,
+                scrollEnabled = false,
+                area = cellW.value * tileH.value,
+            )
+            if (bestFit == null || candidate.area > bestFit.area) {
+                bestFit = candidate
+            }
+        } else {
+            val candidate = Candidate(
+                columns = cols,
+                tileHeight = minCellH,
+                scrollEnabled = true,
+                area = cellW.value * minCellH.value,
+            )
+            if (bestScroll == null || candidate.area > bestScroll.area) {
+                bestScroll = candidate
+            }
+        }
     }
+
+    val chosen = bestFit
+        ?: bestScroll
+        ?: Candidate(1, PosMinCellHeightFloor, scrollEnabled = true, area = 0f)
+
+    return PosItemGridSpec(
+        columns = chosen.columns,
+        tileHeight = chosen.tileHeight,
+        largeTiles = chosen.tileHeight >= PosLargeTileHeightThreshold,
+        scrollEnabled = chosen.scrollEnabled,
+    )
 }
 
 private fun SalesSheetItem.isBarDiscountEligible(): Boolean {
@@ -209,7 +283,10 @@ fun PosScreen(
 
     LaunchedEffect(platformContext) {
         while (true) {
-            nfcAvailability = cardReader.getNfcInputAvailability()
+            nfcAvailability = withContext(Dispatchers.IO) {
+                cardReader.refreshConnectionState()
+                cardReader.getNfcInputAvailability()
+            }
             delay(800)
         }
     }
@@ -238,10 +315,6 @@ fun PosScreen(
             if (selectedCategory == null) true
             else SalesCategory.parseList(item.categories).contains(selectedCategory)
         }.sortedBy { it.name.lowercase() }
-    }
-
-    val gridLayout = remember(filteredItems.size, isCompact) {
-        posGridLayout(filteredItems.size, isCompact)
     }
 
     LaunchedEffect(selectedCategory) {
@@ -480,20 +553,15 @@ fun PosScreen(
                             isDesktop = isDesktop,
                             onSelect = { selectedCategory = it },
                         )
-                        LazyVerticalGrid(
-                            columns = gridLayout.columns,
+                        PosItemsGrid(
+                            items = filteredItems,
+                            currencyCode = currencyCode,
+                            hasCustomer = hasCustomer,
+                            solidBackground = posAnimatedBackground,
+                            onItemClick = { addItemToCart(it) },
+                            onManualClick = { showManualAmount = true },
                             modifier = Modifier.weight(1f),
-                            contentPadding = PaddingValues(4.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            items(filteredItems, key = { it.id }) { item ->
-                                PosItemTile(item, currencyCode, gridLayout.tileMinHeight, gridLayout.largeTiles, hasCustomer, posAnimatedBackground) {
-                                    addItemToCart(item)
-                                }
-                            }
-                            item { PosManualTile(gridLayout.tileMinHeight, gridLayout.largeTiles, hasCustomer, posAnimatedBackground) { showManualAmount = true } }
-                        }
+                        )
                     }
                     PosCartBar(
                         cart, currencyCode, totalAfterDiscount, hasCustomer,
@@ -516,20 +584,15 @@ fun PosScreen(
                         isDesktop = isDesktop,
                         onSelect = { selectedCategory = it },
                     )
-                    LazyVerticalGrid(
-                        columns = gridLayout.columns,
+                    PosItemsGrid(
+                        items = filteredItems,
+                        currencyCode = currencyCode,
+                        hasCustomer = hasCustomer,
+                        solidBackground = posAnimatedBackground,
+                        onItemClick = { addItemToCart(it) },
+                        onManualClick = { showManualAmount = true },
                         modifier = Modifier.weight(2f),
-                        contentPadding = PaddingValues(4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(filteredItems, key = { it.id }) { item ->
-                            PosItemTile(item, currencyCode, gridLayout.tileMinHeight, gridLayout.largeTiles, hasCustomer, posAnimatedBackground) {
-                                addItemToCart(item)
-                            }
-                        }
-                        item { PosManualTile(gridLayout.tileMinHeight, gridLayout.largeTiles, hasCustomer, posAnimatedBackground) { showManualAmount = true } }
-                    }
+                    )
                     PosCartPanel(
                         cart = cart,
                         currencyCode = currencyCode,
@@ -1925,10 +1988,59 @@ private fun PosCategoryFilterItem(
 }
 
 @Composable
+private fun PosItemsGrid(
+    items: List<SalesSheetItem>,
+    currencyCode: String,
+    hasCustomer: Boolean,
+    solidBackground: Boolean,
+    onItemClick: (SalesSheetItem) -> Unit,
+    onManualClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        val width = if (maxWidth.value.isFinite()) maxWidth else 400.dp
+        val height = if (maxHeight.value.isFinite()) maxHeight else 600.dp
+        val cellCount = items.size + 1
+        val spec = remember(width, height, cellCount) {
+            resolvePosItemGridSpec(width, height, cellCount)
+        }
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(spec.columns),
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(PosGridContentPadding),
+            horizontalArrangement = Arrangement.spacedBy(PosGridGap),
+            verticalArrangement = Arrangement.spacedBy(PosGridGap),
+            userScrollEnabled = spec.scrollEnabled,
+        ) {
+            items(items, key = { it.id }) { item ->
+                PosItemTile(
+                    item = item,
+                    currencyCode = currencyCode,
+                    tileHeight = spec.tileHeight,
+                    large = spec.largeTiles,
+                    enabled = hasCustomer,
+                    solidBackground = solidBackground,
+                    onClick = { onItemClick(item) },
+                )
+            }
+            item {
+                PosManualTile(
+                    tileHeight = spec.tileHeight,
+                    large = spec.largeTiles,
+                    enabled = hasCustomer,
+                    solidBackground = solidBackground,
+                    onClick = onManualClick,
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun PosItemTile(
     item: SalesSheetItem,
     currencyCode: String,
-    minHeight: Dp,
+    tileHeight: Dp,
     large: Boolean,
     enabled: Boolean,
     solidBackground: Boolean,
@@ -1947,7 +2059,7 @@ private fun PosItemTile(
     Card(
         Modifier
             .fillMaxWidth()
-            .heightIn(min = minHeight)
+            .height(tileHeight)
             .alpha(if (enabled) 1f else 0.4f)
             .clickable(enabled = enabled, onClick = onClick),
         shape = PosTileShape,
@@ -2080,7 +2192,7 @@ private fun PosItemPriceBadge(
 
 @Composable
 private fun PosManualTile(
-    minHeight: Dp,
+    tileHeight: Dp,
     large: Boolean,
     enabled: Boolean,
     solidBackground: Boolean,
@@ -2090,7 +2202,7 @@ private fun PosManualTile(
     Card(
         Modifier
             .fillMaxWidth()
-            .heightIn(min = minHeight)
+            .height(tileHeight)
             .alpha(if (enabled) 1f else 0.4f)
             .clickable(enabled = enabled, onClick = onClick),
         shape = PosTileShape,

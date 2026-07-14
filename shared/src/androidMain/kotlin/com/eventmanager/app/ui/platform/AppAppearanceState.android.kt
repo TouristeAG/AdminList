@@ -1,5 +1,7 @@
 package com.eventmanager.app.ui.platform
 
+import java.util.Locale
+
 internal actual fun applyPlatformLocale(languageCode: String) {
-    // Android applies locale via Activity configuration in MainActivity.
+    Locale.setDefault(localeFromLanguageCode(languageCode))
 }

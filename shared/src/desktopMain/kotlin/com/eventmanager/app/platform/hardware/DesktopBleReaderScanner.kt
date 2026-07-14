@@ -1,9 +1,11 @@
 package com.eventmanager.app.platform.hardware
 
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.isActive
 import java.util.Locale
 import java.util.regex.Pattern
@@ -62,18 +64,20 @@ object DesktopBleReaderScanner {
             delay(2_000)
         }
         awaitClose { }
-    }
+    }.flowOn(Dispatchers.IO)
 
     /** `true` when ACS provides a PC/SC Bluetooth driver (Windows only). */
     fun isBlePcscSupportedOnPlatform(): Boolean = currentOsFamily() == OsFamily.WINDOWS
 
     fun discoverReaders(preferAcrOnly: Boolean = true): List<DiscoveredReader> {
-        val pcsc = DesktopPcscCardReader()
         val byId = linkedMapOf<String, DiscoveredReader>()
-        val hasUsbReader = pcsc.hasUsbReader()
+        val hasUsbReader = DesktopExternalNfcReader.isUsbConnected()
 
-        pcsc.listTerminalInfos()
-            .filter { it.kind == DesktopPcscCardReader.ReaderKind.BLE }
+        DesktopExternalNfcReader.listTerminalInfosForBle()
+            .filter {
+                it.kind == DesktopPcscCardReader.ReaderKind.BLE &&
+                    !DesktopPcscCardReader.isContactInterfaceOnly(it.name)
+            }
             .forEach { info ->
                 val id = DesktopPcscCardReader.terminalId(info.name)
                 byId[id] = DiscoveredReader(

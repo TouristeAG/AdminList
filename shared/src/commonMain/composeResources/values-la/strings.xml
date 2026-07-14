@@ -100,12 +100,20 @@
     <string name="background_animation_opacity_title">Intensionem\'background</string>
     <string name="background_animation_opacity_description">Redigendum the\'opacitas discre- animata lineas</string>
     <string name="background_animation_opacity_apply">Applicare\'intensio</string>
+    <string name="background_animation_preview_unavailable">Praevisio in hoc dispositivo non praesto</string>
+    <string name="background_animation_low_performance_warning">Animatum background in hoc dispositivo non commendatur — applicatio congelari vel frangi potest.</string>
     <string name="billeterie_background_animation_title">Fons billetariae</string>
     <string name="billeterie_background_animation_description">Elige animatum background ad ticketing tegumenta tantum</string>
     <string name="page_animations_title">Animations paginas</string>
     <string name="page_animations_description">Admitte ungunt animationes cum commutatione paginas et tabs</string>
     <string name="clear_app_cache">Vider cache applicationis</string>
     <string name="app_cache_cleared">Cache applicationem data purgare. Obitus et claves conservatae sunt.</string>
+    <string name="factory_reset_title">Restitutio ad officinam</string>
+    <string name="factory_reset_description">Omnia localia data, status et claves delere, deinde setup wizard renovare</string>
+    <string name="factory_reset_confirm_title">Hanc applicationem reponere?</string>
+    <string name="factory_reset_confirm_message">Hoc permanente delet hospites, voluntarios, munera, POS data, sync status et claves in hoc instrumento. Data Google Sheets non delentur. Applicationem denuo configurare debebis.</string>
+    <string name="factory_reset_confirm_button">Omnia delere</string>
+    <string name="factory_reset_in_progress">Reponitur…</string>
     <string name="check_for_updates">Quaere ex mises ad dies</string>
     <string name="update_available_title">Mise ad dies praesto: %1$s</string>
     <string name="update_required_message">Recentior versio app pergere requiritur. Quaeso renovatio ad recentissimam versionem.</string>
@@ -860,6 +868,8 @@
     <string name="scanner_ble_reader_footer_label">Lector Bluetooth (ACR1255U-J1)</string>
     <string name="scanner_ble_reader_footer_connected">Active link - parati ad scan</string>
     <string name="scanner_ble_reader_footer_disconnected">Nulla activa link - excitare ludio (button) vel exspecta reconnection</string>
+    <string name="scanner_ble_reader_footer_connecting">Reconnecting after wake…</string>
+
     <string name="scanner_ble_reader_footer_reading">Lecture carte…</string>
     <string name="nfc_not_supported_device">Cet instrumentum ne prend pas en charge scan NFC.</string>
     <string name="nfc_unavailable_no_usb_hint">Cet instrumentum n'a pas NFC et nullus lector externus n'est coniunctum (USB vel Bluetooth).</string>
@@ -1226,7 +1236,8 @@
     <string name="settings_category_developer">Elit &amp; Debugging</string>
     <string name="settings_category_maintenance">Maintenance</string>
     
-    <!-- App Icon Settings -->
+        <string name="settings_category_catalog">Catalogus et loci</string>
+<!-- App Icon Settings -->
     <string name="app_icon_title">App icon</string>
     <string name="app_icon_description">Malle icon style tuum</string>
     <string name="app_icon_white">Album</string>
@@ -1472,18 +1483,49 @@
     <string name="announcement_popup_from">: %1$s</string>
 
     <!-- External Bluetooth NFC reader (ACR1255U-J1) -->
-    <string name="settings_category_external_reader">Lector NFC Bluetooth</string>
+    <string name="settings_category_external_reader">Lector NFC</string>
     <string name="settings_category_pcsc_reader">Lector NFC USB</string>
     <string name="pcsc_reader_description">Obturaculum in ACS ACR122U vel USB NFC compatitur lectori. macOS et Fenestra PC/SC includunt; On Linux, install and satus pcscd.</string>
-    <string name="desktop_external_reader_description">USB agitet (ACR122U, ACR1255U-J1 in USB modo) opus inplenda cum PC/SC ACS agitator inauguratus. Flectendum coegi ad USB modum, obturaculum in remulco, sub test Connection utere.</string>
-    <string name="desktop_ble_supported_windows">Bluetooth (ACR1255U-J1): ACS Bluetooth PC/SC rectorem instrue, ludio ludius in Fenestra Bluetooth occasus par, deinde infra elige.</string>
+    <string name="desktop_external_reader_description">ACS lectorem USB (commendatum) conecte, vel Bluetooth in Windows para. Chartam in latere sine contactu pone, deinde Proba lectorem preme.</string>
+    <string name="desktop_nfc_no_reader">Nullus lector detectus. USB conecte, vel Primam configurationem aperi si haec est nova installatio.</string>
+    <string name="desktop_nfc_usb_connected">USB conexus</string>
+    <string name="desktop_nfc_ble_connected">Bluetooth paratus</string>
+    <string name="desktop_nfc_ble_not_ready">Bluetooth electus · nondum paratus</string>
+    <string name="desktop_nfc_ble_connecting">Bluetooth · reconnecting…</string>
+    <string name="desktop_nfc_ble_wake_hint">Wake the ACR1255 (button) and wait until Windows Bluetooth shows Connected. SoftDevice must appear in PC/SC before scans work.</string>
+    <string name="desktop_nfc_ble_connecting_hint">SoftDevice is visible but the link is not ready yet — wait a few seconds after waking the reader.</string>
+    <string name="desktop_nfc_active_none">No reader connected</string>
+
+    <string name="desktop_nfc_test_reader">Proba lectorem</string>
+    <string name="desktop_nfc_use_bluetooth">Utere lectore Bluetooth…</string>
+    <string name="desktop_nfc_setup_title">Prima configuratio</string>
+    <string name="desktop_nfc_setup_usb">USB: commutator ad USB, ACS USB PC/SC agitorem installa, funem conecte, chartam in latere sine contactu (PICC) pone — non in foramine ICC — deinde Proba lectorem.</string>
+    <string name="desktop_nfc_setup_ble">Bluetooth (tantum Windows): ACS Bluetooth PC/SC installa → in Windows Bluetooth iunge → ACS Bluetooth Device Management Tool → Install → lectorem hic elige. Solum iungere non sufficit.</string>
+    <string name="desktop_nfc_advanced_title">Progressum / remedia</string>
+    <string name="desktop_nfc_advanced_hint">Tantum si Proba lectorem deficit: inspice interfaces PC/SC quas Windows videt, vel USB agitatorum structuram corrige.</string>
+<string name="desktop_ble_supported_windows">Bluetooth (ACR1255U-J1): ACS Bluetooth PC/SC rectorem instrue, ludio ludius in Fenestra Bluetooth occasus par, deinde infra elige.</string>
     <string name="desktop_ble_unsupported_macos">Bluetooth n'est pas pris en charge in macOS (pas driver PC/SC BLE ACS). Utilisez mode USB cum driver USB ACS.</string>
     <string name="desktop_ble_unsupported_linux">Bluetooth n'est pas pris en charge in Linux (pas driver PC/SC BLE ACS). Utilisez mode USB cum pcscd et driver USB ACS.</string>
     <string name="desktop_list_pcsc_readers">Lister lecteurs PC/SC</string>
     <string name="desktop_usb_reader_test_button">Proba lector USB</string>
+    <string name="desktop_acs_prefer_usb">Commendatum: modus USB (commutator hardware) fidelior est Bluetooth pro ostio et POS.</string>
+    <string name="desktop_acs_windows_usb_banner">Si lector tintinnat sed Proba lectorem UID non monstrat: ACS USB PC/SC installa, PICC confirma, Escape Command activa si adhuc Microsoft CCID. Postea disiunge/rediunge.</string>
+    <string name="desktop_acs_ble_setup_steps">Bluetooth configuratio (Windows):
+1. ACS Bluetooth PC/SC MSI installa
+2. Lectorem in Windows Bluetooth iunge
+3. ACS Bluetooth Device Management Tool → Install exsequere
+4. Lectorem BLE in Lista PC/SC verifica
+Solum iungere non sufficit — sine Management Tool nexus saepe conectitur deinde cadit.</string>
+    <string name="desktop_acs_open_drivers">ACS agitatores depromere</string>
+    <string name="desktop_acs_probe_drivers">USB agitatorem inspice</string>
+    <string name="desktop_acs_enable_escape">Escape Command activa (admin)</string>
+    <string name="desktop_acs_escape_running">UAC expectatur…</string>
+    <string name="desktop_acs_escape_not_needed">ACS agitator nativus installatus est — Escape Command tantum pro Microsoft CCID. Chartam in PICC pone et Proba lectorem utere.</string>
+    <string name="desktop_ble_paired_not_pcsc_tool_hint">Iunctus sed non in PC/SC — ACS Bluetooth Device Management Tool exsequere et lectorem installa</string>
     <string name="desktop_ble_reader_picker_subtitle">Par ACR1255U-J1 in systemate Bluetooth, hic elige. Agit iam visibilem ad PC/SC parata statim.</string>
     <string name="desktop_ble_reader_not_found">ACR1255U-J1 non invenitur. Vertere, par cum Bluetooth et ACS PC/SC rectorem institue.</string>
-    <string name="desktop_ble_reader_pcsc_ready">PC/SC paratus · %1$s</string>
+    <string name="desktop_ble_reader_pcsc_ready">PC/SC paratus</string>
+    <string name="desktop_ble_reader_not_pcsc_ready">Iunctus · nondum in PC/SC (ACS Bluetooth driver installa)</string>
     <string name="external_reader_description">NFC externum lectorem hic elige. Apparet in occasus MASCULINUS Bluetooth, sed cum hoc app coniungere non potest.</string>
     <string name="external_reader_connected_label">Electus coegi</string>
     <string name="external_reader_pick_button">Quaere lecteur Bluetooth</string>
@@ -1559,6 +1601,9 @@
     <string name="desktop_bluetooth_nfc_reader_offline">Lector NFC Bluetooth (hors ligne)</string>
     <string name="desktop_no_external_reader">Non externum coegi</string>
     <string name="desktop_pcsc_error">Error PC/SC</string>
+    <string name="desktop_pcsc_list_error">PC/SC list error: %1$s</string>
+    <string name="desktop_pcsc_no_ble_reader_paired_hint">If the reader is already paired in Windows Bluetooth but missing from this list, install the ACS Bluetooth PC/SC MSI and use ACS Bluetooth Device Management Tool to install the reader into PC/SC.</string>
+    <string name="desktop_pcsc_service_hint_windows">On Windows: start the Smart Card service (SCardSvr) in services.msc, confirm the reader shows a PICC interface in Device Manager, then unplug/replug the reader and retry.</string>
     <string name="desktop_pcsc_library_unavailable">PC/SC bibliotheca unavailable</string>
     <string name="desktop_pcsc_no_ble_reader">Nullus NFC Bluetooth lector in PC/SC.
 Socius\'ACR1255U-J1 in occasus systematis Bluetooth ac rectorem ACS install.</string>
@@ -1574,6 +1619,10 @@ Fac PC/SC installatur et sileo the\'adhibitis.</string>
     <string name="desktop_pcsc_reader_error">Error ex lecteur</string>
     <string name="desktop_pcsc_reader_ok_place_card">OK — lector coniunctus.
 Placez carte in lecteur et testez ad novus pro lire UID.</string>
+    <string name="desktop_pcsc_beep_no_uid_hint">If the reader beeps but no UID appears: install ACS USB PC/SC, use PICC (not ICC), and enable Escape Command under Microsoft CCID if needed.</string>
+    <string name="desktop_pcsc_escape_blocked_hint">CCID Escape is blocked. Install the ACS USB PC/SC driver, or use Settings → Enable Escape Command (admin), then unplug/replug the reader.</string>
+    <string name="desktop_pcsc_ghost_reader_hint">Tip: ACS may list a BLE SoftDevice (name like ACR1255U-J1-0xxxxx) even with no USB cable. That is not a USB PICC. Leave only “PICC Reader” for USB tests; use ACS Bluetooth Device Management Tool only for BLE.</string>
+    <string name="desktop_pcsc_ble_softdevice_uid_hint">Bluetooth SoftDevice: the reader can beep while PC/SC still has no card. Wake it (button), confirm Windows Bluetooth = Connected and ACS Device Management Tool shows Install OK, then hold a card during the whole Test connection. Prefer USB mode for reliable UID reads.</string>
     <string name="desktop_pcsc_readers_header">Lectors (%1$d):</string>
     <string name="desktop_pcsc_unable_select_reader">Impossibile Elige lecteur.</string>
     <string name="desktop_pcsc_unavailable">PC/SC non praesto</string>
@@ -1611,4 +1660,8 @@ Placez carte in lecteur et testez ad novus pro lire UID.</string>
     <string name="theme_hue_label">Teinte (arc-en-ciel): %1$d°</string>
     <string name="theme_luminosity_label">Splendor: %1$d%%</string>
     <string name="theme_saturation_label">Saturation: %1$d%%</string>
+    <string name="desktop_confirm_entry_button">Confirma introitum</string>
+    <string name="desktop_entry_confirmed">Introitus confirmatus</string>
+    <string name="validate_entry_description_solo_desktop">Introitus solus (sine hospitibus). Infra preme ad confirmandum.</string>
+    <string name="validate_entry_description_with_invites_desktop">Confirma introitum et hospites invitatus infra registra.</string>
 </resources>

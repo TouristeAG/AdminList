@@ -7,11 +7,10 @@ import com.eventmanager.app.platform.PlatformContext
 import com.eventmanager.app.platform.PlatformFileManager
 import com.eventmanager.app.utils.GraphExportUtils
 import org.jetbrains.skia.Image
+import com.eventmanager.app.platform.DesktopFileActions
 import java.awt.Color
 import java.awt.Font
-import java.awt.Graphics2D
 import java.awt.RenderingHints
-import java.awt.Desktop
 import java.awt.image.BufferedImage
 import java.io.File
 import java.io.FileOutputStream
@@ -133,7 +132,7 @@ internal actual object GraphExportBridge {
         exportType: GraphExportType,
         title: String
     ) {
-        openExportedFile(platformContext, file, exportType)
+        DesktopFileActions.share(file)
     }
 
     actual fun openExportedFile(
@@ -141,15 +140,26 @@ internal actual object GraphExportBridge {
         file: File,
         exportType: GraphExportType
     ) {
-        if (!Desktop.isDesktopSupported()) return
-        runCatching {
-            if (Desktop.getDesktop().isSupported(Desktop.Action.OPEN)) {
-                Desktop.getDesktop().open(file)
-            } else if (Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
-                Desktop.getDesktop().browse(file.parentFile?.toURI())
-            }
-        }
+        DesktopFileActions.openWith(file)
     }
+
+    actual suspend fun saveExportedFileToUserLocation(
+        platformContext: PlatformContext,
+        file: File,
+        suggestedName: String,
+        exportType: GraphExportType,
+    ): Boolean {
+        val mimeType = when (exportType) {
+            GraphExportType.XLSX -> MIME_XLSX
+            GraphExportType.JPG -> MIME_JPG
+        }
+        return PlatformFileManager(platformContext)
+            .saveFileToUserLocation(file, suggestedName, mimeType)
+    }
+
+    private const val MIME_JPG = "image/jpeg"
+    private const val MIME_XLSX =
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 }
 
 internal actual fun decodeJpgPreview(file: File): ImageBitmap? {

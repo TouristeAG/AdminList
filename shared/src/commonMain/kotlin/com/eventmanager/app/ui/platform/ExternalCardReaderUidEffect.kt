@@ -8,8 +8,10 @@ import com.eventmanager.app.platform.UidReadResult
 import com.eventmanager.app.platform.createCardReaderService
 import com.eventmanager.app.resources.Res
 import com.eventmanager.app.resources.usb_reader_waiting_card
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
 
 /** Polls USB / BLE external NFC readers via [createCardReaderService]. */
@@ -30,8 +32,18 @@ fun ExternalCardReaderUidEffect(
         }
         var lastDispatchedUid: String? = null
         var lastDispatchAtMs = 0L
+        var lastConnectionRefreshAtMs = 0L
         while (isActive) {
-            if (!cardReader.isReaderConnected()) {
+            val nowRefresh = System.currentTimeMillis()
+            val connected = withContext(Dispatchers.IO) {
+                // Avoid Winscard list while SoftDevice Escape is mid-poll; cache is enough.
+                if (nowRefresh - lastConnectionRefreshAtMs >= CONNECTION_REFRESH_MS) {
+                    cardReader.refreshConnectionState()
+                    lastConnectionRefreshAtMs = nowRefresh
+                }
+                cardReader.isReaderConnected()
+            }
+            if (!connected) {
                 onScanStatus(null)
                 delay(800)
                 continue
@@ -46,9 +58,9 @@ fun ExternalCardReaderUidEffect(
                         lastDispatchAtMs = now
                         onUidRead(result.uid)
                     }
-                    delay(280)
+                    delay(180)
                 }
-                is UidReadResult.Retryable -> delay(300)
+                is UidReadResult.Retryable -> delay(EMPTY_POLL_MS)
                 is UidReadResult.Fatal -> {
                     onScanStatus(result.error)
                     delay(800)
@@ -63,3 +75,6 @@ fun ExternalCardReaderUidEffect(
 }
 
 private const val UID_REPLAY_GAP_MS = 850L
+private const val CONNECTION_REFRESH_MS = 2_500L
+/** SoftDevice already spaces empty polls internally; keep UI loop light. */
+private const val EMPTY_POLL_MS = 20L

@@ -99,12 +99,20 @@
     <string name="background_animation_opacity_title">背景强度</string>
     <string name="background_animation_opacity_description">降低不透明度，使动画线条更加柔和</string>
     <string name="background_animation_opacity_apply">应用强度</string>
+    <string name="background_animation_preview_unavailable">此设备上无法预览</string>
+    <string name="background_animation_low_performance_warning">不建议在此设备上启用动态背景——应用可能会卡顿或崩溃。</string>
     <string name="billeterie_background_animation_title">票务背景</string>
     <string name="billeterie_background_animation_description">仅为票务界面选择背景动画</string>
     <string name="page_animations_title">页面动画</string>
     <string name="page_animations_description">切换页面和标签时启用滑动动画</string>
     <string name="clear_app_cache">清除应用缓存</string>
     <string name="app_cache_cleared">应用数据缓存已清除。设置和密钥已保留。</string>
+    <string name="factory_reset_title">恢复出厂设置</string>
+    <string name="factory_reset_description">删除所有本地数据、设置和凭证，然后重新运行设置向导</string>
+    <string name="factory_reset_confirm_title">要重置此应用吗？</string>
+    <string name="factory_reset_confirm_message">这将永久删除本设备上的宾客、志愿者、班次、POS 数据、同步设置和已上传密钥。不会删除 Google Sheets 中的数据。您需要重新配置应用。</string>
+    <string name="factory_reset_confirm_button">全部清除</string>
+    <string name="factory_reset_in_progress">正在重置…</string>
     <string name="check_for_updates">检查更新</string>
     <string name="update_available_title">有可用更新：%1$s</string>
     <string name="update_required_message">需要更新版本的应用程序才能继续。请更新至最新版本。</string>
@@ -749,6 +757,8 @@
     <string name="scanner_ble_reader_footer_label">蓝牙读卡器（ACR1255U-J1）</string>
     <string name="scanner_ble_reader_footer_connected">链路已建立 — 可扫描</string>
     <string name="scanner_ble_reader_footer_disconnected">链路未建立 — 请唤醒读卡器（按键）或等待重连</string>
+    <string name="scanner_ble_reader_footer_connecting">Reconnecting after wake…</string>
+
     <string name="scanner_ble_reader_footer_reading">正在读卡…</string>
     <string name="nfc_not_supported_device">此设备不支持 NFC 扫描。</string>
     <string name="nfc_unavailable_no_usb_hint">此设备无 NFC，且未连接外接读卡器（USB 或蓝牙）。</string>
@@ -1115,7 +1125,8 @@
     <string name="settings_category_developer">开发者与调试</string>
     <string name="settings_category_maintenance">维护</string>
     
-    <!-- App Icon Settings -->
+        <string name="settings_category_catalog">目录与场地</string>
+<!-- App Icon Settings -->
     <string name="app_icon_title">应用程序图标</string>
     <string name="app_icon_description">选择您偏好的图标样式</string>
     <string name="app_icon_white">白色</string>
@@ -1345,13 +1356,14 @@
     <string name="announcement_popup_from">来自：%1$s</string>
 
     <!-- 外部蓝牙 NFC 读卡器（ACR1255U-J1） -->
-    <string name="settings_category_external_reader">蓝牙 NFC 读卡器</string>
+    <string name="settings_category_external_reader">NFC 读卡器</string>
     <string name="settings_category_pcsc_reader">USB NFC 读卡器</string>
     <string name="pcsc_reader_description">连接 ACS ACR122U 或兼容的 USB NFC 读卡器。macOS 和 Windows 自带 PC/SC；Linux 请安装并启动 pcscd。</string>
-    <string name="desktop_external_reader_description">USB 读卡器（ACR122U）插入即可使用。蓝牙读卡器（ACR1255U-J1）请先在系统蓝牙设置中配对，再在下方的列表中选择。配置完成后即可自动扫描。</string>
+    <string name="desktop_external_reader_description">请通过 USB 连接 ACS 读卡器（推荐），或在 Windows 上配置蓝牙。将卡片放在非接触面，然后点击“测试读卡器”。</string>
     <string name="desktop_ble_reader_picker_subtitle">请先在系统蓝牙中配对 ACR1255U-J1，再在此选择。已出现在 PC/SC 中的读卡器可立即使用。</string>
     <string name="desktop_ble_reader_not_found">未找到 ACR1255U-J1。请开机、在蓝牙中配对并安装 ACS PC/SC 驱动。</string>
-    <string name="desktop_ble_reader_pcsc_ready">PC/SC 就绪 · %1$s</string>
+    <string name="desktop_ble_reader_pcsc_ready">PC/SC 就绪</string>
+    <string name="desktop_ble_reader_not_pcsc_ready">已配对 · 尚未出现在 PC/SC（请安装 ACS 蓝牙驱动）</string>
     <string name="external_reader_description">请在此选择外部 NFC 读卡器。读卡器可能会出现在 Android 蓝牙设置中，但无法从该处与本应用建立连接。</string>
     <string name="external_reader_connected_label">已选择读卡器</string>
     <string name="external_reader_pick_button">扫描蓝牙读卡器</string>
@@ -1467,7 +1479,23 @@
     <string name="desktop_billeterie_nfc_section">NFC 读卡器</string>
     <string name="desktop_billeterie_scan_next_shortcut">按 Enter ↵ 扫描下一位</string>
     <string name="desktop_billeterie_webcam_section">二维码（网络摄像头）</string>
-    <string name="desktop_ble_supported_windows">蓝牙（ACR1255U-J1）：请安装 ACS 蓝牙 PC/SC 驱动程序，在 Windows 蓝牙设置中配对读卡器，然后在下方选择。</string>
+    <string name="desktop_nfc_no_reader">尚未检测到读卡器。请插入 USB；若是全新安装，请打开“首次设置”。</string>
+    <string name="desktop_nfc_usb_connected">USB 已连接</string>
+    <string name="desktop_nfc_ble_connected">蓝牙就绪</string>
+    <string name="desktop_nfc_ble_not_ready">已选择蓝牙 · 未就绪</string>
+    <string name="desktop_nfc_ble_connecting">Bluetooth · reconnecting…</string>
+    <string name="desktop_nfc_ble_wake_hint">Wake the ACR1255 (button) and wait until Windows Bluetooth shows Connected. SoftDevice must appear in PC/SC before scans work.</string>
+    <string name="desktop_nfc_ble_connecting_hint">SoftDevice is visible but the link is not ready yet — wait a few seconds after waking the reader.</string>
+    <string name="desktop_nfc_active_none">No reader connected</string>
+
+    <string name="desktop_nfc_test_reader">测试读卡器</string>
+    <string name="desktop_nfc_use_bluetooth">使用蓝牙读卡器…</string>
+    <string name="desktop_nfc_setup_title">首次设置</string>
+    <string name="desktop_nfc_setup_usb">USB：将硬件开关拨到 USB，安装 ACS USB PC/SC 驱动，插上线缆，然后将卡片放在非接触（PICC）侧（不要放进 ICC 插槽）并点击“测试读卡器”。</string>
+    <string name="desktop_nfc_setup_ble">蓝牙（仅 Windows）：安装 ACS Bluetooth PC/SC → 在 Windows 蓝牙中配对 → ACS Bluetooth Device Management Tool → Install → 在此选择读卡器。仅配对不够。</string>
+    <string name="desktop_nfc_advanced_title">高级 / 故障排除</string>
+    <string name="desktop_nfc_advanced_hint">仅在“测试读卡器”失败时使用：检查 Windows 看到的 PC/SC 接口，或修复 USB 驱动堆栈。</string>
+<string name="desktop_ble_supported_windows">蓝牙（ACR1255U-J1）：请安装 ACS 蓝牙 PC/SC 驱动程序，在 Windows 蓝牙设置中配对读卡器，然后在下方选择。</string>
     <string name="desktop_ble_unsupported_linux">Linux 不支持蓝牙（无 ACS BLE PC/SC 驱动程序）。请改用 USB 模式，并搭配 pcscd 与 ACS USB 驱动程序。</string>
     <string name="desktop_ble_unsupported_macos">macOS 不支持蓝牙（无 ACS BLE PC/SC 驱动程序）。请改用 USB 模式与 ACS USB 驱动程序。</string>
     <string name="desktop_list_pcsc_readers">列出 PC/SC 读卡器</string>
@@ -1481,6 +1509,20 @@
     <string name="desktop_qr_point_at_code">将二维码对准相机</string>
     <string name="desktop_qr_start_webcam">启动网络摄像头</string>
     <string name="desktop_usb_reader_test_button">测试 USB 读卡器</string>
+    <string name="desktop_acs_prefer_usb">推荐：USB 模式（硬件开关）比蓝牙更适合门禁与收银。</string>
+    <string name="desktop_acs_windows_usb_banner">若读卡器有蜂鸣但测试无 UID：安装 ACS USB PC/SC，确认 PICC 接口；若仍为 Microsoft CCID，请启用 Escape Command，然后重新插拔。</string>
+    <string name="desktop_acs_ble_setup_steps">蓝牙设置（Windows）：
+1. 安装 ACS Bluetooth PC/SC MSI
+2. 在 Windows 蓝牙设置中配对读卡器
+3. 运行 ACS Bluetooth Device Management Tool → Install
+4. 在“列出 PC/SC 读卡器”中确认 BLE 条目
+仅配对不够——没有 Management Tool，连接常会先连上再断开。</string>
+    <string name="desktop_acs_open_drivers">下载 ACS 驱动</string>
+    <string name="desktop_acs_probe_drivers">检查 USB 驱动</string>
+    <string name="desktop_acs_enable_escape">启用 Escape Command（管理员）</string>
+    <string name="desktop_acs_escape_running">等待 UAC…</string>
+    <string name="desktop_acs_escape_not_needed">已安装 ACS 原厂驱动——Escape Command 仅适用于 Microsoft CCID。将卡片放在 PICC 上并使用“测试读卡器”。</string>
+    <string name="desktop_ble_paired_not_pcsc_tool_hint">已配对但未进入 PC/SC — 请运行 ACS Bluetooth Device Management Tool 并安装读卡器</string>
     <string name="emoji_picker_choose">选择</string>
     <string name="emoji_picker_title">选择表情符号</string>
     <string name="manual_adjustment_default_note">手动调整</string>
@@ -1554,6 +1596,9 @@
     <string name="desktop_bluetooth_nfc_reader_offline">蓝牙 NFC 读卡器（离线）</string>
     <string name="desktop_no_external_reader">无外部读卡器</string>
     <string name="desktop_pcsc_error">PC/SC 错误</string>
+    <string name="desktop_pcsc_list_error">PC/SC list error: %1$s</string>
+    <string name="desktop_pcsc_no_ble_reader_paired_hint">If the reader is already paired in Windows Bluetooth but missing from this list, install the ACS Bluetooth PC/SC MSI and use ACS Bluetooth Device Management Tool to install the reader into PC/SC.</string>
+    <string name="desktop_pcsc_service_hint_windows">On Windows: start the Smart Card service (SCardSvr) in services.msc, confirm the reader shows a PICC interface in Device Manager, then unplug/replug the reader and retry.</string>
     <string name="desktop_pcsc_library_unavailable">PC/SC 库不可用</string>
     <string name="desktop_pcsc_no_ble_reader">PC/SC 中没有蓝牙 NFC 读卡器。
 请在系统蓝牙设置中配对 ACR1255U-J1，并安装 ACS 驱动程序。</string>
@@ -1569,6 +1614,10 @@
     <string name="desktop_pcsc_reader_error">读卡器错误</string>
     <string name="desktop_pcsc_reader_ok_place_card">正常 — 读卡器已连接。
 请将卡片放在读卡器上再测试一次以读取 UID。</string>
+    <string name="desktop_pcsc_beep_no_uid_hint">If the reader beeps but no UID appears: install ACS USB PC/SC, use PICC (not ICC), and enable Escape Command under Microsoft CCID if needed.</string>
+    <string name="desktop_pcsc_escape_blocked_hint">CCID Escape is blocked. Install the ACS USB PC/SC driver, or use Settings → Enable Escape Command (admin), then unplug/replug the reader.</string>
+    <string name="desktop_pcsc_ghost_reader_hint">Tip: ACS may list a BLE SoftDevice (name like ACR1255U-J1-0xxxxx) even with no USB cable. That is not a USB PICC. Leave only “PICC Reader” for USB tests; use ACS Bluetooth Device Management Tool only for BLE.</string>
+    <string name="desktop_pcsc_ble_softdevice_uid_hint">Bluetooth SoftDevice: the reader can beep while PC/SC still has no card. Wake it (button), confirm Windows Bluetooth = Connected and ACS Device Management Tool shows Install OK, then hold a card during the whole Test connection. Prefer USB mode for reliable UID reads.</string>
     <string name="desktop_pcsc_readers_header">读卡器（%1$d）：</string>
     <string name="desktop_pcsc_unable_select_reader">无法选择读卡器。</string>
     <string name="desktop_pcsc_unavailable">PC/SC 不可用</string>
@@ -1606,4 +1655,8 @@
     <string name="theme_hue_label">色相（彩虹）：%1$d°</string>
     <string name="theme_luminosity_label">亮度：%1$d%%</string>
     <string name="theme_saturation_label">饱和度：%1$d%%</string>
+    <string name="desktop_confirm_entry_button">确认入场</string>
+    <string name="desktop_entry_confirmed">已确认入场</string>
+    <string name="validate_entry_description_solo_desktop">单独入场（无嘉宾）。点击下方确认。</string>
+    <string name="validate_entry_description_with_invites_desktop">确认入场并在下方登记受邀嘉宾。</string>
 </resources>

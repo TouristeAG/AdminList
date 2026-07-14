@@ -18,13 +18,9 @@ import com.eventmanager.app.ui.viewmodel.EventManagerViewModel
 
 fun performPosFlowExit(
     viewModel: EventManagerViewModel,
-    restoreLanguageCode: String,
     onExit: () -> Unit,
 ) {
     viewModel.endPosSession()
-    if (AppAppearanceState.localeCode != restoreLanguageCode) {
-        AppAppearanceState.notifyLocaleChanged(restoreLanguageCode)
-    }
     onExit()
 }
 
@@ -35,7 +31,6 @@ fun PosFlow(
     volunteers: List<Volunteer>,
     guests: List<Guest>,
     onBack: () -> Unit,
-    restoreLanguageCode: String,
 ) {
     val platformContext = LocalPlatformContext.current
     val settingsManager = remember(platformContext) { settingsManagerFor(platformContext) }
@@ -45,7 +40,7 @@ fun PosFlow(
     var showSettings by remember { mutableStateOf(false) }
 
     val leavePos = {
-        performPosFlowExit(viewModel, restoreLanguageCode, onBack)
+        performPosFlowExit(viewModel, onBack)
     }
 
     PlatformBackHandler {
@@ -57,10 +52,6 @@ fun PosFlow(
     }
 
     LaunchedEffect(Unit) {
-        val posLang = settingsManager.getPosLanguage()
-        if (AppAppearanceState.localeCode != posLang) {
-            AppAppearanceState.notifyLocaleChanged(posLang)
-        }
         viewModel.bootstrapPosSession()
     }
 

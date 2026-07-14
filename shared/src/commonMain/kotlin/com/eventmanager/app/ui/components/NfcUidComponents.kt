@@ -17,7 +17,9 @@ import com.eventmanager.app.platform.isDesktop
 import com.eventmanager.app.resources.Res
 import com.eventmanager.app.resources.*
 import com.eventmanager.app.ui.platform.NfcUidListenerEffect
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -60,7 +62,10 @@ fun AddNfcUidDialog(
 
     LaunchedEffect(platformContext) {
         while (true) {
-            externalReaderConnected = cardReader.isReaderConnected()
+            externalReaderConnected = withContext(Dispatchers.IO) {
+                cardReader.refreshConnectionState()
+                cardReader.isReaderConnected()
+            }
             delay(800)
         }
     }

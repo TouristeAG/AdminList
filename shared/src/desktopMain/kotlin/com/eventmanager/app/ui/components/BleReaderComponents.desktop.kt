@@ -18,7 +18,11 @@ import com.eventmanager.app.platform.hardware.DesktopExternalNfcReader
 import com.eventmanager.app.platform.hardware.DesktopPcscCardReader
 import com.eventmanager.app.resources.Res
 import com.eventmanager.app.resources.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -33,6 +37,9 @@ actual fun BleReaderPickerDialog(
     val btUnavailableMsg = stringResource(Res.string.ble_reader_bluetooth_unavailable)
     val lowLevelErrorMsg = stringResource(Res.string.ble_reader_low_level_error)
     val unnamedLabel = stringResource(Res.string.ble_reader_unnamed)
+    val pcscReadyLabel = stringResource(Res.string.desktop_ble_reader_pcsc_ready)
+    val notPcscReadyLabel = stringResource(Res.string.desktop_ble_reader_not_pcsc_ready)
+    val pairedNotPcscToolHint = stringResource(Res.string.desktop_ble_paired_not_pcsc_tool_hint)
 
     LaunchedEffect(Unit) {
         DesktopBleReaderScanner.scan(preferAcrOnly = false).collectLatest { state ->
@@ -53,7 +60,7 @@ actual fun BleReaderPickerDialog(
         }
     }
 
-    val pickerItems = remember(devices, unnamedLabel) {
+    val pickerItems = remember(devices, unnamedLabel, pcscReadyLabel, notPcscReadyLabel, pairedNotPcscToolHint) {
         devices.map { device ->
             val displayName = device.name?.takeIf { it.isNotBlank() } ?: unnamedLabel
             BleReaderPickerItem(
@@ -68,6 +75,12 @@ actual fun BleReaderPickerDialog(
                 bonded = device.bonded,
                 isAcrReader = device.matchesAcr1255,
                 pcscReady = device.pcscReady,
+                statusHint = when {
+                    device.pcscReady -> pcscReadyLabel
+                    device.bonded || device.matchesAcr1255 ->
+                        "$notPcscReadyLabel — $pairedNotPcscToolHint"
+                    else -> null
+                },
             )
         }
     }
@@ -100,11 +113,20 @@ actual fun BleReaderPickerDialog(
         onPick = { item -> onPicked(item.pickId, item.displayName) },
         onDismiss = onDismiss,
         topContent = {
-            Text(
-                text = stringResource(Res.string.desktop_ble_reader_picker_subtitle),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = stringResource(Res.string.desktop_ble_reader_picker_subtitle),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (DesktopBleReaderScanner.isBlePcscSupportedOnPlatform()) {
+                    Text(
+                        text = stringResource(Res.string.desktop_acs_prefer_usb),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
         },
     )
 }
@@ -125,15 +147,31 @@ actual fun BleReaderScannerStatusFooter(
     val name = settings.getExternalBleReaderName().ifBlank {
         stringResource(Res.string.ble_reader_unnamed)
     }
-    val linked = remember(settings) { DesktopExternalNfcReader.isBleLinkActive(settings) }
+    var linkState by remember {
+        mutableStateOf(DesktopExternalNfcReader.BleLinkState.Offline)
+    }
+    LaunchedEffect(settings) {
+        while (isActive) {
+            val status = withContext(Dispatchers.IO) {
+                DesktopExternalNfcReader.refreshStatus(settings)
+            }
+            linkState = status.bleLinkState
+            delay(1_500)
+        }
+    }
+
     val statusText = when {
         isExternalReaderBusy -> stringResource(Res.string.scanner_ble_reader_footer_reading)
-        linked -> stringResource(Res.string.scanner_ble_reader_footer_connected)
+        linkState == DesktopExternalNfcReader.BleLinkState.Ready ->
+            stringResource(Res.string.scanner_ble_reader_footer_connected)
+        linkState == DesktopExternalNfcReader.BleLinkState.Connecting ->
+            stringResource(Res.string.scanner_ble_reader_footer_connecting)
         else -> stringResource(Res.string.scanner_ble_reader_footer_disconnected)
     }
     val color = when {
         isExternalReaderBusy -> activeColor
-        linked -> activeColor
+        linkState == DesktopExternalNfcReader.BleLinkState.Ready -> activeColor
+        linkState == DesktopExternalNfcReader.BleLinkState.Connecting -> labelColor
         else -> idleWarnColor
     }
 

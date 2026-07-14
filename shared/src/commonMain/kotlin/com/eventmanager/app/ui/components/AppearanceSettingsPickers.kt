@@ -1,5 +1,6 @@
 package com.eventmanager.app.ui.components
 
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -23,6 +24,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BlurOn
 import androidx.compose.material.icons.filled.CheckCircle
@@ -43,6 +46,7 @@ import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -50,6 +54,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -65,6 +70,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.eventmanager.app.data.sync.SettingsManager
+import com.eventmanager.app.platform.LocalPlatformContext
+import com.eventmanager.app.platform.isDesktop
+import kotlinx.coroutines.launch
 import com.eventmanager.app.resources.Res
 import com.eventmanager.app.resources.color_theme_custom
 import com.eventmanager.app.resources.color_theme_description
@@ -325,6 +333,11 @@ fun ColorThemePicker(
             defaultColorThemeOptions
         }
     }
+    val scrollState = rememberScrollState()
+    val scope = rememberCoroutineScope()
+    val isDesktop = LocalPlatformContext.current.isDesktop
+    val showScrollArrows = isDesktop && scrollState.maxValue > 0
+    val scrollStepPx = 316f // ~2 theme cards (148dp + gap)
 
     Column(modifier = modifier.fillMaxWidth()) {
         if (showHeader) {
@@ -333,83 +346,126 @@ fun ColorThemePicker(
         }
 
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            options.forEach { option ->
-                val selected = selectedThemeKey == option.key
-                val label = stringResource(option.labelRes)
-                AppearanceOptionCard(
-                    selected = selected,
+            if (showScrollArrows) {
+                IconButton(
                     onClick = {
-                        when {
-                            selected && option.key == "custom" -> onCustomThemeReselect?.invoke()
-                            !selected -> onSelect(option.key)
-                        }
+                        scope.launch { scrollState.animateScrollBy(-scrollStepPx) }
                     },
-                    modifier = Modifier
-                        .width(148.dp)
-                        .semantics { contentDescription = label },
+                    enabled = scrollState.canScrollBackward,
                 ) {
-                    Box(Modifier.fillMaxWidth()) {
-                        ThemeColorPreviewMockup(
-                            themeKey = option.key,
-                            previewDark = previewDark,
-                            settingsManager = settingsManager,
-                            refreshNonce = customThemeRefreshNonce,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(84.dp),
-                        )
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                        contentDescription = null,
+                        tint = if (scrollState.canScrollBackward) {
+                            MaterialTheme.colorScheme.onSurface
+                        } else {
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.28f)
+                        },
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .horizontalScroll(scrollState),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                options.forEach { option ->
+                    val selected = selectedThemeKey == option.key
+                    val label = stringResource(option.labelRes)
+                    AppearanceOptionCard(
+                        selected = selected,
+                        onClick = {
+                            when {
+                                selected && option.key == "custom" -> onCustomThemeReselect?.invoke()
+                                !selected -> onSelect(option.key)
+                            }
+                        },
+                        modifier = Modifier
+                            .width(148.dp)
+                            .semantics { contentDescription = label },
+                    ) {
+                        Box(Modifier.fillMaxWidth()) {
+                            ThemeColorPreviewMockup(
+                                themeKey = option.key,
+                                previewDark = previewDark,
+                                settingsManager = settingsManager,
+                                refreshNonce = customThemeRefreshNonce,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(84.dp),
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopStart)
+                                    .padding(6.dp)
+                                    .size(26.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.92f))
+                                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f), CircleShape),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector = option.icon,
+                                    contentDescription = null,
+                                    tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(15.dp),
+                                )
+                            }
+                            if (selected) {
+                                Icon(
+                                    Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .padding(6.dp)
+                                        .size(18.dp),
+                                )
+                            }
+                        }
                         Box(
-                            modifier = Modifier
-                                .align(Alignment.TopStart)
-                                .padding(6.dp)
-                                .size(26.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.92f))
-                                .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f), CircleShape),
+                            modifier = Modifier.fillMaxWidth(),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Icon(
-                                imageVector = option.icon,
-                                contentDescription = null,
-                                tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(15.dp),
+                            ThemePalettePreview(
+                                themeKey = option.key,
+                                previewDark = previewDark,
+                                settingsManager = settingsManager,
+                                refreshNonce = customThemeRefreshNonce,
                             )
                         }
-                        if (selected) {
-                            Icon(
-                                Icons.Default.CheckCircle,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier
-                                    .align(Alignment.TopEnd)
-                                    .padding(6.dp)
-                                    .size(18.dp),
-                            )
-                        }
-                    }
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        ThemePalettePreview(
-                            themeKey = option.key,
-                            previewDark = previewDark,
-                            settingsManager = settingsManager,
-                            refreshNonce = customThemeRefreshNonce,
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                            color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
                         )
                     }
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth(),
+                }
+            }
+
+            if (showScrollArrows) {
+                IconButton(
+                    onClick = {
+                        scope.launch { scrollState.animateScrollBy(scrollStepPx) }
+                    },
+                    enabled = scrollState.canScrollForward,
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = null,
+                        tint = if (scrollState.canScrollForward) {
+                            MaterialTheme.colorScheme.onSurface
+                        } else {
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.28f)
+                        },
                     )
                 }
             }

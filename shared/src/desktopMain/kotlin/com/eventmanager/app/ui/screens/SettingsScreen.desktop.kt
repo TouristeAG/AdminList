@@ -18,6 +18,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -45,12 +47,14 @@ import com.eventmanager.app.platform.createGmailAuth
 import com.eventmanager.app.platform.AppBuildInfo
 import com.eventmanager.app.platform.hardware.DesktopBleReaderScanner
 import com.eventmanager.app.platform.hardware.DesktopExternalNfcReader
+import com.eventmanager.app.platform.hardware.WindowsAcsPcscSetup
 import com.eventmanager.app.platform.openUrl
 import com.eventmanager.app.ui.components.BleReaderPickerDialog
 import com.eventmanager.app.ui.components.BiometricAdminVerificationDialog
 import com.eventmanager.app.ui.components.ScannerMatch
 import com.eventmanager.app.resources.Res
 import com.eventmanager.app.resources.*
+import com.eventmanager.app.ui.components.ActiveVolunteersDialog
 import com.eventmanager.app.ui.components.CleanupInactiveVolunteersDialog
 import com.eventmanager.app.ui.components.SyncStatusDialog
 import com.eventmanager.app.ui.platform.ServiceAccountKeyUploadButton
@@ -74,6 +78,25 @@ import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
 
+private enum class DesktopSettingsNav {
+    Sync,
+    Email,
+    Maintenance,
+    Catalog,
+    ExternalReader,
+    Appearance,
+    Announcements,
+    Localization,
+    Developer,
+    About,
+}
+
+private data class DesktopSettingsNavItem(
+    val id: DesktopSettingsNav,
+    val title: String,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+)
+
 @Composable
 actual fun SettingsScreen(
     viewModel: EventManagerViewModel,
@@ -83,6 +106,7 @@ actual fun SettingsScreen(
     variant: SettingsScreenVariant,
     modifier: Modifier,
     onDesktopAdminNavLayoutChanged: () -> Unit,
+    onFactoryResetComplete: () -> Unit,
 ) {
     val platformContext = LocalPlatformContext.current
     val settingsManager = remember(platformContext) { SettingsManager(createAppStorage(platformContext)) }
@@ -112,19 +136,8 @@ actual fun SettingsScreen(
     val platformFileManager = remember(platformContext) { PlatformFileManager(platformContext) }
     val serviceAccountConfigured = platformFileManager.getServiceAccountFile() != null
 
-    var showSyncSettings by remember { mutableStateOf(settingsManager.isCategorySyncExpanded()) }
-    val serviceAccountKeyInfo = remember(uploadStatus, showSyncSettings) {
-        platformFileManager.readServiceAccountJson()?.let { ServiceAccountJsonParser.parse(it) }
-    }
-    var showEmailSettings by remember { mutableStateOf(settingsManager.isCategoryEmailExpanded()) }
-    var showAppearanceSettings by remember { mutableStateOf(settingsManager.isCategoryAppearanceExpanded()) }
-    var showMaintenanceSettings by remember { mutableStateOf(settingsManager.isCategoryMaintenanceExpanded()) }
-    var showLocalizationSettings by remember { mutableStateOf(settingsManager.isCategoryLocalizationExpanded()) }
-    var showAnnouncementsSettings by remember { mutableStateOf(settingsManager.isCategoryAnnouncementsExpanded()) }
-    var showDeveloperSettings by remember { mutableStateOf(settingsManager.isCategoryDeveloperExpanded()) }
     var showUpdateResultDialog by remember { mutableStateOf(false) }
     var showUpdateSourcesDialog by remember { mutableStateOf(false) }
-    var showExternalReaderSettings by remember { mutableStateOf(settingsManager.isCategoryExternalReaderExpanded()) }
     var showBleReaderPicker by remember { mutableStateOf(false) }
     var externalBleReaderMac by remember { mutableStateOf(settingsManager.getExternalBleReaderMac()) }
     var externalBleReaderName by remember { mutableStateOf(settingsManager.getExternalBleReaderName()) }
@@ -134,12 +147,67 @@ actual fun SettingsScreen(
     var showPcscReadersDialog by remember { mutableStateOf(false) }
     var pcscReadersListing by remember { mutableStateOf("") }
     var usbReaderConnected by remember { mutableStateOf(DesktopExternalNfcReader.isUsbConnected()) }
-    var usbReaderName by remember { mutableStateOf(DesktopExternalNfcReader.readerDescription(settingsManager)) }
+    var usbReaderName by remember { mutableStateOf("") }
     var bleReaderLinked by remember { mutableStateOf(DesktopExternalNfcReader.isBleLinkActive(settingsManager)) }
+    var bleLinkState by remember {
+        mutableStateOf(DesktopExternalNfcReader.bleLinkState(settingsManager))
+    }
+    val isWindowsDesktop = remember { WindowsAcsPcscSetup.isWindows() }
+    var acsDriverProbeSummary by remember { mutableStateOf<String?>(null) }
+    var acsEscapeBusy by remember { mutableStateOf(false) }
+    var acsEscapeResultMessage by remember { mutableStateOf<String?>(null) }
+    var acsEscapeRelevant by remember { mutableStateOf(true) }
+    var acsStackIsNative by remember { mutableStateOf(false) }
+    var nfcSetupHelpExpanded by remember { mutableStateOf(false) }
+    var nfcAdvancedExpanded by remember { mutableStateOf(false) }
 
     var showInstructions by remember { mutableStateOf(false) }
     var showGmailOAuthHelp by remember { mutableStateOf(false) }
     var showCleanupDialog by remember { mutableStateOf(false) }
+    var showActiveVolunteersDialog by remember { mutableStateOf(false) }
+    var showFactoryResetDialog by remember { mutableStateOf(false) }
+    var factoryResetInProgress by remember { mutableStateOf(false) }
+    val cacheClearedMsg = stringResource(Res.string.app_cache_cleared)
+
+    val navItems = buildList {
+        if (variant == SettingsScreenVariant.Full) {
+            add(DesktopSettingsNavItem(DesktopSettingsNav.Sync, stringResource(Res.string.settings_category_sync), Icons.Default.CloudSync))
+            add(DesktopSettingsNavItem(DesktopSettingsNav.Email, stringResource(Res.string.settings_category_email), Icons.Default.Email))
+            add(DesktopSettingsNavItem(DesktopSettingsNav.Maintenance, stringResource(Res.string.settings_category_maintenance), Icons.Default.Build))
+            add(DesktopSettingsNavItem(DesktopSettingsNav.Catalog, stringResource(Res.string.settings_category_catalog), Icons.Default.Category))
+            add(DesktopSettingsNavItem(DesktopSettingsNav.ExternalReader, stringResource(Res.string.settings_category_external_reader), Icons.Default.Nfc))
+            add(DesktopSettingsNavItem(DesktopSettingsNav.Appearance, stringResource(Res.string.settings_category_appearance), Icons.Default.Palette))
+            add(DesktopSettingsNavItem(DesktopSettingsNav.Announcements, stringResource(Res.string.settings_category_announcements), Icons.Default.Campaign))
+            add(DesktopSettingsNavItem(DesktopSettingsNav.Localization, stringResource(Res.string.settings_category_localization), Icons.Default.Language))
+            add(DesktopSettingsNavItem(DesktopSettingsNav.Developer, stringResource(Res.string.settings_category_developer), Icons.Default.BugReport))
+            add(DesktopSettingsNavItem(DesktopSettingsNav.About, stringResource(Res.string.app_info_title), Icons.Default.Info))
+        } else {
+            add(DesktopSettingsNavItem(DesktopSettingsNav.Appearance, stringResource(Res.string.settings_category_appearance), Icons.Default.Palette))
+            add(DesktopSettingsNavItem(DesktopSettingsNav.Sync, stringResource(Res.string.settings_category_sync), Icons.Default.CloudSync))
+            add(DesktopSettingsNavItem(DesktopSettingsNav.Email, stringResource(Res.string.settings_category_email), Icons.Default.Email))
+            add(DesktopSettingsNavItem(DesktopSettingsNav.ExternalReader, stringResource(Res.string.settings_category_external_reader), Icons.Default.Nfc))
+            add(DesktopSettingsNavItem(DesktopSettingsNav.Announcements, stringResource(Res.string.settings_category_announcements), Icons.Default.Campaign))
+            add(DesktopSettingsNavItem(DesktopSettingsNav.Localization, stringResource(Res.string.settings_category_localization), Icons.Default.Language))
+        }
+    }
+    var selectedSection by remember(variant) {
+        mutableStateOf(
+            when (variant) {
+                SettingsScreenVariant.BilleterieBasic, SettingsScreenVariant.PosBasic -> DesktopSettingsNav.Appearance
+                else -> DesktopSettingsNav.Sync
+            }
+        )
+    }
+    val selectedNav = navItems.firstOrNull { it.id == selectedSection } ?: navItems.first()
+    LaunchedEffect(navItems.map { it.id }) {
+        if (navItems.none { it.id == selectedSection }) {
+            selectedSection = navItems.first().id
+        }
+    }
+
+    val serviceAccountKeyInfo = remember(uploadStatus, selectedSection) {
+        platformFileManager.readServiceAccountJson()?.let { ServiceAccountJsonParser.parse(it) }
+    }
 
     val syncStatusMessage by viewModel.syncStatusMessage.collectAsState()
     val showSyncStatusDialog by viewModel.showSyncStatusDialog.collectAsState()
@@ -180,60 +248,66 @@ actual fun SettingsScreen(
         showPlatformToast(platformContext, saveLabel)
     }
 
-    LaunchedEffect(showExternalReaderSettings) {
-        if (!showExternalReaderSettings) return@LaunchedEffect
+    LaunchedEffect(selectedSection) {
+        if (selectedSection != DesktopSettingsNav.ExternalReader) return@LaunchedEffect
         while (isActive) {
-            usbReaderConnected = DesktopExternalNfcReader.isUsbConnected()
-            usbReaderName = DesktopExternalNfcReader.readerDescription(settingsManager)
-            bleReaderLinked = DesktopExternalNfcReader.isBleLinkActive(settingsManager)
+            val status = withContext(Dispatchers.IO) {
+                DesktopExternalNfcReader.refreshStatus(settingsManager)
+            }
+            usbReaderConnected = status.usbConnected
+            usbReaderName = status.usbName.orEmpty()
+            bleReaderLinked = status.bleAvailable
+            bleLinkState = status.bleLinkState
             delay(1500)
         }
     }
 
-    Column(
+    Row(
         modifier = modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .background(MaterialTheme.colorScheme.surfaceContainerLowest),
     ) {
-        if (variant == SettingsScreenVariant.BilleterieBasic) {
-            BackgroundAnimationSettingsSection(
-                settingsManager = settingsManager,
-                isDesktop = true,
-                target = BackgroundAnimationSettingsTarget.Billeterie,
-            )
-        }
+        DesktopSettingsSidebar(
+            items = navItems,
+            selected = selectedSection,
+            onSelect = { selectedSection = it },
+            subtitle = if (variant == SettingsScreenVariant.Full) {
+                stringResource(Res.string.settings_subtitle)
+            } else null,
+        )
 
-        if (variant == SettingsScreenVariant.PosBasic) {
-            BackgroundAnimationSettingsSection(
-                settingsManager = settingsManager,
-                isDesktop = true,
-                target = BackgroundAnimationSettingsTarget.Pos,
-            )
-        }
+        HorizontalDivider(
+            modifier = Modifier
+                .fillMaxHeight()
+                .width(1.dp),
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f),
+        )
 
-        if (variant == SettingsScreenVariant.Full) {
-            Text(
-                text = stringResource(Res.string.settings_title),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight()
+                .background(MaterialTheme.colorScheme.background),
+        ) {
+            DesktopSettingsDetailHeader(
+                title = selectedNav.title,
+                icon = selectedNav.icon,
             )
-            Text(
-                text = stringResource(Res.string.settings_subtitle),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 36.dp, vertical = 28.dp),
+                verticalArrangement = Arrangement.spacedBy(18.dp),
+            ) {
+                // Variant-specific background animation is embedded in Appearance below.
 
         DesktopSettingsCategory(
+            section = DesktopSettingsNav.Sync,
+            selectedSection = selectedSection,
             title = stringResource(Res.string.settings_category_sync),
             icon = Icons.Default.CloudSync,
-            expanded = showSyncSettings,
-            onToggle = {
-                showSyncSettings = !showSyncSettings
-                settingsManager.setCategorySyncExpanded(showSyncSettings)
-            }
         ) {
             OutlinedButton(
                 onClick = { showInstructions = true },
@@ -338,14 +412,11 @@ actual fun SettingsScreen(
 
         if (variant == SettingsScreenVariant.Full || variant == SettingsScreenVariant.BilleterieBasic || variant == SettingsScreenVariant.PosBasic) {
             DesktopSettingsCategory(
-                title = stringResource(Res.string.settings_category_email),
-                icon = Icons.Default.Email,
-                expanded = showEmailSettings,
-                onToggle = {
-                    showEmailSettings = !showEmailSettings
-                    settingsManager.setCategoryEmailExpanded(showEmailSettings)
-                }
-            ) {
+            section = DesktopSettingsNav.Email,
+            selectedSection = selectedSection,
+            title = stringResource(Res.string.settings_category_email),
+            icon = Icons.Default.Email,
+        ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -522,106 +593,254 @@ actual fun SettingsScreen(
 
         if (variant == SettingsScreenVariant.Full) {
             DesktopSettingsCategory(
-                title = stringResource(Res.string.settings_category_maintenance),
-                icon = Icons.Default.Build,
-                expanded = showMaintenanceSettings,
-                onToggle = {
-                    showMaintenanceSettings = !showMaintenanceSettings
-                    settingsManager.setCategoryMaintenanceExpanded(showMaintenanceSettings)
+            section = DesktopSettingsNav.Maintenance,
+            selectedSection = selectedSection,
+            title = stringResource(Res.string.settings_category_maintenance),
+            icon = Icons.Default.Build,
+        ) {
+                Button(
+                    onClick = { showActiveVolunteersDialog = true },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Default.People, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(Res.string.view_active_volunteers))
                 }
-            ) {
-                OutlinedButton(onClick = onNavigateToJobTypeManagement, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(Res.string.manage_shift_types))
-                }
-                OutlinedButton(onClick = onNavigateToVenueManagement, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(Res.string.manage_venues))
-                }
-                OutlinedButton(onClick = onNavigateToSalesSheetItemManagement, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(Res.string.manage_sales_items))
-                }
-                OutlinedButton(
+                Button(
                     onClick = { showCleanupDialog = true },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Icon(Icons.Default.Delete, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(Res.string.cleanup_inactive_volunteers))
                 }
+                Button(
+                    onClick = {
+                        viewModel.checkForAppUpdates()
+                        showUpdateResultDialog = true
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Default.SystemUpdate, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(Res.string.check_for_updates))
+                }
+                TextButton(
+                    onClick = { showUpdateSourcesDialog = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(vertical = 4.dp),
+                ) {
+                    Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = stringResource(Res.string.change_update_sources),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                OutlinedButton(
+                    onClick = {
+                        viewModel.clearAppData()
+                        showPlatformToast(platformContext, cacheClearedMsg)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Default.Clear, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(Res.string.clear_app_cache))
+                }
+                OutlinedButton(
+                    onClick = { showFactoryResetDialog = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error,
+                    ),
+                ) {
+                    Icon(Icons.Default.Restore, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(Res.string.factory_reset_title))
+                }
+                Text(
+                    text = stringResource(Res.string.factory_reset_description),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            DesktopSettingsCategory(
+                section = DesktopSettingsNav.Catalog,
+                selectedSection = selectedSection,
+                title = stringResource(Res.string.settings_category_catalog),
+                icon = Icons.Default.Category,
+            ) {
+                DesktopManagementCard(
+                    title = stringResource(Res.string.shift_type_management_title),
+                    description = stringResource(Res.string.shift_type_management_description),
+                    icon = Icons.Default.Work,
+                    buttonLabel = stringResource(Res.string.manage_shift_types),
+                    onClick = onNavigateToJobTypeManagement,
+                )
+                DesktopManagementCard(
+                    title = stringResource(Res.string.sales_items_management_title),
+                    description = stringResource(Res.string.sales_items_management_description),
+                    icon = Icons.Default.PointOfSale,
+                    buttonLabel = stringResource(Res.string.manage_sales_items),
+                    onClick = onNavigateToSalesSheetItemManagement,
+                )
+                DesktopManagementCard(
+                    title = stringResource(Res.string.venue_management_title),
+                    description = stringResource(Res.string.venue_management_description),
+                    icon = Icons.Default.LocationOn,
+                    buttonLabel = stringResource(Res.string.manage_venues),
+                    onClick = onNavigateToVenueManagement,
+                )
             }
         }
 
         DesktopSettingsCategory(
+            section = DesktopSettingsNav.ExternalReader,
+            selectedSection = selectedSection,
             title = stringResource(Res.string.settings_category_external_reader),
-            icon = Icons.Default.Bluetooth,
-            expanded = showExternalReaderSettings,
-            onToggle = {
-                showExternalReaderSettings = !showExternalReaderSettings
-                settingsManager.setCategoryExternalReaderExpanded(showExternalReaderSettings)
-            }
+            icon = Icons.Default.Nfc,
         ) {
+            val blePcscSupported = DesktopBleReaderScanner.isBlePcscSupportedOnPlatform()
+            val hasUsbReader = usbReaderConnected
+            val hasBleConfigured = externalBleReaderMac.isNotBlank()
+            val hasLiveReader = hasUsbReader || bleReaderLinked
+
             Text(
                 text = stringResource(Res.string.desktop_external_reader_description),
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = if (DesktopBleReaderScanner.isBlePcscSupportedOnPlatform()) {
-                    stringResource(Res.string.desktop_ble_supported_windows)
-                } else {
-                    val os = System.getProperty("os.name").orEmpty().lowercase()
-                    if (os.contains("mac") || os.contains("darwin")) {
-                        stringResource(Res.string.desktop_ble_unsupported_macos)
-                    } else {
-                        stringResource(Res.string.desktop_ble_unsupported_linux)
-                    }
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.height(8.dp))
-            OutlinedButton(
-                onClick = {
-                    pcscReadersListing = DesktopExternalNfcReader.listPcscReadersReport()
-                    showPcscReadersDialog = true
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(Icons.Default.List, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(Res.string.desktop_list_pcsc_readers))
-            }
-            Spacer(Modifier.height(12.dp))
 
-            if (usbReaderConnected) {
+            if (!hasUsbReader && !hasBleConfigured) {
+                Text(
+                    text = stringResource(Res.string.desktop_nfc_active_none),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            if (hasUsbReader || hasBleConfigured) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
-                    Row(
-                        Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Icon(Icons.Default.Usb, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        Spacer(Modifier.width(8.dp))
-                        Column {
-                            Text(
-                                stringResource(Res.string.settings_category_pcsc_reader),
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.SemiBold
+                        if (hasUsbReader) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.Usb,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(Modifier.width(10.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        stringResource(Res.string.desktop_nfc_usb_connected),
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    if (usbReaderName.isNotBlank()) {
+                                        Text(
+                                            usbReaderName,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontFamily = FontFamily.Monospace,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        if (hasUsbReader && hasBleConfigured) {
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                             )
-                            Text(usbReaderName, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
+                        }
+                        if (hasBleConfigured) {
+                            val bleStatusLabel = when (bleLinkState) {
+                                DesktopExternalNfcReader.BleLinkState.Ready ->
+                                    stringResource(Res.string.desktop_nfc_ble_connected)
+                                DesktopExternalNfcReader.BleLinkState.Connecting ->
+                                    stringResource(Res.string.desktop_nfc_ble_connecting)
+                                else ->
+                                    stringResource(Res.string.desktop_nfc_ble_not_ready)
+                            }
+                            val bleStatusColor = when (bleLinkState) {
+                                DesktopExternalNfcReader.BleLinkState.Ready ->
+                                    MaterialTheme.colorScheme.primary
+                                DesktopExternalNfcReader.BleLinkState.Connecting ->
+                                    MaterialTheme.colorScheme.tertiary
+                                else ->
+                                    MaterialTheme.colorScheme.error
+                            }
+                            val bleHint = when (bleLinkState) {
+                                DesktopExternalNfcReader.BleLinkState.Ready -> null
+                                DesktopExternalNfcReader.BleLinkState.Connecting ->
+                                    stringResource(Res.string.desktop_nfc_ble_connecting_hint)
+                                else -> stringResource(Res.string.desktop_nfc_ble_wake_hint)
+                            }
+                            Row(verticalAlignment = Alignment.Top) {
+                                Icon(
+                                    Icons.Default.Bluetooth,
+                                    contentDescription = null,
+                                    tint = bleStatusColor
+                                )
+                                Spacer(Modifier.width(10.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = bleStatusLabel,
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = bleStatusColor
+                                    )
+                                    Text(
+                                        text = externalBleReaderName.ifBlank {
+                                            stringResource(Res.string.ble_reader_unnamed)
+                                        },
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = externalBleReaderMac,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontFamily = FontFamily.Monospace,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    if (bleHint != null) {
+                                        Spacer(Modifier.height(4.dp))
+                                        Text(
+                                            text = bleHint,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = bleStatusColor
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
-                Spacer(Modifier.height(8.dp))
-                OutlinedButton(
+            }
+
+            if (hasLiveReader || hasBleConfigured) {
+                Button(
                     onClick = {
-                        if (externalReaderTestRunning) return@OutlinedButton
+                        if (externalReaderTestRunning) return@Button
                         externalReaderTestRunning = true
                         scope.launch {
                             val result = withContext(Dispatchers.IO) {
-                                DesktopExternalNfcReader.runDiagnostic()
+                                if (hasUsbReader) {
+                                    DesktopExternalNfcReader.runDiagnostic()
+                                } else {
+                                    DesktopExternalNfcReader.runBleDiagnostic(settingsManager)
+                                }
                             }
                             externalReaderTestDialogSuccess = result.success
                             externalReaderTestDialogMessage = result.details
@@ -632,123 +851,213 @@ actual fun SettingsScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     if (externalReaderTestRunning) {
-                        CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
                         Spacer(Modifier.width(8.dp))
                         Text(stringResource(Res.string.external_reader_testing))
                     } else {
                         Icon(Icons.Default.Sync, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
-                        Text(stringResource(Res.string.desktop_usb_reader_test_button))
+                        Text(stringResource(Res.string.desktop_nfc_test_reader))
                     }
                 }
-                Spacer(Modifier.height(12.dp))
             }
 
-            if (externalBleReaderMac.isNotBlank()) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Column(Modifier.padding(12.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.Bluetooth,
-                                contentDescription = null,
-                                tint = if (bleReaderLinked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-                            )
+            if (blePcscSupported) {
+                if (hasBleConfigured) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = { showBleReaderPicker = true },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.BluetoothSearching, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
-                            Text(
-                                text = stringResource(Res.string.external_reader_connected_label),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = if (bleReaderLinked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                                fontWeight = FontWeight.SemiBold
-                            )
+                            Text(stringResource(Res.string.external_reader_change))
                         }
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = externalBleReaderName.ifBlank { stringResource(Res.string.ble_reader_unnamed) },
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Text(
-                            text = externalBleReaderMac,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontFamily = FontFamily.Monospace
-                        )
-                        if (!bleReaderLinked) {
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                text = stringResource(Res.string.scanner_ble_reader_footer_disconnected),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.error
-                            )
+                        OutlinedButton(
+                            onClick = {
+                                DesktopExternalNfcReader.shutdownBle()
+                                settingsManager.clearExternalBleReader()
+                                externalBleReaderMac = ""
+                                externalBleReaderName = ""
+                                showPlatformToast(platformContext, readerClearedToast)
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.Clear, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(Res.string.external_reader_forget))
                         }
                     }
-                }
-                Spacer(Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Button(
+                } else {
+                    OutlinedButton(
                         onClick = { showBleReaderPicker = true },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Icon(Icons.Default.BluetoothSearching, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
-                        Text(stringResource(Res.string.external_reader_change))
-                    }
-                    OutlinedButton(
-                        onClick = {
-                            DesktopExternalNfcReader.shutdownBle()
-                            settingsManager.clearExternalBleReader()
-                            externalBleReaderMac = ""
-                            externalBleReaderName = ""
-                            showPlatformToast(platformContext, readerClearedToast)
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(Icons.Default.Clear, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(Res.string.external_reader_forget))
+                        Text(stringResource(Res.string.desktop_nfc_use_bluetooth))
                     }
                 }
-                Spacer(Modifier.height(8.dp))
+            }
+
+            DesktopNfcExpandSection(
+                title = stringResource(Res.string.desktop_nfc_setup_title),
+                expanded = nfcSetupHelpExpanded,
+                onToggle = { nfcSetupHelpExpanded = !nfcSetupHelpExpanded }
+            ) {
+                Text(
+                    text = stringResource(Res.string.desktop_acs_prefer_usb),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = stringResource(Res.string.desktop_nfc_setup_usb),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (blePcscSupported) {
+                    Text(
+                        text = stringResource(Res.string.desktop_nfc_setup_ble),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    val os = System.getProperty("os.name").orEmpty().lowercase()
+                    Text(
+                        text = if (os.contains("mac") || os.contains("darwin")) {
+                            stringResource(Res.string.desktop_ble_unsupported_macos)
+                        } else {
+                            stringResource(Res.string.desktop_ble_unsupported_linux)
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                OutlinedButton(
+                    onClick = { openUrl(WindowsAcsPcscSetup.ACS_ACR1255_DRIVER_URL) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(Res.string.desktop_acs_open_drivers))
+                }
+            }
+
+            DesktopNfcExpandSection(
+                title = stringResource(Res.string.desktop_nfc_advanced_title),
+                expanded = nfcAdvancedExpanded,
+                onToggle = { nfcAdvancedExpanded = !nfcAdvancedExpanded }
+            ) {
+                Text(
+                    text = stringResource(Res.string.desktop_nfc_advanced_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 OutlinedButton(
                     onClick = {
-                        if (externalReaderTestRunning) return@OutlinedButton
-                        externalReaderTestRunning = true
                         scope.launch {
-                            val result = withContext(Dispatchers.IO) {
-                                DesktopExternalNfcReader.runBleDiagnostic(settingsManager)
+                            pcscReadersListing = withContext(Dispatchers.IO) {
+                                DesktopExternalNfcReader.listPcscReadersReport()
                             }
-                            externalReaderTestDialogSuccess = result.success
-                            externalReaderTestDialogMessage = result.details
-                            externalReaderTestRunning = false
+                            showPcscReadersDialog = true
                         }
                     },
-                    enabled = !externalReaderTestRunning,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    if (externalReaderTestRunning) {
-                        CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(Res.string.external_reader_testing))
-                    } else {
-                        Icon(Icons.Default.Sync, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(Res.string.external_reader_test_button))
-                    }
-                }
-            } else {
-                Button(
-                    onClick = { showBleReaderPicker = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.BluetoothSearching, contentDescription = null)
+                    Icon(Icons.Default.List, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text(stringResource(Res.string.external_reader_pick_button))
+                    Text(stringResource(Res.string.desktop_list_pcsc_readers))
+                }
+                if (isWindowsDesktop) {
+                    OutlinedButton(
+                        onClick = {
+                            scope.launch {
+                                val probe = withContext(Dispatchers.IO) {
+                                    WindowsAcsPcscSetup.probeDrivers()
+                                }
+                                acsDriverProbeSummary = probe.summary
+                                acsEscapeRelevant = probe.escapeRelevant ||
+                                    probe.stack == WindowsAcsPcscSetup.DriverStack.MICROSOFT_CCID
+                                acsStackIsNative =
+                                    probe.stack == WindowsAcsPcscSetup.DriverStack.ACS
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Info, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(Res.string.desktop_acs_probe_drivers))
+                    }
+                    if (acsStackIsNative && !acsEscapeRelevant) {
+                        Text(
+                            text = stringResource(Res.string.desktop_acs_escape_not_needed),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    } else {
+                        Text(
+                            text = stringResource(Res.string.desktop_acs_windows_usb_banner),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        OutlinedButton(
+                            onClick = {
+                                if (acsEscapeBusy) return@OutlinedButton
+                                acsEscapeBusy = true
+                                acsEscapeResultMessage = null
+                                scope.launch {
+                                    val result = withContext(Dispatchers.IO) {
+                                        WindowsAcsPcscSetup.enableEscapeCommandElevated()
+                                    }
+                                    acsEscapeResultMessage = result.message
+                                    val probe = withContext(Dispatchers.IO) {
+                                        WindowsAcsPcscSetup.probeDrivers()
+                                    }
+                                    acsDriverProbeSummary = probe.summary
+                                    acsEscapeRelevant = probe.escapeRelevant ||
+                                        probe.stack == WindowsAcsPcscSetup.DriverStack.MICROSOFT_CCID
+                                    acsStackIsNative =
+                                        probe.stack == WindowsAcsPcscSetup.DriverStack.ACS
+                                    acsEscapeBusy = false
+                                }
+                            },
+                            enabled = !acsEscapeBusy,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            if (acsEscapeBusy) {
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                Spacer(Modifier.width(8.dp))
+                                Text(stringResource(Res.string.desktop_acs_escape_running))
+                            } else {
+                                Icon(Icons.Default.Security, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text(stringResource(Res.string.desktop_acs_enable_escape))
+                            }
+                        }
+                    }
+                    acsDriverProbeSummary?.let { summary ->
+                        Text(
+                            text = summary,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontFamily = FontFamily.Monospace,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    acsEscapeResultMessage?.let { msg ->
+                        Text(
+                            text = msg,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
         }
@@ -764,6 +1073,8 @@ actual fun SettingsScreen(
                     externalBleReaderName = name
                     showBleReaderPicker = false
                     scope.launch {
+                        DesktopExternalNfcReader.prepareBleReader(settingsManager)
+                        bleReaderLinked = DesktopExternalNfcReader.isBleLinkActive(settingsManager)
                         showPlatformToast(
                             platformContext,
                             getString(Res.string.external_reader_saved_toast, name)
@@ -774,14 +1085,31 @@ actual fun SettingsScreen(
         }
 
         DesktopSettingsCategory(
+            section = DesktopSettingsNav.Appearance,
+            selectedSection = selectedSection,
             title = stringResource(Res.string.settings_category_appearance),
             icon = Icons.Default.Palette,
-            expanded = showAppearanceSettings,
-            onToggle = {
-                showAppearanceSettings = !showAppearanceSettings
-                settingsManager.setCategoryAppearanceExpanded(showAppearanceSettings)
-            }
         ) {
+            when (variant) {
+                SettingsScreenVariant.BilleterieBasic -> {
+                    BackgroundAnimationSettingsSection(
+                        settingsManager = settingsManager,
+                        isDesktop = true,
+                        target = BackgroundAnimationSettingsTarget.Billeterie,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
+                SettingsScreenVariant.PosBasic -> {
+                    BackgroundAnimationSettingsSection(
+                        settingsManager = settingsManager,
+                        isDesktop = true,
+                        target = BackgroundAnimationSettingsTarget.Pos,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
+                else -> Unit
+            }
+
             var selectedThemeMode by remember { mutableStateOf(ThemeMode.fromString(settingsManager.getThemeMode())) }
 
             ThemeModePicker(
@@ -868,13 +1196,10 @@ actual fun SettingsScreen(
         }
 
         DesktopSettingsCategory(
+            section = DesktopSettingsNav.Announcements,
+            selectedSection = selectedSection,
             title = stringResource(Res.string.settings_category_announcements),
             icon = Icons.Default.Campaign,
-            expanded = showAnnouncementsSettings,
-            onToggle = {
-                showAnnouncementsSettings = !showAnnouncementsSettings
-                settingsManager.setCategoryAnnouncementsExpanded(showAnnouncementsSettings)
-            }
         ) {
             var receptionEnabled by remember { mutableStateOf(settingsManager.isAnnouncementsReceptionEnabled()) }
             DesktopSettingsToggleRow(
@@ -936,32 +1261,17 @@ actual fun SettingsScreen(
         }
 
         DesktopSettingsCategory(
+            section = DesktopSettingsNav.Localization,
+            selectedSection = selectedSection,
             title = stringResource(Res.string.settings_category_localization),
             icon = Icons.Default.Language,
-            expanded = showLocalizationSettings,
-            onToggle = {
-                showLocalizationSettings = !showLocalizationSettings
-                settingsManager.setCategoryLocalizationExpanded(showLocalizationSettings)
-            }
         ) {
             val languageCode by AppAppearanceState::localeCode
-            val currentLanguage = when (variant) {
-                SettingsScreenVariant.PosBasic -> settingsManager.getPosLanguage()
-                else -> languageCode ?: settingsManager.getLanguage()
-            }
             DesktopLanguagePicker(
-                selectedLanguage = currentLanguage,
+                selectedLanguage = languageCode ?: settingsManager.getLanguage(),
                 onLanguageSelected = { code ->
-                    when (variant) {
-                        SettingsScreenVariant.PosBasic -> {
-                            settingsManager.savePosLanguage(code)
-                            AppAppearanceState.notifyLocaleChanged(code)
-                        }
-                        else -> {
-                            settingsManager.saveLanguage(code)
-                            applyLocaleChange(platformContext)
-                        }
-                    }
+                    settingsManager.saveLanguage(code)
+                    applyLocaleChange(platformContext)
                 },
             )
 
@@ -978,36 +1288,33 @@ actual fun SettingsScreen(
 
         if (variant == SettingsScreenVariant.Full) {
             DesktopSettingsCategory(
-                title = stringResource(Res.string.settings_category_developer),
-                icon = Icons.Default.BugReport,
-                expanded = showDeveloperSettings,
-                onToggle = {
-                    showDeveloperSettings = !showDeveloperSettings
-                    settingsManager.setCategoryDeveloperExpanded(showDeveloperSettings)
-                }
-            ) {
+            section = DesktopSettingsNav.Developer,
+            selectedSection = selectedSection,
+            title = stringResource(Res.string.settings_category_developer),
+            icon = Icons.Default.BugReport,
+        ) {
                 DesktopDeveloperSettings(
                     settingsManager = settingsManager,
                     viewModel = viewModel,
                     platformContext = platformContext,
-                    onCheckForUpdates = {
-                        viewModel.checkForAppUpdates()
-                        showUpdateResultDialog = true
-                    },
-                    onConfigureUpdateSources = { showUpdateSourcesDialog = true },
                 )
             }
         }
 
-        Spacer(Modifier.height(12.dp))
-
-        AppInformationPanel(
-            versionName = AppBuildInfo.VERSION_NAME,
-            lastSyncTimeMs = settingsManager.getLastSyncTime(),
-        )
-
-        if (isAppIconChangeSupported()) {
-            Text(stringResource(Res.string.desktop_app_icon_unavailable), style = MaterialTheme.typography.bodySmall)
+        if (selectedSection == DesktopSettingsNav.About) {
+            AppInformationPanel(
+                versionName = AppBuildInfo.VERSION_NAME,
+                lastSyncTimeMs = settingsManager.getLastSyncTime(),
+            )
+            if (isAppIconChangeSupported()) {
+                Text(
+                    stringResource(Res.string.desktop_app_icon_unavailable),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+            }
         }
     }
 
@@ -1028,6 +1335,69 @@ actual fun SettingsScreen(
                 showCleanupDialog = false
             },
             onDismiss = { showCleanupDialog = false }
+        )
+    }
+
+    if (showActiveVolunteersDialog) {
+        val volunteers by viewModel.volunteers.collectAsState()
+        ActiveVolunteersDialog(
+            volunteers = volunteers,
+            onDismiss = { showActiveVolunteersDialog = false },
+        )
+    }
+
+    if (showFactoryResetDialog) {
+        AlertDialog(
+            onDismissRequest = { if (!factoryResetInProgress) showFactoryResetDialog = false },
+            icon = {
+                Icon(
+                    Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                )
+            },
+            title = { Text(stringResource(Res.string.factory_reset_confirm_title)) },
+            text = { Text(stringResource(Res.string.factory_reset_confirm_message)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (factoryResetInProgress) return@Button
+                        factoryResetInProgress = true
+                        viewModel.factoryReset(
+                            settingsManager = settingsManager,
+                            fileManager = platformFileManager,
+                        ) {
+                            showFactoryResetDialog = false
+                            factoryResetInProgress = false
+                            onFactoryResetComplete()
+                        }
+                    },
+                    enabled = !factoryResetInProgress,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                    ),
+                ) {
+                    if (factoryResetInProgress) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onError,
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(Res.string.factory_reset_in_progress))
+                    } else {
+                        Text(stringResource(Res.string.factory_reset_confirm_button))
+                    }
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showFactoryResetDialog = false },
+                    enabled = !factoryResetInProgress,
+                ) {
+                    Text(stringResource(Res.string.cancel))
+                }
+            },
         )
     }
 
@@ -1801,8 +2171,6 @@ private fun DesktopDeveloperSettings(
     settingsManager: SettingsManager,
     viewModel: EventManagerViewModel,
     platformContext: com.eventmanager.app.platform.PlatformContext,
-    onCheckForUpdates: () -> Unit,
-    onConfigureUpdateSources: () -> Unit,
 ) {
     var debugModeEnabled by remember { mutableStateOf(settingsManager.getDebugMode()) }
     var logFiles by remember { mutableStateOf(FileAppLogger.getAllLogFiles()) }
@@ -1836,27 +2204,6 @@ private fun DesktopDeveloperSettings(
     )
 
     Spacer(Modifier.height(8.dp))
-
-    Button(
-        onClick = onCheckForUpdates,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Icon(Icons.Default.SystemUpdate, contentDescription = null)
-        Spacer(Modifier.width(8.dp))
-        Text(stringResource(Res.string.check_for_updates))
-    }
-
-    TextButton(
-        onClick = onConfigureUpdateSources,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(16.dp))
-        Spacer(Modifier.width(4.dp))
-        Text(
-            text = stringResource(Res.string.change_update_sources),
-            style = MaterialTheme.typography.bodySmall,
-        )
-    }
 
     if (debugModeEnabled) {
         Column(
@@ -2447,21 +2794,141 @@ private fun DesktopServiceAccountKeyInfoPanel(
 }
 
 @Composable
+private fun DesktopSettingsSidebar(
+    items: List<DesktopSettingsNavItem>,
+    selected: DesktopSettingsNav,
+    onSelect: (DesktopSettingsNav) -> Unit,
+    subtitle: String?,
+) {
+    Column(
+        modifier = Modifier
+            .width(252.dp)
+            .fillMaxHeight()
+            .background(MaterialTheme.colorScheme.surfaceContainerLow)
+            .padding(vertical = 20.dp, horizontal = 12.dp),
+    ) {
+        Text(
+            text = stringResource(Res.string.settings_title),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(horizontal = 12.dp),
+        )
+        if (subtitle != null) {
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 12.dp),
+            )
+        }
+        Spacer(Modifier.height(18.dp))
+        items.forEach { item ->
+            val isSelected = item.id == selected
+            val container = if (isSelected) {
+                MaterialTheme.colorScheme.secondaryContainer
+            } else {
+                Color.Transparent
+            }
+            val content = if (isSelected) {
+                MaterialTheme.colorScheme.onSecondaryContainer
+            } else {
+                MaterialTheme.colorScheme.onSurface
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(container)
+                    .clickable { onSelect(item.id) }
+                    .padding(horizontal = 12.dp, vertical = 11.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = item.icon,
+                    contentDescription = null,
+                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    text = item.title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                    color = content,
+                    maxLines = 2,
+                )
+            }
+            Spacer(Modifier.height(2.dp))
+        }
+    }
+}
+
+@Composable
+private fun DesktopSettingsDetailHeader(
+    title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(horizontal = 36.dp, vertical = 20.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.size(22.dp),
+            )
+        }
+        Spacer(Modifier.width(14.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
+}
+
+@Composable
 private fun DesktopSettingsToggleRow(
     title: String,
     description: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
-    Row(
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        tonalElevation = 0.dp,
     ) {
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
-            Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
+                Text(
+                    description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(Modifier.width(16.dp))
+            Switch(checked = checked, onCheckedChange = onCheckedChange)
         }
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 
@@ -2472,30 +2939,117 @@ private fun SheetNameField(label: String, value: String, onValueChange: (String)
         onValueChange = onValueChange,
         label = { Text(label) },
         modifier = Modifier.fillMaxWidth(),
-        singleLine = true
+        singleLine = true,
+        shape = RoundedCornerShape(12.dp),
     )
 }
 
 @Composable
-private fun DesktopSettingsCategory(
+private fun DesktopManagementCard(
     title: String,
+    description: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    expanded: Boolean,
-    onToggle: () -> Unit,
-    content: @Composable ColumnScope.() -> Unit
+    buttonLabel: String,
+    onClick: () -> Unit,
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth().clickable(onClick = onToggle),
-                verticalAlignment = Alignment.CenterVertically
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)),
+                contentAlignment = Alignment.Center,
             ) {
-                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.width(8.dp))
-                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = null)
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(22.dp),
+                )
             }
-            if (expanded) content()
+            Spacer(Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(Modifier.width(16.dp))
+            OutlinedButton(onClick = onClick, shape = RoundedCornerShape(10.dp)) {
+                Text(buttonLabel)
+            }
         }
     }
+}
+
+
+@Composable
+private fun DesktopNfcExpandSection(
+    title: String,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .clickable(onClick = onToggle)
+                .padding(vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f),
+            )
+            Icon(
+                if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (expanded) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                content = content,
+            )
+        }
+    }
+}
+
+@Composable
+private fun DesktopSettingsCategory(
+    section: DesktopSettingsNav,
+    selectedSection: DesktopSettingsNav,
+    @Suppress("UNUSED_PARAMETER") title: String,
+    @Suppress("UNUSED_PARAMETER") icon: androidx.compose.ui.graphics.vector.ImageVector,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    if (section != selectedSection) return
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+        content = content,
+    )
 }

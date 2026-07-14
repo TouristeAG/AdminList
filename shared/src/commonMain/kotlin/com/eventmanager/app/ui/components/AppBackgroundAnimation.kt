@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import com.eventmanager.app.data.sync.SettingsManager
+import com.eventmanager.app.platform.LocalPlatformContext
 import com.eventmanager.app.ui.platform.AppAppearanceState
 
 @Composable
@@ -70,7 +71,13 @@ fun AppBackgroundAnimation(
     isDesktop: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
-    val shouldRender = BackgroundAnimationStyle.isEnabled(style) && opacity > 0f
+    val platformContext = LocalPlatformContext.current
+    val lowPerformanceDevice = remember(platformContext) {
+        isLowPerformanceDeviceForBackgroundAnimation(platformContext)
+    }
+    val shouldRender = !lowPerformanceDevice &&
+        BackgroundAnimationStyle.isEnabled(style) &&
+        opacity > 0f
 
     BoxWithConstraints(
         modifier = modifier.fillMaxSize(),

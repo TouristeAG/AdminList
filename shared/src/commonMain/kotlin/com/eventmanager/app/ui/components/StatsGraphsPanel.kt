@@ -465,17 +465,15 @@ private fun ActiveVolunteersGraph(
 
     // Preview and share dialog
     if (showPreviewDialog && exportedFile != null && exportType != null) {
-        PreviewDialog(
+        ExportedFilePreviewDialog(
             file = exportedFile!!,
             exportType = exportType!!,
+            title = graphTitle,
             onDismiss = {
                 showPreviewDialog = false
                 exportedFile = null
                 exportType = null
             },
-            onShare = {
-                GraphExportBridge.shareExportedFile(platformContext, exportedFile!!, if (exportType == ExportType.XLSX) GraphExportType.XLSX else GraphExportType.JPG, graphTitle)
-            }
         )
     }
 
@@ -579,17 +577,15 @@ private fun GraphCardWithExport(
 
     // Preview and share dialog
     if (showPreviewDialog && exportedFile != null && exportType != null) {
-        PreviewDialog(
+        ExportedFilePreviewDialog(
             file = exportedFile!!,
             exportType = exportType!!,
+            title = title,
             onDismiss = {
                 showPreviewDialog = false
                 exportedFile = null
                 exportType = null
             },
-            onShare = {
-                GraphExportBridge.shareExportedFile(platformContext, exportedFile!!, if (exportType == ExportType.XLSX) GraphExportType.XLSX else GraphExportType.JPG, title)
-            }
         )
     }
 
@@ -818,6 +814,7 @@ private fun GenderParityGraph(
     isPhone: Boolean = true
 ) {
     val platformContext = LocalPlatformContext.current
+    val useTouchGestures = !platformContext.isDesktop
     val genderDistributionTitle = stringResource(Res.string.gender_distribution)
     
     // Filter to only active volunteers
@@ -868,7 +865,7 @@ private fun GenderParityGraph(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 4.dp)
-            .graphCardExportInteraction(isPhone) { showExportDialog = true },
+            .graphCardExportInteraction(useTouchGestures) { showExportDialog = true },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (isPhone) {
@@ -1074,17 +1071,15 @@ private fun GenderParityGraph(
 
     // Preview and share dialog
     if (showPreviewDialog && exportedFile != null && exportType != null) {
-        PreviewDialog(
+        ExportedFilePreviewDialog(
             file = exportedFile!!,
             exportType = exportType!!,
+            title = genderDistributionTitle,
             onDismiss = {
                 showPreviewDialog = false
                 exportedFile = null
                 exportType = null
             },
-            onShare = {
-                GraphExportBridge.shareExportedFile(platformContext, exportedFile!!, if (exportType == ExportType.XLSX) GraphExportType.XLSX else GraphExportType.JPG, genderDistributionTitle)
-            }
         )
     }
 
@@ -1150,6 +1145,7 @@ private fun AgeDistributionGraph(
     isPhone: Boolean = true
 ) {
     val platformContext = LocalPlatformContext.current
+    val useTouchGestures = !platformContext.isDesktop
     val ageDistributionTitle = stringResource(Res.string.age_distribution_title)
     
     // Filter to only active volunteers
@@ -1200,7 +1196,7 @@ private fun AgeDistributionGraph(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 4.dp)
-            .graphCardExportInteraction(isPhone) { showExportDialog = true },
+            .graphCardExportInteraction(useTouchGestures) { showExportDialog = true },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (isPhone) {
@@ -1409,17 +1405,15 @@ private fun AgeDistributionGraph(
 
     // Preview and share dialog
     if (showPreviewDialog && exportedFile != null && exportType != null) {
-        PreviewDialog(
+        ExportedFilePreviewDialog(
             file = exportedFile!!,
             exportType = exportType!!,
+            title = ageDistributionTitle,
             onDismiss = {
                 showPreviewDialog = false
                 exportedFile = null
                 exportType = null
             },
-            onShare = {
-                GraphExportBridge.shareExportedFile(platformContext, exportedFile!!, if (exportType == ExportType.XLSX) GraphExportType.XLSX else GraphExportType.JPG, ageDistributionTitle)
-            }
         )
     }
 
@@ -1597,6 +1591,7 @@ private fun MultiLineGraph(
     isPhone: Boolean = true
 ) {
     val platformContext = LocalPlatformContext.current
+    val useTouchGestures = !platformContext.isDesktop
     if (seriesData.isEmpty() || seriesData.all { it.second.isEmpty() }) return
 
     val height = if (isPhone) 200.dp else 240.dp
@@ -1640,7 +1635,7 @@ private fun MultiLineGraph(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 4.dp)
-            .graphCardExportInteraction(isPhone) { showExportDialog = true },
+            .graphCardExportInteraction(useTouchGestures) { showExportDialog = true },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (isPhone) {
@@ -1712,7 +1707,7 @@ private fun MultiLineGraph(
                     )
                     .padding(12.dp)
                     .multiSeriesGraphInteraction(
-                        isPhone = isPhone,
+                        useTouchGestures = useTouchGestures,
                         seriesData = seriesData,
                         onInteractionChange = { interactionState = it },
                         onExportRequest = { showExportDialog = true }
@@ -1726,8 +1721,8 @@ private fun MultiLineGraph(
                         interactionState = interactionState
                     )
 
-                    // Show tooltip on touch (phone) or hover (desktop)
-                    if (interactionState.hoveredPointIndex >= 0 && (!isPhone || interactionState.isPressed)) {
+                    // Show tooltip on touch (phone/tablet) or hover (desktop)
+                    if (interactionState.hoveredPointIndex >= 0 && (!useTouchGestures || interactionState.isPressed)) {
                         MultiLineGraphTooltip(
                             seriesData = seriesData,
                             pointIndex = interactionState.hoveredPointIndex,
@@ -1833,17 +1828,15 @@ private fun MultiLineGraph(
 
     // Preview and share dialog
     if (showPreviewDialog && exportedFile != null && exportType != null) {
-        PreviewDialog(
+        ExportedFilePreviewDialog(
             file = exportedFile!!,
             exportType = exportType!!,
+            title = label,
             onDismiss = {
                 showPreviewDialog = false
                 exportedFile = null
                 exportType = null
             },
-            onShare = {
-                GraphExportBridge.shareExportedFile(platformContext, exportedFile!!, if (exportType == ExportType.XLSX) GraphExportType.XLSX else GraphExportType.JPG, label)
-            }
         )
     }
 
@@ -2037,10 +2030,10 @@ private fun calculateNearestPointIndex(xPosition: Float, width: Float, dataPoint
 
 @OptIn(ExperimentalFoundationApi::class)
 private fun Modifier.graphCardExportInteraction(
-    isPhone: Boolean,
+    useTouchGestures: Boolean,
     onExportRequest: () -> Unit,
 ): Modifier = then(
-    if (isPhone) {
+    if (useTouchGestures) {
         Modifier.combinedClickable(
             onClick = {},
             onLongClick = onExportRequest
@@ -2061,12 +2054,12 @@ private fun Modifier.graphCardExportInteraction(
 )
 
 private fun Modifier.singleSeriesGraphInteraction(
-    isPhone: Boolean,
+    useTouchGestures: Boolean,
     dataPoints: List<DataPoint>,
     onInteractionChange: (InteractionState) -> Unit,
     onExportRequest: () -> Unit,
 ): Modifier = pointerInput(
-    isPhone,
+    useTouchGestures,
     dataPoints.size,
     dataPoints.firstOrNull()?.timestamp,
     dataPoints.lastOrNull()?.timestamp,
@@ -2081,10 +2074,10 @@ private fun Modifier.singleSeriesGraphInteraction(
 
             when (event.type) {
                 PointerEventType.Press -> {
-                    if (!isPhone && event.buttons.isSecondaryPressed) {
+                    if (!useTouchGestures && event.buttons.isSecondaryPressed) {
                         onExportRequest()
                         event.changes.forEach { it.consume() }
-                    } else if (isPhone) {
+                    } else if (useTouchGestures) {
                         val change = event.changes.firstOrNull() ?: continue
                         isPointerDown = true
                         updateSingleSeriesInteraction(change, currentDataPoints, onInteractionChange, pressed = true)
@@ -2093,27 +2086,27 @@ private fun Modifier.singleSeriesGraphInteraction(
                 }
                 PointerEventType.Move -> {
                     val change = event.changes.firstOrNull() ?: continue
-                    if (!isPhone || isPointerDown) {
+                    if (!useTouchGestures || isPointerDown) {
                         updateSingleSeriesInteraction(
                             change,
                             currentDataPoints,
                             onInteractionChange,
-                            pressed = !isPhone || isPointerDown,
+                            pressed = !useTouchGestures || isPointerDown,
                         )
-                        if (isPhone && isPointerDown) {
+                        if (useTouchGestures && isPointerDown) {
                             event.changes.forEach { it.consume() }
                         }
                     }
                 }
                 PointerEventType.Release -> {
-                    if (isPhone) {
+                    if (useTouchGestures) {
                         isPointerDown = false
                         onInteractionChange(InteractionState(isPressed = false))
                         event.changes.forEach { it.consume() }
                     }
                 }
                 PointerEventType.Exit -> {
-                    if (!isPhone) {
+                    if (!useTouchGestures) {
                         onInteractionChange(InteractionState())
                     }
                 }
@@ -2145,12 +2138,12 @@ private fun PointerInputScope.updateSingleSeriesInteraction(
 }
 
 private fun Modifier.multiSeriesGraphInteraction(
-    isPhone: Boolean,
+    useTouchGestures: Boolean,
     seriesData: List<Triple<String, List<DataPoint>, Color>>,
     onInteractionChange: (InteractionState) -> Unit,
     onExportRequest: () -> Unit,
 ): Modifier = pointerInput(
-    isPhone,
+    useTouchGestures,
     seriesData.size,
     seriesData.firstOrNull()?.second?.size ?: 0,
     seriesData.firstOrNull()?.second?.firstOrNull()?.timestamp,
@@ -2166,10 +2159,10 @@ private fun Modifier.multiSeriesGraphInteraction(
 
             when (event.type) {
                 PointerEventType.Press -> {
-                    if (!isPhone && event.buttons.isSecondaryPressed) {
+                    if (!useTouchGestures && event.buttons.isSecondaryPressed) {
                         onExportRequest()
                         event.changes.forEach { it.consume() }
-                    } else if (isPhone) {
+                    } else if (useTouchGestures) {
                         val change = event.changes.firstOrNull() ?: continue
                         isPointerDown = true
                         updateMultiSeriesInteraction(change, currentDataPoints, onInteractionChange, pressed = true)
@@ -2178,27 +2171,27 @@ private fun Modifier.multiSeriesGraphInteraction(
                 }
                 PointerEventType.Move -> {
                     val change = event.changes.firstOrNull() ?: continue
-                    if (!isPhone || isPointerDown) {
+                    if (!useTouchGestures || isPointerDown) {
                         updateMultiSeriesInteraction(
                             change,
                             currentDataPoints,
                             onInteractionChange,
-                            pressed = !isPhone || isPointerDown,
+                            pressed = !useTouchGestures || isPointerDown,
                         )
-                        if (isPhone && isPointerDown) {
+                        if (useTouchGestures && isPointerDown) {
                             event.changes.forEach { it.consume() }
                         }
                     }
                 }
                 PointerEventType.Release -> {
-                    if (isPhone) {
+                    if (useTouchGestures) {
                         isPointerDown = false
                         onInteractionChange(InteractionState(isPressed = false))
                         event.changes.forEach { it.consume() }
                     }
                 }
                 PointerEventType.Exit -> {
-                    if (!isPhone) {
+                    if (!useTouchGestures) {
                         onInteractionChange(InteractionState())
                     }
                 }
@@ -2242,13 +2235,14 @@ private fun GraphCard(
     description: String? = null,
     onLongPress: (() -> Unit)? = null
 ) {
+    val useTouchGestures = !LocalPlatformContext.current.isDesktop
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 4.dp)
             .then(
                 if (onLongPress != null) {
-                    Modifier.graphCardExportInteraction(isPhone, onLongPress)
+                    Modifier.graphCardExportInteraction(useTouchGestures, onLongPress)
                 } else {
                     Modifier
                 }
@@ -2359,6 +2353,7 @@ private fun InteractiveLineGraph(
     isPhone: Boolean = true
 ) {
     val platformContext = LocalPlatformContext.current
+    val useTouchGestures = !platformContext.isDesktop
     if (dataPoints.size < 2) return
 
     val height = if (isPhone) 180.dp else 220.dp
@@ -2388,7 +2383,7 @@ private fun InteractiveLineGraph(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 4.dp)
-            .graphCardExportInteraction(isPhone) { showExportDialog = true },
+            .graphCardExportInteraction(useTouchGestures) { showExportDialog = true },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (isPhone) {
@@ -2468,7 +2463,7 @@ private fun InteractiveLineGraph(
                     )
                     .padding(12.dp)
                     .singleSeriesGraphInteraction(
-                        isPhone = isPhone,
+                        useTouchGestures = useTouchGestures,
                         dataPoints = dataPoints,
                         onInteractionChange = { interactionState = it },
                         onExportRequest = { showExportDialog = true }
@@ -2484,8 +2479,8 @@ private fun InteractiveLineGraph(
                         interactionState = interactionState
                     )
 
-                    // Show tooltip on touch (phone) or hover (desktop)
-                    if (interactionState.hoveredPointIndex >= 0 && (!isPhone || interactionState.isPressed)) {
+                    // Show tooltip on touch (phone/tablet) or hover (desktop)
+                    if (interactionState.hoveredPointIndex >= 0 && (!useTouchGestures || interactionState.isPressed)) {
                         GraphTooltip(
                             value = interactionState.hoveredValue,
                             label = interactionState.hoveredLabel,
@@ -2590,17 +2585,15 @@ private fun InteractiveLineGraph(
 
     // Preview and share dialog
     if (showPreviewDialog && exportedFile != null && exportType != null) {
-        PreviewDialog(
+        ExportedFilePreviewDialog(
             file = exportedFile!!,
             exportType = exportType!!,
+            title = label,
             onDismiss = {
                 showPreviewDialog = false
                 exportedFile = null
                 exportType = null
             },
-            onShare = {
-                GraphExportBridge.shareExportedFile(platformContext, exportedFile!!, if (exportType == ExportType.XLSX) GraphExportType.XLSX else GraphExportType.JPG, label)
-            }
         )
     }
 
@@ -3307,17 +3300,59 @@ private fun ExportOptionsDialog(
 }
 
 /**
- * Preview dialog with share functionality
+ * Preview dialog with Share / Open with / Save as (same actions as POS report export).
  */
+@Composable
+private fun ExportedFilePreviewDialog(
+    file: File,
+    exportType: ExportType,
+    title: String,
+    onDismiss: () -> Unit,
+) {
+    val platformContext = LocalPlatformContext.current
+    val scope = rememberCoroutineScope()
+    val graphType = if (exportType == ExportType.XLSX) GraphExportType.XLSX else GraphExportType.JPG
+    val showSaveAs = platformContext.isDesktop || isTablet()
+
+    PreviewDialog(
+        file = file,
+        exportType = exportType,
+        onDismiss = onDismiss,
+        onShare = {
+            GraphExportBridge.shareExportedFile(platformContext, file, graphType, title)
+        },
+        onOpen = {
+            GraphExportBridge.openExportedFile(platformContext, file, graphType)
+        },
+        onSaveAs = if (showSaveAs) {
+            {
+                scope.launch {
+                    GraphExportBridge.saveExportedFileToUserLocation(
+                        platformContext,
+                        file,
+                        file.name,
+                        graphType,
+                    )
+                }
+            }
+        } else {
+            null
+        },
+    )
+}
+
 @Composable
 private fun PreviewDialog(
     file: File,
     exportType: ExportType,
     onDismiss: () -> Unit,
-    onShare: () -> Unit
+    onShare: () -> Unit,
+    onOpen: () -> Unit,
+    onSaveAs: (() -> Unit)?,
 ) {
     val platformContext = LocalPlatformContext.current
     val useFixedLayout = platformContext.isDesktop || isTablet()
+    val showSave = onSaveAs != null
     Dialog(
         onDismissRequest = onDismiss,
         properties = phoneFractionDialogProperties(),
@@ -3434,9 +3469,7 @@ private fun PreviewDialog(
                                                     style = MaterialTheme.typography.bodyMedium,
                                                     color = MaterialTheme.colorScheme.primary,
                                                     maxLines = 1,
-                                                    modifier = Modifier.clickable {
-                                                        GraphExportBridge.openExportedFile(platformContext, file, if (exportType == ExportType.XLSX) GraphExportType.XLSX else GraphExportType.JPG)
-                                                    }
+                                                    modifier = Modifier.clickable(onClick = onOpen)
                                                 )
                                                 Text(
                                                     text = stringResource(Res.string.file_size, formatFileSize(file.length())),
@@ -3535,9 +3568,7 @@ private fun PreviewDialog(
                                                             style = MaterialTheme.typography.bodyLarge,
                                                             color = MaterialTheme.colorScheme.primary,
                                                             maxLines = 1,
-                                                            modifier = Modifier.clickable {
-                                                                GraphExportBridge.openExportedFile(platformContext, file, if (exportType == ExportType.XLSX) GraphExportType.XLSX else GraphExportType.JPG)
-                                                            }
+                                                            modifier = Modifier.clickable(onClick = onOpen)
                                                         )
                                                         Text(
                                                             text = stringResource(Res.string.file_size, formatFileSize(file.length())),
@@ -3630,9 +3661,7 @@ private fun PreviewDialog(
                                                             style = MaterialTheme.typography.bodyMedium,
                                                             color = MaterialTheme.colorScheme.primary,
                                                             maxLines = 1,
-                                                            modifier = Modifier.clickable {
-                                                                GraphExportBridge.openExportedFile(platformContext, file, if (exportType == ExportType.XLSX) GraphExportType.XLSX else GraphExportType.JPG)
-                                                            }
+                                                            modifier = Modifier.clickable(onClick = onOpen)
                                                         )
                                                         Text(
                                                             text = stringResource(Res.string.file_size, formatFileSize(file.length())),
@@ -3651,7 +3680,6 @@ private fun PreviewDialog(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Share button — always visible at bottom
                     Button(
                         onClick = onShare,
                         modifier = Modifier
@@ -3672,6 +3700,40 @@ private fun PreviewDialog(
                             stringResource(Res.string.share_graph),
                             style = MaterialTheme.typography.titleMedium
                         )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = onOpen,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                    ) {
+                        Icon(
+                            Icons.Default.FolderOpen,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(Res.string.open_with))
+                    }
+                    if (showSave && onSaveAs != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedButton(
+                            onClick = onSaveAs,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            shape = RoundedCornerShape(12.dp),
+                        ) {
+                            Icon(
+                                Icons.Default.Download,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringResource(Res.string.pos_report_save_as))
+                        }
                     }
                 }
             }

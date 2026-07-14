@@ -16,8 +16,10 @@ import com.eventmanager.app.resources.*
 import com.eventmanager.app.ui.components.NfcUidMatchOption
 import com.eventmanager.app.ui.components.ScannerMatch
 import com.eventmanager.app.ui.components.resolveDesktopScannerPayload
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -47,8 +49,15 @@ actual fun BilleterieScannerScreen(
 
     LaunchedEffect(cardReader, settingsManager) {
         while (isActive) {
-            hasReaderConnected = cardReader.isReaderConnected()
-            readerLabel = DesktopExternalNfcReader.readerDescription(settingsManager)
+            val status = withContext(Dispatchers.IO) {
+                DesktopExternalNfcReader.refreshStatus(settingsManager)
+            }
+            hasReaderConnected = status.usbConnected || status.bleAvailable
+            readerLabel = if (hasReaderConnected) {
+                status.description
+            } else {
+                ""
+            }
             delay(1500)
         }
     }
@@ -123,7 +132,17 @@ actual fun BilleterieScannerScreen(
             isReaderBusy = false
             return@LaunchedEffect
         }
-        while (isActive && scanResult == null && cardReader.isReaderConnected()) {
+        var lastConnectionRefreshAtMs = 0L
+        while (isActive && scanResult == null) {
+            val nowMs = System.currentTimeMillis()
+            val stillConnected = withContext(Dispatchers.IO) {
+                if (nowMs - lastConnectionRefreshAtMs >= 2_500L) {
+                    cardReader.refreshConnectionState()
+                    lastConnectionRefreshAtMs = nowMs
+                }
+                cardReader.isReaderConnected()
+            }
+            if (!stillConnected) break
             isReaderBusy = true
             when (val uid = cardReader.readUid()) {
                 is UidReadResult.Success -> {
@@ -135,7 +154,7 @@ actual fun BilleterieScannerScreen(
                     errorMessage = uid.error
                     delay(500)
                 }
-                is UidReadResult.Retryable -> delay(280)
+                is UidReadResult.Retryable -> delay(20)
                 UidReadResult.NoReader -> {
                     isReaderBusy = false
                     break

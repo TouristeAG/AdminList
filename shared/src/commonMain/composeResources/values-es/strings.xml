@@ -99,12 +99,20 @@
     <string name="background_animation_opacity_title">Intensidad del fondo</string>
     <string name="background_animation_opacity_description">Reduce la opacidad para unas líneas animadas más sutiles</string>
     <string name="background_animation_opacity_apply">Aplicar intensidad</string>
+    <string name="background_animation_preview_unavailable">Vista previa no disponible en este dispositivo</string>
+    <string name="background_animation_low_performance_warning">No se recomienda activar un fondo animado en este dispositivo: la aplicación puede congelarse o cerrarse.</string>
     <string name="billeterie_background_animation_title">Fondo de billetterie</string>
     <string name="billeterie_background_animation_description">Elige un fondo animado solo para las pantallas de billetterie</string>
     <string name="page_animations_title">Animaciones de página</string>
     <string name="page_animations_description">Habilitar animaciones de deslizamiento al cambiar páginas y pestañas</string>
     <string name="clear_app_cache">Borrar caché de la aplicación</string>
     <string name="app_cache_cleared">Caché de datos de la aplicación borrado. La configuración y las claves se conservaron.</string>
+    <string name="factory_reset_title">Restablecimiento de fábrica</string>
+    <string name="factory_reset_description">Eliminar todos los datos locales, ajustes y credenciales, y reiniciar el asistente de configuración</string>
+    <string name="factory_reset_confirm_title">¿Restablecer esta aplicación?</string>
+    <string name="factory_reset_confirm_message">Esto elimina de forma permanente en este dispositivo invitados, voluntarios, turnos, datos POS, ajustes de sincronización y claves importadas. Los datos de Google Sheets no se eliminan. Tendrá que configurar la aplicación de nuevo.</string>
+    <string name="factory_reset_confirm_button">Borrar todo</string>
+    <string name="factory_reset_in_progress">Restableciendo…</string>
     <string name="check_for_updates">Buscar actualizaciones</string>
     <string name="update_available_title">Actualización disponible: %1$s</string>
     <string name="update_required_message">Se requiere una versión más reciente de esta aplicación para continuar. Por favor, actualiza a la última versión.</string>
@@ -749,6 +757,8 @@
     <string name="scanner_ble_reader_footer_label">Lector Bluetooth (ACR1255U-J1)</string>
     <string name="scanner_ble_reader_footer_connected">Enlace activo — listo para escanear</string>
     <string name="scanner_ble_reader_footer_disconnected">Sin enlace activo — despierte el lector (botón) o espere la reconexión</string>
+    <string name="scanner_ble_reader_footer_connecting">Reconnecting after wake…</string>
+
     <string name="scanner_ble_reader_footer_reading">Leyendo tarjeta…</string>
     <string name="nfc_not_supported_device">Este dispositivo no admite escaneo NFC.</string>
     <string name="nfc_unavailable_no_usb_hint">Este dispositivo no tiene NFC y no hay ningún lector externo conectado (USB o Bluetooth).</string>
@@ -1115,7 +1125,8 @@
     <string name="settings_category_developer">Desarrollador y depuración</string>
     <string name="settings_category_maintenance">Mantenimiento</string>
     
-    <!-- App Icon Settings -->
+        <string name="settings_category_catalog">Catálogo y lugares</string>
+<!-- App Icon Settings -->
     <string name="app_icon_title">Icono de la aplicación</string>
     <string name="app_icon_description">Selecciona tu estilo de icono preferido</string>
     <string name="app_icon_white">Blanco</string>
@@ -1345,13 +1356,14 @@
     <string name="announcement_popup_from">De: %1$s</string>
 
     <!-- Lector NFC Bluetooth externo (ACR1255U-J1) -->
-    <string name="settings_category_external_reader">Lector NFC Bluetooth</string>
+    <string name="settings_category_external_reader">Lector NFC</string>
     <string name="settings_category_pcsc_reader">Lector NFC USB</string>
     <string name="pcsc_reader_description">Conecte un lector NFC USB ACS ACR122U o compatible. macOS y Windows incluyen PC/SC; en Linux instale e inicie pcscd.</string>
-    <string name="desktop_external_reader_description">Los lectores USB (ACR122U) funcionan al conectarlos. Para Bluetooth (ACR1255U-J1), empareje el lector en los ajustes Bluetooth del equipo y selecciónelo abajo. Tras configurarlo, el escaneo es automático.</string>
+    <string name="desktop_external_reader_description">Conecte un lector ACS por USB (recomendado) o configure Bluetooth en Windows. Coloque una tarjeta en el lado sin contacto y pulse Probar lector.</string>
     <string name="desktop_ble_reader_picker_subtitle">Empareje el ACR1255U-J1 en Bluetooth del sistema y elíjalo aquí. Los lectores ya visibles en PC/SC están listos de inmediato.</string>
     <string name="desktop_ble_reader_not_found">No se encontró un ACR1255U-J1. Enciéndalo, empareje en Bluetooth e instale el controlador ACS PC/SC.</string>
-    <string name="desktop_ble_reader_pcsc_ready">PC/SC listo · %1$s</string>
+    <string name="desktop_ble_reader_pcsc_ready">PC/SC listo</string>
+    <string name="desktop_ble_reader_not_pcsc_ready">Emparejado · aún no en PC/SC (instale el controlador Bluetooth ACS)</string>
     <string name="external_reader_description">Seleccione aquí el lector NFC externo. Puede aparecer en los ajustes Bluetooth de Android, pero no es posible conectarse desde ahí para esta aplicación.</string>
     <string name="external_reader_connected_label">Lector seleccionado</string>
     <string name="external_reader_pick_button">Buscar lectores Bluetooth</string>
@@ -1467,7 +1479,23 @@
     <string name="desktop_billeterie_nfc_section">Lector NFC</string>
     <string name="desktop_billeterie_scan_next_shortcut">Intro ↵ para escanear a la siguiente persona</string>
     <string name="desktop_billeterie_webcam_section">Código QR (webcam)</string>
-    <string name="desktop_ble_supported_windows">Bluetooth (ACR1255U-J1): instale el controlador PC/SC Bluetooth ACS, empareje el lector en los ajustes Bluetooth de Windows y selecciónelo a continuación.</string>
+    <string name="desktop_nfc_no_reader">Ningún lector detectado. Conecte el USB, o abra Configuración inicial si es una instalación nueva.</string>
+    <string name="desktop_nfc_usb_connected">USB conectado</string>
+    <string name="desktop_nfc_ble_connected">Bluetooth listo</string>
+    <string name="desktop_nfc_ble_not_ready">Bluetooth seleccionado · no listo</string>
+    <string name="desktop_nfc_ble_connecting">Bluetooth · reconnecting…</string>
+    <string name="desktop_nfc_ble_wake_hint">Wake the ACR1255 (button) and wait until Windows Bluetooth shows Connected. SoftDevice must appear in PC/SC before scans work.</string>
+    <string name="desktop_nfc_ble_connecting_hint">SoftDevice is visible but the link is not ready yet — wait a few seconds after waking the reader.</string>
+    <string name="desktop_nfc_active_none">No reader connected</string>
+
+    <string name="desktop_nfc_test_reader">Probar lector</string>
+    <string name="desktop_nfc_use_bluetooth">Usar lector Bluetooth…</string>
+    <string name="desktop_nfc_setup_title">Configuración inicial</string>
+    <string name="desktop_nfc_setup_usb">USB: ponga el interruptor en USB, instale el controlador ACS USB PC/SC, conecte el cable y pulse Probar lector con una tarjeta en el lado sin contacto (PICC), no en la ranura ICC.</string>
+    <string name="desktop_nfc_setup_ble">Bluetooth (solo Windows): instale ACS Bluetooth PC/SC → empareje en Bluetooth de Windows → ACS Bluetooth Device Management Tool → Install → elija el lector aquí. Emparejar no basta.</string>
+    <string name="desktop_nfc_advanced_title">Avanzado / solución de problemas</string>
+    <string name="desktop_nfc_advanced_hint">Solo si Probar lector falla: compruebe qué interfaces PC/SC ve Windows, o corrija la pila del controlador USB.</string>
+<string name="desktop_ble_supported_windows">Bluetooth (ACR1255U-J1): instale el controlador PC/SC Bluetooth ACS, empareje el lector en los ajustes Bluetooth de Windows y selecciónelo a continuación.</string>
     <string name="desktop_ble_unsupported_linux">Bluetooth no es compatible en Linux (sin controlador PC/SC BLE ACS). Use el modo USB con pcscd y el controlador USB ACS.</string>
     <string name="desktop_ble_unsupported_macos">Bluetooth no es compatible en macOS (sin controlador PC/SC BLE ACS). Use el modo USB con el controlador USB ACS.</string>
     <string name="desktop_list_pcsc_readers">Listar lectores PC/SC</string>
@@ -1481,6 +1509,20 @@
     <string name="desktop_qr_point_at_code">Apunte el código QR a la cámara</string>
     <string name="desktop_qr_start_webcam">Iniciar webcam</string>
     <string name="desktop_usb_reader_test_button">Probar lector USB</string>
+    <string name="desktop_acs_prefer_usb">Recomendado: el modo USB (interruptor físico) es más fiable que Bluetooth para puerta y TPV.</string>
+    <string name="desktop_acs_windows_usb_banner">Si el lector pita pero Probar lector no muestra UID: instale ACS USB PC/SC, confirme una interfaz PICC y active Escape Command si sigue con Microsoft CCID. Desconecte y vuelva a conectar después.</string>
+    <string name="desktop_acs_ble_setup_steps">Configuración Bluetooth (Windows):
+1. Instale el MSI PC/SC Bluetooth ACS
+2. Empareje el lector en los ajustes Bluetooth de Windows
+3. Ejecute ACS Bluetooth Device Management Tool → Install
+4. Verifique un lector BLE en Listar lectores PC/SC
+Emparejar no basta: sin la herramienta Management, el enlace suele conectarse y luego cortarse.</string>
+    <string name="desktop_acs_open_drivers">Descargar controladores ACS</string>
+    <string name="desktop_acs_probe_drivers">Comprobar controlador USB</string>
+    <string name="desktop_acs_enable_escape">Activar Escape Command (admin)</string>
+    <string name="desktop_acs_escape_running">Esperando UAC…</string>
+    <string name="desktop_acs_escape_not_needed">El controlador nativo ACS está instalado: Escape Command solo hace falta con Microsoft CCID. Coloque una tarjeta en el PICC y use Probar lector.</string>
+    <string name="desktop_ble_paired_not_pcsc_tool_hint">Emparejado pero no en PC/SC — ejecute ACS Bluetooth Device Management Tool e instale el lector</string>
     <string name="emoji_picker_choose">Elegir</string>
     <string name="emoji_picker_title">Elegir un emoji</string>
     <string name="manual_adjustment_default_note">Ajuste manual</string>
@@ -1554,6 +1596,9 @@
     <string name="desktop_bluetooth_nfc_reader_offline">Lector NFC Bluetooth (sin conexión)</string>
     <string name="desktop_no_external_reader">Ningún lector externo</string>
     <string name="desktop_pcsc_error">Error PC/SC</string>
+    <string name="desktop_pcsc_list_error">PC/SC list error: %1$s</string>
+    <string name="desktop_pcsc_no_ble_reader_paired_hint">If the reader is already paired in Windows Bluetooth but missing from this list, install the ACS Bluetooth PC/SC MSI and use ACS Bluetooth Device Management Tool to install the reader into PC/SC.</string>
+    <string name="desktop_pcsc_service_hint_windows">On Windows: start the Smart Card service (SCardSvr) in services.msc, confirm the reader shows a PICC interface in Device Manager, then unplug/replug the reader and retry.</string>
     <string name="desktop_pcsc_library_unavailable">Biblioteca PC/SC no disponible</string>
     <string name="desktop_pcsc_no_ble_reader">No hay lector NFC Bluetooth en PC/SC.
 Empareje el ACR1255U-J1 en los ajustes Bluetooth del sistema e instale el controlador ACS.</string>
@@ -1569,6 +1614,10 @@ Asegúrese de que PC/SC esté instalado y reinicie la aplicación.</string>
     <string name="desktop_pcsc_reader_error">Error del lector</string>
     <string name="desktop_pcsc_reader_ok_place_card">OK — lector conectado.
 Coloque una tarjeta en el lector y vuelva a probar para leer un UID.</string>
+    <string name="desktop_pcsc_beep_no_uid_hint">If the reader beeps but no UID appears: install ACS USB PC/SC, use PICC (not ICC), and enable Escape Command under Microsoft CCID if needed.</string>
+    <string name="desktop_pcsc_escape_blocked_hint">CCID Escape is blocked. Install the ACS USB PC/SC driver, or use Settings → Enable Escape Command (admin), then unplug/replug the reader.</string>
+    <string name="desktop_pcsc_ghost_reader_hint">Tip: ACS may list a BLE SoftDevice (name like ACR1255U-J1-0xxxxx) even with no USB cable. That is not a USB PICC. Leave only “PICC Reader” for USB tests; use ACS Bluetooth Device Management Tool only for BLE.</string>
+    <string name="desktop_pcsc_ble_softdevice_uid_hint">Bluetooth SoftDevice: the reader can beep while PC/SC still has no card. Wake it (button), confirm Windows Bluetooth = Connected and ACS Device Management Tool shows Install OK, then hold a card during the whole Test connection. Prefer USB mode for reliable UID reads.</string>
     <string name="desktop_pcsc_readers_header">Lectores (%1$d):</string>
     <string name="desktop_pcsc_unable_select_reader">No se puede seleccionar un lector.</string>
     <string name="desktop_pcsc_unavailable">PC/SC no disponible</string>
@@ -1606,4 +1655,8 @@ Coloque una tarjeta en el lector y vuelva a probar para leer un UID.</string>
     <string name="theme_hue_label">Tono (arcoíris): %1$d°</string>
     <string name="theme_luminosity_label">Brillo: %1$d%%</string>
     <string name="theme_saturation_label">Saturación: %1$d%%</string>
+    <string name="desktop_confirm_entry_button">Confirmar entrada</string>
+    <string name="desktop_entry_confirmed">Entrada confirmada</string>
+    <string name="validate_entry_description_solo_desktop">Entrada individual (sin invitados). Haz clic abajo para confirmar.</string>
+    <string name="validate_entry_description_with_invites_desktop">Confirma la entrada y registra a los invitados abajo.</string>
 </resources>

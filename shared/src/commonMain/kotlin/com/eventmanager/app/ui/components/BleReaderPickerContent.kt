@@ -37,6 +37,8 @@ data class BleReaderPickerItem(
     val bonded: Boolean,
     val isAcrReader: Boolean,
     val pcscReady: Boolean = false,
+    /** Optional second-line hint (e.g. desktop PC/SC readiness). */
+    val statusHint: String? = null,
 )
 
 @Composable
@@ -391,6 +393,19 @@ private fun BleReaderDeviceCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                device.statusHint?.takeIf { it.isNotBlank() }?.let { hint ->
+                    Text(
+                        text = hint,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (device.pcscReady) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.error
+                        },
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 if (rssiLabel != null) {

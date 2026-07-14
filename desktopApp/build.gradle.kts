@@ -57,10 +57,11 @@ compose.desktop {
             packageVersion = desktopPackageVersion
             description = "NoctuList — Guest list and volunteer management"
             vendor = "Collectif Nocturne"
-            val desktopIcon = project.file("../app/src/main/res/mipmap-xxxhdpi/ic_launcher.png")
+            // Packagers require OS-native formats (PNG is ignored → default Java icon).
+            // Source + generators live under desktopApp/icons/.
             macOS {
                 bundleID = "com.eventmanager.app.desktop"
-                iconFile.set(desktopIcon)
+                iconFile.set(project.file("icons/icon.icns"))
                 runtimeEntitlementsFile.set(project.file("runtime-entitlements.plist"))
                 infoPlist {
                     extraKeysRawXml = """
@@ -72,12 +73,12 @@ compose.desktop {
                 }
             }
             windows {
-                iconFile.set(desktopIcon)
+                iconFile.set(project.file("icons/icon.ico"))
                 menuGroup = "NoctuList"
                 upgradeUuid = "8f4e2b1a-9c3d-4e5f-a6b7-c8d9e0f1a2b3"
             }
             linux {
-                iconFile.set(desktopIcon)
+                iconFile.set(project.file("icons/icon.png"))
                 debMaintainer = "Collectif Nocturne <contact@collectif-nocturne.ch>"
                 menuGroup = "Office"
                 appCategory = "Office"

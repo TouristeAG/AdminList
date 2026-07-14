@@ -1,11 +1,6 @@
 package com.eventmanager.app.platform
 
 import java.io.File
-import javax.swing.JFileChooser
-import javax.swing.SwingUtilities
-import javax.swing.filechooser.FileNameExtensionFilter
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -45,35 +40,21 @@ actual class PlatformFileManager actual constructor(private val context: Platfor
     actual fun getUpdatesDirectory(): File =
         File(context.appDataDir, "updates").also { it.mkdirs() }
 
-    private suspend fun pickFile(configure: JFileChooser.() -> Unit): File? = suspendCoroutine { cont ->
-        SwingUtilities.invokeLater {
-            val chooser = JFileChooser().apply(configure)
-            val file = if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
-                chooser.selectedFile
-            } else {
-                null
-            }
-            cont.resume(file)
-        }
-    }
-
     actual suspend fun pickServiceAccountJsonFile(): String? {
-        val file = pickFile {
-            dialogTitle = "Select Google Service Account JSON"
-            fileFilter = FileNameExtensionFilter("JSON files", "json")
-            isAcceptAllFileFilterUsed = false
-        } ?: return null
+        val file = NativeDesktopFileDialog.pickOpen(
+            title = "Select Google Service Account JSON",
+            allowedExtensions = listOf("json"),
+        ) ?: return null
         return withContext(Dispatchers.IO) {
             runCatching { file.readText() }.getOrNull()
         }
     }
 
     actual suspend fun pickGmailOAuthClientJsonFile(): String? {
-        val file = pickFile {
-            dialogTitle = "Select Gmail OAuth Client JSON"
-            fileFilter = FileNameExtensionFilter("JSON files", "json")
-            isAcceptAllFileFilterUsed = false
-        } ?: return null
+        val file = NativeDesktopFileDialog.pickOpen(
+            title = "Select Gmail OAuth Client JSON",
+            allowedExtensions = listOf("json"),
+        ) ?: return null
         return withContext(Dispatchers.IO) {
             runCatching { file.readText() }.getOrNull()
         }
@@ -98,22 +79,20 @@ actual class PlatformFileManager actual constructor(private val context: Platfor
     }.getOrDefault(false)
 
     actual suspend fun pickWalletPassCertificateFile(): ByteArray? {
-        val file = pickFile {
-            dialogTitle = "Select Apple Wallet Pass Type ID Certificate (.p12)"
-            fileFilter = FileNameExtensionFilter("PKCS#12 certificate", "p12", "pfx")
-            isAcceptAllFileFilterUsed = false
-        } ?: return null
+        val file = NativeDesktopFileDialog.pickOpen(
+            title = "Select Apple Wallet Pass Type ID Certificate (.p12)",
+            allowedExtensions = listOf("p12", "pfx"),
+        ) ?: return null
         return withContext(Dispatchers.IO) {
             runCatching { file.readBytes() }.getOrNull()
         }
     }
 
     actual suspend fun pickEmailLogoImageFile(): String? {
-        val selected = pickFile {
-            dialogTitle = "Select Email Logo Image"
-            fileFilter = FileNameExtensionFilter("Image files", "png", "jpg", "jpeg", "webp", "gif")
-            isAcceptAllFileFilterUsed = false
-        } ?: return null
+        val selected = NativeDesktopFileDialog.pickOpen(
+            title = "Select Email Logo Image",
+            allowedExtensions = listOf("png", "jpg", "jpeg", "webp", "gif"),
+        ) ?: return null
         return withContext(Dispatchers.IO) {
             runCatching {
                 val buffered = javax.imageio.ImageIO.read(selected) ?: return@runCatching null
@@ -130,27 +109,29 @@ actual class PlatformFileManager actual constructor(private val context: Platfor
         suggestedName: String,
         mimeType: String,
     ): Boolean = withContext(Dispatchers.IO) {
-        val destination = suspendCoroutine<File?> { cont ->
-            SwingUtilities.invokeLater {
-                val chooser = JFileChooser().apply {
-                    dialogTitle = "Enregistrer le rapport"
-                    selectedFile = File(suggestedName)
-                    fileFilter = FileNameExtensionFilter("PDF files", "pdf")
-                    isAcceptAllFileFilterUsed = false
-                }
-                val file = if (chooser.showSaveDialog(null) == JFileChooser.APPROVE_OPTION) {
-                    chooser.selectedFile.let { selected ->
-                        if (!selected.name.lowercase().endsWith(".pdf")) {
-                            File(selected.parentFile, "${selected.name}.pdf")
-                        } else selected
-                    }
-                } else null
-                cont.resume(file)
-            }
-        } ?: return@withContext false
+        val extension = extensionForMimeType(mimeType, suggestedName)
+        val destination = NativeDesktopFileDialog.pickSave(
+            title = "Save as",
+            suggestedName = suggestedName,
+            forcedExtension = extension,
+        ) ?: return@withContext false
         runCatching {
             sourceFile.copyTo(destination, overwrite = true)
             true
         }.getOrDefault(false)
+    }
+
+    private fun extensionForMimeType(mimeType: String, suggestedName: String): String {
+        val fromName = suggestedName.substringAfterLast('.', missingDelimiterValue = "")
+            .lowercase()
+            .takeIf { it.isNotBlank() && it.length <= 5 }
+        if (fromName != null) return fromName
+        return when (mimeType.lowercase()) {
+            "application/pdf" -> "pdf"
+            "image/jpeg", "image/jpg" -> "jpg"
+            "image/png" -> "png"
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" -> "xlsx"
+            else -> "bin"
+        }
     }
 }

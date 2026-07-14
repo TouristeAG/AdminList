@@ -100,6 +100,12 @@
     <string name="page_animations_description">पेज और टैब स्विच करते समय स्लाइड एनिमेशन सक्षम करें</string>
     <string name="clear_app_cache">ऐप कैश साफ़ करें</string>
     <string name="app_cache_cleared">ऐप डेटा कैश साफ़ किया गया. सेटिंग्स और चाबियाँ रखी गईं।</string>
+    <string name="factory_reset_title">फ़ैक्टरी रीसेट</string>
+    <string name="factory_reset_description">सभी स्थानीय डेटा, सेटिंग्स और क्रेडेंशियल हटाएँ, फिर सेटअप विज़ार्ड फिर से शुरू करें</string>
+    <string name="factory_reset_confirm_title">इस ऐप को रीसेट करें?</string>
+    <string name="factory_reset_confirm_message">यह इस डिवाइस पर अतिथि, स्वयंसेवक, शिफ्ट, POS डेटा, सिंक सेटिंग्स और अपलोड की गई कुंजियाँ स्थायी रूप से हटा देता है। Google Sheets डेटा नहीं हटाया जाता। आपको ऐप फिर से कॉन्फ़िगर करना होगा।</string>
+    <string name="factory_reset_confirm_button">सब मिटाएँ</string>
+    <string name="factory_reset_in_progress">रीसेट हो रहा है…</string>
     <string name="check_for_updates">अपडेट के लिए जांचें</string>
     <string name="update_available_title">अद्यतन उपलब्ध: %s</string>
     <string name="update_required_message">जारी रखने के लिए इस ऐप का एक नया संस्करण आवश्यक है। कृपया नवीनतम संस्करण में अद्यतन करें.</string>
@@ -1268,7 +1274,7 @@
     <string name="announcement_popup_from">प्रेषक: %s</string>
 
     <!-- External Bluetooth NFC reader (ACR1255U-J1) -->
-    <string name="settings_category_external_reader">ब्लूटूथ एनएफसी रीडर</string>
+    <string name="settings_category_external_reader">एनएफसी रीडर</string>
     <string name="external_reader_description">यहां अपना बाहरी एनएफसी रीडर चुनें। यह एंड्रॉइड ब्लूटूथ सेटिंग्स में दिखाई दे सकता है, लेकिन आप वहां से कनेक्ट नहीं कर सकते - ऐप के लिए रीडर चुनने के लिए इस स्क्रीन का उपयोग करें।</string>
     <string name="external_reader_connected_label">चयनित पाठक</string>
     <string name="external_reader_pick_button">ब्लूटूथ रीडर के लिए स्कैन करें</string>

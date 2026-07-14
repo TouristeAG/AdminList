@@ -1479,6 +1479,7 @@ actual fun SettingsScreen(
     variant: SettingsScreenVariant,
     modifier: Modifier,
     onDesktopAdminNavLayoutChanged: () -> Unit,
+    onFactoryResetComplete: () -> Unit,
 ) {
     val context = LocalContext.current
     val platformContext = remember(context) { com.eventmanager.app.platform.createPlatformContext(context) }
@@ -1524,6 +1525,8 @@ actual fun SettingsScreen(
     var hasUnsavedResolutionChanges by remember { mutableStateOf(false) }
     var showUpdateResultDialog by remember { mutableStateOf(false) }
     var showUpdateSourcesDialog by remember { mutableStateOf(false) }
+    var showFactoryResetDialog by remember { mutableStateOf(false) }
+    var factoryResetInProgress by remember { mutableStateOf(false) }
     
     // Easter Egg state
     var easterEggTapCount by remember { mutableStateOf(0) }
@@ -2134,7 +2137,7 @@ actual fun SettingsScreen(
         // Bluetooth pairing list, so we provide an in-app scan + pick + remember flow.
         ExpandableSettingsCategory(
             title = context.getString(R.string.settings_category_external_reader),
-            icon = Icons.Default.Bluetooth,
+            icon = Icons.Default.Nfc,
             isExpanded = showExternalReaderSettings,
             onToggleExpanded = {
                 showExternalReaderSettings = !showExternalReaderSettings
@@ -2977,24 +2980,14 @@ actual fun SettingsScreen(
                 settingsManager.setCategoryLocalizationExpanded(showLocalizationSettings)
             }
         ) {
-            // Language Selection
-            val usesPosLanguage = variant == SettingsScreenVariant.PosBasic
-            var selectedLanguage by remember(variant) {
-                mutableStateOf(
-                    if (usesPosLanguage) settingsManager.getPosLanguage() else settingsManager.getLanguage()
-                )
-            }
+            // Language Selection (shared by admin, POS and billeterie)
+            var selectedLanguage by remember { mutableStateOf(settingsManager.getLanguage()) }
             var showLanguageMenu by remember { mutableStateOf(false) }
             val persistLanguageSelection: (String) -> Unit = { code ->
                 selectedLanguage = code
                 showLanguageMenu = false
-                if (usesPosLanguage) {
-                    settingsManager.savePosLanguage(code)
-                    AppAppearanceState.notifyLocaleChanged(code)
-                } else {
-                    settingsManager.saveLanguage(code)
-                    (context as? android.app.Activity)?.recreate()
-                }
+                settingsManager.saveLanguage(code)
+                (context as? android.app.Activity)?.recreate()
             }
             
             Column(
@@ -3911,6 +3904,25 @@ actual fun SettingsScreen(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(context.getString(R.string.clear_app_cache))
             }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            OutlinedButton(
+                onClick = { showFactoryResetDialog = true },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error,
+                ),
+            ) {
+                Icon(Icons.Default.Restore, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(context.getString(R.string.factory_reset_title))
+            }
+            Text(
+                text = context.getString(R.string.factory_reset_description),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
         
         if (showUpdateSourcesDialog) {
@@ -4383,6 +4395,64 @@ actual fun SettingsScreen(
                 showCleanupDialog = false
             },
             onDismiss = { showCleanupDialog = false }
+        )
+    }
+
+    if (showFactoryResetDialog) {
+        val platformFileManager = remember(platformContext) {
+            com.eventmanager.app.platform.PlatformFileManager(platformContext)
+        }
+        AlertDialog(
+            onDismissRequest = { if (!factoryResetInProgress) showFactoryResetDialog = false },
+            icon = {
+                Icon(
+                    Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                )
+            },
+            title = { Text(context.getString(R.string.factory_reset_confirm_title)) },
+            text = { Text(context.getString(R.string.factory_reset_confirm_message)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (factoryResetInProgress) return@Button
+                        factoryResetInProgress = true
+                        viewModel.factoryReset(
+                            settingsManager = settingsManager,
+                            fileManager = platformFileManager,
+                        ) {
+                            showFactoryResetDialog = false
+                            factoryResetInProgress = false
+                            onFactoryResetComplete()
+                        }
+                    },
+                    enabled = !factoryResetInProgress,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                    ),
+                ) {
+                    if (factoryResetInProgress) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onError,
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(context.getString(R.string.factory_reset_in_progress))
+                    } else {
+                        Text(context.getString(R.string.factory_reset_confirm_button))
+                    }
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showFactoryResetDialog = false },
+                    enabled = !factoryResetInProgress,
+                ) {
+                    Text(context.getString(R.string.cancel))
+                }
+            },
         )
     }
     

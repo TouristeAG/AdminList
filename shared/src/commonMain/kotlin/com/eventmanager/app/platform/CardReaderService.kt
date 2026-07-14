@@ -23,6 +23,12 @@ interface CardReaderService {
     fun getNfcInputAvailability(): NfcInputAvailability
     suspend fun readUid(): UidReadResult
     fun readerDescription(): String
+
+    /**
+     * Refresh hardware connection status off the UI thread when needed.
+     * Desktop PC/SC probes block Winscard; Android no-ops (sync USB/BLE checks are cheap).
+     */
+    suspend fun refreshConnectionState() {}
 }
 
 expect fun createCardReaderService(context: PlatformContext): CardReaderService

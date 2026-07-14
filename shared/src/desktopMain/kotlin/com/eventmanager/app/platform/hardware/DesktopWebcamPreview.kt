@@ -21,7 +21,11 @@ import com.google.zxing.MultiFormatReader
 import com.google.zxing.NotFoundException
 import com.google.zxing.client.j2se.BufferedImageLuminanceSource
 import com.google.zxing.common.HybridBinarizer
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
@@ -48,55 +52,62 @@ fun DesktopWebcamQrScanView(
 
     LaunchedEffect(Unit) {
         status = openingMsg
-        withContext(Dispatchers.IO) {
-            var webcam: Webcam? = null
-            try {
+        var webcam: Webcam? = null
+        try {
+            withContext(Dispatchers.IO) {
                 DesktopWebcamSupport.ensureInitialized()
                 webcam = Webcam.getWebcams().firstOrNull()
-                if (webcam == null) {
-                    withContext(Dispatchers.Main) {
+                val cam = webcam
+                if (cam == null) {
+                    withContext(Dispatchers.Main.immediate) {
                         onError(noWebcamMsg)
                     }
                     return@withContext
                 }
-                webcam.viewSize = Dimension(640, 480)
-                if (!webcam.isOpen) webcam.open()
-                withContext(Dispatchers.Main) { status = pointMsg }
+                cam.viewSize = Dimension(640, 480)
+                if (!cam.isOpen) cam.open()
+                withContext(Dispatchers.Main.immediate) { status = pointMsg }
 
                 val reader = MultiFormatReader()
                 var framesWithoutImage = 0
-                var done = false
-                while (isActive && !done) {
-                    val image = webcam.image
+                while (isActive) {
+                    ensureActive()
+                    val image = cam.image
                     if (image == null) {
                         framesWithoutImage++
                         if (framesWithoutImage > 100) {
-                            withContext(Dispatchers.Main) {
+                            withContext(Dispatchers.Main.immediate) {
                                 onError(noFramesMsg)
                             }
-                            done = true
-                        } else {
-                            Thread.sleep(50)
+                            break
                         }
+                        delay(50)
                         continue
                     }
                     framesWithoutImage = 0
                     val decoded = decodeBufferedImage(image, reader)
                     if (decoded != null) {
-                        withContext(Dispatchers.Main) { onQrDetected(decoded) }
-                        done = true
-                    } else {
-                        val frame = image.toComposeImageBitmapFast()
-                        withContext(Dispatchers.Main) { preview = frame }
-                        Thread.sleep(80)
+                        withContext(Dispatchers.Main.immediate) { onQrDetected(decoded) }
+                        break
                     }
+                    val frame = image.toComposeImageBitmapFast()
+                    withContext(Dispatchers.Main.immediate) { preview = frame }
+                    delay(80)
                 }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    onError(e.message?.takeIf { it.isNotBlank() } ?: "Webcam scan failed.")
+            }
+        } catch (e: CancellationException) {
+            // Closing the scanner / leaving the screen — normal, do not report as error.
+            throw e
+        } catch (e: Exception) {
+            withContext(Dispatchers.Main.immediate) {
+                onError(e.message?.takeIf { it.isNotBlank() } ?: "Webcam scan failed.")
+            }
+        } finally {
+            // Always release the camera even when the LaunchedEffect is cancelled.
+            withContext(NonCancellable + Dispatchers.IO) {
+                runCatching {
+                    webcam?.takeIf { it.isOpen }?.close()
                 }
-            } finally {
-                webcam?.takeIf { it.isOpen }?.close()
             }
         }
     }
@@ -153,6 +164,9 @@ private fun decodeBufferedImage(image: BufferedImage, reader: MultiFormatReader)
     return try {
         reader.decode(bitmap).text
     } catch (_: NotFoundException) {
+        null
+    } catch (_: Exception) {
+        // Corrupt / mid-teardown frames while the camera is closing.
         null
     }
 }

@@ -40,7 +40,6 @@ class SettingsManager(private val storage: AppStorage) {
         private const val KEY_POS_BACKGROUND_ANIMATION_OPACITY = "pos_background_animation_opacity"
         private const val KEY_POS_SELECTED_CATEGORY = "pos_selected_category"
         private const val KEY_POS_SELECTED_VENUE = "pos_selected_venue"
-        private const val KEY_POS_LANGUAGE = "pos_language"
         private const val KEY_PAGE_ANIMATIONS = "page_animations"
         /** Legacy: was also updated on upload-only paths; still read for migration. */
         private const val KEY_LAST_SYNC_TIME = "last_sync_time"
@@ -392,15 +391,6 @@ class SettingsManager(private val storage: AppStorage) {
 
     fun setPosSelectedVenue(venue: String) {
         storage.putString(KEY_POS_SELECTED_VENUE, venue)
-    }
-
-    fun getPosLanguage(): String {
-        val stored = storage.getString(KEY_POS_LANGUAGE, "").orEmpty()
-        return stored.ifEmpty { getLanguage() }
-    }
-
-    fun savePosLanguage(language: String) {
-        storage.putString(KEY_POS_LANGUAGE, language)
     }
 
     private fun normalizeBackgroundAnimationStyle(style: String, default: String): String {

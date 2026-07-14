@@ -21,9 +21,11 @@ import com.eventmanager.app.platform.hardware.DesktopQrScanner
 import com.eventmanager.app.platform.hardware.DesktopWebcamQrScanView
 import com.eventmanager.app.resources.Res
 import com.eventmanager.app.resources.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
 
@@ -49,7 +51,11 @@ actual fun QRScannerDialog(
 
     LaunchedEffect(Unit) {
         while (isActive) {
-            hasExternalReader = DesktopExternalNfcReader.isConnected(settingsManager)
+            hasExternalReader = withContext(Dispatchers.IO) {
+                DesktopExternalNfcReader.refreshStatus(settingsManager).let {
+                    it.usbConnected || it.bleAvailable
+                }
+            }
             delay(1500)
         }
     }
@@ -86,8 +92,17 @@ actual fun QRScannerDialog(
             return@LaunchedEffect
         }
         try {
+            var lastConnectionRefreshAtMs = 0L
             while (isActive && mode == QrDialogMode.Choose && duplicateMatches.isEmpty()) {
-                if (!cardReader.isReaderConnected()) {
+                val nowMs = System.currentTimeMillis()
+                val connected = withContext(Dispatchers.IO) {
+                    if (nowMs - lastConnectionRefreshAtMs >= 2_500L) {
+                        cardReader.refreshConnectionState()
+                        lastConnectionRefreshAtMs = nowMs
+                    }
+                    cardReader.isReaderConnected()
+                }
+                if (!connected) {
                     delay(800)
                     continue
                 }
@@ -98,7 +113,7 @@ actual fun QRScannerDialog(
                         status = result.error
                         delay(500)
                     }
-                    is UidReadResult.Retryable -> delay(300)
+                    is UidReadResult.Retryable -> delay(20)
                     UidReadResult.NoReader -> delay(800)
                 }
             }

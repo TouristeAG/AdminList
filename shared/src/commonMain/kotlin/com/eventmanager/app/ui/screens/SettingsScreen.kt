@@ -13,4 +13,6 @@ expect fun SettingsScreen(
     variant: SettingsScreenVariant = SettingsScreenVariant.Full,
     modifier: Modifier = Modifier,
     onDesktopAdminNavLayoutChanged: () -> Unit = {},
+    /** Called after a successful factory reset so the host can show the setup wizard. */
+    onFactoryResetComplete: () -> Unit = {},
 )

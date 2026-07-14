@@ -168,6 +168,12 @@
 
     <!-- Update flow -->
     <string name="app_cache_cleared">Cache des données de l\'application vidé. Les paramètres et les clés ont été conservés.</string>
+    <string name="factory_reset_title">Réinitialisation d\'usine</string>
+    <string name="factory_reset_description">Supprimer toutes les données locales, paramètres et identifiants, puis relancer l\'assistant de configuration</string>
+    <string name="factory_reset_confirm_title">Réinitialiser cette application ?</string>
+    <string name="factory_reset_confirm_message">Cela efface définitivement sur cet appareil les invités, bénévoles, shifts, données POS, paramètres de sync et clés importées. Les données Google Sheets ne sont pas supprimées. Vous devrez reconfigurer l\'application.</string>
+    <string name="factory_reset_confirm_button">Tout effacer</string>
+    <string name="factory_reset_in_progress">Réinitialisation…</string>
     <string name="check_for_updates">Rechercher des mises à jour</string>
     <string name="update_available_title">Mise à jour disponible : %s</string>
     <string name="update_required_message">Une version plus récente de l\'application est requise pour continuer. Veuillez mettre à jour vers la dernière version.</string>
@@ -1268,7 +1274,7 @@
     <string name="announcement_popup_from">De : %s</string>
 
     <!-- Lecteur NFC Bluetooth externe (ACR1255U-J1) -->
-    <string name="settings_category_external_reader">Lecteur NFC Bluetooth</string>
+    <string name="settings_category_external_reader">Lecteur NFC</string>
     <string name="external_reader_description">Sélectionnez le lecteur NFC externe ici. Il peut apparaître dans les paramètres Bluetooth d\'Android, mais il n\'est pas possible de s\'y connecter pour cette application.</string>
     <string name="external_reader_connected_label">Lecteur sélectionné</string>
     <string name="external_reader_pick_button">Rechercher un lecteur Bluetooth</string>

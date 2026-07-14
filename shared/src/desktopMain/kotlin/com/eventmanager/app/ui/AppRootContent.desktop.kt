@@ -289,6 +289,8 @@ actual fun AppRootContent(
                 LaunchedEffect(Unit) {
                     if (skipStartupSync) return@LaunchedEffect
                     delay(1200)
+                    // Avoid stacking another full sync on top of admin-gate prep right after welcome.
+                    if (showAdminAuth) return@LaunchedEffect
                     withContext(Dispatchers.IO) { viewModel.performFullSync() }
                 }
                 LaunchedEffect(showAdminAuth) {
@@ -365,7 +367,6 @@ actual fun AppRootContent(
                         volunteers = volunteers,
                         guests = guests,
                         onBack = { showPos = false; showWelcome = true },
-                        restoreLanguageCode = settingsManager.getLanguage(),
                     )
                 } else if (showTicketCheck) {
                     DesktopBilleterieFlow(
@@ -522,6 +523,19 @@ actual fun AppRootContent(
                                             showSalesSheetItemManagement = true
                                         },
                                         onDesktopAdminNavLayoutChanged = { refreshAdminNavPreferences() },
+                                        onFactoryResetComplete = {
+                                            showJobTypeManagement = false
+                                            showVenueManagement = false
+                                            showSalesSheetItemManagement = false
+                                            showPosAccountingReport = false
+                                            showQRScanner = false
+                                            showAdminAuth = false
+                                            showTicketCheck = false
+                                            showPos = false
+                                            showWelcome = false
+                                            selectedTab = AdminTab.Dashboard.index
+                                            showSetupWizard = true
+                                        },
                                         modifier = Modifier.fillMaxSize()
                                     )
                                 }
@@ -755,10 +769,9 @@ private fun DesktopBilleterieFlow(
             showBilleterieSettings -> showBilleterieSettings = false
             section == BilleterieSection.Scanner.name -> section = scannerReturnSection
             section == BilleterieSection.GuestList.name -> section = BilleterieSection.Home.name
-            section == BilleterieSection.Pos.name -> performPosFlowExit(
-                viewModel,
-                settingsManager.getLanguage(),
-            ) { section = BilleterieSection.Home.name }
+            section == BilleterieSection.Pos.name -> performPosFlowExit(viewModel) {
+                section = BilleterieSection.Home.name
+            }
             else -> onExit()
         }
     }
@@ -809,7 +822,6 @@ private fun DesktopBilleterieFlow(
                     volunteers = volunteers,
                     guests = guests,
                     onBack = { section = BilleterieSection.Home.name },
-                    restoreLanguageCode = settingsManager.getLanguage(),
                 )
             }
             else -> {

@@ -42,10 +42,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.eventmanager.app.data.sync.SettingsManager
+import com.eventmanager.app.platform.LocalPlatformContext
 import com.eventmanager.app.resources.Res
 import com.eventmanager.app.resources.animated_background_description
 import com.eventmanager.app.resources.animated_background_title
@@ -54,15 +56,19 @@ import com.eventmanager.app.resources.billeterie_background_animation_title
 import com.eventmanager.app.resources.pos_background_animation_description
 import com.eventmanager.app.resources.pos_background_animation_title
 import com.eventmanager.app.resources.background_animation_arches
+import com.eventmanager.app.resources.background_animation_low_performance_warning
 import com.eventmanager.app.resources.background_animation_none
 import com.eventmanager.app.resources.background_animation_opacity_apply
 import com.eventmanager.app.resources.background_animation_opacity_description
 import com.eventmanager.app.resources.background_animation_opacity_title
+import com.eventmanager.app.resources.background_animation_preview_unavailable
 import com.eventmanager.app.resources.background_animation_topographic
 import com.eventmanager.app.ui.platform.AppAppearanceState
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.abs
 import kotlin.math.roundToInt
+
+private val BackgroundAnimationWarningOrange = Color(0xFFE65100)
 
 private data class BackgroundAnimationOption(
     val key: String,
@@ -125,6 +131,11 @@ fun BackgroundAnimationSettingsSection(
         }
     }
 
+    val platformContext = LocalPlatformContext.current
+    val lowPerformanceDevice = remember(platformContext) {
+        isLowPerformanceDeviceForBackgroundAnimation(platformContext)
+    }
+
     Column(modifier = modifier.fillMaxWidth()) {
         if (showSectionHeader) {
             Text(
@@ -151,6 +162,16 @@ fun BackgroundAnimationSettingsSection(
             Spacer(Modifier.height(12.dp))
         }
 
+        if (lowPerformanceDevice) {
+            Text(
+                text = stringResource(Res.string.background_animation_low_performance_warning),
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Medium,
+                color = BackgroundAnimationWarningOrange,
+            )
+            Spacer(Modifier.height(12.dp))
+        }
+
         var selectedStyle by remember(target) { mutableStateOf(readStyle()) }
         var appliedOpacity by remember(target) { mutableFloatStateOf(readOpacity()) }
         var pendingOpacity by remember(target) { mutableFloatStateOf(readOpacity()) }
@@ -159,6 +180,7 @@ fun BackgroundAnimationSettingsSection(
             selectedStyle = selectedStyle,
             settingsManager = settingsManager,
             isDesktop = isDesktop,
+            livePreviewEnabled = !lowPerformanceDevice,
             onSelect = { style ->
                 selectedStyle = style
                 writeStyle(style)
@@ -246,6 +268,7 @@ fun BackgroundAnimationStylePicker(
     modifier: Modifier = Modifier,
     settingsManager: SettingsManager? = null,
     isDesktop: Boolean = false,
+    livePreviewEnabled: Boolean = true,
 ) {
     Row(
         modifier = modifier
@@ -260,6 +283,7 @@ fun BackgroundAnimationStylePicker(
                 selected = selected,
                 settingsManager = settingsManager,
                 isDesktop = isDesktop,
+                livePreviewEnabled = livePreviewEnabled,
                 onClick = { onSelect(option.key) },
             )
         }
@@ -272,6 +296,7 @@ private fun BackgroundAnimationStyleCard(
     selected: Boolean,
     settingsManager: SettingsManager?,
     isDesktop: Boolean,
+    livePreviewEnabled: Boolean,
     onClick: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -308,6 +333,7 @@ private fun BackgroundAnimationStyleCard(
                     style = option.key,
                     settingsManager = settingsManager,
                     isDesktop = isDesktop,
+                    livePreviewEnabled = livePreviewEnabled,
                     modifier = Modifier.fillMaxSize(),
                 )
 
@@ -361,29 +387,44 @@ private fun BackgroundAnimationPreview(
     style: String,
     settingsManager: SettingsManager?,
     isDesktop: Boolean,
+    livePreviewEnabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val colorScheme = MaterialTheme.colorScheme
 
     Box(modifier = modifier) {
-        when (BackgroundAnimationStyle.fromStored(style)) {
-            BackgroundAnimationStyle.NONE -> {
+        when {
+            BackgroundAnimationStyle.fromStored(style) == BackgroundAnimationStyle.NONE -> {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(colorScheme.surfaceVariant.copy(alpha = 0.4f)),
                 )
             }
-            else -> {
-                if (settingsManager != null) {
-                    AppBackgroundAnimation(
-                        style = style,
-                        opacity = BackgroundAnimationStyle.defaultOpacity(style),
-                        settingsManager = settingsManager,
-                        isDesktop = isDesktop,
-                        modifier = Modifier.fillMaxSize(),
+            !livePreviewEnabled -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(colorScheme.surfaceVariant.copy(alpha = 0.55f))
+                        .padding(12.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = stringResource(Res.string.background_animation_preview_unavailable),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = BackgroundAnimationWarningOrange,
+                        textAlign = TextAlign.Center,
                     )
                 }
+            }
+            settingsManager != null -> {
+                AppBackgroundAnimation(
+                    style = style,
+                    opacity = BackgroundAnimationStyle.defaultOpacity(style),
+                    settingsManager = settingsManager,
+                    isDesktop = isDesktop,
+                    modifier = Modifier.fillMaxSize(),
+                )
             }
         }
     }

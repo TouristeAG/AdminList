@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.eventmanager.app.data.models.*
 import com.eventmanager.app.data.repository.EventManagerRepository
+import com.eventmanager.app.data.sync.FactoryReset
 import com.eventmanager.app.data.sync.GoogleSheetsService
 import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.data.sync.BiometricAdminProfileLink
@@ -37,6 +38,7 @@ import com.eventmanager.app.data.update.UpdateChecker
 import com.eventmanager.app.data.update.UpdateCheckResult
 import com.eventmanager.app.data.update.UpdateDownloader
 import com.eventmanager.app.data.update.DownloadState
+import com.eventmanager.app.platform.PlatformFileManager
 import com.eventmanager.app.ui.components.ScannerMatch
 import com.eventmanager.app.ui.components.shouldShowSyncError
 import java.io.File
@@ -135,6 +137,9 @@ class EventManagerViewModel(
     // State for sync status
     private val _isSyncing = MutableStateFlow(false)
     val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
+
+    /** Skip duplicate sheet repair+download on Admin tap when a pull already completed recently. */
+    private val adminGateFreshSyncMs = 3 * 60 * 1000L
 
     // State for sync error
     private val _syncError = MutableStateFlow<String?>(null)
@@ -2892,15 +2897,40 @@ class EventManagerViewModel(
     }
 
     /**
-     * Repairs Google Sheet headers (including Admin column on guest/volunteer tabs) and runs
-     * a full download before the admin authentication screen accepts scans.
+     * Ensures sheet structure + data are ready before the admin NFC/QR gate.
+     * Skips a full network repair/download when a successful Sheets pull already happened
+     * recently (startup precheck), so tapping Admin is not delayed by a second full sync.
      */
     fun prepareForAdminAuthentication() {
         viewModelScope.launch {
-            _isSyncing.value = true
             _syncError.value = null
-            AppLogger.i("EventManagerViewModel", "Preparing sheets and syncing for admin authentication gate")
             try {
+                // Startup precheck may still be running — wait for it instead of stacking another sync.
+                if (_isSyncing.value) {
+                    AppLogger.i(
+                        "EventManagerViewModel",
+                        "Admin gate waiting for in-flight sync instead of starting another"
+                    )
+                    isSyncing.first { !it }
+                    if (hasFreshSheetsPullForAdminGate()) {
+                        withContext(Dispatchers.Main) { refreshAllData() }
+                        AppLogger.i("EventManagerViewModel", "Admin gate preparation reused fresh sync")
+                        return@launch
+                    }
+                } else if (hasFreshSheetsPullForAdminGate()) {
+                    withContext(Dispatchers.Main) { refreshAllData() }
+                    AppLogger.i(
+                        "EventManagerViewModel",
+                        "Admin gate preparation skipped full sync (data fresh)"
+                    )
+                    return@launch
+                }
+
+                _isSyncing.value = true
+                AppLogger.i(
+                    "EventManagerViewModel",
+                    "Preparing sheets and syncing for admin authentication gate"
+                )
                 val result = withContext(Dispatchers.IO) {
                     syncManager?.repairSheetStructureThenFullDownload()
                 }
@@ -2933,6 +2963,15 @@ class EventManagerViewModel(
                 _isSyncing.value = false
             }
         }
+    }
+
+    private fun hasFreshSheetsPullForAdminGate(
+        maxAgeMs: Long = adminGateFreshSyncMs,
+    ): Boolean {
+        val memory = _lastSyncTime.value
+        val persisted = platformContext?.let { SettingsManager(it).getLastSheetsPullAt() } ?: 0L
+        val last = maxOf(memory, persisted)
+        return last > 0L && System.currentTimeMillis() - last < maxAgeMs
     }
 
     // Unified guest list: regular guests + volunteer benefits (computed locally)
@@ -3371,6 +3410,27 @@ class EventManagerViewModel(
                 println("All local app data cleared successfully")
             } catch (e: Exception) {
                 println("Failed to clear local app data: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Full factory reset: wipe DB tables, preferences, and credential/cache files.
+     * Caller should navigate back to the setup wizard after [onComplete].
+     */
+    fun factoryReset(
+        settingsManager: SettingsManager,
+        fileManager: PlatformFileManager,
+        onComplete: () -> Unit,
+    ) {
+        viewModelScope.launch {
+            try {
+                FactoryReset.perform(repository, settingsManager, fileManager)
+                refreshAllData()
+                onComplete()
+            } catch (e: Exception) {
+                println("Factory reset failed: ${e.message}")
+                onComplete()
             }
         }
     }

@@ -113,6 +113,13 @@ internal actual object GraphExportBridge {
     ) {
         openFile(platformContext.androidContext, file, exportType)
     }
+
+    actual suspend fun saveExportedFileToUserLocation(
+        platformContext: PlatformContext,
+        file: File,
+        suggestedName: String,
+        exportType: GraphExportType,
+    ): Boolean = false
 }
 
 internal actual fun decodeJpgPreview(file: File): ImageBitmap? {

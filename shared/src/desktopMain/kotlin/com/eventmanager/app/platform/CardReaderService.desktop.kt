@@ -22,4 +22,8 @@ private class DesktopCardReaderService(private val context: PlatformContext) : C
     override suspend fun readUid(): UidReadResult = DesktopExternalNfcReader.readUid(settings)
 
     override fun readerDescription(): String = DesktopExternalNfcReader.readerDescription(settings)
+
+    override suspend fun refreshConnectionState() {
+        DesktopExternalNfcReader.refreshStatus(settings)
+    }
 }

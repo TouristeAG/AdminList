@@ -99,6 +99,12 @@
     <string name="page_animations_description">切換頁面和分頁時啟用滑動動畫</string>
     <string name="clear_app_cache">清除應用程式快取</string>
     <string name="app_cache_cleared">應用程式資料快取已清除。設定和金鑰已保留。</string>
+    <string name="factory_reset_title">恢復原廠設定</string>
+    <string name="factory_reset_description">刪除所有本機資料、設定與認證，然後重新執行設定精靈</string>
+    <string name="factory_reset_confirm_title">要重設此應用程式嗎？</string>
+    <string name="factory_reset_confirm_message">這會永久刪除此裝置上的賓客、志工、班次、POS 資料、同步設定與已上傳金鑰。不會刪除 Google Sheets 中的資料。您需要重新設定應用程式。</string>
+    <string name="factory_reset_confirm_button">全部清除</string>
+    <string name="factory_reset_in_progress">正在重設…</string>
     <string name="check_for_updates">檢查更新</string>
     <string name="update_available_title">有可用更新：%s</string>
     <string name="update_required_message">需要更新版本的應用程式才能繼續。請更新至最新版本。</string>
@@ -1236,7 +1242,7 @@
     <string name="announcement_popup_from">來自：%s</string>
 
     <!-- 外部藍牙 NFC 讀卡機（ACR1255U-J1） -->
-    <string name="settings_category_external_reader">藍牙 NFC 讀卡機</string>
+    <string name="settings_category_external_reader">NFC 讀卡機</string>
     <string name="external_reader_description">請在此選擇外部 NFC 讀卡機。讀卡機可能顯示於 Android 藍牙設定中，但無法從該處與本應用程式建立連線。</string>
     <string name="external_reader_connected_label">已選擇讀卡機</string>
     <string name="external_reader_pick_button">掃描藍牙讀卡機</string>

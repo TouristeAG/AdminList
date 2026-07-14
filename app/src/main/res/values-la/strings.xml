@@ -100,6 +100,12 @@
     <string name="page_animations_description">Admitte ungunt animationes cum mutantur paginae et mutantur paginae\'tab</string>
     <string name="clear_app_cache">Vider cache l\'application</string>
     <string name="app_cache_cleared">Data cache\'vide application. Obitus et claves conservatae sunt.</string>
+    <string name="factory_reset_title">Restitutio ad officinam</string>
+    <string name="factory_reset_description">Omnia localia data, status et claves delere, deinde setup wizard renovare</string>
+    <string name="factory_reset_confirm_title">Hanc applicationem reponere?</string>
+    <string name="factory_reset_confirm_message">Hoc permanente delet hospites, voluntarios, munera, POS data, sync status et claves in hoc instrumento. Data Google Sheets non delentur. Applicationem denuo configurare debebis.</string>
+    <string name="factory_reset_confirm_button">Omnia delere</string>
+    <string name="factory_reset_in_progress">Reponitur…</string>
     <string name="check_for_updates">Quaere ex mises ad dies</string>
     <string name="update_available_title">Mise ad dies praesto: %s</string>
     <string name="update_required_message">Recentior versio\'applicationem requiritur pergere. Quaeso renovatio ad recentissimam versionem.</string>
@@ -1268,7 +1274,7 @@
     <string name="announcement_popup_from">: %s</string>
 
     <!-- External Bluetooth NFC reader (ACR1255U-J1) -->
-    <string name="settings_category_external_reader">Lector NFC Bluetooth</string>
+    <string name="settings_category_external_reader">Lector NFC</string>
     <string name="external_reader_description">NFC externum lectorem hic elige. Ut in Bluetooth occasus of *\'Pellentesque sed ipsum non\'non potest to\'coniunge huic applicationi.</string>
     <string name="external_reader_connected_label">Electus coegi</string>
     <string name="external_reader_pick_button">Quaere lecteur Bluetooth</string>

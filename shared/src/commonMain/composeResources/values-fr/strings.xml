@@ -173,6 +173,8 @@
     <string name="background_animation_opacity_title">Intensité de l\'arrière-plan</string>
     <string name="background_animation_opacity_description">Réduisez l\'opacité pour des lignes animées plus discrètes</string>
     <string name="background_animation_opacity_apply">Appliquer l\'intensité</string>
+    <string name="background_animation_preview_unavailable">Aperçu indisponible sur cet appareil</string>
+    <string name="background_animation_low_performance_warning">Activer un arrière-plan animé est déconseillé sur ce périphérique — l\'application risque de ralentir ou de planter.</string>
     <string name="billeterie_background_animation_title">Arrière-plan billetterie</string>
     <string name="billeterie_background_animation_description">Choisissez un arrière-plan animé pour les écrans de billetterie uniquement</string>
     <string name="page_animations_title">Animations de pages</string>
@@ -243,6 +245,12 @@
 
     <!-- Update flow -->
     <string name="app_cache_cleared">Cache des données de l'application vidé. Les paramètres et les clés ont été conservés.</string>
+    <string name="factory_reset_title">Réinitialisation d'usine</string>
+    <string name="factory_reset_description">Supprimer toutes les données locales, paramètres et identifiants, puis relancer l'assistant de configuration</string>
+    <string name="factory_reset_confirm_title">Réinitialiser cette application ?</string>
+    <string name="factory_reset_confirm_message">Cela efface définitivement sur cet appareil les invités, bénévoles, shifts, données POS, paramètres de sync et clés importées. Les données Google Sheets ne sont pas supprimées. Vous devrez reconfigurer l'application.</string>
+    <string name="factory_reset_confirm_button">Tout effacer</string>
+    <string name="factory_reset_in_progress">Réinitialisation…</string>
     <string name="check_for_updates">Rechercher des mises à jour</string>
     <string name="update_available_title">Mise à jour disponible : %1$s</string>
     <string name="update_required_message">Une version plus récente de l'application est requise pour continuer. Veuillez mettre à jour vers la dernière version.</string>
@@ -848,8 +856,9 @@
     <string name="scan_with_usb_reader">Scanner avec le lecteur externe</string>
     <string name="usb_reader_waiting_card_short">Carte en attente...</string>
     <string name="scanner_ble_reader_footer_label">Lecteur Bluetooth (ACR1255U-J1)</string>
-    <string name="scanner_ble_reader_footer_connected">Lien actif — prêt à scanner</string>
-    <string name="scanner_ble_reader_footer_disconnected">Pas de lien actif — réveillez le lecteur (bouton) ou attendez la reconnexion</string>
+    <string name="scanner_ble_reader_footer_connected">Connecté — prêt à scanner</string>
+    <string name="scanner_ble_reader_footer_disconnected">Non connecté — réveillez le lecteur / attendez le Bluetooth</string>
+    <string name="scanner_ble_reader_footer_connecting">Reconnexion après réveil…</string>
     <string name="scanner_ble_reader_footer_reading">Lecture de la carte…</string>
     <string name="nfc_not_supported_device">Cet appareil ne prend pas en charge le scan NFC.</string>
     <string name="nfc_unavailable_no_usb_hint">Cet appareil n'a pas de NFC et aucun lecteur externe n'est connecté (USB ou Bluetooth).</string>
@@ -1322,7 +1331,8 @@
     <string name="settings_category_developer">Développeur &amp; Débogage</string>
     <string name="settings_category_maintenance">Maintenance</string>
     
-    <!-- Easter Egg Games -->
+        <string name="settings_category_catalog">Catalogue &amp; lieux</string>
+<!-- Easter Egg Games -->
     <string name="easter_egg_hextris">Hextris</string>
     <string name="easter_egg_pizza_undelivery">Pizza Undelivery</string>
     <string name="easter_egg_scroll">Scroll!</string>
@@ -1350,7 +1360,7 @@
     <string name="desktop_confirm_entry_button">Valider l'entrée</string>
     <string name="desktop_entry_confirmed">Entrée validée</string>
     <string name="validate_entry_description_solo_desktop">Entrée seule (sans invités). Cliquez ci-dessous pour confirmer.</string>
-    <string name="validate_entry_description_with_invites_desktop">Entrée pour le bénévole + %1$d invité(s). Cliquez ci-dessous pour confirmer.</string>
+    <string name="validate_entry_description_with_invites_desktop">Validez l'entrée et enregistrez les invité·e·s ci-dessous.</string>
     <string name="future_entry_group_label_invites">%1$d entrée restante (+%2$d inv.)</string>
     <string name="future_entries_group_label_invites">%1$d entrées restantes (+%2$d inv.)</string>
     <string name="future_entry_group_label_solo">%1$d entrée restante (seul)</string>
@@ -1459,19 +1469,44 @@
     <string name="announcement_popup_close">Fermer</string>
     <string name="announcement_popup_from">De : %1$s</string>
 
-    <!-- Lecteur NFC Bluetooth externe (ACR1255U-J1) -->
-    <string name="settings_category_external_reader">Lecteur NFC Bluetooth</string>
+    <!-- Lecteur NFC (USB PC/SC + Bluetooth optionnel ACR1255U-J1) -->
+    <string name="settings_category_external_reader">Lecteur NFC</string>
     <string name="settings_category_pcsc_reader">Lecteur NFC USB</string>
     <string name="pcsc_reader_description">Branchez un lecteur NFC USB ACS ACR122U ou compatible. macOS et Windows incluent PC/SC ; sous Linux, installez et démarrez pcscd.</string>
-    <string name="desktop_external_reader_description">Les lecteurs USB (ACR122U, ACR1255U-J1 en mode USB) fonctionnent branchés avec le driver PC/SC ACS installé. Basculez le lecteur en mode USB, branchez le câble, puis utilisez Tester la connexion ci-dessous.</string>
-    <string name="desktop_ble_supported_windows">Bluetooth (ACR1255U-J1) : installez le driver PC/SC Bluetooth ACS, associez le lecteur dans les réglages Bluetooth Windows, puis sélectionnez-le ci-dessous.</string>
+    <string name="desktop_external_reader_description">Branchez un lecteur ACS en USB (recommandé) ou configurez le Bluetooth sous Windows. Posez une carte sur le côté sans contact, puis appuyez sur Tester le lecteur.</string>
+    <string name="desktop_nfc_no_reader">Aucun lecteur détecté. Branchez l\'USB, ou ouvrez Première configuration si c\'est une nouvelle installation.</string>
+    <string name="desktop_nfc_usb_connected">USB connecté</string>
+    <string name="desktop_nfc_ble_connected">Bluetooth connecté · prêt</string>
+    <string name="desktop_nfc_ble_not_ready">Bluetooth sélectionné · non connecté</string>
+    <string name="desktop_nfc_ble_connecting">Bluetooth · reconnexion…</string>
+    <string name="desktop_nfc_ble_wake_hint">Réveillez l\'ACR1255 (bouton) et attendez que Windows Bluetooth affiche Connecté. SoftDevice doit apparaître dans PC/SC avant de pouvoir scanner.</string>
+    <string name="desktop_nfc_ble_connecting_hint">SoftDevice est visible mais le lien n\'est pas encore prêt — attendez quelques secondes après le réveil du lecteur.</string>
+    <string name="desktop_nfc_active_none">Aucun lecteur connecté</string>
+    <string name="desktop_nfc_test_reader">Tester le lecteur</string>
+    <string name="desktop_nfc_use_bluetooth">Utiliser un lecteur Bluetooth…</string>
+    <string name="desktop_nfc_setup_title">Première configuration</string>
+    <string name="desktop_nfc_setup_usb">USB : commutateur sur USB, installer le driver PC/SC USB ACS, brancher le câble, puis Tester le lecteur avec une carte sur le côté sans contact (PICC) — pas le slot ICC.</string>
+    <string name="desktop_nfc_setup_ble">Bluetooth (Windows uniquement) : installer ACS Bluetooth PC/SC → associer dans Bluetooth Windows → ACS Bluetooth Device Management Tool → Install → choisir le lecteur ici. L\'appairage seul ne suffit pas.</string>
+    <string name="desktop_nfc_advanced_title">Avancé / dépannage</string>
+    <string name="desktop_nfc_advanced_hint">Uniquement si Tester le lecteur échoue : vérifiez les interfaces PC/SC vues par Windows, ou corrigez le stack driver USB.</string>
+    <string name="desktop_ble_supported_windows">Bluetooth (ACR1255U-J1) : 1) Installez le MSI PC/SC Bluetooth ACS. 2) Passez le lecteur en BT et associez-le dans Windows. 3) Ouvrez ACS Bluetooth Device Management Tool et installez le lecteur. 4) Vérifiez une entrée BLE dans Lister les lecteurs PC/SC. Préférez le mode USB pour la porte / la caisse sous Windows.</string>
     <string name="desktop_ble_unsupported_macos">Le Bluetooth n'est pas pris en charge sur macOS (pas de driver PC/SC BLE ACS). Utilisez le mode USB avec le driver USB ACS.</string>
     <string name="desktop_ble_unsupported_linux">Le Bluetooth n'est pas pris en charge sur Linux (pas de driver PC/SC BLE ACS). Utilisez le mode USB avec pcscd et le driver USB ACS.</string>
     <string name="desktop_list_pcsc_readers">Lister les lecteurs PC/SC</string>
     <string name="desktop_usb_reader_test_button">Tester le lecteur USB</string>
-    <string name="desktop_ble_reader_picker_subtitle">Associez l'ACR1255U-J1 dans le Bluetooth système, puis choisissez-le ici. Les lecteurs déjà visibles par PC/SC sont prêts immédiatement.</string>
-    <string name="desktop_ble_reader_not_found">Aucun ACR1255U-J1 trouvé. Allumez-le, associez-le au Bluetooth et installez le pilote ACS PC/SC.</string>
-    <string name="desktop_ble_reader_pcsc_ready">PC/SC prêt · %1$s</string>
+    <string name="desktop_acs_prefer_usb">Recommandé : le mode USB (commutateur matériel) est plus fiable que le Bluetooth pour la porte et la caisse.</string>
+    <string name="desktop_acs_windows_usb_banner">Si le lecteur bippe mais le test ne montre pas d\'UID : installez ACS USB PC/SC, confirmez une interface PICC, puis Activez Escape Command s\'il est encore sous Microsoft CCID. Débranchez/rebranchez après avoir activé Escape.</string>
+    <string name="desktop_acs_ble_setup_steps">Configuration Bluetooth (Windows) :\n1. Installer le MSI PC/SC Bluetooth ACS\n2. Associer le lecteur dans les réglages Bluetooth Windows\n3. Lancer ACS Bluetooth Device Management Tool → Install\n4. Vérifier un lecteur BLE dans Lister les lecteurs PC/SC\nL\'appairage seul ne suffit pas — sans l\'outil Management, le lien se connecte souvent puis se coupe.</string>
+    <string name="desktop_acs_open_drivers">Télécharger les drivers ACS</string>
+    <string name="desktop_acs_probe_drivers">Vérifier le driver USB</string>
+    <string name="desktop_acs_enable_escape">Activer Escape Command (admin)</string>
+    <string name="desktop_acs_escape_running">En attente UAC…</string>
+    <string name="desktop_acs_escape_not_needed">Le driver natif ACS est installé — Escape Command ne concerne que Microsoft CCID. Posez une carte sur le PICC et utilisez Tester le lecteur.</string>
+    <string name="desktop_ble_paired_not_pcsc_tool_hint">Associé mais absent de PC/SC — lancez ACS Bluetooth Device Management Tool et installez le lecteur</string>
+    <string name="desktop_ble_reader_picker_subtitle">Associez l\'ACR1255U-J1 dans le Bluetooth Windows, puis utilisez ACS Bluetooth Device Management Tool pour qu\'il apparaisse dans PC/SC. Préférez le mode USB pour la porte / la caisse.</string>
+    <string name="desktop_ble_reader_not_found">Aucun ACR1255U-J1 trouvé. Allumez-le, associez-le au Bluetooth, installez le driver PC/SC Bluetooth ACS, et lancez ACS Bluetooth Device Management Tool pour qu\'il apparaisse dans PC/SC.</string>
+    <string name="desktop_ble_reader_pcsc_ready">PC/SC prêt</string>
+    <string name="desktop_ble_reader_not_pcsc_ready">Associé · pas encore dans PC/SC</string>
     <string name="external_reader_description">Sélectionnez le lecteur NFC externe ici. Il peut apparaître dans les paramètres Bluetooth d'Android, mais il n'est pas possible de s'y connecter pour cette application.</string>
     <string name="external_reader_connected_label">Lecteur sélectionné</string>
     <string name="external_reader_pick_button">Rechercher un lecteur Bluetooth</string>
@@ -1562,20 +1597,27 @@
     <string name="desktop_no_external_reader">Aucun lecteur externe</string>
     <string name="desktop_pcsc_error">Erreur PC/SC</string>
     <string name="desktop_pcsc_library_unavailable">Bibliothèque PC/SC indisponible</string>
+    <string name="desktop_pcsc_list_error">Erreur de liste PC/SC : %1$s</string>
     <string name="desktop_pcsc_no_ble_reader">Aucun lecteur NFC Bluetooth dans PC/SC.
-Associez l\'ACR1255U-J1 dans les réglages Bluetooth du système et installez le driver ACS.</string>
+Associez l\'ACR1255U-J1 dans les réglages Bluetooth du système et installez le driver PC/SC Bluetooth ACS.</string>
+    <string name="desktop_pcsc_no_ble_reader_paired_hint">Si le lecteur est déjà associé dans le Bluetooth Windows mais absent de cette liste, installez le MSI PC/SC Bluetooth ACS et utilisez ACS Bluetooth Device Management Tool pour installer le lecteur dans PC/SC.</string>
     <string name="desktop_pcsc_no_card_on_reader">Aucune carte détectée sur le lecteur</string>
     <string name="desktop_pcsc_no_card_present">Aucune carte présente</string>
     <string name="desktop_pcsc_no_reader">Aucun lecteur PC/SC</string>
     <string name="desktop_pcsc_no_readers_found">Aucun lecteur PC/SC trouvé.</string>
     <string name="desktop_pcsc_no_readers_hint">Aucun lecteur PC/SC trouvé.
-Branchez un lecteur USB ou associez un ACR1255U-J1 Bluetooth.</string>
+Branchez un lecteur USB (préférez l\'interface PICC) ou associez un ACR1255U-J1 Bluetooth avec le driver ACS et l\'outil Management.</string>
     <string name="desktop_pcsc_provider_failed">Échec du chargement du fournisseur PC/SC.
 Assurez-vous que PC/SC est installé et redémarrez l\'application.</string>
+    <string name="desktop_pcsc_service_hint_windows">Sous Windows : démarrez le service Carte à puce (SCardSvr) dans services.msc, vérifiez qu\'une interface PICC apparaît dans le Gestionnaire de périphériques, puis débranchez/rebranchez le lecteur et réessayez.</string>
     <string name="desktop_pcsc_reader_disconnected">Lecteur déconnecté.</string>
     <string name="desktop_pcsc_reader_error">Erreur du lecteur</string>
     <string name="desktop_pcsc_reader_ok_place_card">OK — lecteur connecté.
 Placez une carte sur le lecteur et testez à nouveau pour lire un UID.</string>
+    <string name="desktop_pcsc_beep_no_uid_hint">Si le lecteur bippe sans UID : utilisez PICC (pas ICC / pas SoftDevice BLE), maintenez la carte jusqu\'à la fin du test, et préférez le mode USB avec câble.</string>
+    <string name="desktop_pcsc_escape_blocked_hint">Échec Escape CCID. Avec le driver ACS, c\'est souvent une entrée PC/SC fantôme ou le polling PICC désactivé — débranchez l\'USB, retirez les SoftDevice restants dans le Gestionnaire de périphériques, rebranchez en mode USB, puis retestez en maintenant une carte.</string>
+    <string name="desktop_pcsc_ghost_reader_hint">Astuce : ACS peut lister un SoftDevice BLE (nom du type ACR1255U-J1-0xxxxx) même sans câble USB. Ce n\'est pas un PICC USB. Pour les tests USB, ne gardez que « PICC Reader » ; l\'outil ACS Bluetooth Device Management ne sert que pour le BLE.</string>
+    <string name="desktop_pcsc_ble_softdevice_uid_hint">SoftDevice Bluetooth : le lecteur peut bipper alors que PC/SC n\'a pas de carte. Réveillez-le (bouton), vérifiez Bluetooth Windows = Connecté et ACS Device Management Tool = Install OK, puis maintenez une carte pendant tout le test. Préférez le mode USB pour des UID fiables.</string>
     <string name="desktop_pcsc_readers_header">Lecteurs (%1$d) :</string>
     <string name="desktop_pcsc_unable_select_reader">Impossible de sélectionner un lecteur.</string>
     <string name="desktop_pcsc_unavailable">PC/SC indisponible</string>

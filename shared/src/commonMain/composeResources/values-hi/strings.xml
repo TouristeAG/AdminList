@@ -100,12 +100,20 @@
     <string name="background_animation_opacity_title">पृष्ठभूमि की तीव्रता</string>
     <string name="background_animation_opacity_description">एनिमेटेड पंक्तियों को अधिक सूक्ष्म बनाने के लिए अपारदर्शिता कम करें</string>
     <string name="background_animation_opacity_apply">तीव्रता लागू करें</string>
+    <string name="background_animation_preview_unavailable">इस डिवाइस पर पूर्वावलोकन उपलब्ध नहीं है</string>
+    <string name="background_animation_low_performance_warning">इस डिवाइस पर एनिमेटेड बैकग्राउंड चालू करना अनुशंसित नहीं है — ऐप जम सकता है या क्रैश हो सकता है।</string>
     <string name="billeterie_background_animation_title">बिलेटरी पृष्ठभूमि</string>
     <string name="billeterie_background_animation_description">केवल टिकट जांच स्क्रीन के लिए पृष्ठभूमि एनीमेशन चुनें</string>
     <string name="page_animations_title">पेज एनिमेशन</string>
     <string name="page_animations_description">पेज और टैब स्विच करते समय स्लाइड एनिमेशन सक्षम करें</string>
     <string name="clear_app_cache">ऐप कैश साफ़ करें</string>
     <string name="app_cache_cleared">ऐप डेटा कैश साफ़ किया गया. सेटिंग्स और चाबियाँ रखी गईं।</string>
+    <string name="factory_reset_title">फ़ैक्टरी रीसेट</string>
+    <string name="factory_reset_description">सभी स्थानीय डेटा, सेटिंग्स और क्रेडेंशियल हटाएँ, फिर सेटअप विज़ार्ड फिर से शुरू करें</string>
+    <string name="factory_reset_confirm_title">इस ऐप को रीसेट करें?</string>
+    <string name="factory_reset_confirm_message">यह इस डिवाइस पर अतिथि, स्वयंसेवक, शिफ्ट, POS डेटा, सिंक सेटिंग्स और अपलोड की गई कुंजियाँ स्थायी रूप से हटा देता है। Google Sheets डेटा नहीं हटाया जाता। आपको ऐप फिर से कॉन्फ़िगर करना होगा।</string>
+    <string name="factory_reset_confirm_button">सब मिटाएँ</string>
+    <string name="factory_reset_in_progress">रीसेट हो रहा है…</string>
     <string name="check_for_updates">अपडेट के लिए जांचें</string>
     <string name="update_available_title">अद्यतन उपलब्ध: %1$s</string>
     <string name="update_required_message">जारी रखने के लिए इस ऐप का एक नया संस्करण आवश्यक है। कृपया नवीनतम संस्करण में अद्यतन करें.</string>
@@ -860,6 +868,8 @@
     <string name="scanner_ble_reader_footer_label">ब्लूटूथ रीडर (ACR1255U-J1)</string>
     <string name="scanner_ble_reader_footer_connected">सक्रिय लिंक - स्कैन करने के लिए तैयार</string>
     <string name="scanner_ble_reader_footer_disconnected">कोई सक्रिय लिंक नहीं - रीडर (बटन) को जगाएं या पुनः कनेक्ट होने की प्रतीक्षा करें</string>
+    <string name="scanner_ble_reader_footer_connecting">Reconnecting after wake…</string>
+
     <string name="scanner_ble_reader_footer_reading">कार्ड पढ़ना...</string>
     <string name="nfc_not_supported_device">यह डिवाइस एनएफसी स्कैनिंग का समर्थन नहीं करता है.</string>
     <string name="nfc_unavailable_no_usb_hint">इस डिवाइस में कोई एनएफसी नहीं है, और कोई बाहरी रीडर कनेक्ट नहीं है (यूएसबी या ब्लूटूथ)।</string>
@@ -1226,7 +1236,8 @@
     <string name="settings_category_developer">डेवलपर &amp; डीबग</string>
     <string name="settings_category_maintenance">रख-रखाव</string>
     
-    <!-- App Icon Settings -->
+        <string name="settings_category_catalog">कैटलॉग और स्थान</string>
+<!-- App Icon Settings -->
     <string name="app_icon_title">ऐप आइकन</string>
     <string name="app_icon_description">अपनी पसंदीदा आइकन शैली चुनें</string>
     <string name="app_icon_white">सफ़ेद</string>
@@ -1472,18 +1483,49 @@
     <string name="announcement_popup_from">प्रेषक: %1$s</string>
 
     <!-- External Bluetooth NFC reader (ACR1255U-J1) -->
-    <string name="settings_category_external_reader">ब्लूटूथ एनएफसी रीडर</string>
+    <string name="settings_category_external_reader">एनएफसी रीडर</string>
     <string name="settings_category_pcsc_reader">यूएसबी एनएफसी रीडर</string>
     <string name="pcsc_reader_description">ACS ACR122U या संगत USB NFC रीडर कनेक्ट करें। macOS और Windows में स्वचालित रूप से PC/SC समर्थन शामिल है; लिनक्स पर पीसीएससीडी स्थापित करें और प्रारंभ करें।</string>
-    <string name="desktop_external_reader_description">यूएसबी रीडर (एसीआर122यू, यूएसबी मोड में एसीआर1255यू-जे1) एसीएस पीसी/एससी ड्राइवर स्थापित होने पर प्लग इन होने पर काम करते हैं। रीडर को यूएसबी मोड पर स्विच करें, केबल कनेक्ट करें, फिर नीचे दिए गए टेस्ट कनेक्शन का उपयोग करें।</string>
-    <string name="desktop_ble_supported_windows">ब्लूटूथ (एसीआर1255यू-जे1): एसीएस ब्लूटूथ पीसी/एससी ड्राइवर स्थापित करें, विंडोज ब्लूटूथ सेटिंग्स में जोड़ें, फिर नीचे रीडर का चयन करें।</string>
+    <string name="desktop_external_reader_description">USB से ACS रीडर कनेक्ट करें (अनुशंसित) या Windows पर ब्लूटूथ सेटअप करें। कार्ड को संपर्कहीन पक्ष पर रखें, फिर रीडर परीक्षण दबाएँ।</string>
+    <string name="desktop_nfc_no_reader">अभी कोई रीडर नहीं मिला। USB लगाएँ, या नई स्थापना होने पर पहली बार सेटअप खोलें।</string>
+    <string name="desktop_nfc_usb_connected">USB कनेक्टेड</string>
+    <string name="desktop_nfc_ble_connected">ब्लूटूथ तैयार</string>
+    <string name="desktop_nfc_ble_not_ready">ब्लूटूथ चुना गया · तैयार नहीं</string>
+    <string name="desktop_nfc_ble_connecting">Bluetooth · reconnecting…</string>
+    <string name="desktop_nfc_ble_wake_hint">Wake the ACR1255 (button) and wait until Windows Bluetooth shows Connected. SoftDevice must appear in PC/SC before scans work.</string>
+    <string name="desktop_nfc_ble_connecting_hint">SoftDevice is visible but the link is not ready yet — wait a few seconds after waking the reader.</string>
+    <string name="desktop_nfc_active_none">No reader connected</string>
+
+    <string name="desktop_nfc_test_reader">रीडर परीक्षण</string>
+    <string name="desktop_nfc_use_bluetooth">ब्लूटूथ रीडर उपयोग करें…</string>
+    <string name="desktop_nfc_setup_title">पहली बार सेटअप</string>
+    <string name="desktop_nfc_setup_usb">USB: हार्डवेयर स्विच USB पर रखें, ACS USB PC/SC ड्राइवर इंस्टॉल करें, केबल लगाएँ, फिर संपर्कहीन (PICC) पक्ष पर कार्ड रखकर रीडर परीक्षण करें — ICC स्लॉट नहीं।</string>
+    <string name="desktop_nfc_setup_ble">ब्लूटूथ (केवल Windows): ACS Bluetooth PC/SC इंस्टॉल करें → Windows ब्लूटूथ में पेयर करें → ACS Bluetooth Device Management Tool → Install → यहाँ रीडर चुनें। केवल पेयरिंग काफी नहीं है।</string>
+    <string name="desktop_nfc_advanced_title">उन्नत / समस्या निवारण</string>
+    <string name="desktop_nfc_advanced_hint">केवल जब रीडर परीक्षण विफल हो: देखें Windows किन PC/SC इंटरफ़ेस को दिखाता है, या USB ड्राइवर स्टैक सुधारें।</string>
+<string name="desktop_ble_supported_windows">ब्लूटूथ (एसीआर1255यू-जे1): एसीएस ब्लूटूथ पीसी/एससी ड्राइवर स्थापित करें, विंडोज ब्लूटूथ सेटिंग्स में जोड़ें, फिर नीचे रीडर का चयन करें।</string>
     <string name="desktop_ble_unsupported_macos">ब्लूटूथ macOS पर समर्थित नहीं है (कोई ACS BLE PC/SC ड्राइवर नहीं)। इसके बजाय ACS USB ड्राइवर के साथ USB मोड का उपयोग करें।</string>
     <string name="desktop_ble_unsupported_linux">लिनक्स पर ब्लूटूथ समर्थित नहीं है (कोई एसीएस बीएलई पीसी/एससी ड्राइवर नहीं)। इसके बजाय पीसीएससीडी और एसीएस यूएसबी ड्राइवर के साथ यूएसबी मोड का उपयोग करें।</string>
     <string name="desktop_list_pcsc_readers">पीसी/एससी पाठकों की सूची बनाएं</string>
     <string name="desktop_usb_reader_test_button">USB रीडर का परीक्षण करें</string>
+    <string name="desktop_acs_prefer_usb">अनुशंसित: दरवाज़े और POS के लिए USB मोड (हार्डवेयर स्विच) ब्लूटूथ से अधिक विश्वसनीय है।</string>
+    <string name="desktop_acs_windows_usb_banner">यदि रीडर बीप करे लेकिन परीक्षण में UID न दिखे: ACS USB PC/SC इंस्टॉल करें, PICC इंटरफ़ेस पुष्टि करें, फिर यदि अभी भी Microsoft CCID हो तो Escape Command सक्षम करें। सक्षम करने के बाद अनप्लग/प्लग करें।</string>
+    <string name="desktop_acs_ble_setup_steps">ब्लूटूथ सेटअप (Windows):
+1. ACS Bluetooth PC/SC MSI इंस्टॉल करें
+2. Windows ब्लूटूथ सेटिंग्ज़ में रीडर पेयर करें
+3. ACS Bluetooth Device Management Tool → Install चलाएँ
+4. PC/SC रीडर सूची में BLE प्रविष्टि जाँचें
+केवल पेयरिंग काफी नहीं — Management Tool के बिना लिंक अक्सर जुड़कर टूट जाता है।</string>
+    <string name="desktop_acs_open_drivers">ACS ड्राइवर डाउनलोड करें</string>
+    <string name="desktop_acs_probe_drivers">USB ड्राइवर जाँचें</string>
+    <string name="desktop_acs_enable_escape">Escape Command सक्षम करें (व्यवस्थापक)</string>
+    <string name="desktop_acs_escape_running">UAC की प्रतीक्षा…</string>
+    <string name="desktop_acs_escape_not_needed">ACS मूल ड्राइवर इंस्टॉल है — Escape Command केवल Microsoft CCID के लिए आवश्यक है। PICC पर कार्ड रखें और रीडर परीक्षण करें।</string>
+    <string name="desktop_ble_paired_not_pcsc_tool_hint">पेयर है पर PC/SC में नहीं — ACS Bluetooth Device Management Tool चलाकर रीडर इंस्टॉल करें</string>
     <string name="desktop_ble_reader_picker_subtitle">ACR1255U-J1 को सिस्टम ब्लूटूथ सेटिंग्स में जोड़ें, फिर यहां रीडर चुनें। पीसी/एससी को पहले से ही दिखाई देने वाले रीडर तुरंत उपयोग के लिए तैयार हैं।</string>
     <string name="desktop_ble_reader_not_found">कोई ACR1255U-J1 रीडर नहीं मिला। इसे चालू करें, इसे ब्लूटूथ सेटिंग्स में जोड़ें, और सुनिश्चित करें कि एसीएस पीसी/एससी ड्राइवर स्थापित है।</string>
-    <string name="desktop_ble_reader_pcsc_ready">पीसी/एससी तैयार · %1$s</string>
+    <string name="desktop_ble_reader_pcsc_ready">पीसी/एससी तैयार</string>
+    <string name="desktop_ble_reader_not_pcsc_ready">पेयर किया · अभी PC/SC में नहीं (ACS ब्लूटूथ ड्राइवर इंस्टॉल करें)</string>
     <string name="external_reader_description">यहां अपना बाहरी एनएफसी रीडर चुनें। यह एंड्रॉइड ब्लूटूथ सेटिंग्स में दिखाई दे सकता है, लेकिन आप वहां से कनेक्ट नहीं कर सकते - ऐप के लिए रीडर चुनने के लिए इस स्क्रीन का उपयोग करें।</string>
     <string name="external_reader_connected_label">चयनित पाठक</string>
     <string name="external_reader_pick_button">ब्लूटूथ रीडर के लिए स्कैन करें</string>
@@ -1559,6 +1601,9 @@
     <string name="desktop_bluetooth_nfc_reader_offline">ब्लूटूथ एनएफसी रीडर (ऑफ़लाइन)</string>
     <string name="desktop_no_external_reader">कोई बाहरी पाठक नहीं</string>
     <string name="desktop_pcsc_error">पीसी/एससी त्रुटि</string>
+    <string name="desktop_pcsc_list_error">PC/SC list error: %1$s</string>
+    <string name="desktop_pcsc_no_ble_reader_paired_hint">If the reader is already paired in Windows Bluetooth but missing from this list, install the ACS Bluetooth PC/SC MSI and use ACS Bluetooth Device Management Tool to install the reader into PC/SC.</string>
+    <string name="desktop_pcsc_service_hint_windows">On Windows: start the Smart Card service (SCardSvr) in services.msc, confirm the reader shows a PICC interface in Device Manager, then unplug/replug the reader and retry.</string>
     <string name="desktop_pcsc_library_unavailable">पीसी/एससी लाइब्रेरी अनुपलब्ध</string>
     <string name="desktop_pcsc_no_ble_reader">पीसी/एससी में कोई ब्लूटूथ एनएफसी रीडर नहीं।
 ACR1255U-J1 को सिस्टम ब्लूटूथ सेटिंग्स में जोड़ें और ACS ड्राइवर स्थापित करें।</string>
@@ -1574,6 +1619,10 @@ USB रीडर प्लग इन करें या ब्लूटूथ A
     <string name="desktop_pcsc_reader_error">पाठक त्रुटि</string>
     <string name="desktop_pcsc_reader_ok_place_card">ठीक है - रीडर कनेक्ट हो गया।
 रीडर पर एक कार्ड रखें और यूआईडी पढ़ने के लिए दोबारा परीक्षण करें।</string>
+    <string name="desktop_pcsc_beep_no_uid_hint">If the reader beeps but no UID appears: install ACS USB PC/SC, use PICC (not ICC), and enable Escape Command under Microsoft CCID if needed.</string>
+    <string name="desktop_pcsc_escape_blocked_hint">CCID Escape is blocked. Install the ACS USB PC/SC driver, or use Settings → Enable Escape Command (admin), then unplug/replug the reader.</string>
+    <string name="desktop_pcsc_ghost_reader_hint">Tip: ACS may list a BLE SoftDevice (name like ACR1255U-J1-0xxxxx) even with no USB cable. That is not a USB PICC. Leave only “PICC Reader” for USB tests; use ACS Bluetooth Device Management Tool only for BLE.</string>
+    <string name="desktop_pcsc_ble_softdevice_uid_hint">Bluetooth SoftDevice: the reader can beep while PC/SC still has no card. Wake it (button), confirm Windows Bluetooth = Connected and ACS Device Management Tool shows Install OK, then hold a card during the whole Test connection. Prefer USB mode for reliable UID reads.</string>
     <string name="desktop_pcsc_readers_header">पाठक (%1$d):</string>
     <string name="desktop_pcsc_unable_select_reader">पाठक का चयन करने में असमर्थ.</string>
     <string name="desktop_pcsc_unavailable">पीसी/एससी अनुपलब्ध</string>
@@ -1611,4 +1660,8 @@ USB रीडर प्लग इन करें या ब्लूटूथ A
     <string name="theme_hue_label">रंग (इंद्रधनुष): %1$d°</string>
     <string name="theme_luminosity_label">चमक: %1$d%%</string>
     <string name="theme_saturation_label">संतृप्ति: %1$d%%</string>
+    <string name="desktop_confirm_entry_button">प्रवेश पुष्टि करें</string>
+    <string name="desktop_entry_confirmed">प्रवेश पुष्टि हो गया</string>
+    <string name="validate_entry_description_solo_desktop">अकेला प्रवेश (कोई अतिथि नहीं)। पुष्टि के लिए नीचे क्लिक करें।</string>
+    <string name="validate_entry_description_with_invites_desktop">प्रवेश पुष्टि करें और नीचे आमंत्रित अतिथियों को पंजीकृत करें।</string>
 </resources>

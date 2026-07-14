@@ -99,6 +99,12 @@
     <string name="page_animations_description">切换页面和标签时启用滑动动画</string>
     <string name="clear_app_cache">清除应用缓存</string>
     <string name="app_cache_cleared">应用数据缓存已清除。设置和密钥已保留。</string>
+    <string name="factory_reset_title">恢复出厂设置</string>
+    <string name="factory_reset_description">删除所有本地数据、设置和凭证，然后重新运行设置向导</string>
+    <string name="factory_reset_confirm_title">要重置此应用吗？</string>
+    <string name="factory_reset_confirm_message">这将永久删除本设备上的宾客、志愿者、班次、POS 数据、同步设置和已上传密钥。不会删除 Google Sheets 中的数据。您需要重新配置应用。</string>
+    <string name="factory_reset_confirm_button">全部清除</string>
+    <string name="factory_reset_in_progress">正在重置…</string>
     <string name="check_for_updates">检查更新</string>
     <string name="update_available_title">有可用更新：%s</string>
     <string name="update_required_message">需要更新版本的应用程序才能继续。请更新至最新版本。</string>
@@ -1236,7 +1242,7 @@
     <string name="announcement_popup_from">来自：%s</string>
 
     <!-- 外部蓝牙 NFC 读卡器（ACR1255U-J1） -->
-    <string name="settings_category_external_reader">蓝牙 NFC 读卡器</string>
+    <string name="settings_category_external_reader">NFC 读卡器</string>
     <string name="external_reader_description">请在此选择外部 NFC 读卡器。读卡器可能会出现在 Android 蓝牙设置中，但无法从该处与本应用建立连接。</string>
     <string name="external_reader_connected_label">已选择读卡器</string>
     <string name="external_reader_pick_button">扫描蓝牙读卡器</string>

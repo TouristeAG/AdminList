@@ -99,6 +99,12 @@
     <string name="page_animations_description">Habilitar animaciones de deslizamiento al cambiar páginas y pestañas</string>
     <string name="clear_app_cache">Borrar caché de la aplicación</string>
     <string name="app_cache_cleared">Caché de datos de la aplicación borrado. La configuración y las claves se conservaron.</string>
+    <string name="factory_reset_title">Restablecimiento de fábrica</string>
+    <string name="factory_reset_description">Eliminar todos los datos locales, ajustes y credenciales, y reiniciar el asistente de configuración</string>
+    <string name="factory_reset_confirm_title">¿Restablecer esta aplicación?</string>
+    <string name="factory_reset_confirm_message">Esto elimina de forma permanente en este dispositivo invitados, voluntarios, turnos, datos POS, ajustes de sincronización y claves importadas. Los datos de Google Sheets no se eliminan. Tendrá que configurar la aplicación de nuevo.</string>
+    <string name="factory_reset_confirm_button">Borrar todo</string>
+    <string name="factory_reset_in_progress">Restableciendo…</string>
     <string name="check_for_updates">Buscar actualizaciones</string>
     <string name="update_available_title">Actualización disponible: %s</string>
     <string name="update_required_message">Se requiere una versión más reciente de esta aplicación para continuar. Por favor, actualiza a la última versión.</string>
@@ -1236,7 +1242,7 @@
     <string name="announcement_popup_from">De: %s</string>
 
     <!-- Lector NFC Bluetooth externo (ACR1255U-J1) -->
-    <string name="settings_category_external_reader">Lector NFC Bluetooth</string>
+    <string name="settings_category_external_reader">Lector NFC</string>
     <string name="external_reader_description">Seleccione aquí el lector NFC externo. Puede aparecer en los ajustes Bluetooth de Android, pero no es posible conectarse desde ahí para esta aplicación.</string>
     <string name="external_reader_connected_label">Lector seleccionado</string>
     <string name="external_reader_pick_button">Buscar lectores Bluetooth</string>
