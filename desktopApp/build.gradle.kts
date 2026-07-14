@@ -42,6 +42,9 @@ compose.desktop {
         mainClass = "com.eventmanager.app.desktop.MainKt"
         jvmArgs("-Dapple.awt.application.appearance=system")
         nativeDistributions {
+            // Keep installer output out of any previously locked Windows package folders
+            // (e.g. an open NoctuList-*.exe holding build/compose/binaries/main-release/exe).
+            outputBaseDir.set(project.layout.buildDirectory.dir("compose/packaged"))
             jvmArgs("-Dapple.awt.application.appearance=system")
             val packageFormats = buildList {
                 add(TargetFormat.Dmg)

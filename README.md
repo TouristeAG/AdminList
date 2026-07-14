@@ -125,7 +125,9 @@ Compose Desktop packages must be built **on the target OS** (no cross-compilatio
 ./gradlew :desktopApp:packageReleaseAppImage   # Linux
 ```
 
-Outputs land under `desktopApp/build/compose/binaries/main-release/`.
+Outputs land under `desktopApp/build/compose/packaged/main-release/`.
+
+Before packaging on Windows, quit any running NoctuList build you launched from a previous package (otherwise the old `exe` folder can stay locked).
 
 **Linux packaging prerequisites** (Ubuntu/Debian):
 
