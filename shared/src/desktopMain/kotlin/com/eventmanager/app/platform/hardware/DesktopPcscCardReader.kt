@@ -600,6 +600,11 @@ class DesktopPcscCardReader {
             if (isBleishTerminal(live.name.orEmpty())) {
                 return readUidSoftDeviceFast(live)
             }
+            // macOS CryptoTokenKit + ACR USB worked with the classic PC/SC path (T=CL, Le=04).
+            // The Windows multi-strategy path (direct/escape/PN532) broke that — keep it for Win only.
+            if (!isWindowsOs()) {
+                return readUidWiredClassic(live, cardWaitMs)
+            }
             readUidWired(live, cardWaitMs)
         } catch (_: CardNotPresentException) {
             UidReadResult.Retryable(ERR_NO_CARD_PRESENT)
@@ -608,6 +613,78 @@ class DesktopPcscCardReader {
         } catch (e: Exception) {
             UidReadResult.Fatal(e.message ?: tr { getString(Res.string.desktop_pcsc_error) })
         }
+    }
+
+    /**
+     * Classic USB UID read used before the Windows PC/SC rewrite. Restored for macOS/Linux:
+     * waitForCardPresent → connect (T=CL first) → Get UID (Le=04 first) → disconnect(reset).
+     */
+    private fun readUidWiredClassic(terminal: CardTerminal, cardWaitMs: Long): UidReadResult {
+        lastProbeNotes += "path=wired-classic"
+        val waitMs = maxOf(cardWaitMs, CLASSIC_CARD_WAIT_MS)
+        val cardPresent = runCatching { terminal.waitForCardPresent(waitMs) }
+            .getOrElse { e ->
+                if (e is CardNotPresentException) return UidReadResult.Retryable(ERR_NO_CARD_PRESENT)
+                return UidReadResult.Retryable(
+                    e.message ?: tr { getString(Res.string.desktop_pcsc_error) }
+                )
+            }
+        lastProbeNotes += "presence=$cardPresent"
+        if (!cardPresent) {
+            return UidReadResult.Retryable(ERR_NO_CARD_PRESENT)
+        }
+
+        var lastSw: Int? = null
+        for (protocol in CLASSIC_CONNECT_PROTOCOLS) {
+            val card = runCatching { terminal.connect(protocol) }.getOrNull() ?: continue
+            try {
+                Thread.sleep(CLASSIC_POST_CONNECT_DELAY_MS)
+                lastProbeNotes += "connect=$protocol"
+                val uidResult = transmitUidApduVariantsClassic(card) ?: continue
+                lastSw = uidResult.sw
+                if (uidResult.sw != SW_SUCCESS || uidResult.data.isEmpty()) {
+                    lastProbeNotes += "sw=${String.format("%04X", uidResult.sw)}"
+                    continue
+                }
+                lastProbeNotes += "getUidOk=${uidResult.data.size}b"
+                val uid = uidResult.data.toHexUid()
+                val now = System.currentTimeMillis()
+                val normalized = uid.uppercase(Locale.US)
+                if (normalized == lastDispatchedUid && now - lastDispatchAtMs < UID_REPLAY_GAP_MS) {
+                    return UidReadResult.Retryable("Duplicate tap")
+                }
+                awaitingCardRemoval = true
+                awaitingRemovalSinceMs = now
+                waitForCardAbsentQuietly(terminal, card)
+                lastDispatchedUid = normalized
+                lastDispatchAtMs = now
+                lastWiredSeenAtMs = now
+                return UidReadResult.Success(uid)
+            } finally {
+                runCatching { card.disconnect(true) }
+            }
+        }
+        return if (lastSw != null) {
+            UidReadResult.Retryable("No card detected (SW=${String.format("%04X", lastSw)})")
+        } else {
+            UidReadResult.Retryable(ERR_NO_CARD_ON_READER)
+        }
+    }
+
+    /**
+     * ACS Get UID for macOS: Le=04 first — CryptoTokenKit often returns SW=6300 for Le=00
+     * even with a card on the antenna.
+     */
+    private fun transmitUidApduVariantsClassic(card: Card): ResponseAPDU? {
+        val channel = card.basicChannel ?: return null
+        var lastResponse: ResponseAPDU? = null
+        for (apduBytes in CLASSIC_GET_UID_APDU_VARIANTS) {
+            val response = runCatching { channel.transmit(CommandAPDU(apduBytes)) }.getOrNull()
+                ?: continue
+            lastResponse = response
+            if (response.sw == SW_SUCCESS && response.data.isNotEmpty()) return response
+        }
+        return lastResponse
     }
 
     /**
@@ -1259,11 +1336,14 @@ class DesktopPcscCardReader {
         private const val SOFTDEVICE_REPLAY_GAP_MS = 550L
         private const val CARD_ABSENT_WAIT_MS = 400L
         private const val CARD_WAIT_MS = 500L
+        /** Pre-Windows-rewrite USB poll window (macOS classic path). */
+        private const val CLASSIC_CARD_WAIT_MS = 3_000L
         private const val PRESENCE_PROBE_MS = 200L
         private const val CARD_PRESENT_POLL_MS = 80L
         private const val DIAGNOSTIC_CARD_WAIT_MS = 12_000L
         private const val DIAGNOSTIC_POLL_MS = 600L
         private const val POST_CONNECT_DELAY_MS = 80L
+        private const val CLASSIC_POST_CONNECT_DELAY_MS = 120L
         private const val SOFTDEVICE_POST_CONNECT_MS = 15L
         /** Pause after an empty SoftDevice poll (outside connect) to avoid thrashing BT/PC/SC. */
         private const val SOFTDEVICE_INTER_POLL_MS = 70L
@@ -1304,6 +1384,12 @@ class DesktopPcscCardReader {
             "EXCLUSIVE;direct",
         )
 
+        /**
+         * Contactless first — required by many ACS drivers / macOS CryptoTokenKit for PICC
+         * pseudo-APDUs. (jnasmartcardio on Windows rejects T=CL; classic path is non-Windows.)
+         */
+        private val CLASSIC_CONNECT_PROTOCOLS = arrayOf("T=CL", "*", "T=1", "T=0")
+
         private val PN532_CONNECT_PROTOCOLS = arrayOf(
             "direct",
             "EXCLUSIVE;direct",
@@ -1321,6 +1407,14 @@ class DesktopPcscCardReader {
             byteArrayOf(0xFF.toByte(), 0xCA.toByte(), 0x00, 0x00, 0x04),
             byteArrayOf(0xFF.toByte(), 0xCA.toByte(), 0x00, 0x01, 0x00),
             byteArrayOf(0xFF.toByte(), 0xCA.toByte(), 0x00, 0x00, 0x08),
+        )
+
+        /** Le=04 first — macOS CryptoTokenKit often needs this (Le=00 → SW=6300). */
+        private val CLASSIC_GET_UID_APDU_VARIANTS = arrayOf(
+            byteArrayOf(0xFF.toByte(), 0xCA.toByte(), 0x00, 0x00, 0x04),
+            byteArrayOf(0xFF.toByte(), 0xCA.toByte(), 0x00, 0x00, 0x00),
+            byteArrayOf(0xFF.toByte(), 0xCA.toByte(), 0x00, 0x00, 0x08),
+            byteArrayOf(0xFF.toByte(), 0xCA.toByte(), 0x00, 0x00, 0x10),
         )
 
         private val GET_UID_APDU_FAST = arrayOf(
