@@ -1,5 +1,6 @@
 package com.eventmanager.app.platform.hardware
 
+import com.eventmanager.app.data.sync.AppLogger
 import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.platform.UidReadResult
 import com.eventmanager.app.resources.Res
@@ -277,6 +278,7 @@ class DesktopPcscCardReader {
                 success = false,
                 details = buildString {
                     appendLine(getString(Res.string.desktop_pcsc_provider_failed))
+                    PcscContext.lastInitError?.takeIf { it.isNotBlank() }?.let { appendLine(it) }
                     if (isWindowsOs()) {
                         appendLine(getString(Res.string.desktop_pcsc_service_hint_windows))
                     }
@@ -484,13 +486,16 @@ class DesktopPcscCardReader {
      * macOS / Linux: use [TerminalFactory.getDefault] exactly like the pre-Windows rewrite.
      * Persistent Winscard contexts and SoftDevice heuristics broke USB discovery on macOS.
      */
-    private fun ensureClassicPcscProvider(): Boolean = runCatching {
+    private fun ensureClassicPcscProvider(): Boolean = try {
         if (Security.getProvider(Smartcardio.PROVIDER_NAME) == null) {
             Security.insertProviderAt(Smartcardio(), 1)
         }
         TerminalFactory.getDefault()
         true
-    }.getOrDefault(false)
+    } catch (e: Throwable) {
+        AppLogger.e(LOG_TAG, "Classic PC/SC provider init failed", e)
+        false
+    }
 
     private fun listTerminals(): List<CardTerminal> {
         if (!isWindowsOs()) {
@@ -1365,6 +1370,8 @@ class DesktopPcscCardReader {
         private val factoryRef = AtomicReference<TerminalFactory?>(null)
         private val terminalsRef = AtomicReference<CardTerminals?>(null)
         @Volatile private var providerOk = false
+        @Volatile var lastInitError: String? = null
+            private set
 
         data class ListOutcome(val terminals: List<CardTerminal>, val error: String?)
 
@@ -1375,7 +1382,14 @@ class DesktopPcscCardReader {
 
         fun listTerminals(): ListOutcome = synchronized(lock) {
             ensureProviderLocked()
-            if (!providerOk) return ListOutcome(emptyList(), "PC/SC provider unavailable")
+            if (!providerOk) {
+                val detail = lastInitError?.takeIf { it.isNotBlank() }
+                return ListOutcome(
+                    emptyList(),
+                    if (detail != null) "PC/SC provider unavailable: $detail"
+                    else "PC/SC provider unavailable"
+                )
+            }
             return try {
                 val terminals = terminalsRef.get() ?: openTerminalsLocked()
                 val listed = terminals.list()
@@ -1408,15 +1422,22 @@ class DesktopPcscCardReader {
 
         private fun ensureProviderLocked() {
             if (providerOk && factoryRef.get() != null) return
-            providerOk = runCatching {
+            try {
                 if (Security.getProvider(Smartcardio.PROVIDER_NAME) == null) {
                     Security.insertProviderAt(Smartcardio(), 1)
                 }
                 val factory = TerminalFactory.getInstance("PC/SC", null, Smartcardio.PROVIDER_NAME)
                 factoryRef.set(factory)
                 openTerminalsLocked()
-                true
-            }.getOrDefault(false)
+                providerOk = true
+                lastInitError = null
+            } catch (e: Throwable) {
+                providerOk = false
+                factoryRef.set(null)
+                terminalsRef.set(null)
+                lastInitError = e.message ?: e.javaClass.simpleName
+                AppLogger.e(LOG_TAG, "PC/SC provider init failed", e)
+            }
         }
 
         private fun openTerminalsLocked(): CardTerminals {
@@ -1443,6 +1464,7 @@ class DesktopPcscCardReader {
     }
 
     companion object {
+        private const val LOG_TAG = "DesktopPcscCardReader"
         private const val SW_SUCCESS = 0x9000
         private const val PCSC_ID_PREFIX = "pcsc:"
         private const val UID_REPLAY_GAP_MS = 700L
