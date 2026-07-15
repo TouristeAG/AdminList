@@ -103,10 +103,14 @@ class DesktopPcscCardReader {
 
     private fun tr(block: suspend () -> String): String = runBlocking { block() }
 
-    fun isReaderAvailable(): Boolean = PcscContext.isAvailable() && listTerminals().isNotEmpty()
+    fun isReaderAvailable(): Boolean = isPcscAvailable() && listTerminals().isNotEmpty()
 
     /** USB or other non-BLE PC/SC terminals suitable for contactless UID reads. */
     fun hasWiredReader(): Boolean {
+        // macOS: exact pre-Windows behaviour — any PC/SC terminal classified USB.
+        if (!isWindowsOs()) {
+            return listTerminalInfos().any { it.kind == ReaderKind.USB }
+        }
         val infos = listTerminalInfos()
         val wired = infos.filter { it.kind == ReaderKind.USB && !isGhostOrBleSoftDevice(it.name) }
         val found = pickPreferredContactless(wired) != null
@@ -129,10 +133,14 @@ class DesktopPcscCardReader {
     fun hasUsbReader(): Boolean = hasWiredReader()
 
     fun firstUsbTerminalName(): String? =
-        preferredWiredTerminal()?.name
+        if (!isWindowsOs()) {
+            listTerminalInfos().firstOrNull { it.kind == ReaderKind.USB }?.name
+        } else {
+            preferredWiredTerminal()?.name
+        }
 
     fun readerName(): String = selectTerminal(null)?.name ?: tr {
-        if (PcscContext.isAvailable()) getString(Res.string.desktop_pcsc_no_reader)
+        if (isPcscAvailable()) getString(Res.string.desktop_pcsc_no_reader)
         else getString(Res.string.desktop_pcsc_unavailable)
     }
 
@@ -227,14 +235,14 @@ class DesktopPcscCardReader {
 
     suspend fun readUid(settings: SettingsManager? = null): UidReadResult = accessMutex.withLock {
         withContext(Dispatchers.IO) {
-            if (!PcscContext.isAvailable()) {
+            if (!isPcscAvailable()) {
                 return@withContext UidReadResult.Fatal(
                     getString(Res.string.desktop_pcsc_library_unavailable)
                 )
             }
             var terminal = selectTerminal(settings)
             if (terminal == null && hasWiredReader()) {
-                PcscContext.refresh()
+                refreshPcscListing()
                 terminal = selectTerminal(settings)
             }
             if (terminal == null) return@withContext UidReadResult.NoReader
@@ -264,7 +272,7 @@ class DesktopPcscCardReader {
         bleOnly: Boolean
     ): DiagnosticResult {
         val details = StringBuilder()
-        if (!PcscContext.isAvailable()) {
+        if (!isPcscAvailable()) {
             return DiagnosticResult(
                 success = false,
                 details = buildString {
@@ -276,7 +284,7 @@ class DesktopPcscCardReader {
             )
         }
         // Force a context refresh so a just-plugged reader is visible.
-        PcscContext.refresh()
+        refreshPcscListing()
         val terminals = listTerminalInfos()
         if (terminals.isEmpty()) {
             val emptyMsg = if (bleOnly) {
@@ -462,7 +470,39 @@ class DesktopPcscCardReader {
         }
     }
 
+    private fun isPcscAvailable(): Boolean =
+        if (isWindowsOs()) PcscContext.isAvailable() else ensureClassicPcscProvider()
+
+    private fun refreshPcscListing() {
+        if (isWindowsOs()) {
+            PcscContext.refresh()
+        }
+        // macOS: TerminalFactory.getDefault() already re-lists CryptoTokenKit on each call.
+    }
+
+    /**
+     * macOS / Linux: use [TerminalFactory.getDefault] exactly like the pre-Windows rewrite.
+     * Persistent Winscard contexts and SoftDevice heuristics broke USB discovery on macOS.
+     */
+    private fun ensureClassicPcscProvider(): Boolean = runCatching {
+        if (Security.getProvider(Smartcardio.PROVIDER_NAME) == null) {
+            Security.insertProviderAt(Smartcardio(), 1)
+        }
+        TerminalFactory.getDefault()
+        true
+    }.getOrDefault(false)
+
     private fun listTerminals(): List<CardTerminal> {
+        if (!isWindowsOs()) {
+            lastListError = null
+            return runCatching {
+                ensureClassicPcscProvider()
+                TerminalFactory.getDefault().terminals().list()
+            }.getOrElse { e ->
+                lastListError = e.message ?: e.javaClass.simpleName
+                emptyList()
+            }
+        }
         if (!PcscContext.isAvailable()) {
             lastListError = "PC/SC provider unavailable"
             return emptyList()
@@ -497,6 +537,14 @@ class DesktopPcscCardReader {
     }
 
     private fun selectTerminal(settings: SettingsManager?): CardTerminal? {
+        if (!isWindowsOs()) {
+            val infos = listTerminalInfos()
+            infos.firstOrNull { it.kind == ReaderKind.USB }?.terminal?.let { return it }
+            infos.firstOrNull { it.kind == ReaderKind.OTHER }?.terminal?.let { return it }
+            val savedId = settings?.getExternalBleReaderMac()?.trim().orEmpty()
+            val savedName = settings?.getExternalBleReaderName()?.trim().orEmpty()
+            return selectBleTerminal(savedId, savedName)
+        }
         // Never fall back to ICC-only interfaces — contactless UID needs PICC / non-ICC.
         preferredWiredTerminal()?.terminal?.let { return it }
 
@@ -747,25 +795,57 @@ class DesktopPcscCardReader {
         piccPollingEnsuredAtMs = now
     }
 
+    /**
+     * Windows USB: follow the macOS-proven rhythm (patient presence wait → shared APDU →
+     * reset disconnect). Keep Escape / PN532 only as fallbacks for ACS stacks that beep
+     * without flipping PC/SC card-present.
+     */
     private fun readUidWired(live: CardTerminal, cardWaitMs: Long): UidReadResult {
-        val presenceWait = minOf(cardWaitMs, PRESENCE_PROBE_MS)
-        val cardPresent = waitUntilCardPresent(live, presenceWait)
+        lastProbeNotes += "path=wired-win"
+        val waitMs = maxOf(cardWaitMs, WIRED_CARD_WAIT_MS)
+        val cardPresent = waitUntilCardPresent(live, waitMs)
         lastProbeNotes += "presence=$cardPresent"
-        maybeEnsureAcsPiccPolling(live)
 
-        when (val viaApdu = readUidViaGetDataApdu(live)) {
-            is UidReadResult.Success -> return acceptUid(live, viaApdu.uid)
-            is UidReadResult.Fatal -> return viaApdu
-            is UidReadResult.Retryable -> lastProbeNotes += "getUid=${viaApdu.error}"
-            UidReadResult.NoReader -> lastProbeNotes += "getUid=NoReader"
+        if (cardPresent) {
+            when (val viaApdu = readUidViaGetDataApdu(live, resetReader = true)) {
+                is UidReadResult.Success -> return acceptUid(live, viaApdu.uid)
+                is UidReadResult.Fatal -> return viaApdu
+                is UidReadResult.Retryable -> lastProbeNotes += "getUid=${viaApdu.error}"
+                UidReadResult.NoReader -> lastProbeNotes += "getUid=NoReader"
+            }
+            // Presence flipped but Get UID failed — enable PICC poll + full Escape recovery.
+            maybeEnsureAcsPiccPolling(live)
+            return readUidWiredEscapeFallbacks(live, softFast = false)
         }
-        when (val viaEscape = readUidViaEscapeGetData(live, softFast = false)) {
+
+        // No presence bit: hardware may still have seen a tag (common on Microsoft CCID).
+        // One time-bounded Escape inventory — not the full multi-protocol thrash every idle poll.
+        maybeEnsureAcsPiccPolling(live)
+        return readUidWiredEscapeFallbacks(live, softFast = true).let { fallback ->
+            if (fallback is UidReadResult.Retryable &&
+                (fallback.error == ERR_NO_CARD_ON_READER ||
+                    fallback.error == ERR_ESCAPE_BLOCKED ||
+                    fallback.error == ERR_BLE_SOFTDEVICE_NO_UID ||
+                    fallback.error?.startsWith("PN532") == true)
+            ) {
+                UidReadResult.Retryable(ERR_NO_CARD_PRESENT)
+            } else {
+                fallback
+            }
+        }
+    }
+
+    private fun readUidWiredEscapeFallbacks(
+        live: CardTerminal,
+        softFast: Boolean,
+    ): UidReadResult {
+        when (val viaEscape = readUidViaEscapeGetData(live, softFast = softFast)) {
             is UidReadResult.Success -> return acceptUid(live, viaEscape.uid)
             is UidReadResult.Fatal -> return viaEscape
             is UidReadResult.Retryable -> lastProbeNotes += "escapeUid=${viaEscape.error}"
             UidReadResult.NoReader -> lastProbeNotes += "escapeUid=NoReader"
         }
-        when (val viaPn532 = readUidViaPn532Poll(live, softFast = false)) {
+        when (val viaPn532 = readUidViaPn532Poll(live, softFast = softFast)) {
             is UidReadResult.Success -> return acceptUid(live, viaPn532.uid)
             is UidReadResult.Fatal -> return viaPn532
             is UidReadResult.Retryable -> {
@@ -830,8 +910,14 @@ class DesktopPcscCardReader {
         return UidReadResult.Success(uid)
     }
 
-    private fun isBleishTerminal(name: String): Boolean =
-        isGhostOrBleSoftDevice(name) || classifyTerminal(name) == ReaderKind.BLE
+    private fun isBleishTerminal(name: String): Boolean {
+        // SoftDevice ghost heuristics are Windows-only. On macOS a USB ACR1255U-J1 must use
+        // the classic wired path, not SoftDevice Escape.
+        if (!isWindowsOs()) {
+            return classifyTerminal(name) == ReaderKind.BLE
+        }
+        return isGhostOrBleSoftDevice(name) || classifyTerminal(name) == ReaderKind.BLE
+    }
 
     private fun maybeEnsureAcsPiccPolling(terminal: CardTerminal) {
         val now = System.currentTimeMillis()
@@ -840,18 +926,23 @@ class DesktopPcscCardReader {
         piccPollingEnsuredAtMs = now
     }
 
-    private fun readUidViaGetDataApdu(terminal: CardTerminal): UidReadResult {
+    private fun readUidViaGetDataApdu(
+        terminal: CardTerminal,
+        resetReader: Boolean = false,
+    ): UidReadResult {
         var lastSw: Int? = null
         var lastConnectError: String? = null
         var lastProtocol: String? = null
-        for (protocol in CONNECT_PROTOCOLS) {
+        // Shared protocols first (macOS-style). "direct"/EXCLUSIVE only as last resorts —
+        // opening DIRECT on every empty Windows poll made USB flaky.
+        for (protocol in WIRED_CONNECT_PROTOCOLS) {
             val card = runCatching { terminal.connect(protocol) }.getOrElse { e ->
                 lastConnectError = "$protocol: ${e.message}"
                 null
             } ?: continue
             lastProtocol = protocol
             try {
-                Thread.sleep(POST_CONNECT_DELAY_MS)
+                Thread.sleep(CLASSIC_POST_CONNECT_DELAY_MS)
                 val protocolName = runCatching { card.protocol }.getOrNull()
                 lastProbeNotes += "connect=$protocol${protocolName?.let { "/$it" } ?: ""}"
                 val uidResult = transmitUidApduVariants(card) ?: continue
@@ -861,9 +952,13 @@ class DesktopPcscCardReader {
                     continue
                 }
                 lastProbeNotes += "getUidOk=${uidResult.data.size}b"
+                if (resetReader) {
+                    waitForCardAbsentQuietly(terminal, card)
+                }
                 return UidReadResult.Success(uidResult.data.toHexUid())
             } finally {
-                runCatching { card.disconnect(false) }
+                // Reset (true) rearms ACS USB PICC like the macOS classic path.
+                runCatching { card.disconnect(resetReader) }
             }
         }
         return when {
@@ -995,9 +1090,14 @@ class DesktopPcscCardReader {
     private fun resolveLiveTerminal(terminal: CardTerminal): CardTerminal? {
         val name = terminal.name ?: return null
         listTerminals().firstOrNull { it.name == name }?.let { return it }
-        PcscContext.refresh()
+        refreshPcscListing()
         val refreshed = listTerminals()
         refreshed.firstOrNull { it.name == name }?.let { return it }
+        if (!isWindowsOs()) {
+            return refreshed.firstOrNull {
+                classifyTerminal(it.name.orEmpty()) == ReaderKind.USB
+            } ?: refreshed.firstOrNull()
+        }
         preferredWiredTerminal()?.terminal?.let { return it }
         return refreshed.firstOrNull {
             isAcsFamilyName(it.name) && !isContactInterfaceOnly(it.name)
@@ -1024,13 +1124,13 @@ class DesktopPcscCardReader {
     }
 
     /**
-     * ACS Get UID pseudo-APDU. Prefer Le=00 (max) first — works on Windows Microsoft CCID / ACS;
-     * macOS CryptoTokenKit often needs Le=04. jnasmartcardio does **not** accept "T=CL".
+     * ACS Get UID pseudo-APDU. Try Le=04 then Le=00 (macOS order that also helps Windows ACS),
+     * then remaining Le variants. jnasmartcardio does **not** accept "T=CL" on Windows.
      */
     private fun transmitUidApduVariants(card: Card): ResponseAPDU? {
         val channel = card.basicChannel ?: return null
         var lastResponse: ResponseAPDU? = null
-        for (apduBytes in GET_UID_APDU_VARIANTS) {
+        for (apduBytes in WIRED_GET_UID_APDU_VARIANTS) {
             val response = runCatching { channel.transmit(CommandAPDU(apduBytes)) }.getOrNull()
                 ?: continue
             lastResponse = response
@@ -1060,6 +1160,17 @@ class DesktopPcscCardReader {
 
     private fun classifyTerminal(name: String): ReaderKind {
         val lower = name.lowercase(Locale.US)
+        // macOS: restore the simple classifier that worked with CryptoTokenKit names.
+        // SoftDevice / ICC heuristics are Windows-only — they hide real USB readers on Mac.
+        if (!isWindowsOs()) {
+            return when {
+                lower.contains("bluetooth") || lower.contains(" ble") -> ReaderKind.BLE
+                lower.contains("acr122") || lower.contains("usb") -> ReaderKind.USB
+                lower.contains("acr125") || lower.contains("1255") -> ReaderKind.USB
+                lower.contains("acs") && lower.contains("nfc") -> ReaderKind.USB
+                else -> ReaderKind.OTHER
+            }
+        }
         return when {
             isGhostOrBleSoftDevice(name) -> ReaderKind.BLE
             lower.contains("bluetooth") || lower.contains(" ble") ||
@@ -1077,8 +1188,10 @@ class DesktopPcscCardReader {
     /**
      * ACS Bluetooth Device Management Tool / SoftDevice publishes readers like
      * `ACS ACR1255U-J1-042283 0` even with no USB cable — must not count as USB PICC.
+     * Windows-only: on macOS the same model over USB must stay classified as wired USB.
      */
-    private fun isGhostOrBleSoftDevice(name: String): Boolean = isAcsBleSoftDeviceName(name)
+    private fun isGhostOrBleSoftDevice(name: String): Boolean =
+        isWindowsOs() && isAcsBleSoftDeviceName(name)
 
     /**
      * SoftDevice often only accepts DIRECT and never flips isCardPresent. Send Get Data as Escape.
@@ -1090,7 +1203,7 @@ class DesktopPcscCardReader {
         var escapeOk = false
         val protocols = if (softFast) SOFTDEVICE_CONNECT_PROTOCOLS else PN532_CONNECT_PROTOCOLS
         val delayMs = if (softFast) SOFTDEVICE_POST_CONNECT_MS else POST_CONNECT_DELAY_MS
-        val uidApdus = if (softFast) GET_UID_APDU_FAST else GET_UID_APDU_VARIANTS
+        val uidApdus = if (softFast) GET_UID_APDU_FAST else WIRED_GET_UID_APDU_VARIANTS
         for (protocol in protocols) {
             val card = runCatching { terminal.connect(protocol) }.getOrNull() ?: continue
             try {
@@ -1338,7 +1451,8 @@ class DesktopPcscCardReader {
         private const val CARD_WAIT_MS = 500L
         /** Pre-Windows-rewrite USB poll window (macOS classic path). */
         private const val CLASSIC_CARD_WAIT_MS = 3_000L
-        private const val PRESENCE_PROBE_MS = 200L
+        /** Windows USB presence wait — same patient rhythm as macOS classic. */
+        private const val WIRED_CARD_WAIT_MS = 2_500L
         private const val CARD_PRESENT_POLL_MS = 80L
         private const val DIAGNOSTIC_CARD_WAIT_MS = 12_000L
         private const val DIAGNOSTIC_POLL_MS = 600L
@@ -1376,12 +1490,15 @@ class DesktopPcscCardReader {
         private const val ERR_BLE_SOFTDEVICE_NO_UID =
             "BLE SoftDevice beeps but PC/SC got no UID — wake reader, keep ACS BT link Connected, hold card during Test"
 
-        private val CONNECT_PROTOCOLS = arrayOf(
+        /**
+         * USB shared connects (macOS rhythm without T=CL — rejected by jnasmartcardio on Windows).
+         * Prefer these over DIRECT/EXCLUSIVE so USB PICC is not contended every poll.
+         */
+        private val WIRED_CONNECT_PROTOCOLS = arrayOf(
             "*",
             "T=1",
+            "T=0",
             "direct",
-            "EXCLUSIVE;*",
-            "EXCLUSIVE;direct",
         )
 
         /**
@@ -1402,11 +1519,15 @@ class DesktopPcscCardReader {
             "EXCLUSIVE;direct",
         )
 
-        private val GET_UID_APDU_VARIANTS = arrayOf(
-            byteArrayOf(0xFF.toByte(), 0xCA.toByte(), 0x00, 0x00, 0x00),
+        /**
+         * Le=04 first (macOS-proven), then Le=00 / other lengths for Microsoft CCID / ACS.
+         */
+        private val WIRED_GET_UID_APDU_VARIANTS = arrayOf(
             byteArrayOf(0xFF.toByte(), 0xCA.toByte(), 0x00, 0x00, 0x04),
+            byteArrayOf(0xFF.toByte(), 0xCA.toByte(), 0x00, 0x00, 0x00),
             byteArrayOf(0xFF.toByte(), 0xCA.toByte(), 0x00, 0x01, 0x00),
             byteArrayOf(0xFF.toByte(), 0xCA.toByte(), 0x00, 0x00, 0x08),
+            byteArrayOf(0xFF.toByte(), 0xCA.toByte(), 0x00, 0x00, 0x10),
         )
 
         /** Le=04 first — macOS CryptoTokenKit often needs this (Le=00 → SW=6300). */

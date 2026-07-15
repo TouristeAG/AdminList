@@ -118,11 +118,16 @@ NoctuList/
 Compose Desktop packages must be built **on the target OS** (no cross-compilation):
 
 ```bash
-./gradlew :desktopApp:packageReleaseDmg        # macOS
-./gradlew :desktopApp:packageReleaseMsi        # Windows
-./gradlew :desktopApp:packageReleaseExe        # Windows
-./gradlew :desktopApp:packageReleaseDeb        # Linux
-./gradlew :desktopApp:packageReleaseAppImage   # Linux
+# macOS
+./gradlew :desktopApp:packageReleaseDmg
+
+# Windows
+./gradlew :desktopApp:packageReleaseMsi
+./gradlew :desktopApp:packageReleaseExe
+
+# Linux
+./gradlew :desktopApp:packageReleaseDeb
+./gradlew :desktopApp:packageReleaseAppImage
 ```
 
 Outputs land under `desktopApp/build/compose/packaged/main-release/`.

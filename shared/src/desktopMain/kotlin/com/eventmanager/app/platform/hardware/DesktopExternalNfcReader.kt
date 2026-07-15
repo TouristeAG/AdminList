@@ -4,12 +4,14 @@ import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.platform.UidReadResult
 import com.eventmanager.app.resources.Res
 import com.eventmanager.app.resources.desktop_bluetooth_nfc_reader
+import com.eventmanager.app.resources.desktop_bluetooth_nfc_reader_offline
 import com.eventmanager.app.resources.desktop_no_external_reader
 import com.eventmanager.app.resources.desktop_usb_nfc_reader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.getString
+import java.util.Locale
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -17,13 +19,14 @@ import java.util.concurrent.atomic.AtomicBoolean
  * Desktop external NFC readers: **USB** (ACR122U via PC/SC) and **Bluetooth** (ACR1255U-J1 via
  * PC/SC after OS pairing). USB is preferred when both are connected.
  *
- * Sync status APIs ([isConnected], [isUsbConnected], [readerDescription]) return a **cached**
- * snapshot so Compose / Swing never block on Winscard. Refresh happens on a dedicated daemon
- * thread or via [refreshStatus].
+ * On **macOS/Linux**, status APIs are synchronous (pre-Windows-rewrite behaviour) so a plugged
+ * USB reader is recognised immediately via [TerminalFactory.getDefault].
+ *
+ * On **Windows**, sync getters return a **cached** snapshot so Compose / Swing never block on
+ * Winscard. Refresh happens on a dedicated daemon thread or via [refreshStatus].
  *
  * BLE "ready" = SoftDevice **present in PC/SC**. We deliberately do **not** CONNECT to probe
- * liveness — CONNECT probes race SoftDevice Escape UID polls and make reading slow/unreliable.
- * SoftDevice typically disappears from PC/SC when Bluetooth is down / reader asleep.
+ * liveness on Windows — CONNECT probes race SoftDevice Escape UID polls.
  */
 object DesktopExternalNfcReader {
 
@@ -68,6 +71,9 @@ object DesktopExternalNfcReader {
     }
 
     fun isUsbConnected(): Boolean {
+        if (!isWindowsOs()) {
+            return pcsc.hasUsbReader()
+        }
         scheduleRefresh(settings = null)
         return snapshot.usbConnected
     }
@@ -76,6 +82,12 @@ object DesktopExternalNfcReader {
         resolveBleReaderId(settings).isNotBlank()
 
     fun isBleAvailable(settings: SettingsManager): Boolean {
+        if (!isWindowsOs()) {
+            return pcsc.findBleTerminal(
+                resolveBleReaderId(settings),
+                settings.getExternalBleReaderName(),
+            ) != null
+        }
         scheduleRefresh(settings)
         return snapshot.bleAvailable
     }
@@ -83,16 +95,45 @@ object DesktopExternalNfcReader {
     fun isBleLinkActive(settings: SettingsManager): Boolean = isBleAvailable(settings)
 
     fun bleLinkState(settings: SettingsManager): BleLinkState {
+        if (!isWindowsOs()) {
+            return when {
+                !isBleConfigured(settings) -> BleLinkState.NotConfigured
+                isBleAvailable(settings) -> BleLinkState.Ready
+                else -> BleLinkState.Offline
+            }
+        }
         scheduleRefresh(settings)
         return snapshot.bleLinkState
     }
 
     fun isConnected(settings: SettingsManager): Boolean {
+        if (!isWindowsOs()) {
+            return isUsbConnected() || isBleAvailable(settings)
+        }
         scheduleRefresh(settings)
         return snapshot.usbConnected || snapshot.bleAvailable
     }
 
     fun readerDescription(settings: SettingsManager): String {
+        if (!isWindowsOs()) {
+            return runBlocking {
+                when {
+                    isUsbConnected() -> pcsc.firstUsbTerminalName()
+                        ?: getString(Res.string.desktop_usb_nfc_reader)
+                    isBleAvailable(settings) -> {
+                        settings.getExternalBleReaderName().ifBlank {
+                            pcsc.findBleTerminal(
+                                resolveBleReaderId(settings),
+                                settings.getExternalBleReaderName(),
+                            )?.name.orEmpty()
+                        }.ifBlank { getString(Res.string.desktop_bluetooth_nfc_reader) }
+                    }
+                    isBleConfigured(settings) -> settings.getExternalBleReaderName()
+                        .ifBlank { getString(Res.string.desktop_bluetooth_nfc_reader_offline) }
+                    else -> getString(Res.string.desktop_no_external_reader)
+                }
+            }
+        }
         scheduleRefresh(settings)
         val cached = snapshot.description
         if (cached.isNotBlank() || snapshot.initialized) return cached
@@ -109,6 +150,43 @@ object DesktopExternalNfcReader {
      * the sync getters when an up-to-date value is required immediately.
      */
     suspend fun refreshStatus(settings: SettingsManager?): StatusSnapshot = withContext(Dispatchers.IO) {
+        if (!isWindowsOs()) {
+            // Live synchronous snapshot for macOS — no deferred cache.
+            val usbConnected = pcsc.hasUsbReader()
+            val usbName = pcsc.firstUsbTerminalName()
+            val bleConfigured = settings != null && isBleConfigured(settings)
+            val bleId = settings?.let { resolveBleReaderIdFromSettings(it) }.orEmpty()
+            val bleName = settings?.getExternalBleReaderName().orEmpty()
+            val bleTerminal = if (settings != null && (bleId.isNotBlank() || bleName.isNotBlank())) {
+                pcsc.findBleTerminal(bleId, bleName)
+            } else {
+                null
+            }
+            val bleLive = bleTerminal != null
+            val description = when {
+                usbConnected -> usbName ?: getString(Res.string.desktop_usb_nfc_reader)
+                bleLive -> bleName.ifBlank { bleTerminal?.name.orEmpty() }
+                    .ifBlank { getString(Res.string.desktop_bluetooth_nfc_reader) }
+                else -> getString(Res.string.desktop_no_external_reader)
+            }
+            snapshot = StatusSnapshot(
+                usbConnected = usbConnected,
+                usbName = usbName,
+                bleConfigured = bleConfigured,
+                blePcscPresent = bleLive,
+                bleAvailable = bleLive,
+                bleLinkState = when {
+                    !bleConfigured -> BleLinkState.NotConfigured
+                    bleLive -> BleLinkState.Ready
+                    else -> BleLinkState.Offline
+                },
+                bleTerminalName = bleTerminal?.name,
+                description = description,
+                atMs = System.currentTimeMillis(),
+                initialized = true,
+            )
+            return@withContext snapshot
+        }
         refreshBlocking(settings, force = true)
         snapshot
     }
@@ -163,6 +241,7 @@ object DesktopExternalNfcReader {
         resolveBleReaderIdFromSettings(settings)
 
     private fun scheduleRefresh(settings: SettingsManager?, force: Boolean = false) {
+        if (!isWindowsOs()) return
         val now = System.currentTimeMillis()
         val age = now - snapshot.atMs
         if (!force && snapshot.initialized && age < CACHE_TTL_MS) return
@@ -235,6 +314,9 @@ object DesktopExternalNfcReader {
         if (saved.isNotEmpty()) return saved
         return pcsc.singleAutoBleTerminalId().orEmpty()
     }
+
+    private fun isWindowsOs(): Boolean =
+        System.getProperty("os.name").orEmpty().lowercase(Locale.US).contains("win")
 
     private const val CACHE_TTL_MS = 1_200L
 }

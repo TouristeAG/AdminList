@@ -64,6 +64,7 @@ import androidx.compose.ui.window.Dialog
 import com.eventmanager.app.data.models.*
 import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.data.utils.PosCartLine
+import com.eventmanager.app.data.utils.PosPaymentBreakdown
 import com.eventmanager.app.data.utils.computePosPayment
 import com.eventmanager.app.data.utils.formatMoney
 import com.eventmanager.app.platform.LocalPlatformContext
@@ -277,6 +278,9 @@ fun PosScreen(
     var scanFlashNonce by remember { mutableIntStateOf(0) }
     var pendingProfileSwitch by remember { mutableStateOf<PosPendingProfileSwitch?>(null) }
     var pendingCashConfirmation by remember { mutableStateOf(false) }
+    /** Frozen amounts for the cash dialog — live [paymentPreview] mutates after the sale debits credit. */
+    var cashConfirmSnapshot by remember { mutableStateOf<PosPaymentBreakdown?>(null) }
+    var cashConfirmBarDiscount by remember { mutableIntStateOf(0) }
 
     val cardReader = remember(platformContext) { createCardReaderService(platformContext) }
     var nfcAvailability by remember { mutableStateOf(cardReader.getNfcInputAvailability()) }
@@ -418,18 +422,24 @@ fun PosScreen(
         if (!canValidate) return
         val vol = customerVolunteer
         val gst = customerGuest
+        val cartSnapshot = paymentCartLines
+        val discountSnapshot = paymentBarDiscount
+        val venueSnapshot = selectedVenue
+        // Close cash dialog first — otherwise live paymentPreview recomputes after the debit
+        // and the still-open dialog flashes wrong "unexplained" amounts.
+        pendingCashConfirmation = false
+        cashConfirmSnapshot = null
         isProcessing = true
         scope.launch {
             val result = viewModel.completePosSale(
                 holderType = if (vol != null) AccountHolderType.VOLUNTEER else AccountHolderType.GUEST,
                 holderId = vol?.id ?: gst!!.nanoId,
                 holderName = vol?.name ?: gst!!.name,
-                cart = paymentCartLines,
-                barDiscountPercent = paymentBarDiscount,
-                posVenueName = selectedVenue,
+                cart = cartSnapshot,
+                barDiscountPercent = discountSnapshot,
+                posVenueName = venueSnapshot,
             )
             isProcessing = false
-            pendingCashConfirmation = false
             showResult = PosResultState.Success(result)
         }
     }
@@ -437,6 +447,8 @@ fun PosScreen(
     fun validateSale() {
         if (!canValidate) return
         if (paymentPreview.cashOrCardDue > 0) {
+            cashConfirmSnapshot = paymentPreview
+            cashConfirmBarDiscount = paymentBarDiscount
             pendingCashConfirmation = true
             return
         }
@@ -472,14 +484,18 @@ fun PosScreen(
     }
 
     if (pendingCashConfirmation) {
+        val snapshot = cashConfirmSnapshot ?: paymentPreview
         PosCashPaymentDialog(
-            creditPaid = paymentPreview.creditPaid,
-            cashDue = paymentPreview.cashOrCardDue,
-            cashDueBeforeDiscount = paymentPreview.cashOrCardBeforeDiscount,
-            barDiscountPercent = paymentBarDiscount,
+            creditPaid = snapshot.creditPaid,
+            cashDue = snapshot.cashOrCardDue,
+            cashDueBeforeDiscount = snapshot.cashOrCardBeforeDiscount,
+            barDiscountPercent = cashConfirmBarDiscount,
             currencyCode = currencyCode,
             onConfirm = { executeSale() },
-            onCancel = { pendingCashConfirmation = false },
+            onCancel = {
+                pendingCashConfirmation = false
+                cashConfirmSnapshot = null
+            },
         )
     }
 
@@ -815,29 +831,8 @@ private fun PosResultOverlay(
                     fontWeight = FontWeight.SemiBold,
                     textAlign = TextAlign.Center
                 )
-                if (result.cashOrCardDue > 0) {
-                    val barDiscountApplied = result.barDiscountPercent > 0 &&
-                        result.cashOrCardBeforeDiscount > result.cashOrCardDue + 0.001
-                    if (barDiscountApplied) {
-                        Text(
-                            formatMoney(result.cashOrCardBeforeDiscount, currencyCode),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough,
-                            textAlign = TextAlign.Center,
-                        )
-                    }
-                    Text(
-                        stringResource(
-                            Res.string.pos_pay_cash_card,
-                            formatMoney(result.cashOrCardDue, currencyCode),
-                        ),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.primary,
-                        textAlign = TextAlign.Center,
-                    )
-                }
+                // Cash was already confirmed in PosCashPaymentDialog — don't re-prompt "Pay …".
+                // Only show remaining account credit after a successful debit.
                 if (result.creditPaid > 0) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
@@ -854,6 +849,17 @@ private fun PosResultOverlay(
                             textAlign = TextAlign.Center,
                         )
                     }
+                } else if (result.cashOrCardDue > 0) {
+                    Text(
+                        stringResource(
+                            Res.string.pos_report_preview_cash,
+                            formatMoney(result.cashOrCardDue, currencyCode),
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                    )
                 }
                 Spacer(Modifier.height(4.dp))
                 Button(
