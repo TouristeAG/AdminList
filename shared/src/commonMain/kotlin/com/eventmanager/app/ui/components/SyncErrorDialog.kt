@@ -554,8 +554,16 @@ private fun getErrorAdviceResId(errorMessage: String): StringResource {
         }
         errorMessage.contains("permission", ignoreCase = true) ||
         errorMessage.contains("forbidden", ignoreCase = true) ||
-        errorMessage.contains("403", ignoreCase = true) -> {
-            Res.string.sync_advice_permission
+        errorMessage.contains("403", ignoreCase = true) ||
+        errorMessage.contains("PERMISSION_DENIED", ignoreCase = true) ||
+        errorMessage.contains("Missing or insufficient permissions", ignoreCase = true) -> {
+            if (errorMessage.contains("service account", ignoreCase = true) ||
+                errorMessage.contains("spreadsheet", ignoreCase = true)
+            ) {
+                Res.string.sync_advice_permission
+            } else {
+                Res.string.sync_advice_firebase_permission
+            }
         }
         errorMessage.contains("network", ignoreCase = true) ||
         errorMessage.contains("connection", ignoreCase = true) ||

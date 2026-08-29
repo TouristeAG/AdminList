@@ -24,10 +24,13 @@ import com.eventmanager.app.data.sync.settingsManagerFor
 import com.eventmanager.app.ui.utils.GuestListDefaultZoneId
 import com.eventmanager.app.ui.utils.isTablet
 import com.eventmanager.app.ui.utils.rememberGuestListEffectiveToday
+import com.eventmanager.app.ui.components.FirebaseOrgSwitcher
+import com.eventmanager.app.ui.components.FirebaseOrgSwitcherPlacement
 import com.eventmanager.app.ui.components.PeopleCounter
 import com.eventmanager.app.ui.components.StatCardV2
 import com.eventmanager.app.ui.components.SyncStatusPill
 import com.eventmanager.app.ui.components.BackgroundAnimationStyle
+import com.eventmanager.app.ui.components.DashboardClockCard
 import com.eventmanager.app.ui.components.billeterieBackgroundAwareContainerColor
 import com.eventmanager.app.ui.components.billeterieBackgroundAwareTopAppBarColors
 import com.eventmanager.app.ui.components.posBackgroundAwareContainerColor
@@ -53,6 +56,7 @@ fun BilleterieHomeScreen(
     val settingsManager = remember { settingsManagerFor(platformContext) }
     val isPhone = !isTablet()
     val isPeopleCounterVisible = settingsManager.isPeopleCounterVisible()
+    val isClockVisible = settingsManager.isBilleterieClockVisible()
     val dateChangeOffsetHours = remember { settingsManager.getDateChangeOffsetHours() }
     val guestListZone = GuestListDefaultZoneId
     val guestListEffectiveToday = rememberGuestListEffectiveToday(
@@ -105,6 +109,12 @@ fun BilleterieHomeScreen(
                     }
                 },
                 actions = {
+                    if (!isPhone) {
+                        FirebaseOrgSwitcher(
+                            viewModel = viewModel,
+                            placement = FirebaseOrgSwitcherPlacement.TopBarBeforeSync,
+                        )
+                    }
                     SyncStatusPill(viewModel = viewModel)
                     IconButton(onClick = onOpenSettings) {
                         Icon(Icons.Default.Settings, contentDescription = stringResource(Res.string.settings_title))
@@ -133,6 +143,28 @@ fun BilleterieHomeScreen(
                 }
             )
         ) {
+            if (isClockVisible) {
+                DashboardClockCard(
+                    settingsManager = settingsManager,
+                    isPhone = isPhone,
+                    trailingContent = if (isPhone) {
+                        {
+                            FirebaseOrgSwitcher(
+                                viewModel = viewModel,
+                                placement = FirebaseOrgSwitcherPlacement.DashboardClockRow,
+                            )
+                        }
+                    } else {
+                        null
+                    },
+                )
+            } else if (isPhone) {
+                FirebaseOrgSwitcher(
+                    viewModel = viewModel,
+                    placement = FirebaseOrgSwitcherPlacement.BilleterieContent,
+                )
+            }
+
             val compactStats = isPeopleCounterVisible
             val statSpacing = if (compactStats) {
                 if (isPhone) 8.dp else 10.dp

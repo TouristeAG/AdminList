@@ -53,4 +53,10 @@ interface AccountTransferDao {
 
     @Query("DELETE FROM account_transfers")
     suspend fun deleteAllAccountTransfers()
+
+    @Query("DELETE FROM account_transfers WHERE firebaseOrgId = :orgId")
+    suspend fun deleteAllForOrg(orgId: String)
+
+    @Query("DELETE FROM account_transfers WHERE firebaseOrgId != '' AND firebaseOrgId NOT IN (:orgIds)")
+    suspend fun deleteAllNotInOrgs(orgIds: List<String>)
 }

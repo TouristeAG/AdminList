@@ -191,6 +191,8 @@
     <string name="system_is_in_light_mode">Patet modus est ratio</string>
     <string name="people_counter_visibility_title">Afficher compteur personususnes</string>
     <string name="people_counter_visibility_description">Afficher vel Cela compteur personususnes in paginade accueil</string>
+    <string name="billeterie_clock_visibility_title">Afficher horologium</string>
+    <string name="billeterie_clock_visibility_description">Afficher carta diei et horae in accueil billetterie (sicut tabula admin)</string>
     <string name="statistics_visibility_title">Afficher graphicums statistica</string>
     <string name="statistics_visibility_description">Afficher vel Cela section ex graphicums statistica in paginade accueil</string>
     <string name="scroll_behavior_title">Scrolling mores pro administratione paginarum</string>
@@ -374,6 +376,7 @@
     <string name="pos_manual_amount">Summa manualis</string>
     <string name="pos_cart_title">Cistella</string>
     <string name="pos_validate_sale">Confirma venditionem</string>
+    <string name="pos_sale_processing">Venditio in cursu…</string>
     <string name="pos_sale_success">Venditio perfecta!</string>
     <string name="pos_sale_remaining_credit">Creditum reliquum: %1$s</string>
     <string name="pos_remaining_credit_label">Creditum reliquum</string>
@@ -600,6 +603,14 @@
     <string name="last_update_days_ago">il y a %1$d j</string>
     <string name="last_update_line">Mise ad dies %1$s</string>
     <string name="last_update_none_line">Mise ad dies —</string>
+    <string name="firebase_pill_live">Firebase · vivum</string>
+    <string name="firebase_pill_line">Firebase — %1$s</string>
+    <string name="firebase_pill_pending">Firebase · %1$d pendens</string>
+    <string name="firebase_pill_pull">Firebase · omnibus 30 s</string>
+    <string name="firebase_pill_offline">Firebase · ab offline</string>
+    <string name="firebase_pill_not_setup">Firebase · non configuratum</string>
+    <string name="firebase_pill_refresh_cd">Sync cum Firebase nunc</string>
+
     <string name="sync_pill_minutes_ago">il y a %1$d min</string>
     <string name="sync_pill_hours_ago">il y a %1$d h</string>
     <string name="sync_pill_hours_minutes_ago">il y a %1$d h %2$d min</string>
@@ -1230,6 +1241,289 @@
     
     <!-- Settings Categories -->
     <string name="settings_category_sync">Synchronisation &amp; Data</string>
+    <string name="setup_choose_backend_title">Elige backend synchronizationis</string>
+    <string name="setup_choose_backend_description">Elige quomodo instrumenta institutionis tua data communicant. Migrare potes postea ex Optionibus Admin.</string>
+    <string name="setup_backend_sheets">Google Sheets (classicus)</string>
+    <string name="setup_backend_firebase">Firebase (tempore reali, commendatus pro POS)</string>
+    <string name="setup_firebase_title">Connectere ad Firebase</string>
+    <string name="setup_firebase_description">Sequere gradus infra: elige organisationem, incolla Firebase project details, deinde sign in cum Google.</string>
+    <string name="setup_firebase_auth_hint">Sign in debet succedere ante primam sync. Utere eodem Google ratione in omni instrumento admin.</string>
+    <string name="firebase_org_id_label">ID organisationis</string>
+    <string name="firebase_org_id_hint">Nomen commune institutionis tuae (exemplum: noctulist-club). Idem ID in omni instrumento.</string>
+    <string name="firebase_configured_orgs_title">Organizationes</string>
+    <string name="firebase_configured_orgs_body">Adde omnem Firebase org ID in hoc projectu hospitatam. Quaelibet org habet propriam basem sub orgs/{orgId}.</string>
+    <string name="firebase_configured_org_add">Adde organizationem</string>
+    <string name="firebase_configured_org_remove_cd">Remove organizationem</string>
+    <string name="firebase_configured_org_color_cd">Color organizationis</string>
+    <string name="firebase_configured_org_duplicate">Hic org ID iam in indice est.</string>
+    <string name="firebase_org_switcher_cd">Muta organizationem</string>
+    <string name="firebase_org_switching">Mutatio organizationis…</string>
+    <string name="firebase_org_all">Omnes</string>
+    <string name="admin_org_picker_title">Elige organizationem pro Admin</string>
+    <string name="admin_org_picker_message">Modus combinatus in Admin non praesto est. Elige organizationem administrandam.</string>
+    <string name="firebase_sync_title">Sync Firebase</string>
+    <string name="firebase_sync_subtitle">Sync tempore reali pro hospitibus, voluntariis, POS et instrumentis portae.</string>
+    <string name="firebase_settings_intro">Sequere gradus infra. Utere guide ? si opus est auxilium in Firebase Console.</string>
+    <string name="firebase_settings_section_devices">Alia instrumenta</string>
+    <string name="firebase_settings_section_access">Accessus &amp; turma</string>
+    <string name="firebase_settings_section_optional">Optionale</string>
+    <string name="firebase_status_ready">Paratus — sign in et connecté</string>
+    <string name="firebase_status_need_sign_in">Fere paratus — sign in cum Google</string>
+    <string name="firebase_status_need_config">Configuratio incompleta — imple campos infra</string>
+    <string name="firebase_status_signed_in_as">Sign in ut %1$s</string>
+    <string name="firebase_status_not_signed_in">Non sign in</string>
+    <string name="firebase_step_org_title">1. Organisatio tua</string>
+    <string name="firebase_step_org_body">Hic ID omnes apparatus eiusdem institutionis in Firestore colligit.</string>
+    <string name="firebase_step_project_title">2. Projectum Google Cloud</string>
+    <string name="firebase_step_project_body">Copia Project ID, Application ID, API key, Web client ID et (Desktop) Web client secret. Aperi guide ? et elige Firebase Console vel Google Cloud Console.</string>
+    <string name="firebase_step_project_where">Solum projectum Firebase/Google Cloud institutionis. Ne utaris JSON OAuth Gmail Desktop developer pro Sign-In.</string>
+    <string name="firebase_project_id_label">ID projecti</string>
+    <string name="firebase_application_id_label">ID applicationis</string>
+    <string name="firebase_api_key_label">Clavis API</string>
+    <string name="firebase_web_client_id_label">ID client Web</string>
+    <string name="firebase_web_client_id_hint">OAuth 2.0 Web client ID institutionis (Firebase Google Sign-In). Non JSON OAuth Gmail Desktop developer.</string>
+    <string name="firebase_web_client_secret_label">Secret client Web</string>
+    <string name="firebase_web_client_secret_hint">Secret client Web institutionis (Desktop + Android). URI redirectionis auctorizatae (non origines JavaScript): Desktop — http://localhost:8889/Callback (et :8888, :8765, :9090). Android — com.eventmanager.app:/firebaseoauth2callback (sine SHA-1).</string>
+    <string name="firebase_step_signin_title">3. Google Sign-In (connexio)</string>
+    <string name="firebase_step_signin_body">Auctoriza hoc instrumentum. Primum ratio admin fit administrator organisationis.</string>
+    <string name="firebase_sign_in">Sign in cum Google</string>
+    <string name="firebase_sign_out">Exi (sign out)</string>
+    <string name="firebase_checklist_title">Antequam procedas</string>
+    <string name="firebase_checklist_org">ID organisationis impletum</string>
+    <string name="firebase_checklist_project">Project ID, Application ID et API key impleta</string>
+    <string name="firebase_checklist_auth">Ratio Google sign in</string>
+    <string name="firebase_advanced_project">Monstra project details</string>
+    <string name="firebase_hide_project">Celare project details</string>
+    <string name="firebase_reveal_secrets">Monstra secreta projecti</string>
+    <string name="firebase_hide_secrets">Celare secreta projecti</string>
+    <string name="firebase_config_paste_label">Incolla config web Firebase</string>
+    <string name="firebase_config_paste_hint">Incolla config SDK web Firebase Console (apiKey, appId, projectId). Solum adminibus opus est.</string>
+    <string name="firebase_config_paste_apply">Applica config incollatam</string>
+    <string name="firebase_join_qr_title">Invita alia instrumenta (QR)</string>
+    <string name="firebase_join_qr_body">Alia instrumenta scan hoc codicem in Setup → Join. Secreta non monstrantur in illis instrumentis.</string>
+    <string name="firebase_join_qr_need_config">Imple primum org ID et optiones projecti ut generes QR join.</string>
+    <string name="firebase_join_copy_code">Copia codicem join</string>
+    <string name="firebase_join_code_copied">Codex join copiatus</string>
+    <string name="firebase_join_scan_title">Join cum QR vel codice</string>
+    <string name="firebase_join_scan_body">Scan QR admin vel incolla codicem join. Secreta projecti manent celata in hoc instrumento.</string>
+    <string name="firebase_join_scan">Scan QR join</string>
+    <string name="firebase_join_paste_label">Codex join</string>
+    <string name="firebase_join_paste_code">Applica codicem join</string>
+    <string name="firebase_join_received">Configuratio Firebase recepta — sign in cum Google ut procedas</string>
+    <string name="firebase_join_wizard_option">Join institutionem existentem (QR)</string>
+    <string name="firebase_join_wizard_option_body">Scan QR join admin. Non opus est scribere API keys.</string>
+    <string name="firebase_create_new_option">Configura Firebase novum (admin)</string>
+    <string name="firebase_project_configured_hidden">Projectum Firebase configuratum (details celati)</string>
+    <string name="firebase_team_title">Invita collegas (roles &amp; permissiones)</string>
+    <string name="firebase_team_body">Quisque qui Firebase utitur debet registrari ut membrum org cum role. Sine hoc Google Sign-In succedit sed Firestore omnes lectiones et scripturas bloqueat.</string>
+    <string name="firebase_team_steps">1. Rogo aperire hanc app → Sync settings → Sign in cum Google semel.
+2. Copia eorum Firebase UID (Firebase Console → Authentication → Users, vel ex instrumento post sign in).
+3. Incolla UID infra, adde email si scis, deinde tange buttonem role.</string>
+    <string name="firebase_team_roles_heading">Quid permittit quaeque role</string>
+    <string name="firebase_team_role_admin_desc">Admin — optiones plenae, migratio, invitare alios, omnia data.</string>
+    <string name="firebase_team_role_door_desc">Porta / billetterie — index hospitum, jobs, loci (Billeterie).</string>
+    <string name="firebase_team_role_pos_desc">POS — venditiones, saldi rationum, transfers (caisse).</string>
+    <string name="firebase_team_show">Invita aliquem / assigna role</string>
+    <string name="firebase_team_not_domains">Non idem ac «Allowed Google email domains» supra: domaines solum filtrant sign in; haec sectio dat accessum ad data institutionis in Firestore.</string>
+    <string name="firebase_email_domains_title">Domaines email Google permittiti</string>
+    <string name="firebase_email_domains_body">Solum rationes Google quarum inscriptio in uno horum domainum finit potest sign in et accedere ad data org. Relinque vacuum ut quaelibet email permittatur.</string>
+    <string name="firebase_email_domains_empty">Nulla restrictio — quaelibet email Google potest sign in (si invitatus / bootstrap).</string>
+    <string name="firebase_email_domains_label">Domaine</string>
+    <string name="firebase_email_domains_hint">Exemplum: aliquid.ch vel @aliquid.ch</string>
+    <string name="firebase_email_domains_add">Adde domaine</string>
+    <string name="firebase_email_domains_remove">Aufer</string>
+    <string name="firebase_section_show">Monstra</string>
+    <string name="firebase_section_hide">Celare</string>
+    <string name="firebase_member_uid_label">Firebase UID collegae</string>
+    <string name="firebase_member_uid_hint">ID unicum ex Firebase Authentication (non email). Requiritur ut accessum des.</string>
+    <string name="firebase_member_email_label">Email Google eorum (commendatum)</string>
+    <string name="firebase_member_email_hint">Uitur ab regulis securitatis et ad membrum recognoscendum in Firebase.</string>
+    <string name="firebase_role_admin">Administrator</string>
+    <string name="firebase_role_door">Porta</string>
+    <string name="firebase_role_pos">Caisse (POS)</string>
+    <string name="firebase_tools_title">Instrumenta extra</string>
+    <string name="firebase_tools_body">Instrumenta optionalia quae non mutant backend vivum tuum.</string>
+    <string name="firebase_migrate_section_title">Mutare backend sync</string>
+    <string name="firebase_migrate_section_body">Movet omnia data institutionis ad alium backend et rogat alia instrumenta reconnectere. Solum admin — elige momentum quietum.</string>
+    <string name="firebase_migrate_to_sheets">Transire ad Google Sheets…</string>
+    <string name="sheets_migrate_to_firebase">Transire ad Firebase…</string>
+    <string name="sheets_migrate_card_title">Mise ad niveau Firebase</string>
+    <string name="sheets_migrate_card_body">Sync tempore reali velocius pro POS et porta. Data Sheets copiata, deinde alia instrumenta rogantur reconnectere.</string>
+    <string name="firebase_tutorial_help_cd">Quomodo creare database Firebase</string>
+    <string name="firebase_tutorial_title">Crea database Firebase tuum</string>
+    <string name="firebase_tutorial_close">Intellexi</string>
+    <string name="firebase_tutorial_intro">Elige unum walkthrough completum infra. Uterque finit cum eisdem valoribus in NoctuList. Praefere Firebase Console si novus es in Google Cloud.</string>
+    <string name="firebase_tutorial_oauth_note">OAuth Gmail/email (JSON Desktop developer) separatum est et non debet reuti pro Firebase Sign-In. Utere Web client ID + secret institutionis ex hoc projecto Firebase.</string>
+    <string name="firebase_tutorial_method_label">Methodus guide</string>
+    <string name="firebase_tutorial_method_firebase">Console Firebase</string>
+    <string name="firebase_tutorial_method_firebase_hint">Commendatum: console.firebase.google.com — screens clariores pro Auth, Firestore et config web. Aperi breviter Cloud Console solum pro secret client Web et redirectionibus localhost.</string>
+    <string name="firebase_tutorial_method_cloud">Console Google Cloud</string>
+    <string name="firebase_tutorial_method_cloud_hint">Pro adminibus iam in console.cloud.google.com (idem projectum ac Sheets). Tamen aperi Firebase semel pro Auth Google et Application ID (appId).</string>
+    <string name="firebase_tutorial_copy_rules">Copia firestore.rules in clipboard</string>
+    <string name="firebase_tutorial_copy_rules_done">Copiatum — incolla in Firestore → Rules, deinde Publish</string>
+    <string name="firebase_tutorial_copy_rules_error">Non potui onerare regulas — aperi firebase/firestore.rules in projecto</string>
+    <string name="firebase_tutorial_fb_step1_title">1. Creare vel aperire projectum Firebase</string>
+    <string name="firebase_tutorial_fb_step1_body">1. Aperi https://console.firebase.google.com et sign in cum ratione Google institutionis quae potest administrare projectum.
+2. Clicca Add project (vel selige existens).
+3. Si iam utaris Google Sheets in projecto Cloud: elige «Use an existing Google Cloud project» et idem projectum — ne crea secundum projectum vacuum.
+4. Analytics est optionale. Fini wizard.
+5. Nota Project ID (Project settings → General). Incollabis in NoctuList.</string>
+    <string name="firebase_tutorial_fb_step2_title">2. Creare Firestore</string>
+    <string name="firebase_tutorial_fb_step2_body">In Firebase Console, idem projectum:
+1. Build → Firestore Database → Create database.
+2. Praefere production mode, regio prope loca tua (EU si requiritur), deinde create.
+3. Ne adde documenta manu — NoctuList creat sub orgs/{orgId}/…</string>
+    <string name="firebase_tutorial_fb_step3_title">3. Publicare regulas securitatis</string>
+    <string name="firebase_tutorial_fb_step3_body">Firebase Console → Build → Firestore → Rules (URL debet continere /firestore/rules — non Realtime Database).
+Selige omnia, incolla regulas NoctuList (button infra), deinde Publish. Sine his regulis instrumenta non possunt secure legere vel scribere.</string>
+    <string name="firebase_tutorial_fb_step4_title">4. Activare Google Sign-In</string>
+    <string name="firebase_tutorial_fb_step4_body">1. Firebase Console → Build → Authentication → Get started (si opus).
+2. Sign-in method → Google → Enable → Save.
+3. In ea screen nota Web client ID quod Firebase monstrat pro Google provider — hoc est Web client institutionis (non Gmail Desktop).
+4. Si Firebase creat automatice Web OAuth client, serva. Ne substitue cum JSON OAuth Gmail developer.</string>
+    <string name="firebase_tutorial_fb_step5_title">5. Copia valores in NoctuList</string>
+    <string name="firebase_tutorial_fb_step5_body">Serva hanc listam apertam.
+
+A) Config web (facillimum)
+• Project settings (gear) → General → Your apps → Web app.
+• Si nulla: Add app → Web (&lt;/&gt;), nickname «NoctuList», skip Hosting.
+• Aperi Config / SDK snippet et copia apiKey, appId, projectId — vel incolla totum snippet in NoctuList «Incolla config web Firebase».
+
+B) Web client ID
+• Authentication → Sign-in method → Google → Web client ID
+  VEL Project settings → General → Your apps / sectio OAuth
+  VEL Cloud Console → APIs &amp; Services → Credentials → OAuth 2.0 Client IDs → type Web application.
+• Incolla in NoctuList → Web client ID.
+
+C) Web client secret (Desktop requiritur)
+• Aperi https://console.cloud.google.com → idem projectum → APIs &amp; Services → Credentials.
+• Aperi eundem Web application client supra.
+• Copia Client secret → NoctuList → Web client secret.
+• NON sub «Authorized JavaScript origins» (origines non possunt habere /Callback).
+Scroll ad «Authorized redirect URIs» et adde OMNIA haec exacte:
+  http://localhost:8889/Callback
+  http://localhost:8888/Callback
+  http://localhost:8765/Callback
+  http://localhost:9090/Callback
+Origines optionales (sine path): http://localhost:8889 etc.
+→ Save, expecta circiter unum minutum, deinde retry Sign-In.
+
+Instrumenta Android → gradus 6. Desktop solum → gradus 7.</string>
+    <string name="firebase_tutorial_fb_step6_title">6. Android (optionale)</string>
+    <string name="firebase_tutorial_fb_step6_body">Skip si Desktop solum.
+1. Firebase Console → Project settings → Add app → Android.
+2. Package name exacte: com.eventmanager.app
+3. Adde SHA-1 debug (requiritur pro Google Sign-In):
+   macOS/Linux:
+   keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android
+   Windows:
+   keytool -list -v -keystore %USERPROFILE%\\.android\\debug.keystore -alias androiddebugkey -storepass android -keypass android
+4. Optionale download google-services.json in app/google-services.json.
+5. In instrumento, adhuc utere Web client ID ex gradu 5 (Android Sign-In eget). Secret solum Desktop.
+
+Si Sign-In defecit: package + SHA-1, Web client ID, Google provider activatus, deinde Sign out / Sign in.</string>
+    <string name="firebase_tutorial_cloud_step1_title">1. Aperire projectum Cloud</string>
+    <string name="firebase_tutorial_cloud_step1_body">1. Aperi https://console.cloud.google.com
+2. Barra superior → project picker → selige projectum institutionis (idem ac Sheets si iam utaris).
+3. Confirma Project ID (chip projecti vel IAM &amp; Admin → Settings). Incollabis in NoctuList.
+
+Liga Firebase semel si opus: https://console.firebase.google.com → Add project → «Use an existing Google Cloud project» → idem projectum. Ne crea projectum vacuum novum.</string>
+    <string name="firebase_tutorial_cloud_step2_title">2. Activare Firestore</string>
+    <string name="firebase_tutorial_cloud_step2_body">Adhuc in Cloud Console, idem projectum:
+1. Menu ☰ → APIs &amp; Services → Library → «Cloud Firestore API» → Enable.
+2. Menu ☰ → Firestore → Create database si rogatur.
+3. Praefere Native / production, regio prope loca, deinde create.
+4. Ne adde documenta manu — NoctuList creat orgs/{orgId}/…</string>
+    <string name="firebase_tutorial_cloud_step3_title">3. Publicare regulas securitatis</string>
+    <string name="firebase_tutorial_cloud_step3_body">Cloud Console → Firestore → Rules (URL debet continere firestore et rules — non Realtime Database).
+Incolla regulas NoctuList (button infra) → Publish.
+Si nullus editor Rules in Cloud UI: Firebase Console → Build → Firestore → Rules → incolla → Publish.</string>
+    <string name="firebase_tutorial_cloud_step4_title">4. Activare Google Sign-In + Web OAuth client</string>
+    <string name="firebase_tutorial_cloud_step4_body">A) Firebase Auth (semel requiritur)
+1. console.firebase.google.com → idem projectum → Authentication → Sign-in method → Google → Enable → Save.
+
+B) Web OAuth client institutionis (non Gmail Desktop)
+1. Cloud Console → APIs &amp; Services → Credentials.
+2. Sub OAuth 2.0 Client IDs aperi (vel crea) client type Web application usatus ab Firebase Auth.
+3. Ne utaris client JSON Gmail Desktop developer pro hoc.
+4. NON sub «Authorized JavaScript origins» (origines non possunt habere /Callback).
+Scroll ad «Authorized redirect URIs» et adde OMNIA haec exacte:
+  http://localhost:8889/Callback
+  http://localhost:8888/Callback
+  http://localhost:8765/Callback
+  http://localhost:9090/Callback
+Origines optionales (sine path): http://localhost:8889 etc.
+→ Save, expecta circiter unum minutum, deinde retry Sign-In.
+5. Copia Client ID et Client secret pro gradu 5.</string>
+    <string name="firebase_tutorial_cloud_step5_title">5. Copia valores in NoctuList</string>
+    <string name="firebase_tutorial_cloud_step5_body">A) Project ID — Cloud project picker / IAM &amp; Admin → Settings.
+
+B) API key — Credentials → API keys (Browser key existens, vel Create credentials → API key semel).
+
+C) Web client ID + secret — Credentials → OAuth 2.0 Client IDs → Web application (gradus 4). Incolla utrumque in NoctuList (secret = Desktop Sign-In).
+
+D) Application ID (appId)
+• Firebase Console → Project settings → General → Your apps → Web.
+• Si nulla: Add app → Web semel, nickname «NoctuList», skip Hosting; copia appId ex config snippet.
+• Vel incolla totam config web Firebase in NoctuList.
+
+Android → gradus 6. Desktop solum → gradus 7.</string>
+    <string name="firebase_tutorial_cloud_step6_title">6. Android Sign-In (sine SHA-1)</string>
+    <string name="firebase_tutorial_cloud_step6_body">Android utitur eodem Web OAuth client ac Desktop — NON opus est Android OAuth client vel SHA-1 fingerprint.
+1. Cloud Console → Credentials → Web application client tuus (gradus 4).
+2. Sub Authorized redirect URIs adde exacte: com.eventmanager.app:/firebaseoauth2callback
+3. In NoctuList in phone/tablet: incolla Web client ID + secret (gradus 5), deinde tange Sign in cum Google (browser aperitur).
+4. Optionale: Firebase → Add Android app / google-services.json non requiritur pro Sign-In.</string>
+    <string name="firebase_tutorial_step7_title">7. Imple NoctuList, deinde migra / connecte</string>
+    <string name="firebase_tutorial_step7_body">In Admin Firebase sync vel dialogo migrationis:
+• Organization ID — nomen breve commune (exemplum: noctulist-club). Idem in omni instrumento.
+• Project ID, Application ID, API key, Web client ID, et in Desktop Web client secret.
+• Vel incolla web config + imple Web client ID/secret, deinde utere join QR pro aliis instrumentis.
+Sign in cum Google (primus admin fit org admin). Solum post Sign-In felicem incipe migrationem si transis ex Sheets. Pares join per QR / follow — non debent retypare secreta.</string>
+    <string name="firebase_tutorial_step8_title">8. Post configurationem</string>
+    <string name="firebase_tutorial_step8_body">In Firestore debes videre orgs/{yourOrgId}/… (guests, members, metadata, etc.). Serva Sheets ut backup donec POS, porta et secundum instrumentum verificata. Billing: mane in free Spark / free tier dum testas; upgrade solum si excedis quotas.</string>
+    <string name="migration_wizard_to_firebase_title">Transire ad Firebase</string>
+    <string name="migration_wizard_to_sheets_title">Transire ad Google Sheets</string>
+    <string name="migration_wizard_intro">Solum admin. Copiamus data tua, mutamus hoc instrumentum, deinde annuntiamus mutationem ut alia reconnectant.</string>
+    <string name="migration_wizard_step_config">Gradus 1 — Connexio target</string>
+    <string name="migration_wizard_step_config_firebase">Inscribe organisationem Firebase et project details, deinde sign in.</string>
+    <string name="migration_wizard_step_config_sheets">Inscribe spreadsheet destinationis et verifica clavem service account iam uploadatam.</string>
+    <string name="migration_wizard_step_run">Gradus 2 — Run migratio</string>
+    <string name="migration_wizard_step_run_body">Serva hanc screen apertam donec finiat. Alia instrumenta monstrabunt prompt reconnect.</string>
+    <string name="migration_wizard_start">Incipe migrationem</string>
+    <string name="migration_wizard_cancel">Abrogare</string>
+    <string name="migration_wizard_cancel_inflight">Stop migratio</string>
+    <string name="migration_wizard_cancel_inflight_hint">Cancel petitum — stop ante backend switch si adhuc possibile.</string>
+    <string name="migration_spreadsheet_id_label">ID schedae computensis</string>
+    <string name="migration_service_account_ok">Clavis service account inventa in hoc instrumento.</string>
+    <string name="migration_service_account_missing">Upload fasciculum JSON service account Google infra.</string>
+    <string name="follow_title">Reconnecte hoc instrumentum</string>
+    <string name="follow_intro">Aliud instrumentum mutavit database institutionis. Inscribe nova connection details ut unlock editing.</string>
+    <string name="follow_target_firebase">Novum backend: Firebase</string>
+    <string name="follow_target_sheets">Novum backend: Google Sheets</string>
+    <string name="follow_migrated_by">Migratio incepta ab %1$s</string>
+    <string name="follow_step_credentials">Inscribe credentials</string>
+    <string name="follow_step_connect">Connecte</string>
+    <string name="follow_connect">Connecte ad novum database</string>
+    <string name="follow_need_sign_in">Sign in primum cum Google, deinde tange Connect.</string>
+    <string name="follow_later">Postea</string>
+    <string name="backend_mismatch_title">Migratio database detecta</string>
+    <string name="backend_mismatch_billeterie_message">Migratio institutionis facta est. Administrator debet aperire Admin in hoc instrumento ut reconfigurat sync.</string>
+    <string name="backend_mismatch_welcome_title">Database institutionis mutatum</string>
+    <string name="backend_mismatch_welcome_body">Aliud instrumentum migravit backend institutionis. Aperi Admin et inscribe nova connection details ut unlock editing.</string>
+    <string name="backend_mismatch_open_admin">Aperi Admin</string>
+    <string name="backend_mismatch_later">Postea</string>
+    <string name="backend_mismatch_soft_lock">Editing clausum dum migratio backend pendet. Aperi Admin ut reconnectas.</string>
+    <string name="sheets_mirror_export_now">Exporta mirror Sheets nunc</string>
+    <string name="sheets_mirror_section_title">Mirror Google Sheets</string>
+    <string name="sheets_mirror_section_body">Export unidirectionalis optionale ad spreadsheet separatum dum Firebase est backend vivum.</string>
+    <string name="sheets_mirror_enabled_label">Activa export mirror Sheets</string>
+    <string name="sheets_mirror_configure_drawer">Configuratio mirror Sheets</string>
+    <string name="sheets_mirror_spreadsheet_id_label">ID schedae mirror</string>
+    <string name="sheets_mirror_interval_label">Intervallum export auto (minuta)</string>
+    <string name="sheets_mirror_interval_hint">0 = export manualis solum. Minimum 5 minuta cum export auto activatus.</string>
+    <string name="sheets_mirror_last_export">Ultimus export mirror: %1$s</string>
+
     <string name="settings_category_appearance">Apparence &amp; Affichage</string>
     <string name="settings_category_localization">Localisation</string>
     <string name="settings_category_animations">Animations &amp; Effets</string>
@@ -1395,6 +1689,7 @@
     <string name="billeterie_scanner_ready">Paratus ad scan…</string>
     <string name="billeterie_scanner_with_invites">+%1$d invitation(s)</string>
     <string name="billeterie_scanner_error">Error</string>
+    <string name="billeterie_scanner_scanned_org">Organizatio: %1$s</string>
     <string name="desktop_billeterie_webcam_section">Codex QR (webcam)</string>
     <string name="desktop_billeterie_nfc_section">Lector NFC</string>
     <string name="desktop_billeterie_nfc_connected">Lector connexa - ad scan</string>
@@ -1444,6 +1739,9 @@
     <string name="admin_setup_error">Deficio creare admin: %1$s</string>
     <string name="admin_setup_qr_title">QR Code Administratoristrator</string>
     <string name="admin_setup_qr_description">Partagez ce Codex QR pro connexio admin. Vous pouvez partager via puga ci-dessous vel entreremail manu.</string>
+    <string name="admin_setup_qr_unavailable">Codex QR generari non potuit. Iterum conare vel NFC utere.</string>
+    <string name="admin_setup_qr_saved">Codex QR meum servavi</string>
+    <string name="admin_setup_access_required">Ante pergendum QR partage vel serva, vel chartam NFC assigna.</string>
     <string name="admin_setup_nfc_assigned">NFC card assignata! Hoc card uti iam potes pro login admin.</string>
     <string name="admin_setup_done">Factum</string>
     <string name="admin_setup_skip">Passer proinstant</string>

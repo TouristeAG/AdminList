@@ -48,9 +48,18 @@ interface JobDao {
     
     @Query("SELECT * FROM jobs WHERE sheetsId = :sheetsId")
     suspend fun getJobBySheetsId(sheetsId: String): Job?
+
+    @Query("SELECT * FROM jobs WHERE jobNanoId = :jobNanoId LIMIT 1")
+    suspend fun getJobByJobNanoId(jobNanoId: String): Job?
     
     @Query("DELETE FROM jobs")
     suspend fun deleteAllJobs()
+
+    @Query("DELETE FROM jobs WHERE firebaseOrgId = :orgId")
+    suspend fun deleteAllForOrg(orgId: String)
+
+    @Query("DELETE FROM jobs WHERE firebaseOrgId != '' AND firebaseOrgId NOT IN (:orgIds)")
+    suspend fun deleteAllNotInOrgs(orgIds: List<String>)
     
     /**
      * Updates all jobs referencing an old volunteer ID to use a new volunteer ID.

@@ -30,7 +30,7 @@ class EventManagerRepository(
 ) {
     // Guest operations
     fun getAllGuests(): Flow<List<Guest>> = guestDao.getAllGuests()
-    suspend fun insertGuest(guest: Guest): Long {
+    suspend fun insertGuest(guest: Guest): Guest {
         // Ensure guest has a valid NanoID before insertion
         val validatedGuest = if (NanoIdGenerator.needsRegeneration(guest.nanoId)) {
             val newId = NanoIdGenerator.ensureValidNanoId(guest.nanoId, guest.name)
@@ -44,7 +44,8 @@ class EventManagerRepository(
         if (existingByNanoId != null) {
             throw IllegalArgumentException("A guest with NanoID '${validatedGuest.nanoId}' already exists")
         }
-        return guestDao.insertGuest(validatedGuest)
+        val rowId = guestDao.insertGuest(validatedGuest)
+        return validatedGuest.copy(id = rowId)
     }
     
     suspend fun updateGuest(guest: Guest) {
@@ -82,12 +83,71 @@ class EventManagerRepository(
 
     suspend fun getGuestByNanoId(nanoId: String): Guest? = guestDao.getGuestByNanoId(nanoId)
 
+    suspend fun getGuestByNanoIdAndOrg(nanoId: String, orgId: String): Guest? =
+        guestDao.getGuestByNanoIdAndOrg(nanoId, orgId)
+
+    suspend fun getVenueByNameAndOrg(name: String, orgId: String): VenueEntity? =
+        venueDao.getVenueByNameAndOrg(name, orgId)
+
+    suspend fun getJobTypeConfigByNameAndOrg(name: String, orgId: String): JobTypeConfig? =
+        jobTypeConfigDao.getJobTypeConfigByNameAndOrg(name, orgId)
+
+    suspend fun getSalesSheetItemByNameAndOrg(name: String, orgId: String): SalesSheetItem? =
+        salesSheetItemDao.getSalesSheetItemByNameAndOrg(name, orgId)
+
+    suspend fun deleteAllDataForOrg(orgId: String) {
+        if (orgId.isBlank()) return
+        guestDao.deleteAllForOrg(orgId)
+        volunteerDao.deleteAllForOrg(orgId)
+        jobDao.deleteAllForOrg(orgId)
+        jobTypeConfigDao.deleteAllForOrg(orgId)
+        venueDao.deleteAllForOrg(orgId)
+        salesSheetItemDao.deleteAllForOrg(orgId)
+        accountTransferDao.deleteAllForOrg(orgId)
+    }
+
+    suspend fun deleteAllDataNotInOrgs(orgIds: List<String>) {
+        if (orgIds.isEmpty()) return
+        guestDao.deleteAllNotInOrgs(orgIds)
+        volunteerDao.deleteAllNotInOrgs(orgIds)
+        jobDao.deleteAllNotInOrgs(orgIds)
+        jobTypeConfigDao.deleteAllNotInOrgs(orgIds)
+        venueDao.deleteAllNotInOrgs(orgIds)
+        salesSheetItemDao.deleteAllNotInOrgs(orgIds)
+        accountTransferDao.deleteAllNotInOrgs(orgIds)
+    }
+
+    suspend fun backfillEmptyOrgIds(activeOrgId: String) {
+        if (activeOrgId.isBlank()) return
+        guestDao.getAllGuests().first()
+            .filter { it.firebaseOrgId.isBlank() }
+            .forEach { guestDao.updateGuest(it.copy(firebaseOrgId = activeOrgId)) }
+        volunteerDao.getAllVolunteers().first()
+            .filter { it.firebaseOrgId.isBlank() }
+            .forEach { volunteerDao.updateVolunteer(it.copy(firebaseOrgId = activeOrgId)) }
+        jobDao.getAllJobs().first()
+            .filter { it.firebaseOrgId.isBlank() }
+            .forEach { jobDao.updateJob(it.copy(firebaseOrgId = activeOrgId)) }
+        jobTypeConfigDao.getAllJobTypeConfigs().first()
+            .filter { it.firebaseOrgId.isBlank() }
+            .forEach { jobTypeConfigDao.updateJobTypeConfig(it.copy(firebaseOrgId = activeOrgId)) }
+        venueDao.getAllVenues().first()
+            .filter { it.firebaseOrgId.isBlank() }
+            .forEach { venueDao.updateVenue(it.copy(firebaseOrgId = activeOrgId)) }
+        salesSheetItemDao.getAllSalesSheetItems().first()
+            .filter { it.firebaseOrgId.isBlank() }
+            .forEach { salesSheetItemDao.updateSalesSheetItem(it.copy(firebaseOrgId = activeOrgId)) }
+        accountTransferDao.getAllAccountTransfersOnce()
+            .filter { it.firebaseOrgId.isBlank() }
+            .forEach { accountTransferDao.updateAccountTransfer(it.copy(firebaseOrgId = activeOrgId)) }
+    }
+
     // Volunteer operations
     fun getAllActiveVolunteers(): Flow<List<Volunteer>> = volunteerDao.getAllActiveVolunteers()
     fun getAllVolunteers(): Flow<List<Volunteer>> = volunteerDao.getAllVolunteers()
     suspend fun getVolunteerById(id: String): Volunteer? = volunteerDao.getVolunteerById(id)
     fun getVolunteersByRank(rank: VolunteerRank): Flow<List<Volunteer>> = volunteerDao.getVolunteersByRank(rank)
-    suspend fun insertVolunteer(volunteer: Volunteer) {
+    suspend fun insertVolunteer(volunteer: Volunteer): Volunteer {
         // Validate and fix invalid NanoID before insertion
         // This is the data access boundary - validation is essential here
         val validatedVolunteer = if (NanoIdGenerator.needsRegeneration(volunteer.id)) {
@@ -127,15 +187,18 @@ class EventManagerRepository(
                 )
                 volunteerDao.insertVolunteer(updated)
                 println("   ✅ Volunteer record updated with Google Sheets NanoID")
+                return updated
             } else {
                 // Same NanoID - just update the data
                 val updated = validatedVolunteer.copy(
                     sheetsId = validatedVolunteer.sheetsId ?: existingVolunteer.sheetsId
                 )
                 volunteerDao.updateVolunteer(updated)
+                return updated
             }
         } else {
             volunteerDao.insertVolunteer(validatedVolunteer)
+            return validatedVolunteer
         }
     }
     
@@ -232,6 +295,8 @@ class EventManagerRepository(
     // Job operations
     fun getAllJobs(): Flow<List<Job>> = jobDao.getAllJobs()
     suspend fun getJobById(id: Long): Job? = jobDao.getJobById(id)
+    suspend fun getJobByJobNanoId(jobNanoId: String): Job? =
+        jobNanoId.takeIf { it.isNotBlank() }?.let { jobDao.getJobByJobNanoId(it) }
     suspend fun insertJob(job: Job): Long = jobDao.insertJob(job)
     suspend fun updateJob(job: Job) = jobDao.updateJob(job)
     suspend fun deleteJob(job: Job) = jobDao.deleteJob(job)

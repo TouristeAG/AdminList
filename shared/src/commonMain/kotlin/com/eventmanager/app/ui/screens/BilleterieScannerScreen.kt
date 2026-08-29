@@ -2,6 +2,7 @@ package com.eventmanager.app.ui.screens
 
 import androidx.compose.runtime.Composable
 import com.eventmanager.app.data.models.*
+import com.eventmanager.app.ui.viewmodel.EventManagerViewModel
 
 @Composable
 expect fun BilleterieScannerScreen(
@@ -10,5 +11,6 @@ expect fun BilleterieScannerScreen(
     jobs: List<Job>,
     jobTypeConfigs: List<JobTypeConfig>,
     onBack: () -> Unit,
-    onConfirmEntry: (Job, Int) -> Unit
+    onConfirmEntry: (Job, Int) -> Unit,
+    viewModel: EventManagerViewModel? = null,
 )

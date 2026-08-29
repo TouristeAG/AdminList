@@ -190,6 +190,8 @@
     <string name="system_is_in_light_mode">系统处于浅色模式</string>
     <string name="people_counter_visibility_title">显示人数计数器</string>
     <string name="people_counter_visibility_description">在首页上显示或隐藏人数计数器</string>
+    <string name="billeterie_clock_visibility_title">显示时钟小组件</string>
+    <string name="billeterie_clock_visibility_description">在票务首页显示日期时间卡片（与管理员仪表板相同）</string>
     <string name="statistics_visibility_title">显示统计图表</string>
     <string name="statistics_visibility_description">在首页上显示或隐藏统计图表区段</string>
     <string name="scroll_behavior_title">管理页面的滚动行为</string>
@@ -513,6 +515,14 @@
     <string name="last_update_days_ago">%1$d 天前</string>
     <string name="last_update_line">更新 · %1$s</string>
     <string name="last_update_none_line">更新 · —</string>
+    <string name="firebase_pill_live">Firebase · 实时</string>
+    <string name="firebase_pill_line">Firebase — %1$s</string>
+    <string name="firebase_pill_pending">Firebase · %1$d 项待处理</string>
+    <string name="firebase_pill_pull">Firebase · 每 30 秒</string>
+    <string name="firebase_pill_offline">Firebase · 离线</string>
+    <string name="firebase_pill_not_setup">Firebase · 未配置</string>
+    <string name="firebase_pill_refresh_cd">立即与 Firebase 同步</string>
+
     <string name="sync_pill_minutes_ago">%1$d 分钟前</string>
     <string name="sync_pill_hours_ago">%1$d 小时前</string>
     <string name="sync_pill_hours_minutes_ago">%1$d 小时 %2$d 分钟前</string>
@@ -1119,6 +1129,289 @@
     
     <!-- Settings Categories -->
     <string name="settings_category_sync">同步与数据</string>
+    <string name="setup_choose_backend_title">选择同步后端</string>
+    <string name="setup_choose_backend_description">选择机构内设备如何共享数据。之后可在管理员设置中迁移。</string>
+    <string name="setup_backend_sheets">Google Sheets（经典）</string>
+    <string name="setup_backend_firebase">Firebase（实时，推荐用于收银）</string>
+    <string name="setup_firebase_title">连接 Firebase</string>
+    <string name="setup_firebase_description">按以下步骤操作：选择组织、粘贴 Firebase 项目详情，然后使用 Google 登录。</string>
+    <string name="setup_firebase_auth_hint">首次同步前必须成功登录。每台管理员设备使用同一 Google 账号。</string>
+    <string name="firebase_org_id_label">组织 ID</string>
+    <string name="firebase_org_id_hint">机构的共享名称（例如：noctulist-club）。每台设备使用相同 ID。</string>
+    <string name="firebase_configured_orgs_title">组织</string>
+    <string name="firebase_configured_orgs_body">添加此 Firebase 项目上托管的每个组织 ID。每个组织的数据位于 orgs/{orgId} 下。</string>
+    <string name="firebase_configured_org_add">添加组织</string>
+    <string name="firebase_configured_org_remove_cd">移除组织</string>
+    <string name="firebase_configured_org_color_cd">组织颜色</string>
+    <string name="firebase_configured_org_duplicate">此组织 ID 已在列表中。</string>
+    <string name="firebase_org_switcher_cd">切换组织</string>
+    <string name="firebase_org_switching">正在切换组织…</string>
+    <string name="firebase_org_all">全部</string>
+    <string name="admin_org_picker_title">选择 Admin 机构</string>
+    <string name="admin_org_picker_message">Admin 中不可用合并视图。请选择要管理的机构。</string>
+    <string name="firebase_sync_title">Firebase 同步</string>
+    <string name="firebase_sync_subtitle">宾客、志愿者、收银和门禁设备的实时同步。</string>
+    <string name="firebase_settings_intro">请按以下步骤操作。如需 Firebase 控制台帮助，请使用 ? 指南。</string>
+    <string name="firebase_settings_section_devices">其他设备</string>
+    <string name="firebase_settings_section_access">访问与团队</string>
+    <string name="firebase_settings_section_optional">可选</string>
+    <string name="firebase_status_ready">就绪 — 已登录并连接</string>
+    <string name="firebase_status_need_sign_in">即将就绪 — 请使用 Google 登录</string>
+    <string name="firebase_status_need_config">设置未完成 — 请填写下方字段</string>
+    <string name="firebase_status_signed_in_as">已登录为 %1$s</string>
+    <string name="firebase_status_not_signed_in">未登录</string>
+    <string name="firebase_step_org_title">1. 您的组织</string>
+    <string name="firebase_step_org_body">此 ID 在 Firestore 中将同一机构的所有设备归为一组。</string>
+    <string name="firebase_step_project_title">2. Google Cloud 项目</string>
+    <string name="firebase_step_project_body">复制 Project ID、Application ID、API key、Web client ID 和（桌面端）Web client secret。打开 ? 指南并选择 Firebase 控制台或 Google Cloud 控制台。</string>
+    <string name="firebase_step_project_where">仅限机构的 Firebase/Google Cloud 项目。请勿将开发者 Gmail 桌面 OAuth JSON 用于登录。</string>
+    <string name="firebase_project_id_label">项目 ID</string>
+    <string name="firebase_application_id_label">应用 ID</string>
+    <string name="firebase_api_key_label">API 密钥</string>
+    <string name="firebase_web_client_id_label">Web 客户端 ID</string>
+    <string name="firebase_web_client_id_hint">机构的 OAuth 2.0 Web 客户端 ID（Firebase Google 登录）。不是开发者 Gmail 桌面 OAuth JSON。</string>
+    <string name="firebase_web_client_secret_label">Web 客户端密钥</string>
+    <string name="firebase_web_client_secret_hint">机构 Web 客户端密钥（桌面 + Android）。已授权重定向 URI（非 JavaScript 来源）：桌面 — http://localhost:8889/Callback（以及 :8888、:8765、:9090）。Android — com.eventmanager.app:/firebaseoauth2callback（无需 SHA-1）。</string>
+    <string name="firebase_step_signin_title">3. Google 登录</string>
+    <string name="firebase_step_signin_body">授权此设备。首个管理员账号将成为组织管理员。</string>
+    <string name="firebase_sign_in">使用 Google 登录</string>
+    <string name="firebase_sign_out">退出登录</string>
+    <string name="firebase_checklist_title">继续之前</string>
+    <string name="firebase_checklist_org">已填写组织 ID</string>
+    <string name="firebase_checklist_project">已填写 Project ID、Application ID 和 API key</string>
+    <string name="firebase_checklist_auth">已登录 Google 账号</string>
+    <string name="firebase_advanced_project">显示项目详情</string>
+    <string name="firebase_hide_project">隐藏项目详情</string>
+    <string name="firebase_reveal_secrets">显示项目密钥</string>
+    <string name="firebase_hide_secrets">隐藏项目密钥</string>
+    <string name="firebase_config_paste_label">粘贴 Firebase Web 配置</string>
+    <string name="firebase_config_paste_hint">粘贴 Firebase 控制台的 Web SDK 配置（apiKey、appId、projectId）。仅管理员需要。</string>
+    <string name="firebase_config_paste_apply">应用粘贴的配置</string>
+    <string name="firebase_join_qr_title">邀请其他设备（二维码）</string>
+    <string name="firebase_join_qr_body">其他设备在设置 → 加入 中扫描此码。那些设备上不显示密钥。</string>
+    <string name="firebase_join_qr_need_config">请先填写组织 ID 和项目选项以生成加入二维码。</string>
+    <string name="firebase_join_copy_code">复制加入码</string>
+    <string name="firebase_join_code_copied">加入码已复制</string>
+    <string name="firebase_join_scan_title">通过二维码或加入码加入</string>
+    <string name="firebase_join_scan_body">扫描管理员二维码或粘贴加入码。此设备上项目密钥保持隐藏。</string>
+    <string name="firebase_join_scan">扫描加入二维码</string>
+    <string name="firebase_join_paste_label">加入码</string>
+    <string name="firebase_join_paste_code">应用加入码</string>
+    <string name="firebase_join_received">已收到 Firebase 配置 — 请使用 Google 登录以继续</string>
+    <string name="firebase_join_wizard_option">加入现有机构（二维码）</string>
+    <string name="firebase_join_wizard_option_body">扫描管理员加入二维码。无需输入 API 密钥。</string>
+    <string name="firebase_create_new_option">设置新 Firebase（管理员）</string>
+    <string name="firebase_project_configured_hidden">Firebase 项目已配置（详情已隐藏）</string>
+    <string name="firebase_team_title">邀请同事（角色与权限）</string>
+    <string name="firebase_team_body">每位使用 Firebase 的人员必须注册为带角色的组织成员。否则 Google 登录会成功，但 Firestore 将阻止所有读写。</string>
+    <string name="firebase_team_steps">1. 请对方打开本应用 → 同步设置 → 使用 Google 登录一次。
+2. 复制其 Firebase UID（Firebase 控制台 → Authentication → Users，或登录后从其设备获取）。
+3. 在下方粘贴 UID，如已知请添加邮箱，然后点击角色按钮。</string>
+    <string name="firebase_team_roles_heading">各角色允许的权限</string>
+    <string name="firebase_team_role_admin_desc">管理员 — 完整设置、迁移、邀请他人、全部数据。</string>
+    <string name="firebase_team_role_door_desc">门禁 / 售票 — 宾客名单、任务、场地（Billeterie）。</string>
+    <string name="firebase_team_role_pos_desc">收银 — 销售、账户余额、转账（caisse）。</string>
+    <string name="firebase_team_show">邀请他人 / 分配角色</string>
+    <string name="firebase_team_not_domains">与上方「允许的 Google 邮箱域名」不同：域名仅过滤登录；此部分授予 Firestore 中机构数据的访问权限。</string>
+    <string name="firebase_email_domains_title">允许的 Google 邮箱域名</string>
+    <string name="firebase_email_domains_body">仅地址以这些域名之一结尾的 Google 账号可登录并访问组织数据。留空则允许任意邮箱。</string>
+    <string name="firebase_email_domains_empty">无限制 — 任意 Google 邮箱可登录（若已邀请 / bootstrap）。</string>
+    <string name="firebase_email_domains_label">域名</string>
+    <string name="firebase_email_domains_hint">示例：example.ch 或 @example.ch</string>
+    <string name="firebase_email_domains_add">添加域名</string>
+    <string name="firebase_email_domains_remove">移除</string>
+    <string name="firebase_section_show">显示</string>
+    <string name="firebase_section_hide">隐藏</string>
+    <string name="firebase_member_uid_label">同事的 Firebase UID</string>
+    <string name="firebase_member_uid_hint">Firebase Authentication 中的唯一 ID（非邮箱）。授予访问权限所必需。</string>
+    <string name="firebase_member_email_label">对方的 Google 邮箱（推荐）</string>
+    <string name="firebase_member_email_hint">供安全规则使用并在 Firebase 中识别成员。</string>
+    <string name="firebase_role_admin">管理员</string>
+    <string name="firebase_role_door">门禁</string>
+    <string name="firebase_role_pos">收银</string>
+    <string name="firebase_tools_title">附加功能</string>
+    <string name="firebase_tools_body">可选工具，不会改变当前活跃后端。</string>
+    <string name="firebase_migrate_section_title">更改同步后端</string>
+    <string name="firebase_migrate_section_body">将所有机构数据迁移到另一后端，并提示其他设备重新连接。仅管理员 — 请选择空闲时段。</string>
+    <string name="firebase_migrate_to_sheets">切换到 Google Sheets…</string>
+    <string name="sheets_migrate_to_firebase">切换到 Firebase…</string>
+    <string name="sheets_migrate_card_title">升级到 Firebase</string>
+    <string name="sheets_migrate_card_body">为收银和门禁提供更快的实时同步。会复制 Sheets 数据，然后提示其他设备重新连接。</string>
+    <string name="firebase_tutorial_help_cd">如何创建 Firebase 数据库</string>
+    <string name="firebase_tutorial_title">创建 Firebase 数据库</string>
+    <string name="firebase_tutorial_close">知道了</string>
+    <string name="firebase_tutorial_intro">在下方选择完整教程。两种方式最终在 NoctuList 中填入相同值。若不熟悉 Google Cloud，建议使用 Firebase 控制台。</string>
+    <string name="firebase_tutorial_oauth_note">Gmail/邮件 OAuth（开发者桌面 JSON）是独立的，不可用于 Firebase 登录。请使用此 Firebase 项目中的机构 Web client ID + 密钥。</string>
+    <string name="firebase_tutorial_method_label">指南方式</string>
+    <string name="firebase_tutorial_method_firebase">Firebase 控制台</string>
+    <string name="firebase_tutorial_method_firebase_hint">推荐：console.firebase.google.com — Auth、Firestore 和 Web 配置界面更清晰。仅需短暂打开 Cloud 控制台获取 Web 客户端密钥和 localhost 重定向。</string>
+    <string name="firebase_tutorial_method_cloud">Google Cloud 控制台</string>
+    <string name="firebase_tutorial_method_cloud_hint">适用于已使用 console.cloud.google.com 的管理员（与 Sheets 同一项目）。仍需打开一次 Firebase 以配置 Google 登录和 Application ID（appId）。</string>
+    <string name="firebase_tutorial_copy_rules">复制 firestore.rules 到剪贴板</string>
+    <string name="firebase_tutorial_copy_rules_done">已复制 — 粘贴到 Firestore → Rules，然后发布</string>
+    <string name="firebase_tutorial_copy_rules_error">无法加载规则 — 请打开项目中的 firebase/firestore.rules</string>
+    <string name="firebase_tutorial_fb_step1_title">1. 创建或打开 Firebase 项目</string>
+    <string name="firebase_tutorial_fb_step1_body">1. 打开 https://console.firebase.google.com，使用可管理项目的机构 Google 账号登录。
+2. 点击添加项目（或选择现有项目）。
+3. 若已在 Cloud 项目上使用 Google Sheets：选择「使用现有 Google Cloud 项目」并选择同一项目 — 勿创建第二个空项目。
+4. Analytics 可选。完成向导。
+5. 记下 Project ID（项目设置 → 常规）。将粘贴到 NoctuList。</string>
+    <string name="firebase_tutorial_fb_step2_title">2. 创建 Firestore</string>
+    <string name="firebase_tutorial_fb_step2_body">在 Firebase 控制台，同一项目：
+1. Build → Firestore Database → 创建数据库。
+2. 建议选择生产模式、靠近场地的区域（如需则选 EU），然后创建。
+3. 请勿手动添加文档 — NoctuList 会在 orgs/{orgId}/… 下创建</string>
+    <string name="firebase_tutorial_fb_step3_title">3. 发布安全规则</string>
+    <string name="firebase_tutorial_fb_step3_body">Firebase 控制台 → Build → Firestore → Rules（URL 须包含 /firestore/rules — 不是 Realtime Database）。
+全选，粘贴 NoctuList 规则（下方按钮），然后发布。无这些规则，设备无法安全读写。</string>
+    <string name="firebase_tutorial_fb_step4_title">4. 启用 Google 登录</string>
+    <string name="firebase_tutorial_fb_step4_body">1. Firebase 控制台 → Build → Authentication → 开始使用（如需要）。
+2. 登录方式 → Google → 启用 → 保存。
+3. 在该界面记下 Firebase 为 Google 提供商显示的 Web client ID — 这是机构 Web 客户端（非 Gmail 桌面）。
+4. 若 Firebase 自动创建 Web OAuth 客户端，请保留。勿替换为开发者 Gmail OAuth JSON。</string>
+    <string name="firebase_tutorial_fb_step5_title">5. 将值复制到 NoctuList</string>
+    <string name="firebase_tutorial_fb_step5_body">保持此清单打开。
+
+A) Web 配置（最简单）
+• 项目设置（齿轮）→ 常规 → 您的应用 → Web 应用。
+• 若无：添加应用 → Web (&lt;/&gt;)，昵称「NoctuList」，跳过 Hosting。
+• 打开 Config / SDK 片段，复制 apiKey、appId、projectId — 或将整段粘贴到 NoctuList「粘贴 Firebase Web 配置」。
+
+B) Web client ID
+• Authentication → 登录方式 → Google → Web client ID
+  或 项目设置 → 常规 → 您的应用 / OAuth 部分
+  或 Cloud 控制台 → APIs &amp; Services → Credentials → OAuth 2.0 Client IDs → Web application 类型。
+• 粘贴到 NoctuList → Web client ID。
+
+C) Web client secret（桌面端必需）
+• 打开 https://console.cloud.google.com → 同一项目 → APIs &amp; Services → Credentials。
+• 打开上方同一 Web application 客户端。
+• 复制 Client secret → NoctuList → Web client secret。
+• 不要填在「Authorized JavaScript origins」（来源不能包含 /Callback）。
+滚动到「Authorized redirect URIs」并精确添加以下全部：
+  http://localhost:8889/Callback
+  http://localhost:8888/Callback
+  http://localhost:8765/Callback
+  http://localhost:9090/Callback
+可选来源（无路径）：http://localhost:8889 等。
+→ 保存，等待约一分钟，然后重试登录。
+
+Android 设备 → 第 6 步。仅桌面 → 第 7 步。</string>
+    <string name="firebase_tutorial_fb_step6_title">6. Android（可选）</string>
+    <string name="firebase_tutorial_fb_step6_body">若仅桌面可跳过。
+1. Firebase 控制台 → 项目设置 → 添加应用 → Android。
+2. 包名须完全一致：com.eventmanager.app
+3. 添加调试 SHA-1（Google 登录所需）：
+   macOS/Linux：
+   keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android
+   Windows：
+   keytool -list -v -keystore %USERPROFILE%\\.android\\debug.keystore -alias androiddebugkey -storepass android -keypass android
+4. 可选：将 google-services.json 下载到 app/google-services.json。
+5. 设备上仍使用第 5 步的 Web client ID（Android 登录需要）。密钥仅用于桌面。
+
+若登录失败：包名 + SHA-1、Web client ID、Google 提供商已启用，然后退出 / 重新登录。</string>
+    <string name="firebase_tutorial_cloud_step1_title">1. 打开 Cloud 项目</string>
+    <string name="firebase_tutorial_cloud_step1_body">1. 打开 https://console.cloud.google.com
+2. 顶部栏 → 项目选择器 → 选择机构项目（若已用 Sheets 则选同一项目）。
+3. 确认 Project ID（项目芯片或 IAM &amp; Admin → Settings）。将粘贴到 NoctuList。
+
+如需要可链接 Firebase：https://console.firebase.google.com → 添加项目 →「使用现有 Google Cloud 项目」→ 同一项目。勿创建全新空项目。</string>
+    <string name="firebase_tutorial_cloud_step2_title">2. 启用 Firestore</string>
+    <string name="firebase_tutorial_cloud_step2_body">仍在 Cloud 控制台，同一项目：
+1. 菜单 ☰ → APIs &amp; Services → Library →「Cloud Firestore API」→ Enable。
+2. 菜单 ☰ → Firestore → 如提示则创建数据库。
+3. 建议选择 Native / 生产、靠近场地的区域，然后创建。
+4. 请勿手动添加文档 — NoctuList 创建 orgs/{orgId}/…</string>
+    <string name="firebase_tutorial_cloud_step3_title">3. 发布安全规则</string>
+    <string name="firebase_tutorial_cloud_step3_body">Cloud 控制台 → Firestore → Rules（URL 须包含 firestore 和 rules — 不是 Realtime Database）。
+粘贴 NoctuList 规则（下方按钮）→ 发布。
+若 Cloud UI 无 Rules 编辑器：Firebase 控制台 → Build → Firestore → Rules → 粘贴 → 发布。</string>
+    <string name="firebase_tutorial_cloud_step4_title">4. 启用 Google 登录 + Web OAuth 客户端</string>
+    <string name="firebase_tutorial_cloud_step4_body">A) Firebase Auth（需完成一次）
+1. console.firebase.google.com → 同一项目 → Authentication → 登录方式 → Google → 启用 → 保存。
+
+B) 机构 Web OAuth 客户端（非 Gmail 桌面）
+1. Cloud 控制台 → APIs &amp; Services → Credentials。
+2. 在 OAuth 2.0 Client IDs 下打开（或创建）Firebase Auth 使用的 Web application 类型客户端。
+3. 勿使用开发者 Gmail 桌面 JSON 客户端。
+4. 不要填在「Authorized JavaScript origins」（来源不能包含 /Callback）。
+滚动到「Authorized redirect URIs」并精确添加以下全部：
+  http://localhost:8889/Callback
+  http://localhost:8888/Callback
+  http://localhost:8765/Callback
+  http://localhost:9090/Callback
+可选来源（无路径）：http://localhost:8889 等。
+→ 保存，等待约一分钟，然后重试登录。
+5. 复制 Client ID 和 Client secret 供第 5 步使用。</string>
+    <string name="firebase_tutorial_cloud_step5_title">5. 将值复制到 NoctuList</string>
+    <string name="firebase_tutorial_cloud_step5_body">A) Project ID — Cloud 项目选择器 / IAM &amp; Admin → Settings。
+
+B) API key — Credentials → API keys（现有浏览器密钥，或 Create credentials → API key 一次）。
+
+C) Web client ID + secret — Credentials → OAuth 2.0 Client IDs → Web application（第 4 步）。两者粘贴到 NoctuList（secret = 桌面登录）。
+
+D) Application ID（appId）
+• Firebase 控制台 → 项目设置 → 常规 → 您的应用 → Web。
+• 若无：添加应用 → Web 一次，昵称「NoctuList」，跳过 Hosting；从配置片段复制 appId。
+• 或将完整 Firebase Web 配置粘贴到 NoctuList。
+
+Android → 第 6 步。仅桌面 → 第 7 步。</string>
+    <string name="firebase_tutorial_cloud_step6_title">6. Android 登录（无需 SHA-1）</string>
+    <string name="firebase_tutorial_cloud_step6_body">Android 使用与桌面相同的 Web OAuth 客户端 — 无需 Android OAuth 客户端或 SHA-1 指纹。
+1. Cloud 控制台 → Credentials → 您的 Web application 客户端（第 4 步）。
+2. 在 Authorized redirect URIs 中精确添加：com.eventmanager.app:/firebaseoauth2callback
+3. 在手机/平板 NoctuList 中：粘贴 Web client ID + secret（第 5 步），然后点击使用 Google 登录（会打开浏览器）。
+4. 可选：Firebase → 添加 Android 应用 / google-services.json 对登录不是必需的。</string>
+    <string name="firebase_tutorial_step7_title">7. 填写 NoctuList，然后迁移 / 连接</string>
+    <string name="firebase_tutorial_step7_body">在管理员 Firebase 同步或迁移对话框中：
+• 组织 ID — 简短共享名称（例如：noctulist-club）。每台设备相同。
+• Project ID、Application ID、API key、Web client ID，桌面端还需 Web client secret。
+• 或粘贴 Web 配置 + 填写 Web client ID/secret，然后为其他设备使用加入二维码。
+使用 Google 登录（首位管理员成为组织管理员）。仅在登录成功后再开始从 Sheets 迁移。其他设备通过二维码 / follow 加入 — 不应重新输入密钥。</string>
+    <string name="firebase_tutorial_step8_title">8. 设置完成后</string>
+    <string name="firebase_tutorial_step8_body">Firestore 中应看到 orgs/{yourOrgId}/…（guests、members、metadata 等）。在验证收银、门禁和第二台设备前请保留 Sheets 备份。计费：测试期间保持免费 Spark / 免费层；仅超出配额时升级。</string>
+    <string name="migration_wizard_to_firebase_title">切换到 Firebase</string>
+    <string name="migration_wizard_to_sheets_title">切换到 Google Sheets</string>
+    <string name="migration_wizard_intro">仅管理员。我们将复制数据、切换此设备，然后公告变更以便其他设备重新连接。</string>
+    <string name="migration_wizard_step_config">第 1 步 — 目标连接</string>
+    <string name="migration_wizard_step_config_firebase">输入 Firebase 组织和项目详情，然后登录。</string>
+    <string name="migration_wizard_step_config_sheets">输入目标电子表格，并确保服务账号密钥已上传。</string>
+    <string name="migration_wizard_step_run">第 2 步 — 运行迁移</string>
+    <string name="migration_wizard_step_run_body">保持此界面打开直至完成。其他设备将显示重新连接提示。</string>
+    <string name="migration_wizard_start">开始迁移</string>
+    <string name="migration_wizard_cancel">取消</string>
+    <string name="migration_wizard_cancel_inflight">停止迁移</string>
+    <string name="migration_wizard_cancel_inflight_hint">已请求取消 — 若仍可能，将在切换后端前停止。</string>
+    <string name="migration_spreadsheet_id_label">电子表格 ID</string>
+    <string name="migration_service_account_ok">在此设备上找到服务账号密钥。</string>
+    <string name="migration_service_account_missing">请在下方上传 Google 服务账号 JSON 文件。</string>
+    <string name="follow_title">重新连接此设备</string>
+    <string name="follow_intro">另一台设备更改了机构数据库。输入新连接详情以解锁编辑。</string>
+    <string name="follow_target_firebase">新后端：Firebase</string>
+    <string name="follow_target_sheets">新后端：Google Sheets</string>
+    <string name="follow_migrated_by">迁移由 %1$s 发起</string>
+    <string name="follow_step_credentials">输入凭据</string>
+    <string name="follow_step_connect">连接</string>
+    <string name="follow_connect">连接到新数据库</string>
+    <string name="follow_need_sign_in">请先使用 Google 登录，然后点击连接。</string>
+    <string name="follow_later">稍后</string>
+    <string name="backend_mismatch_title">检测到数据库迁移</string>
+    <string name="backend_mismatch_billeterie_message">机构已完成迁移。管理员须在此设备上打开 Admin 以重新配置同步。</string>
+    <string name="backend_mismatch_welcome_title">机构数据库已更改</string>
+    <string name="backend_mismatch_welcome_body">另一台设备迁移了机构后端。打开 Admin 并输入新连接详情以解锁编辑。</string>
+    <string name="backend_mismatch_open_admin">打开 Admin</string>
+    <string name="backend_mismatch_later">稍后</string>
+    <string name="backend_mismatch_soft_lock">后端迁移待处理时编辑已锁定。打开 Admin 以重新连接。</string>
+    <string name="sheets_mirror_export_now">立即导出 Sheets 镜像</string>
+    <string name="sheets_mirror_section_title">Google Sheets 镜像</string>
+    <string name="sheets_mirror_section_body">Firebase 为活跃后端时，可选单向导出到单独电子表格。</string>
+    <string name="sheets_mirror_enabled_label">启用 Sheets 镜像导出</string>
+    <string name="sheets_mirror_configure_drawer">镜像 Sheets 配置</string>
+    <string name="sheets_mirror_spreadsheet_id_label">镜像电子表格 ID</string>
+    <string name="sheets_mirror_interval_label">自动导出间隔（分钟）</string>
+    <string name="sheets_mirror_interval_hint">0 = 仅手动导出。启用自动导出时最少 5 分钟。</string>
+    <string name="sheets_mirror_last_export">上次镜像导出：%1$s</string>
+
     <string name="settings_category_appearance">外观与显示</string>
     <string name="settings_category_localization">本地化</string>
     <string name="settings_category_animations">动画与效果</string>
@@ -1284,6 +1577,7 @@
     <string name="billeterie_scanner_ready">准备扫描…</string>
     <string name="billeterie_scanner_with_invites">+%1$d 位邀请</string>
     <string name="billeterie_scanner_error">错误</string>
+    <string name="billeterie_scanner_scanned_org">组织：%1$s</string>
 
     <!-- Admin Setup (first admin creation) -->
     <string name="admin_setup_title">创建首位管理员</string>
@@ -1317,6 +1611,9 @@
     <string name="admin_setup_error">创建管理员失败：%1$s</string>
     <string name="admin_setup_qr_title">管理员二维码</string>
     <string name="admin_setup_qr_description">分享此二维码用于管理员登录。您可以通过下方按钮分享或手动输入邮箱。</string>
+    <string name="admin_setup_qr_unavailable">无法生成二维码。请重试或使用 NFC。</string>
+    <string name="admin_setup_qr_saved">我已保存二维码</string>
+    <string name="admin_setup_access_required">继续前请分享或保存二维码，或分配 NFC 卡。</string>
     <string name="admin_setup_nfc_assigned">NFC卡已分配！您现在可以使用此卡进行管理员登录。</string>
     <string name="admin_setup_done">完成</string>
     <string name="admin_setup_skip">暂时跳过</string>
@@ -1576,6 +1873,7 @@
     <string name="pos_unknown_card">无法识别的卡片</string>
     <string name="pos_use_qr">使用二维码</string>
     <string name="pos_validate_sale">确认销售</string>
+    <string name="pos_sale_processing">正在处理销售…</string>
     <string name="pos_waiting_card">请将卡片靠近读卡器</string>
     <string name="pos_welcome_button">内部 POS</string>
     <string name="recent_transfers_label">最近转账</string>

@@ -1,0 +1,158 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function memberPath(orgId) {
+      return /databases/$(database)/documents/orgs/$(orgId)/members/$(request.auth.uid);
+    }
+
+    function configPath(orgId) {
+      return /databases/$(database)/documents/orgs/$(orgId)/metadata/config;
+    }
+
+    function authEmailDomain() {
+      return request.auth.token.email is string
+        ? request.auth.token.email.lower().split('@')[1]
+        : '';
+    }
+
+    // Empty / missing allowedEmailDomains map = unrestricted.
+    // Non-empty map: Google token email domain must be a key with true.
+    function emailDomainAllowed(orgId) {
+      return !exists(configPath(orgId))
+        || !('allowedEmailDomains' in get(configPath(orgId)).data)
+        || get(configPath(orgId)).data.allowedEmailDomains.keys().size() == 0
+        || (
+          authEmailDomain().size() > 0
+          && authEmailDomain() in get(configPath(orgId)).data.allowedEmailDomains
+          && get(configPath(orgId)).data.allowedEmailDomains[authEmailDomain()] == true
+        );
+    }
+
+    function isMember(orgId) {
+      return isSignedIn()
+        && exists(memberPath(orgId))
+        && emailDomainAllowed(orgId);
+    }
+
+    function memberRole(orgId) {
+      return get(memberPath(orgId)).data.role;
+    }
+
+    function isOrgAdmin(orgId) {
+      return isMember(orgId) && memberRole(orgId) == 'admin';
+    }
+
+    function isValidMemberRole(role) {
+      return role in ['admin', 'member', 'door', 'pos'];
+    }
+
+    function legacyMemberRole(role) {
+      return role in ['member', 'door', 'pos'];
+    }
+
+    function configBootstrapCode(orgId) {
+      return exists(configPath(orgId))
+        && ('bootstrapCode' in get(configPath(orgId)).data)
+        ? get(configPath(orgId)).data.bootstrapCode
+        : '';
+    }
+
+    function purchaseBuffer(orgId) {
+      let doc = get(/databases/$(database)/documents/orgs/$(orgId)/institutionSettings/purchase_credit_buffer);
+      return doc.data.value is number ? doc.data.value :
+        (doc.data.value is string ? float(doc.data.value) : 0.0);
+    }
+
+    // Bootstrap: first admin creates org metadata + self as member
+    match /orgs/{orgId}/metadata/{docId} {
+      allow read: if isMember(orgId);
+      allow create: if isSignedIn()
+        && !exists(configPath(orgId));
+      allow update: if isOrgAdmin(orgId);
+    }
+
+    match /orgs/{orgId}/members/{uid} {
+      allow read: if isMember(orgId);
+      allow create: if isSignedIn()
+        && emailDomainAllowed(orgId)
+        && isValidMemberRole(request.resource.data.role)
+        && (
+          // First admin bootstrap: self-create when this uid has no member doc yet
+          (request.auth.uid == uid
+            && request.resource.data.role == 'admin'
+            && !exists(memberPath(orgId)))
+          // Join with org bootstrap code (team device, not admin)
+          || (request.auth.uid == uid
+            && legacyMemberRole(request.resource.data.role)
+            && configBootstrapCode(orgId).size() > 0
+            && request.resource.data.bootstrapCode == configBootstrapCode(orgId))
+          // Admin invite (self or other uid)
+          || isOrgAdmin(orgId)
+        );
+      allow update: if isOrgAdmin(orgId)
+        && isValidMemberRole(request.resource.data.role);
+      allow delete: if isOrgAdmin(orgId);
+    }
+
+    match /orgs/{orgId}/transfers/{transferId} {
+      allow read: if isMember(orgId);
+      allow create: if isMember(orgId);
+      allow update, delete: if false; // append-only ledger
+    }
+
+    match /orgs/{orgId}/accounts/{holderKey} {
+      allow read: if isMember(orgId);
+      allow write: if isMember(orgId)
+        && request.resource.data.balance >= (0.0 - purchaseBuffer(orgId));
+    }
+
+    match /orgs/{orgId}/guests/{docId} {
+      allow read: if isMember(orgId);
+      allow write: if isMember(orgId);
+    }
+
+    match /orgs/{orgId}/jobs/{docId} {
+      allow read: if isMember(orgId);
+      allow write: if isMember(orgId);
+    }
+
+    match /orgs/{orgId}/salesItems/{docId} {
+      allow read: if isMember(orgId);
+      allow write: if isMember(orgId);
+    }
+
+    match /orgs/{orgId}/volunteers/{docId} {
+      allow read: if isMember(orgId);
+      allow write: if isMember(orgId);
+    }
+
+    match /orgs/{orgId}/jobTypeConfigs/{docId} {
+      allow read: if isMember(orgId);
+      allow write: if isMember(orgId);
+    }
+
+    match /orgs/{orgId}/venues/{docId} {
+      allow read: if isMember(orgId);
+      allow write: if isMember(orgId);
+    }
+
+    match /orgs/{orgId}/institutionSettings/{key} {
+      allow read: if isMember(orgId);
+      allow write: if isMember(orgId);
+    }
+
+    // Admin fallback for unspecified collections.
+    match /orgs/{orgId}/{document=**} {
+      allow read: if isMember(orgId);
+      allow write: if isMember(orgId)
+        && document[0] != 'transfers'
+        && document[0] != 'members'
+        && document[0] != 'metadata';
+    }
+  }
+}

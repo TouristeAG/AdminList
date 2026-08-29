@@ -34,6 +34,7 @@ object GoogleSheetsConfig {
     const val SALES_ITEMS_SHEET = "Sales"
     const val TRANSFERS_SHEET = "Transfers"
     const val TEMP_GUEST_LIST_SHEET = "Temp Guest List"
+    const val SETTINGS_SHEET = "Settings"
     
     // Service account key file name (should be placed in assets folder)
     const val SERVICE_ACCOUNT_KEY_FILE = "service_account_key.json"

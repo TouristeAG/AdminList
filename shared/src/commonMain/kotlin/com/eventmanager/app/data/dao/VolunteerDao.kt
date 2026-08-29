@@ -60,5 +60,11 @@ interface VolunteerDao {
     
     @Query("DELETE FROM volunteers")
     suspend fun deleteAllVolunteers()
+
+    @Query("DELETE FROM volunteers WHERE firebaseOrgId = :orgId")
+    suspend fun deleteAllForOrg(orgId: String)
+
+    @Query("DELETE FROM volunteers WHERE firebaseOrgId != '' AND firebaseOrgId NOT IN (:orgIds)")
+    suspend fun deleteAllNotInOrgs(orgIds: List<String>)
 }
 

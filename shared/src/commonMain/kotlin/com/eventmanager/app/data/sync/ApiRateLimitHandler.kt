@@ -2,6 +2,7 @@ package com.eventmanager.app.data.sync
 
 import kotlinx.coroutines.delay
 import java.io.IOException
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Handles API rate limiting for Google Sheets operations
@@ -23,6 +24,8 @@ object ApiRateLimitHandler {
         repeat(MAX_RETRIES) { attempt ->
             try {
                 return operation()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 lastException = e
                 
@@ -30,9 +33,8 @@ object ApiRateLimitHandler {
                     val delayMs = calculateDelay(attempt)
                     println("⚠️ Rate limit hit for $operationName (attempt ${attempt + 1}/$MAX_RETRIES). Retrying in ${delayMs}ms...")
                     delay(delayMs)
-                } else {
-                    // Exit the loop
-                    return@repeat
+                } else if (!isRateLimitError(e)) {
+                    throw e
                 }
             }
         }

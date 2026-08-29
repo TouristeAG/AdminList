@@ -10,11 +10,10 @@ object AccountBalanceService {
         holderId: String,
         transfers: List<AccountTransfer>
     ): Double {
-        val sum = transfers
+        return transfers
             .asSequence()
             .filter { it.holderType == holderType && it.holderId == holderId }
             .sumOf { it.amount }
-        return maxOf(0.0, sum)
     }
 
     fun computeAllBalances(transfers: List<AccountTransfer>): Map<AccountHolderKey, Double> {
@@ -23,7 +22,7 @@ object AccountBalanceService {
             val key = AccountHolderKey(transfer.holderType, transfer.holderId)
             sums[key] = (sums[key] ?: 0.0) + transfer.amount
         }
-        return sums.mapValues { (_, balance) -> maxOf(0.0, balance) }
+        return sums
     }
 
     fun patchBalance(
@@ -32,6 +31,6 @@ object AccountBalanceService {
     ): Map<AccountHolderKey, Double> {
         val key = AccountHolderKey(transfer.holderType, transfer.holderId)
         val updated = (current[key] ?: 0.0) + transfer.amount
-        return current + (key to maxOf(0.0, updated))
+        return current + (key to updated)
     }
 }

@@ -29,6 +29,7 @@
     <string name="sheet_epoch_calc_hint_ms">Saisir les ms (ex. 1776711088094)</string>
     <string name="sheet_epoch_calc_hint_datetime">Choisir ou saisir une date/heure</string>
     <string name="temp_guest_list_sheet_label">Feuille guest-list temporaire</string>
+    <string name="settings_sheet_label">Feuille des paramètres</string>
     <string name="shift_types_sheet_label">Feuille types de Shifts</string>
     <string name="venues_sheet_label">Feuille Lieux</string>
     <string name="sales_items_sheet_label">Feuille des articles de vente</string>
@@ -36,6 +37,11 @@
     <string name="account_amount_label">Montant du compte</string>
     <string name="currency_setting_label">Devise</string>
     <string name="currency_setting_description">Devise affichée pour les soldes et le POS</string>
+    <string name="purchase_credit_buffer_label">Tampon d’achat</string>
+    <string name="purchase_credit_buffer_description">Écart maximum absorbé par le crédit (ex. 5). Le compte peut descendre jusqu’à −tampon. 0 = pas de découvert. Synchronisé entre appareils.</string>
+    <string name="pos_negative_balance_title">Compte désormais négatif</string>
+    <string name="pos_negative_balance_message">Le tampon de crédits a été utilisé. Le solde du compte est maintenant %1$s.</string>
+    <string name="amount_label">Montant</string>
     <string name="pos_welcome_button">POS interne</string>
     <string name="admin_label">Admin</string>
     <string name="admin_yes">Oui</string>
@@ -155,6 +161,8 @@
     <string name="system_is_in_light_mode">Le système est en mode clair</string>
     <string name="people_counter_visibility_title">Afficher le compteur de personnes</string>
     <string name="people_counter_visibility_description">Afficher ou masquer le compteur de personnes sur la page d\'accueil</string>
+    <string name="billeterie_clock_visibility_title">Afficher l\'horloge</string>
+    <string name="billeterie_clock_visibility_description">Afficher la carte date et heure sur l\'accueil billetterie (comme sur le tableau de bord admin)</string>
     <string name="statistics_visibility_title">Afficher les graphiques statistiques</string>
     <string name="statistics_visibility_description">Afficher ou masquer la section des graphiques statistiques sur la page d\'accueil</string>
     <string name="scroll_behavior_title">Comportement du défilement pour les pages de gestion</string>

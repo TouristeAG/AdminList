@@ -35,6 +35,17 @@ kotlin {
 
 configurations.configureEach {
     exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-android")
+    resolutionStrategy {
+        force(
+            "io.grpc:grpc-api:1.68.2",
+            "io.grpc:grpc-core:1.68.2",
+            "io.grpc:grpc-context:1.68.2",
+            "io.grpc:grpc-stub:1.68.2",
+            "io.grpc:grpc-okhttp:1.68.2",
+            "io.grpc:grpc-protobuf-lite:1.68.2",
+            "io.grpc:grpc-util:1.68.2",
+        )
+    }
 }
 
 compose.desktop {

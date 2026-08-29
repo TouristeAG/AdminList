@@ -190,6 +190,8 @@
     <string name="system_is_in_light_mode">El sistema está en modo claro</string>
     <string name="people_counter_visibility_title">Mostrar contador de personas</string>
     <string name="people_counter_visibility_description">Mostrar u ocultar el contador de personas en la página de inicio</string>
+    <string name="billeterie_clock_visibility_title">Mostrar reloj</string>
+    <string name="billeterie_clock_visibility_description">Mostrar la tarjeta de fecha y hora en la pantalla de inicio de taquilla (como en el panel de administración)</string>
     <string name="statistics_visibility_title">Mostrar gráficos estadísticos</string>
     <string name="statistics_visibility_description">Mostrar u ocultar la sección de gráficos estadísticos en la página de inicio</string>
     <string name="scroll_behavior_title">Comportamiento de desplazamiento para páginas de gestión</string>
@@ -513,6 +515,14 @@
     <string name="last_update_days_ago">hace %1$d d</string>
     <string name="last_update_line">Actualización · %1$s</string>
     <string name="last_update_none_line">Actualización · —</string>
+    <string name="firebase_pill_live">Firebase · en vivo</string>
+    <string name="firebase_pill_line">Firebase — %1$s</string>
+    <string name="firebase_pill_pending">Firebase · %1$d pendiente(s)</string>
+    <string name="firebase_pill_pull">Firebase · cada 30 s</string>
+    <string name="firebase_pill_offline">Firebase · sin conexión</string>
+    <string name="firebase_pill_not_setup">Firebase · sin configurar</string>
+    <string name="firebase_pill_refresh_cd">Sincronizar con Firebase ahora</string>
+
     <string name="sync_pill_minutes_ago">hace %1$d min</string>
     <string name="sync_pill_hours_ago">hace %1$d h</string>
     <string name="sync_pill_hours_minutes_ago">hace %1$d h %2$d min</string>
@@ -1119,6 +1129,289 @@
     
     <!-- Settings Categories -->
     <string name="settings_category_sync">Sincronización y datos</string>
+    <string name="setup_choose_backend_title">Elegir backend de sincronización</string>
+    <string name="setup_choose_backend_description">Seleccione cómo los dispositivos de su institución comparten datos. Puede migrar más tarde desde Ajustes de administrador.</string>
+    <string name="setup_backend_sheets">Google Sheets (clásico)</string>
+    <string name="setup_backend_firebase">Firebase (tiempo real, recomendado para TPV)</string>
+    <string name="setup_firebase_title">Conectar a Firebase</string>
+    <string name="setup_firebase_description">Siga los pasos: elija su organización, pegue los datos del proyecto Firebase y luego inicie sesión con Google.</string>
+    <string name="setup_firebase_auth_hint">Debe iniciar sesión correctamente antes de la primera sincronización. Use la misma cuenta de Google en cada dispositivo de administrador.</string>
+    <string name="firebase_org_id_label">ID de organización</string>
+    <string name="firebase_org_id_hint">Nombre compartido de su institución (ejemplo: noctulist-club). Mismo ID en cada dispositivo.</string>
+    <string name="firebase_configured_orgs_title">Organizaciones</string>
+    <string name="firebase_configured_orgs_body">Añada cada ID de organización Firebase alojado en este proyecto. Cada org tiene su propia base en orgs/{orgId}.</string>
+    <string name="firebase_configured_org_add">Añadir organización</string>
+    <string name="firebase_configured_org_remove_cd">Eliminar organización</string>
+    <string name="firebase_configured_org_color_cd">Color de la organización</string>
+    <string name="firebase_configured_org_duplicate">Este ID de organización ya está en la lista.</string>
+    <string name="firebase_org_switcher_cd">Cambiar de organización</string>
+    <string name="firebase_org_switching">Cambiando de organización…</string>
+    <string name="firebase_org_all">Todas</string>
+    <string name="admin_org_picker_title">Elegir organización para Admin</string>
+    <string name="admin_org_picker_message">La vista combinada no está disponible en Admin. Seleccione la organización a gestionar.</string>
+    <string name="firebase_sync_title">Sincronización Firebase</string>
+    <string name="firebase_sync_subtitle">Sincronización en tiempo real para invitados, voluntarios, TPV y dispositivos de puerta.</string>
+    <string name="firebase_settings_intro">Siga los pasos a continuación. Use la guía ? si necesita ayuda en Firebase Console.</string>
+    <string name="firebase_settings_section_devices">Otros dispositivos</string>
+    <string name="firebase_settings_section_access">Acceso y equipo</string>
+    <string name="firebase_settings_section_optional">Opcional</string>
+    <string name="firebase_status_ready">Listo — sesión iniciada y conectado</string>
+    <string name="firebase_status_need_sign_in">Casi listo — inicie sesión con Google</string>
+    <string name="firebase_status_need_config">Configuración incompleta — complete los campos siguientes</string>
+    <string name="firebase_status_signed_in_as">Sesión iniciada como %1$s</string>
+    <string name="firebase_status_not_signed_in">Sin iniciar sesión</string>
+    <string name="firebase_step_org_title">1. Su organización</string>
+    <string name="firebase_step_org_body">Este ID agrupa todos los dispositivos de la misma institución en Firestore.</string>
+    <string name="firebase_step_project_title">2. Proyecto de Google Cloud</string>
+    <string name="firebase_step_project_body">Copie Project ID, Application ID, clave API, Web client ID y (Escritorio) el secreto del cliente Web. Abra la guía ? y elija Firebase Console o Google Cloud Console.</string>
+    <string name="firebase_step_project_where">Solo el proyecto Firebase/Google Cloud de la institución. No use el JSON OAuth Gmail Desktop del desarrollador para el inicio de sesión.</string>
+    <string name="firebase_project_id_label">ID del proyecto</string>
+    <string name="firebase_application_id_label">ID de aplicación</string>
+    <string name="firebase_api_key_label">Clave API</string>
+    <string name="firebase_web_client_id_label">ID de cliente Web</string>
+    <string name="firebase_web_client_id_hint">ID de cliente OAuth 2.0 Web de la institución (inicio de sesión Firebase). No el JSON OAuth Gmail Desktop del desarrollador.</string>
+    <string name="firebase_web_client_secret_label">Secreto del cliente Web</string>
+    <string name="firebase_web_client_secret_hint">Secreto del cliente Web de la institución (Escritorio + Android). URI de redirección autorizadas (no orígenes JavaScript): Escritorio — http://localhost:8889/Callback (y :8888, :8765, :9090). Android — com.eventmanager.app:/firebaseoauth2callback (sin SHA-1).</string>
+    <string name="firebase_step_signin_title">3. Inicio de sesión con Google</string>
+    <string name="firebase_step_signin_body">Autorice este dispositivo. La primera cuenta de administrador se convierte en administrador de la organización.</string>
+    <string name="firebase_sign_in">Iniciar sesión con Google</string>
+    <string name="firebase_sign_out">Cerrar sesión</string>
+    <string name="firebase_checklist_title">Antes de continuar</string>
+    <string name="firebase_checklist_org">ID de organización completado</string>
+    <string name="firebase_checklist_project">Project ID, Application ID y clave API completados</string>
+    <string name="firebase_checklist_auth">Cuenta de Google con sesión iniciada</string>
+    <string name="firebase_advanced_project">Mostrar detalles del proyecto</string>
+    <string name="firebase_hide_project">Ocultar detalles del proyecto</string>
+    <string name="firebase_reveal_secrets">Mostrar secretos del proyecto</string>
+    <string name="firebase_hide_secrets">Ocultar secretos del proyecto</string>
+    <string name="firebase_config_paste_label">Pegar configuración web de Firebase</string>
+    <string name="firebase_config_paste_hint">Pegue la configuración SDK web de Firebase Console (apiKey, appId, projectId). Solo los administradores la necesitan.</string>
+    <string name="firebase_config_paste_apply">Aplicar configuración pegada</string>
+    <string name="firebase_join_qr_title">Invitar otros dispositivos (QR)</string>
+    <string name="firebase_join_qr_body">Otros dispositivos escanean este código en Configuración → Unirse. Los secretos no se muestran en esos dispositivos.</string>
+    <string name="firebase_join_qr_need_config">Complete el ID de org y las opciones del proyecto para generar el QR de unión.</string>
+    <string name="firebase_join_copy_code">Copiar código de unión</string>
+    <string name="firebase_join_code_copied">Código de unión copiado</string>
+    <string name="firebase_join_scan_title">Unirse con QR o código</string>
+    <string name="firebase_join_scan_body">Escanee el QR del administrador o pegue el código de unión. Los secretos del proyecto permanecen ocultos en este dispositivo.</string>
+    <string name="firebase_join_scan">Escanear QR de unión</string>
+    <string name="firebase_join_paste_label">Código de unión</string>
+    <string name="firebase_join_paste_code">Aplicar código de unión</string>
+    <string name="firebase_join_received">Configuración de Firebase recibida — inicie sesión con Google para continuar</string>
+    <string name="firebase_join_wizard_option">Unirse a institución existente (QR)</string>
+    <string name="firebase_join_wizard_option_body">Escanee el QR de unión del administrador. No necesitará escribir claves API.</string>
+    <string name="firebase_create_new_option">Configurar Firebase nuevo (administrador)</string>
+    <string name="firebase_project_configured_hidden">Proyecto Firebase configurado (detalles ocultos)</string>
+    <string name="firebase_team_title">Invitar colegas (roles y permisos)</string>
+    <string name="firebase_team_body">Cada persona que use Firebase debe registrarse como miembro de la organización con un rol. Sin esto, el inicio de sesión con Google tendrá éxito pero Firestore bloqueará todas las lecturas y escrituras.</string>
+    <string name="firebase_team_steps">1. Pídale que abra esta app → Ajustes de sincronización → Iniciar sesión con Google una vez.
+2. Copie su UID de Firebase (Firebase Console → Authentication → Users, o desde su dispositivo tras iniciar sesión).
+3. Pegue el UID abajo, añada su correo si lo conoce y luego pulse un botón de rol.</string>
+    <string name="firebase_team_roles_heading">Qué permite cada rol</string>
+    <string name="firebase_team_role_admin_desc">Administrador — ajustes completos, migración, invitar a otros, todos los datos.</string>
+    <string name="firebase_team_role_door_desc">Puerta / taquilla — lista de invitados, trabajos, locales (Billeterie).</string>
+    <string name="firebase_team_role_pos_desc">TPV — ventas, saldos de cuentas, transferencias (caja).</string>
+    <string name="firebase_team_show">Invitar a alguien / asignar rol</string>
+    <string name="firebase_team_not_domains">No es lo mismo que «Dominios de correo Google permitidos» arriba: los dominios solo filtran el inicio de sesión; esta sección concede acceso a los datos de la institución en Firestore.</string>
+    <string name="firebase_email_domains_title">Dominios de correo Google permitidos</string>
+    <string name="firebase_email_domains_body">Solo las cuentas de Google cuya dirección termine en uno de estos dominios pueden iniciar sesión y acceder a los datos de la org. Déjelo vacío para permitir cualquier correo.</string>
+    <string name="firebase_email_domains_empty">Sin restricción — cualquier correo de Google puede iniciar sesión (si está invitado / bootstrap).</string>
+    <string name="firebase_email_domains_label">Dominio</string>
+    <string name="firebase_email_domains_hint">Ejemplo: algo.ch o @algo.ch</string>
+    <string name="firebase_email_domains_add">Añadir dominio</string>
+    <string name="firebase_email_domains_remove">Eliminar</string>
+    <string name="firebase_section_show">Mostrar</string>
+    <string name="firebase_section_hide">Ocultar</string>
+    <string name="firebase_member_uid_label">UID de Firebase del colega</string>
+    <string name="firebase_member_uid_hint">ID único de Firebase Authentication (no su correo). Obligatorio para conceder acceso.</string>
+    <string name="firebase_member_email_label">Correo de Google del colega (recomendado)</string>
+    <string name="firebase_member_email_hint">Usado por las reglas de seguridad y para reconocer al miembro en Firebase.</string>
+    <string name="firebase_role_admin">Administrador</string>
+    <string name="firebase_role_door">Puerta</string>
+    <string name="firebase_role_pos">TPV</string>
+    <string name="firebase_tools_title">Herramientas extra</string>
+    <string name="firebase_tools_body">Herramientas opcionales que no cambian su backend activo.</string>
+    <string name="firebase_migrate_section_title">Cambiar backend de sincronización</string>
+    <string name="firebase_migrate_section_body">Mueve todos los datos de la institución a otro backend y pide a los demás dispositivos que se reconecten. Solo administradores — elija un momento tranquilo.</string>
+    <string name="firebase_migrate_to_sheets">Cambiar a Google Sheets…</string>
+    <string name="sheets_migrate_to_firebase">Cambiar a Firebase…</string>
+    <string name="sheets_migrate_card_title">Actualizar a Firebase</string>
+    <string name="sheets_migrate_card_body">Sincronización en tiempo real más rápida para TPV y puerta. Sus datos de Sheets se copian y luego se pide a otros dispositivos que se reconecten.</string>
+    <string name="firebase_tutorial_help_cd">Cómo crear una base de datos Firebase</string>
+    <string name="firebase_tutorial_title">Crear su base de datos Firebase</string>
+    <string name="firebase_tutorial_close">Entendido</string>
+    <string name="firebase_tutorial_intro">Elija una guía completa abajo. Ambas terminan con los mismos valores en NoctuList. Prefiera Firebase Console si es nuevo en Google Cloud.</string>
+    <string name="firebase_tutorial_oauth_note">OAuth Gmail/correo (JSON Desktop del desarrollador) es independiente y no debe reutilizarse para el inicio de sesión Firebase. Use el Web client ID + secreto de la institución de este proyecto Firebase.</string>
+    <string name="firebase_tutorial_method_label">Método de la guía</string>
+    <string name="firebase_tutorial_method_firebase">Consola Firebase</string>
+    <string name="firebase_tutorial_method_firebase_hint">Recomendado: console.firebase.google.com — pantallas más claras para Auth, Firestore y configuración web. Abra Cloud Console brevemente solo para el secreto del cliente Web y las redirecciones localhost.</string>
+    <string name="firebase_tutorial_method_cloud">Consola de Google Cloud</string>
+    <string name="firebase_tutorial_method_cloud_hint">Para administradores que ya usan console.cloud.google.com (mismo proyecto que Sheets). Aún debe abrir Firebase una vez para Auth Google y Application ID (appId).</string>
+    <string name="firebase_tutorial_copy_rules">Copiar firestore.rules al portapapeles</string>
+    <string name="firebase_tutorial_copy_rules_done">Copiado — pegue en Firestore → Rules y luego Publique</string>
+    <string name="firebase_tutorial_copy_rules_error">No se pudieron cargar las reglas — abra firebase/firestore.rules en el proyecto</string>
+    <string name="firebase_tutorial_fb_step1_title">1. Crear o abrir el proyecto Firebase</string>
+    <string name="firebase_tutorial_fb_step1_body">1. Abra https://console.firebase.google.com e inicie sesión con una cuenta de Google de la institución que pueda gestionar el proyecto.
+2. Haga clic en Añadir proyecto (o seleccione uno existente).
+3. Si ya usa Google Sheets en un proyecto Cloud: elija «Usar un proyecto de Google Cloud existente» y seleccione ese mismo proyecto — no cree un segundo proyecto vacío.
+4. Analytics es opcional. Termine el asistente.
+5. Anote el Project ID (Configuración del proyecto → General). Lo pegará en NoctuList.</string>
+    <string name="firebase_tutorial_fb_step2_title">2. Crear Firestore</string>
+    <string name="firebase_tutorial_fb_step2_body">En Firebase Console, mismo proyecto:
+1. Build → Firestore Database → Crear base de datos.
+2. Prefiera modo producción, región cercana a sus locales (UE si es necesario) y luego crear.
+3. No añada documentos manualmente — NoctuList los crea bajo orgs/{orgId}/…</string>
+    <string name="firebase_tutorial_fb_step3_title">3. Publicar reglas de seguridad</string>
+    <string name="firebase_tutorial_fb_step3_body">Firebase Console → Build → Firestore → Rules (la URL debe contener /firestore/rules — no Realtime Database).
+Seleccione todo, pegue las reglas de NoctuList (botón abajo) y luego Publique. Sin estas reglas, los dispositivos no pueden leer ni escribir de forma segura.</string>
+    <string name="firebase_tutorial_fb_step4_title">4. Activar inicio de sesión con Google</string>
+    <string name="firebase_tutorial_fb_step4_body">1. Firebase Console → Build → Authentication → Comenzar (si hace falta).
+2. Método de inicio de sesión → Google → Activar → Guardar.
+3. En esa pantalla, anote el Web client ID que Firebase muestra para el proveedor Google — es el cliente Web de la institución (no Gmail Desktop).
+4. Si Firebase crea automáticamente un cliente OAuth Web, consérvelo. No lo sustituya por el JSON OAuth Gmail del desarrollador.</string>
+    <string name="firebase_tutorial_fb_step5_title">5. Copiar valores en NoctuList</string>
+    <string name="firebase_tutorial_fb_step5_body">Mantenga esta lista abierta.
+
+A) Configuración web (más fácil)
+• Configuración del proyecto (engranaje) → General → Sus apps → app Web.
+• Si no hay ninguna: Añadir app → Web (&lt;/&gt;), apodo «NoctuList», omitir Hosting.
+• Abra Config / fragmento SDK y copie apiKey, appId, projectId — o pegue todo el fragmento en NoctuList «Pegar configuración web de Firebase».
+
+B) Web client ID
+• Authentication → Método de inicio de sesión → Google → Web client ID
+  O Configuración del proyecto → General → Sus apps / sección OAuth
+  O Cloud Console → APIs &amp; Services → Credentials → OAuth 2.0 Client IDs → tipo Web application.
+• Pegue en NoctuList → Web client ID.
+
+C) Secreto del cliente Web (obligatorio en Escritorio)
+• Abra https://console.cloud.google.com → mismo proyecto → APIs &amp; Services → Credentials.
+• Abra el mismo cliente Web application de arriba.
+• Copie Client secret → NoctuList → Secreto del cliente Web.
+• NO en «Authorized JavaScript origins» (los orígenes no pueden tener /Callback).
+Desplácese hasta «Authorized redirect URIs» y añada TODAS estas exactamente:
+  http://localhost:8889/Callback
+  http://localhost:8888/Callback
+  http://localhost:8765/Callback
+  http://localhost:9090/Callback
+Orígenes opcionales (sin ruta): http://localhost:8889 etc.
+→ Guarde, espere un minuto aproximadamente y vuelva a intentar el inicio de sesión.
+
+Dispositivos Android → paso 6. Solo escritorio → paso 7.</string>
+    <string name="firebase_tutorial_fb_step6_title">6. Android (opcional)</string>
+    <string name="firebase_tutorial_fb_step6_body">Omita si solo usa escritorio.
+1. Firebase Console → Configuración del proyecto → Añadir app → Android.
+2. Nombre del paquete exactamente: com.eventmanager.app
+3. Añada su SHA-1 de depuración (necesario para Google Sign-In):
+   macOS/Linux:
+   keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android
+   Windows:
+   keytool -list -v -keystore %USERPROFILE%\\.android\\debug.keystore -alias androiddebugkey -storepass android -keypass android
+4. Opcionalmente descargue google-services.json en app/google-services.json.
+5. En el dispositivo, use siempre el Web client ID del paso 5 (Android Sign-In lo necesita). El secreto es solo para Escritorio.
+
+Si falla el inicio de sesión: paquete + SHA-1, Web client ID, proveedor Google activado, luego Cerrar sesión / Iniciar sesión.</string>
+    <string name="firebase_tutorial_cloud_step1_title">1. Abrir el proyecto Cloud</string>
+    <string name="firebase_tutorial_cloud_step1_body">1. Abra https://console.cloud.google.com
+2. Barra superior → selector de proyecto → seleccione el proyecto de la institución (el de Sheets si ya lo usa).
+3. Confirme el Project ID (chip del proyecto o IAM &amp; Admin → Settings). Lo pegará en NoctuList.
+
+Vincule Firebase si hace falta: https://console.firebase.google.com → Añadir proyecto → «Usar un proyecto de Google Cloud existente» → este mismo proyecto. No cree un proyecto vacío nuevo.</string>
+    <string name="firebase_tutorial_cloud_step2_title">2. Activar Firestore</string>
+    <string name="firebase_tutorial_cloud_step2_body">Sigue en Cloud Console, mismo proyecto:
+1. Menú ☰ → APIs &amp; Services → Library → «Cloud Firestore API» → Enable.
+2. Menú ☰ → Firestore → Crear base de datos si se solicita.
+3. Prefiera Native / producción, región cercana a sus locales, luego crear.
+4. No añada documentos manualmente — NoctuList crea orgs/{orgId}/…</string>
+    <string name="firebase_tutorial_cloud_step3_title">3. Publicar reglas de seguridad</string>
+    <string name="firebase_tutorial_cloud_step3_body">Cloud Console → Firestore → Rules (la URL debe contener firestore y rules — no Realtime Database).
+Pegue las reglas de NoctuList (botón abajo) → Publique.
+Si no hay editor Rules en la UI de Cloud: Firebase Console → Build → Firestore → Rules → pegar → Publique.</string>
+    <string name="firebase_tutorial_cloud_step4_title">4. Activar Google Sign-In + cliente OAuth Web</string>
+    <string name="firebase_tutorial_cloud_step4_body">A) Firebase Auth (obligatorio una vez)
+1. console.firebase.google.com → mismo proyecto → Authentication → Método de inicio de sesión → Google → Activar → Guardar.
+
+B) Cliente OAuth Web de la institución (no Gmail Desktop)
+1. Cloud Console → APIs &amp; Services → Credentials.
+2. En OAuth 2.0 Client IDs, abra (o cree) un cliente de tipo Web application usado por Firebase Auth.
+3. No use el cliente JSON Gmail Desktop del desarrollador para esto.
+4. NO en «Authorized JavaScript origins» (los orígenes no pueden tener /Callback).
+Desplácese hasta «Authorized redirect URIs» y añada TODAS estas exactamente:
+  http://localhost:8889/Callback
+  http://localhost:8888/Callback
+  http://localhost:8765/Callback
+  http://localhost:9090/Callback
+Orígenes opcionales (sin ruta): http://localhost:8889 etc.
+→ Guarde, espere un minuto aproximadamente y vuelva a intentar el inicio de sesión.
+5. Copie Client ID y Client secret para el paso 5.</string>
+    <string name="firebase_tutorial_cloud_step5_title">5. Copiar valores en NoctuList</string>
+    <string name="firebase_tutorial_cloud_step5_body">A) Project ID — selector de proyecto Cloud / IAM &amp; Admin → Settings.
+
+B) Clave API — Credentials → API keys (clave de navegador existente, o Create credentials → API key una vez).
+
+C) Web client ID + secreto — Credentials → OAuth 2.0 Client IDs → Web application (paso 4). Pegue ambos en NoctuList (secreto = inicio de sesión Escritorio).
+
+D) Application ID (appId)
+• Firebase Console → Configuración del proyecto → General → Sus apps → Web.
+• Si no hay ninguna: Añadir app → Web una vez, apodo «NoctuList», omitir Hosting; copie appId del fragmento de configuración.
+• O pegue toda la configuración web de Firebase en NoctuList.
+
+Android → paso 6. Solo escritorio → paso 7.</string>
+    <string name="firebase_tutorial_cloud_step6_title">6. Inicio de sesión Android (sin SHA-1)</string>
+    <string name="firebase_tutorial_cloud_step6_body">Android usa el mismo cliente OAuth Web que Escritorio — NO necesita un cliente OAuth Android ni huella SHA-1.
+1. Cloud Console → Credentials → su cliente Web application (paso 4).
+2. En Authorized redirect URIs, añada exactamente: com.eventmanager.app:/firebaseoauth2callback
+3. En NoctuList en el teléfono/tableta: pegue Web client ID + secreto (paso 5) y pulse Iniciar sesión con Google (se abre el navegador).
+4. Opcional: Firebase → Añadir app Android / google-services.json no es necesario para el inicio de sesión.</string>
+    <string name="firebase_tutorial_step7_title">7. Completar NoctuList y migrar / conectar</string>
+    <string name="firebase_tutorial_step7_body">En Sincronización Firebase de administrador o el diálogo de migración:
+• ID de organización — nombre corto compartido (ejemplo: noctulist-club). Igual en cada dispositivo.
+• Project ID, Application ID, clave API, Web client ID y en Escritorio el secreto del cliente Web.
+• O pegue la configuración web + complete Web client ID/secreto, luego use el QR de unión para otros dispositivos.
+Inicie sesión con Google (el primer administrador se convierte en admin de la org). Solo tras un inicio de sesión correcto, inicie la migración si cambia desde Sheets. Los demás se unen vía QR / follow — no deben volver a escribir secretos.</string>
+    <string name="firebase_tutorial_step8_title">8. Tras la configuración</string>
+    <string name="firebase_tutorial_step8_body">En Firestore debería ver orgs/{suOrgId}/… (guests, members, metadata, etc.). Mantenga Sheets como copia de seguridad hasta verificar TPV, puerta y un segundo dispositivo. Facturación: permanezca en el plan gratuito Spark mientras prueba; actualice solo si supera las cuotas.</string>
+    <string name="migration_wizard_to_firebase_title">Cambiar a Firebase</string>
+    <string name="migration_wizard_to_sheets_title">Cambiar a Google Sheets</string>
+    <string name="migration_wizard_intro">Solo administradores. Copiaremos sus datos, cambiaremos este dispositivo y anunciaremos el cambio para que otros se reconecten.</string>
+    <string name="migration_wizard_step_config">Paso 1 — Conexión de destino</string>
+    <string name="migration_wizard_step_config_firebase">Introduzca la organización Firebase y los datos del proyecto, luego inicie sesión.</string>
+    <string name="migration_wizard_step_config_sheets">Introduzca la hoja de cálculo de destino y asegúrese de que la clave de cuenta de servicio ya esté cargada.</string>
+    <string name="migration_wizard_step_run">Paso 2 — Ejecutar migración</string>
+    <string name="migration_wizard_step_run_body">Mantenga esta pantalla abierta hasta que termine. Otros dispositivos mostrarán un aviso de reconexión.</string>
+    <string name="migration_wizard_start">Iniciar migración</string>
+    <string name="migration_wizard_cancel">Cancelar</string>
+    <string name="migration_wizard_cancel_inflight">Detener migración</string>
+    <string name="migration_wizard_cancel_inflight_hint">Cancelación solicitada — se detiene antes del cambio de backend si aún es posible.</string>
+    <string name="migration_spreadsheet_id_label">ID de hoja de cálculo</string>
+    <string name="migration_service_account_ok">Clave de cuenta de servicio encontrada en este dispositivo.</string>
+    <string name="migration_service_account_missing">Cargue el archivo JSON de cuenta de servicio de Google abajo.</string>
+    <string name="follow_title">Reconectar este dispositivo</string>
+    <string name="follow_intro">Otro dispositivo cambió la base de datos de la institución. Introduzca los nuevos datos de conexión para desbloquear la edición.</string>
+    <string name="follow_target_firebase">Nuevo backend: Firebase</string>
+    <string name="follow_target_sheets">Nuevo backend: Google Sheets</string>
+    <string name="follow_migrated_by">Migración iniciada por %1$s</string>
+    <string name="follow_step_credentials">Introducir credenciales</string>
+    <string name="follow_step_connect">Conectar</string>
+    <string name="follow_connect">Conectar a la nueva base de datos</string>
+    <string name="follow_need_sign_in">Inicie sesión con Google primero, luego pulse Conectar.</string>
+    <string name="follow_later">Más tarde</string>
+    <string name="backend_mismatch_title">Migración de base de datos detectada</string>
+    <string name="backend_mismatch_billeterie_message">Se realizó una migración de la institución. Un administrador debe abrir Admin en este dispositivo para reconfigurar la sincronización.</string>
+    <string name="backend_mismatch_welcome_title">Base de datos de la institución cambiada</string>
+    <string name="backend_mismatch_welcome_body">Otro dispositivo migró el backend de la institución. Abra Admin e introduzca los nuevos datos de conexión para desbloquear la edición.</string>
+    <string name="backend_mismatch_open_admin">Abrir Admin</string>
+    <string name="backend_mismatch_later">Más tarde</string>
+    <string name="backend_mismatch_soft_lock">La edición está bloqueada mientras hay una migración de backend pendiente. Abra Admin para reconectar.</string>
+    <string name="sheets_mirror_export_now">Exportar espejo Sheets ahora</string>
+    <string name="sheets_mirror_section_title">Espejo de Google Sheets</string>
+    <string name="sheets_mirror_section_body">Exportación unidireccional opcional a una hoja de cálculo separada mientras Firebase es su backend activo.</string>
+    <string name="sheets_mirror_enabled_label">Activar exportación espejo Sheets</string>
+    <string name="sheets_mirror_configure_drawer">Configuración del espejo Sheets</string>
+    <string name="sheets_mirror_spreadsheet_id_label">ID de hoja de cálculo espejo</string>
+    <string name="sheets_mirror_interval_label">Intervalo de exportación automática (minutos)</string>
+    <string name="sheets_mirror_interval_hint">0 = solo exportación manual. Mínimo 5 minutos cuando la exportación automática está activada.</string>
+    <string name="sheets_mirror_last_export">Última exportación espejo: %1$s</string>
+
     <string name="settings_category_appearance">Apariencia y visualización</string>
     <string name="settings_category_localization">Localización</string>
     <string name="settings_category_animations">Animaciones y efectos</string>
@@ -1284,6 +1577,7 @@
     <string name="billeterie_scanner_ready">Listo para escanear…</string>
     <string name="billeterie_scanner_with_invites">+%1$d invitación(es)</string>
     <string name="billeterie_scanner_error">Error</string>
+    <string name="billeterie_scanner_scanned_org">Org: %1$s</string>
 
     <!-- Admin Setup (first admin creation) -->
     <string name="admin_setup_title">Crear Primer Admin</string>
@@ -1317,6 +1611,9 @@
     <string name="admin_setup_error">Error al crear admin: %1$s</string>
     <string name="admin_setup_qr_title">Código QR Admin</string>
     <string name="admin_setup_qr_description">Comparte este código QR para el acceso admin. Puedes compartirlo con el botón o ingresar el correo manualmente.</string>
+    <string name="admin_setup_qr_unavailable">No se pudo generar el código QR. Inténtalo de nuevo o usa NFC.</string>
+    <string name="admin_setup_qr_saved">He guardado mi código QR</string>
+    <string name="admin_setup_access_required">Comparte o guarda el código QR, o asigna una tarjeta NFC, antes de continuar.</string>
     <string name="admin_setup_nfc_assigned">¡Tarjeta NFC asignada! Ahora puedes usar esta tarjeta para el acceso admin.</string>
     <string name="admin_setup_done">Listo</string>
     <string name="admin_setup_skip">Omitir por ahora</string>
@@ -1576,6 +1873,7 @@ Emparejar no basta: sin la herramienta Management, el enlace suele conectarse y 
     <string name="pos_unknown_card">Tarjeta no reconocida</string>
     <string name="pos_use_qr">Usar un QR</string>
     <string name="pos_validate_sale">Validar la venta</string>
+    <string name="pos_sale_processing">Procesando venta…</string>
     <string name="pos_waiting_card">Acerque la tarjeta al lector</string>
     <string name="pos_welcome_button">POS interno</string>
     <string name="recent_transfers_label">Transferencias recientes</string>

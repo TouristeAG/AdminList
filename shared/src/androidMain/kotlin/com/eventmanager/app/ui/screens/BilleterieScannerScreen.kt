@@ -46,7 +46,8 @@ actual fun BilleterieScannerScreen(
     jobs: List<Job>,
     jobTypeConfigs: List<JobTypeConfig>,
     onBack: () -> Unit,
-    onConfirmEntry: (Job, Int) -> Unit
+    onConfirmEntry: (Job, Int) -> Unit,
+    viewModel: com.eventmanager.app.ui.viewmodel.EventManagerViewModel?,
 ) {
     val context = LocalContext.current
     val bleReaderFxScope = rememberCoroutineScope()
@@ -428,11 +429,13 @@ actual fun BilleterieScannerScreen(
                 cameraEnabled = false
                 errorMessage = null
             },
-            onCloseToMenu = onBack
+            onCloseToMenu = onBack,
+            viewModel = viewModel,
         )
     } else {
         BilleterieScannerScanningScreen(
             onBack = onBack,
+            viewModel = viewModel,
             cameraEnabled = cameraEnabled,
             onToggleCamera = { cameraEnabled = !cameraEnabled },
             hasCameraPermission = hasPermission,
@@ -471,6 +474,7 @@ actual fun BilleterieScannerScreen(
     if (duplicateUidMatches.isNotEmpty()) {
         BilleterieDuplicateUidPickerDialog(
             matches = duplicateUidMatches,
+            viewModel = viewModel ?: return,
             onSelect = { match ->
                 processMatch(match)
                 duplicateUidMatches = emptyList()

@@ -283,12 +283,20 @@ fun PeopleCounter(
                         selected = v.id == selectedVenueId,
                         onClick = { viewModel.setPeopleCounterSelectedVenueId(v.id) },
                         label = {
-                            Text(
-                                v.name,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                style = MaterialTheme.typography.labelLarge
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            ) {
+                                if (viewModel.isFirebaseAllOrgsMode() && v.firebaseOrgId.isNotBlank()) {
+                                    OrgColorDot(orgId = v.firebaseOrgId, viewModel = viewModel, size = 8.dp)
+                                }
+                                Text(
+                                    v.name,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    style = MaterialTheme.typography.labelLarge
+                                )
+                            }
                         },
                         leadingIcon = {
                             Icon(

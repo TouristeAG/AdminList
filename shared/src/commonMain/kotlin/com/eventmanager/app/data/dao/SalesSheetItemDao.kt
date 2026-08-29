@@ -23,6 +23,9 @@ interface SalesSheetItemDao {
     @Query("SELECT * FROM sales_sheet_items WHERE name = :name")
     suspend fun getSalesSheetItemByName(name: String): SalesSheetItem?
 
+    @Query("SELECT * FROM sales_sheet_items WHERE name = :name AND firebaseOrgId = :orgId LIMIT 1")
+    suspend fun getSalesSheetItemByNameAndOrg(name: String, orgId: String): SalesSheetItem?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSalesSheetItem(item: SalesSheetItem): Long
 
@@ -46,4 +49,10 @@ interface SalesSheetItemDao {
 
     @Query("DELETE FROM sales_sheet_items")
     suspend fun deleteAllSalesSheetItems()
+
+    @Query("DELETE FROM sales_sheet_items WHERE firebaseOrgId = :orgId")
+    suspend fun deleteAllForOrg(orgId: String)
+
+    @Query("DELETE FROM sales_sheet_items WHERE firebaseOrgId != '' AND firebaseOrgId NOT IN (:orgIds)")
+    suspend fun deleteAllNotInOrgs(orgIds: List<String>)
 }

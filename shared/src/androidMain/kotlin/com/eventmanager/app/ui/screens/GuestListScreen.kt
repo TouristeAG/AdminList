@@ -26,6 +26,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.eventmanager.app.data.models.*
+import com.eventmanager.app.data.remote.MultiOrgMerge
 import com.eventmanager.app.data.sync.settingsManagerFor
 import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.ui.components.SearchBarWithFilter
@@ -42,7 +43,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import java.time.format.DateTimeFormatter
-import com.eventmanager.app.ui.utils.GuestListDefaultZoneId
+import com.eventmanager.app.ui.components.OrgColorDot
 import com.eventmanager.app.ui.utils.rememberGuestListEffectiveToday
 import com.eventmanager.app.data.utils.formatMoney
 import com.eventmanager.app.ui.viewmodel.EventManagerViewModel
@@ -146,13 +147,17 @@ actual fun GuestListScreen(
     val offsetHours = settingsManager.getDateChangeOffsetHours()
     val effectiveToday = rememberGuestListEffectiveToday(zone = zone, offsetHours = offsetHours)
 
+    val allOrgsMode = viewModel?.isFirebaseAllOrgsMode() == true
+    val mergedVenueNames = remember(venues, allOrgsMode) {
+        if (allOrgsMode) MultiOrgMerge.mergedVenueFilterNames(venues) else emptyList()
+    }
+
     // Filter guests with proper dependency tracking on all inputs
     // Note: derivedStateOf only tracks Compose State objects, not function parameters like 'guests'
     // So we must include 'guests' as a key to remember() to re-filter when sync updates data
-    val filteredGuests = remember(guests, selectedVenueName, searchText, selectedFilter, volunteersMap, effectiveToday) {
+    val filteredGuests = remember(guests, selectedVenueName, searchText, selectedFilter, volunteersMap, effectiveToday, allOrgsMode, venues) {
         val searchQuery = searchText.trim()
         val hasSearch = searchQuery.isNotEmpty()
-        val selectedVenue = selectedVenueName
         val sortable = ArrayList<Pair<String, Guest>>(guests.size)
 
         for (guest in guests) {
@@ -161,14 +166,7 @@ actual fun GuestListScreen(
                 if (Instant.ofEpochMilli(eventTs).atZone(zone).toLocalDate() != effectiveToday) continue
             }
 
-            if (selectedVenue != null) {
-                val matchesVenue = if (selectedVenue == "BOTH") {
-                    guest.venueName == "BOTH"
-                } else {
-                    guest.venueName == selectedVenue || guest.venueName == "BOTH"
-                }
-                if (!matchesVenue) continue
-            }
+            if (!MultiOrgMerge.matchesGuestVenueSelection(guest, selectedVenueName, venues, allOrgsMode)) continue
 
             if (hasSearch) {
                 val matchesSearch =
@@ -382,7 +380,8 @@ actual fun GuestListScreen(
                         },
                         onGuestClick = { clickedGuest ->
                             showGuestDetailPanel = clickedGuest
-                        }
+                        },
+                        viewModel = viewModel,
                     )
                 }
             }
@@ -546,7 +545,8 @@ actual fun GuestListScreen(
                         },
                         onGuestClick = { clickedGuest ->
                             showGuestDetailPanel = clickedGuest
-                        }
+                        },
+                        viewModel = viewModel,
                     )
                 }
             }
@@ -699,7 +699,8 @@ actual fun GuestListScreen(
                         },
                         onGuestClick = { clickedGuest ->
                             showGuestDetailPanel = clickedGuest
-                        }
+                        },
+                        viewModel = viewModel,
                     )
                 }
             }
@@ -906,7 +907,8 @@ fun GuestCard(
     @Suppress("UNUSED_PARAMETER") onDelete: () -> Unit,
     modifier: Modifier = Modifier,
     onVolunteerClick: (Volunteer) -> Unit = {},
-    onGuestClick: (Guest) -> Unit = {}
+    onGuestClick: (Guest) -> Unit = {},
+    viewModel: EventManagerViewModel? = null,
 ) {
     val context = LocalContext.current
     val isCompact = isCompactScreen()
@@ -978,6 +980,9 @@ fun GuestCard(
                         style = if (isCompact) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
+                    if (viewModel?.isFirebaseAllOrgsMode() == true && guest.firebaseOrgId.isNotBlank()) {
+                        OrgColorDot(orgId = guest.firebaseOrgId, viewModel = viewModel, size = 8.dp)
+                    }
                     
                     if (guest.isVolunteerBenefit) {
                         AssistChip(

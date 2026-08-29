@@ -28,6 +28,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.eventmanager.app.data.models.Guest
 import com.eventmanager.app.data.models.Volunteer
+import com.eventmanager.app.data.security.LocalAdminAccessResult
 import com.eventmanager.app.data.sync.settingsManagerFor
 import com.eventmanager.app.platform.PlatformContext
 import com.eventmanager.app.platform.PlatformBackHandler
@@ -47,6 +48,7 @@ import org.jetbrains.compose.resources.stringResource
 sealed class AuthState {
     data object Syncing : AuthState()
     data object Ready : AuthState()
+    data class SyncFailed(val message: String) : AuthState()
     data class AccessGranted(val name: String) : AuthState()
     data class AccessDenied(val name: String) : AuthState()
     data class NotFound(val uid: String = "") : AuthState()
@@ -69,9 +71,18 @@ fun AdminAuthScreen(
     val settingsManager = remember(platformContext) { settingsManagerFor(platformContext) }
     val biometricAuth = remember(platformContext) { createBiometricAuth(platformContext) }
     val scope = rememberCoroutineScope()
+    val adminGateSyncSucceeded by viewModel.adminGateSyncSucceeded.collectAsState()
+    val syncError by viewModel.syncError.collectAsState()
+    val venues by viewModel.venues.collectAsState()
 
-    var authState by remember { mutableStateOf<AuthState>(if (isSyncing) AuthState.Syncing else AuthState.Ready) }
+    var authState by remember { mutableStateOf<AuthState>(AuthState.Syncing) }
     var showQRScanner by remember { mutableStateOf(false) }
+    var showNoAdminRecovery by remember { mutableStateOf(false) }
+    var userDismissedRecovery by remember { mutableStateOf(false) }
+
+    val hasLocalAdmin = remember(guests, volunteers) {
+        institutionHasLocalAdmin(guests, volunteers)
+    }
 
     val permanentGuests = remember(guests) { guests.filter { !it.isVolunteerBenefit && !it.isTemporaryGuest } }
     val volunteersByNfcUid = remember(volunteers) {
@@ -83,46 +94,18 @@ fun AdminAuthScreen(
             .groupBy { it.nfcCardUid.trim().replace(" ", "").replace(":", "").uppercase() }
     }
 
-    fun applyVerifiedAdminFromCandidates(candidates: List<ScannerMatch>) {
-        if (candidates.isEmpty()) {
-            authState = AuthState.NotFound()
-            return
+    fun applyAccessResult(result: LocalAdminAccessResult) {
+        authState = when (result) {
+            is LocalAdminAccessResult.Granted -> AuthState.AccessGranted(result.displayName)
+            is LocalAdminAccessResult.Denied -> AuthState.AccessDenied(result.displayName)
+            LocalAdminAccessResult.NotFound -> AuthState.NotFound()
         }
+    }
+
+    fun applyVerifiedAdminFromCandidates(candidates: List<ScannerMatch>) {
         scope.launch {
-            var grantedName: String? = null
-            var deniedName: String? = null
-            for (match in candidates) {
-                val fresh = try {
-                    viewModel.resolveFreshAdminScanMatch(match)
-                } catch (_: Exception) {
-                    match
-                }
-                when (fresh) {
-                    is ScannerMatch.VolunteerMatch -> {
-                        if (fresh.volunteer.isAdmin) {
-                            grantedName = fresh.volunteer.name
-                            break
-                        } else {
-                            deniedName = fresh.volunteer.name
-                        }
-                    }
-                    is ScannerMatch.GuestMatch -> {
-                        if (fresh.guest.isAdmin) {
-                            grantedName = fresh.guest.name
-                            break
-                        } else {
-                            deniedName = fresh.guest.name
-                        }
-                    }
-                }
-            }
-            withContext(Dispatchers.Main) {
-                authState = when {
-                    grantedName != null -> AuthState.AccessGranted(grantedName)
-                    deniedName != null -> AuthState.AccessDenied(deniedName)
-                    else -> AuthState.NotFound()
-                }
-            }
+            val result = viewModel.verifyLocalAdminAccess(candidates)
+            withContext(Dispatchers.Main) { applyAccessResult(result) }
         }
     }
 
@@ -134,21 +117,39 @@ fun AdminAuthScreen(
         applyVerifiedAdminFromCandidates(allMatches)
     }
 
-    val canScanNfc = authState is AuthState.Ready || authState is AuthState.AccessDenied ||
-        authState is AuthState.NotFound || authState is AuthState.Error
+    val gateReady = adminGateSyncSucceeded == true && !isSyncing
+    val canScanNfc = gateReady && !showNoAdminRecovery && (
+        authState is AuthState.Ready || authState is AuthState.AccessDenied ||
+            authState is AuthState.NotFound || authState is AuthState.Error
+        )
+
+    LaunchedEffect(gateReady, hasLocalAdmin) {
+        if (!gateReady) return@LaunchedEffect
+        if (!hasLocalAdmin && !userDismissedRecovery) {
+            showNoAdminRecovery = true
+        }
+        if (hasLocalAdmin && !showNoAdminRecovery) {
+            userDismissedRecovery = false
+        }
+    }
 
     NfcUidListenerEffect(
         platformContext = platformContext,
-        enabled = canScanNfc && !isSyncing,
+        enabled = canScanNfc,
         onUidRead = ::resolveUidMatch
     )
 
-    LaunchedEffect(isSyncing) {
-        authState = if (isSyncing) AuthState.Syncing else {
-            when (val current = authState) {
-                is AuthState.AccessGranted, is AuthState.AccessDenied, is AuthState.NotFound, is AuthState.Error -> current
-                else -> AuthState.Ready
-            }
+    LaunchedEffect(isSyncing, adminGateSyncSucceeded) {
+        authState = when {
+            isSyncing || adminGateSyncSucceeded == null -> AuthState.Syncing
+            adminGateSyncSucceeded == false -> AuthState.SyncFailed(
+                syncError ?: "Sync failed"
+            )
+            authState is AuthState.AccessGranted ||
+                authState is AuthState.AccessDenied ||
+                authState is AuthState.NotFound ||
+                authState is AuthState.Error -> authState
+            else -> AuthState.Ready
         }
     }
 
@@ -171,15 +172,16 @@ fun AdminAuthScreen(
         }
     }
 
+    Box(Modifier.fillMaxSize()) {
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        if (authState is AuthState.Syncing) {
-                            stringResource(Res.string.admin_auth_syncing_title)
-                        } else {
-                            stringResource(Res.string.admin_auth_title)
+                        when (authState) {
+                            is AuthState.Syncing, is AuthState.SyncFailed ->
+                                stringResource(Res.string.admin_auth_syncing_title)
+                            else -> stringResource(Res.string.admin_auth_title)
                         }
                     )
                 },
@@ -205,7 +207,24 @@ fun AdminAuthScreen(
             ) { state ->
                 when (state) {
                     AuthState.Syncing -> AdminAuthSyncingPanel(modifier = Modifier.fillMaxWidth())
-                    AuthState.Ready -> AdminAuthReadyPanel(modifier = Modifier.fillMaxWidth())
+                    AuthState.Ready -> if (hasLocalAdmin) {
+                        AdminAuthReadyPanel(modifier = Modifier.fillMaxWidth())
+                    } else {
+                        AdminAuthNoAdminPanel(
+                            modifier = Modifier.fillMaxWidth(),
+                            onCreateAdmin = {
+                                userDismissedRecovery = false
+                                showNoAdminRecovery = true
+                            },
+                        )
+                    }
+                    is AuthState.SyncFailed -> AdminAuthResultPanel(
+                        icon = Icons.Default.CloudOff,
+                        iconTint = MaterialTheme.colorScheme.error,
+                        message = state.message,
+                        messageColor = MaterialTheme.colorScheme.error,
+                        onRetry = { viewModel.retryAdminGateSync() },
+                    )
                     is AuthState.AccessGranted -> AdminAuthResultPanel(
                         icon = Icons.Default.CheckCircle,
                         iconTint = MaterialTheme.colorScheme.primary,
@@ -244,7 +263,7 @@ fun AdminAuthScreen(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            if (!isSyncing && authState !is AuthState.AccessGranted) {
+            if (gateReady && hasLocalAdmin && authState !is AuthState.AccessGranted) {
                 Column(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)
@@ -265,18 +284,8 @@ fun AdminAuthScreen(
                                         authState = AuthState.NotFound()
                                         return@launch
                                     }
-                                    authState = when (fresh) {
-                                        is ScannerMatch.VolunteerMatch -> if (fresh.volunteer.isAdmin) {
-                                            AuthState.AccessGranted(fresh.volunteer.name)
-                                        } else {
-                                            AuthState.AccessDenied(fresh.volunteer.name)
-                                        }
-                                        is ScannerMatch.GuestMatch -> if (fresh.guest.isAdmin) {
-                                            AuthState.AccessGranted(fresh.guest.name)
-                                        } else {
-                                            AuthState.AccessDenied(fresh.guest.name)
-                                        }
-                                    }
+                                    val result = viewModel.verifyLocalAdminAccess(fresh)
+                                    applyAccessResult(result)
                                 }
                             },
                             modifier = Modifier.fillMaxWidth(),
@@ -307,6 +316,30 @@ fun AdminAuthScreen(
         }
     }
 
+    if (showNoAdminRecovery) {
+        NoAdminRecoveryDialog(
+            platformContext = platformContext,
+            venues = venues,
+            onCreateAdminGuest = { guest, cb -> viewModel.createAdminGuest(guest, cb) },
+            onCreateAdminVolunteer = { volunteer, cb -> viewModel.createAdminVolunteer(volunteer, cb) },
+            onAssignNfcUid = { adminType, entityId, uid ->
+                viewModel.assignNfcUidToAdmin(
+                    isGuest = adminType == AdminType.GUEST,
+                    entityId = entityId,
+                    uid = uid,
+                )
+            },
+            onComplete = {
+                userDismissedRecovery = false
+                showNoAdminRecovery = false
+            },
+            onDismiss = {
+                userDismissedRecovery = true
+                showNoAdminRecovery = false
+            },
+        )
+    }
+
     if (showQRScanner) {
         QRScannerDialog(
             platformContext = platformContext,
@@ -318,6 +351,7 @@ fun AdminAuthScreen(
             volunteers = volunteers,
             guests = guests
         )
+    }
     }
 }
 
@@ -544,6 +578,52 @@ private fun AdminAuthSyncStepRow(
             }
             SyncStepVisualState.Pending -> {
                 Spacer(Modifier.size(18.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun AdminAuthNoAdminPanel(
+    modifier: Modifier = Modifier,
+    onCreateAdmin: () -> Unit,
+) {
+    val scheme = MaterialTheme.colorScheme
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = scheme.errorContainer.copy(alpha = 0.35f)),
+        border = BorderStroke(1.dp, scheme.error.copy(alpha = 0.35f)),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Icon(
+                Icons.Default.Shield,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = scheme.error,
+            )
+            Text(
+                text = stringResource(Res.string.no_admin_recovery_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = stringResource(Res.string.no_admin_recovery_panel_hint),
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+                color = scheme.onSurfaceVariant,
+            )
+            Button(onClick = onCreateAdmin, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.PersonAdd, contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(Res.string.no_admin_recovery_create_admin))
             }
         }
     }

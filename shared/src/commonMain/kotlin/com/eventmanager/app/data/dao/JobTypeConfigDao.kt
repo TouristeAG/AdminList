@@ -18,6 +18,9 @@ interface JobTypeConfigDao {
     @Query("SELECT * FROM job_type_configs WHERE name = :name")
     suspend fun getJobTypeConfigByName(name: String): JobTypeConfig?
 
+    @Query("SELECT * FROM job_type_configs WHERE name = :name AND firebaseOrgId = :orgId LIMIT 1")
+    suspend fun getJobTypeConfigByNameAndOrg(name: String, orgId: String): JobTypeConfig?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertJobTypeConfig(config: JobTypeConfig): Long
 
@@ -50,4 +53,10 @@ interface JobTypeConfigDao {
 
     @Query("DELETE FROM job_type_configs")
     suspend fun deleteAllJobTypeConfigs()
+
+    @Query("DELETE FROM job_type_configs WHERE firebaseOrgId = :orgId")
+    suspend fun deleteAllForOrg(orgId: String)
+
+    @Query("DELETE FROM job_type_configs WHERE firebaseOrgId != '' AND firebaseOrgId NOT IN (:orgIds)")
+    suspend fun deleteAllNotInOrgs(orgIds: List<String>)
 }

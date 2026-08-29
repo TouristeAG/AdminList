@@ -59,6 +59,7 @@ import com.eventmanager.app.ui.ADMIN_SESSION_IDLE_TIMEOUT_MS
 import com.eventmanager.app.ui.components.SendAnnouncementButton
 import com.eventmanager.app.ui.components.SendAnnouncementDialog
 import com.eventmanager.app.ui.components.AnnouncementPopup
+import com.eventmanager.app.ui.components.BackendMigrationUiHost
 import com.eventmanager.app.ui.scaling.ResolutionScaler
 import com.eventmanager.app.data.models.Guest
 import com.eventmanager.app.data.models.Volunteer
@@ -146,6 +147,8 @@ import com.eventmanager.app.platform.createPlatformContext
 import com.eventmanager.app.ui.utils.*
 import com.eventmanager.app.ui.components.AppBackgroundAnimation
 import com.eventmanager.app.ui.components.BackgroundAnimationStyle
+import com.eventmanager.app.ui.components.FirebaseOrgSwitcher
+import com.eventmanager.app.ui.components.FirebaseOrgSwitcherPlacement
 import com.eventmanager.app.ui.components.WelcomeForegroundPanel
 import com.eventmanager.app.ui.components.WelcomeSecondaryButton
 import com.eventmanager.app.ui.components.DashboardClockCard
@@ -200,6 +203,8 @@ actual fun AppRootContent(
     var showWelcome by rememberSaveable { mutableStateOf(true) }
     var showSetupWizard by rememberSaveable { mutableStateOf(settingsManager.shouldShowSetupWizard()) }
     var showAdminAuth by rememberSaveable { mutableStateOf(false) }
+    var showAdminOrgPicker by rememberSaveable { mutableStateOf(false) }
+    val adminOrgPickerScope = rememberCoroutineScope()
     var showTicketCheck by rememberSaveable { mutableStateOf(false) }
     var showPos by rememberSaveable { mutableStateOf(false) }
     var selectedTab by rememberSaveable { mutableStateOf(0) }
@@ -221,6 +226,32 @@ actual fun AppRootContent(
     var hasCheckedUpdate by remember { mutableStateOf(false) }
     
     if (showSetupWizard) {
+        val wizardAuthScope = rememberCoroutineScope()
+        var wizardAuthEmail by remember {
+            mutableStateOf(
+                com.eventmanager.app.data.sync.settingsManagerFor(platformContext)
+                    .getFirebaseAuthEmail().ifBlank { null }
+            )
+        }
+        val wizardFirebaseAuth = remember {
+            com.eventmanager.app.data.remote.createFirebaseAuthService(platformContext)
+                as? com.eventmanager.app.data.remote.AndroidFirebaseAuthService
+        }
+        val wizardAuthLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+            contract = androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+        ) { activityResult ->
+            wizardAuthScope.launch {
+                val auth = wizardFirebaseAuth ?: return@launch
+                when (val result = auth.completeSignInFromIntent(activityResult.data)) {
+                    is com.eventmanager.app.data.remote.FirebaseAuthResult.Success -> {
+                        wizardAuthEmail = result.email
+                        com.eventmanager.app.data.sync.settingsManagerFor(platformContext)
+                            .setFirebaseAuthEmail(result.email.orEmpty())
+                    }
+                    is com.eventmanager.app.data.remote.FirebaseAuthResult.Error -> Unit
+                }
+            }
+        }
         SetupWizardScreen(
             platformContext = platformContext,
             onSetupComplete = {
@@ -228,7 +259,11 @@ actual fun AppRootContent(
                 // Resolution scale is applied in attachBaseContext; recreate so layout size matches prefs.
                 (appContext as? Activity)?.recreate()
             },
-            onThemeModeChanged = onThemeModeChanged
+            onThemeModeChanged = onThemeModeChanged,
+            firebaseAuthEmail = wizardAuthEmail,
+            onRequestFirebaseSignIn = {
+                wizardFirebaseAuth?.let { wizardAuthLauncher.launch(it.getSignInIntent()) }
+            },
         )
     } else {
         var database by remember { mutableStateOf<EventManagerDatabase?>(null) }
@@ -265,7 +300,12 @@ actual fun AppRootContent(
             }
             val googleSheetsService = remember { GoogleSheetsService(platformContext) }
             val viewModel: EventManagerViewModel = viewModel {
-                EventManagerViewModel(repository, googleSheetsService, platformContext)
+                EventManagerViewModel(
+                    repository,
+                    googleSheetsService,
+                    platformContext,
+                    pendingRemoteWriteDao = db.pendingRemoteWriteDao(),
+                )
             }
 
             // ── First-admin setup gate ──────────────────────────────────────
@@ -317,17 +357,45 @@ actual fun AppRootContent(
                 adminCheckDone = true
             }
 
+            val appSettingsManager = remember(platformContext) {
+                settingsManagerFor(platformContext)
+            }
+            var followAuthEmail by remember {
+                mutableStateOf(appSettingsManager.getFirebaseAuthEmail().ifBlank { null })
+            }
+            val followFirebaseAuth = remember {
+                com.eventmanager.app.data.remote.createFirebaseAuthService(platformContext)
+                    as? com.eventmanager.app.data.remote.AndroidFirebaseAuthService
+            }
+            val followAuthScope = rememberCoroutineScope()
+            var pendingFollowSignInResult by remember {
+                mutableStateOf<((com.eventmanager.app.data.remote.FirebaseAuthResult) -> Unit)?>(null)
+            }
+            val followAuthLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+                contract = androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+            ) { activityResult ->
+                followAuthScope.launch {
+                    val auth = followFirebaseAuth
+                    val result = if (auth == null) {
+                        com.eventmanager.app.data.remote.FirebaseAuthResult.Error("Firebase Auth unavailable")
+                    } else {
+                        auth.completeSignInFromIntent(activityResult.data)
+                    }
+                    when (result) {
+                        is com.eventmanager.app.data.remote.FirebaseAuthResult.Success -> {
+                            followAuthEmail = result.email
+                            appSettingsManager.setFirebaseAuthEmail(result.email.orEmpty())
+                        }
+                        is com.eventmanager.app.data.remote.FirebaseAuthResult.Error -> Unit
+                    }
+                    pendingFollowSignInResult?.invoke(result)
+                    pendingFollowSignInResult = null
+                }
+            }
+
             when {
                 showAdminSetup -> {
                 val adminSetupVenues by viewModel.venues.collectAsState()
-
-                LaunchedEffect(Unit) {
-                    if (skipStartupSync) return@LaunchedEffect
-                    delay(400)
-                    try {
-                        viewModel.performFullSyncAwait(suppressSyncErrorDialog = true)
-                    } catch (_: Exception) { }
-                }
 
                 AdminSetupScreen(
                     platformContext = platformContext,
@@ -348,8 +416,12 @@ actual fun AppRootContent(
                 showWelcome -> {
                 WelcomeScreen(
                     onAdminSelected = {
-                        showWelcome = false
-                        showAdminAuth = true
+                        if (viewModel.isFirebaseAllOrgsMode()) {
+                            showAdminOrgPicker = true
+                        } else {
+                            showWelcome = false
+                            showAdminAuth = true
+                        }
                     },
                     onTicketCheckSelected = {
                         showWelcome = false
@@ -359,7 +431,8 @@ actual fun AppRootContent(
                         showWelcome = false
                         showPos = true
                     },
-                    showAdminAccessSyncIndicator = !adminPrecheckComplete
+                    showAdminAccessSyncIndicator = !adminPrecheckComplete,
+                    viewModel = viewModel,
                 )
                 }
                 else -> {
@@ -651,7 +724,8 @@ actual fun AppRootContent(
                             onBack = { billeterieSection = billeterieScannerReturnSection },
                             onConfirmEntry = { job, selectedInvites ->
                                 viewModel.markBenefitAsUsed(job, selectedInvites)
-                            }
+                            },
+                            viewModel = viewModel,
                         )
                     }
                     else -> {
@@ -665,11 +739,22 @@ actual fun AppRootContent(
                             topBar = {
                                 CenterAlignedTopAppBar(
                                     title = {
-                                        Text(
-                                            text = billeterieListContext.getString(R.string.nav_guests),
-                                            style = MaterialTheme.typography.titleLarge,
-                                            fontWeight = FontWeight.Bold
-                                        )
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                        ) {
+                                            Text(
+                                                text = billeterieListContext.getString(R.string.nav_guests),
+                                                style = MaterialTheme.typography.titleLarge,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.weight(1f),
+                                            )
+                                            FirebaseOrgSwitcher(
+                                                viewModel = viewModel,
+                                                placement = FirebaseOrgSwitcherPlacement.TopBarTitleEnd,
+                                            )
+                                        }
                                     },
                                     navigationIcon = {
                                         IconButton(onClick = { billeterieSection = "home" }) {
@@ -1302,6 +1387,21 @@ if (pageAnimationsEnabled) {
             }
         }
         }
+
+            BackendMigrationUiHost(
+                viewModel = viewModel,
+                settingsManager = appSettingsManager,
+                platformContext = platformContext,
+                onRequestFirebaseSignIn = { onResult ->
+                    val auth = followFirebaseAuth
+                    if (auth == null) {
+                        onResult(com.eventmanager.app.data.remote.FirebaseAuthResult.Error("Firebase Auth unavailable"))
+                    } else {
+                        pendingFollowSignInResult = onResult
+                        followAuthLauncher.launch(auth.getSignInIntent())
+                    }
+                },
+            )
             
         // QR Scanner Dialog
         if (showQRScanner) {
@@ -1616,6 +1716,22 @@ if (pageAnimationsEnabled) {
             }
         }
             }
+
+            if (showAdminOrgPicker) {
+                com.eventmanager.app.ui.components.AdminOrgPickerDialog(
+                    configuredOrgs = viewModel.getFirebaseConfiguredOrgs(),
+                    viewModel = viewModel,
+                    onOrgSelected = { orgId ->
+                        showAdminOrgPicker = false
+                        adminOrgPickerScope.launch {
+                            viewModel.enterSingleOrgMode(orgId)
+                            showWelcome = false
+                            showAdminAuth = true
+                        }
+                    },
+                    onDismiss = { showAdminOrgPicker = false },
+                )
+            }
         }
         }
     }
@@ -1624,107 +1740,13 @@ if (pageAnimationsEnabled) {
 // Sync Status Widget
 @Composable
 fun SyncStatusWidget(
-viewModel: EventManagerViewModel,
-    modifier: Modifier = Modifier
+    viewModel: EventManagerViewModel,
+    modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
-    val lastSyncTime by viewModel.lastSyncTime.collectAsState()
-    val isSyncing by viewModel.isSyncing.collectAsState()
-
-    var syncPillTick by remember { mutableIntStateOf(0) }
-    LaunchedEffect(lastSyncTime) {
-        if (lastSyncTime <= 0L) return@LaunchedEffect
-        while (true) {
-            delay(30_000L)
-            syncPillTick++
-        }
-    }
-
-    val lastUpdateLabel = remember(lastSyncTime, syncPillTick) {
-        if (lastSyncTime <= 0L) {
-            context.getString(R.string.last_update_none_line)
-        } else {
-            context.getString(
-                R.string.last_update_line,
-                DateFormatUtils.formatSyncPillTimeAgo(createPlatformContext(context), lastSyncTime, System.currentTimeMillis())
-            )
-        }
-    }
-
-    // Interaction source for press feedback
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    
-    // Animate scale on press
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed && !isSyncing) 0.95f else 1f,
-        animationSpec = tween(100),
-        label = "sync_pill_scale"
+    com.eventmanager.app.ui.components.SyncStatusPill(
+        viewModel = viewModel,
+        modifier = modifier,
     )
-    
-    Card(
-        modifier = modifier
-            .padding(4.dp)
-            .clickable(
-                enabled = !isSyncing,
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = {
-                    // Trigger differential sync for efficient targeted updates
-                    // Only reloads changed items instead of the entire list
-                    viewModel.performDifferentialFullSync()
-                }
-            ),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSyncing) 
-                MaterialTheme.colorScheme.primaryContainer 
-            else 
-                MaterialTheme.colorScheme.surfaceVariant
-        ),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = if (isPressed && !isSyncing) 4.dp else 2.dp
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(horizontal = 12.dp, vertical = 6.dp)
-                .scale(scale),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            if (isSyncing) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(16.dp),
-                    strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = context.getString(R.string.syncing),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            } else {
-                Icon(
-                    imageVector = Icons.Default.Sync,
-                    contentDescription = "Tap to sync",
-                    modifier = Modifier.size(16.dp),
-                    tint = if (lastSyncTime > 0)
-                        MaterialTheme.colorScheme.primary
-                    else
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = lastUpdateLabel,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (lastSyncTime > 0) 
-                        MaterialTheme.colorScheme.onPrimaryContainer 
-                    else 
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-    }
 }
 
 // QR Scanner Button Widget
@@ -1865,10 +1887,20 @@ fun DashboardScreen(
             offsetHours = dateChangeOffsetHours
         )
 
-        DashboardClockCard(
-            settingsManager = settingsManager,
-            isPhone = isPhone
-        )
+        if (viewModel != null) {
+            DashboardClockCard(
+                settingsManager = settingsManager,
+                isPhone = isPhone,
+                trailingContent = {
+                    FirebaseOrgSwitcher(
+                        viewModel = viewModel,
+                        placement = FirebaseOrgSwitcherPlacement.DashboardClockRow,
+                    )
+                },
+            )
+        } else {
+            DashboardClockCard(settingsManager = settingsManager, isPhone = isPhone)
+        }
         
         Spacer(modifier = Modifier.height(if (isPhone) 16.dp else 24.dp))
 
@@ -2497,7 +2529,8 @@ fun WelcomeScreen(
     onAdminSelected: () -> Unit,
     onTicketCheckSelected: () -> Unit,
     onPosSelected: () -> Unit = {},
-    showAdminAccessSyncIndicator: Boolean = false
+    showAdminAccessSyncIndicator: Boolean = false,
+    viewModel: EventManagerViewModel? = null,
 ) {
     val context = LocalContext.current
     val settingsManager = remember { settingsManagerFor(context) }
@@ -2529,11 +2562,15 @@ fun WelcomeScreen(
     val isPrideDay = month == Calendar.JUNE && day == 28 && settingsManager.isSeasonalFunEnabled()
     
     Scaffold { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+        ) {
         // Full-bleed launch screen with custom background and bottom CTA
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
                 .background(if (isPrideDay) Color.White else colorScheme.surface)
         ) {
             val logoName = remember(isDarkTheme) {
@@ -2833,9 +2870,20 @@ fun WelcomeScreen(
                                 fontWeight = FontWeight.Bold
                             )
                         }
+
                     }
                 }
             }
+        }
+        if (viewModel != null) {
+            FirebaseOrgSwitcher(
+                viewModel = viewModel,
+                placement = FirebaseOrgSwitcherPlacement.WelcomeTopEnd,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(12.dp),
+            )
+        }
         }
     }
 }

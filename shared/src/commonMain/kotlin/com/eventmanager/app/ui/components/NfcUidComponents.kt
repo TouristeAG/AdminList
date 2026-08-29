@@ -47,15 +47,18 @@ fun NfcUidInfoRow(uid: String, isPhone: Boolean, modifier: Modifier = Modifier) 
 }
 
 @Composable
-fun AddNfcUidDialog(
+fun NfcUidCaptureContent(
     platformContext: PlatformContext,
-    onDismiss: () -> Unit,
-    onConfirmUid: (String) -> Unit
+    manualUid: String,
+    onManualUidChange: (String) -> Unit,
+    onConfirmUid: (String) -> Unit,
+    onCancel: (() -> Unit)? = null,
+    statusMessage: String? = null,
+    onStatusMessageChange: ((String?) -> Unit)? = null,
+    modifier: Modifier = Modifier,
 ) {
-    var manualUid by remember { mutableStateOf("") }
     var scannedUid by remember { mutableStateOf<String?>(null) }
     var scanStatus by remember { mutableStateOf<String?>(null) }
-    var statusMessage by remember { mutableStateOf<String?>(null) }
     val readFailedMsg = stringResource(Res.string.nfc_uid_read_failed)
     val cardReader = remember(platformContext) { createCardReaderService(platformContext) }
     var externalReaderConnected by remember { mutableStateOf(cardReader.isReaderConnected()) }
@@ -71,9 +74,7 @@ fun AddNfcUidDialog(
     }
 
     LaunchedEffect(scannedUid) {
-        scannedUid?.let { uid ->
-            manualUid = uid.uppercase()
-        }
+        scannedUid?.let { uid -> onManualUidChange(uid.uppercase()) }
     }
 
     NfcUidListenerEffect(
@@ -81,7 +82,7 @@ fun AddNfcUidDialog(
         enabled = true,
         onUidRead = { uid ->
             scannedUid = uid
-            statusMessage = null
+            onStatusMessageChange?.invoke(null)
         },
         onScanStatus = { scanStatus = it },
     )
@@ -99,6 +100,98 @@ fun AddNfcUidDialog(
         else -> stringResource(Res.string.place_nfc_card_on_phone)
     }
 
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Icon(Icons.Default.Nfc, contentDescription = null, modifier = Modifier.size(40.dp))
+        Text(
+            text = stringResource(Res.string.add_nfc_card_uid_title),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+        )
+        if (externalReaderConnected || scannedUid != null || !scanStatus.isNullOrBlank()) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                if (scannedUid == null && externalReaderConnected) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                }
+                Text(
+                    text = scanHint,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (scannedUid != null) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    textAlign = TextAlign.Center,
+                    fontWeight = if (scannedUid != null) FontWeight.SemiBold else FontWeight.Normal,
+                )
+            }
+        }
+        scanSubHint?.let { hint ->
+            Text(
+                text = hint,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+        }
+        Text(
+            text = stringResource(Res.string.enter_nfc_uid_title),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        OutlinedTextField(
+            value = manualUid,
+            onValueChange = { onManualUidChange(it.uppercase()) },
+            label = { Text(stringResource(Res.string.nfc_uid_label)) },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+        )
+        statusMessage?.let {
+            Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+        }
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            onCancel?.let { cancel ->
+                TextButton(onClick = cancel) {
+                    Text(stringResource(Res.string.cancel))
+                }
+                Spacer(Modifier.width(8.dp))
+            }
+            Button(
+                onClick = {
+                    val uid = manualUid.trim()
+                        .replace(" ", "")
+                        .replace(":", "")
+                        .uppercase()
+                    if (uid.isBlank()) {
+                        onStatusMessageChange?.invoke(readFailedMsg)
+                    } else {
+                        onConfirmUid(uid)
+                    }
+                },
+            ) {
+                Text(stringResource(Res.string.confirm))
+            }
+        }
+    }
+}
+
+@Composable
+fun AddNfcUidDialog(
+    platformContext: PlatformContext,
+    onDismiss: () -> Unit,
+    onConfirmUid: (String) -> Unit
+) {
+    var manualUid by remember { mutableStateOf("") }
+    var statusMessage by remember { mutableStateOf<String?>(null) }
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = phoneFractionDialogProperties(),
@@ -110,92 +203,17 @@ fun AddNfcUidDialog(
                     .heightIn(max = maxDialogHeight)
                     .padding(16.dp),
             ) {
-            Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Icon(Icons.Default.Nfc, contentDescription = null, modifier = Modifier.size(40.dp))
-                Text(
-                    text = stringResource(Res.string.add_nfc_card_uid_title),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center
+                NfcUidCaptureContent(
+                    platformContext = platformContext,
+                    manualUid = manualUid,
+                    onManualUidChange = { manualUid = it },
+                    onConfirmUid = onConfirmUid,
+                    onCancel = onDismiss,
+                    statusMessage = statusMessage,
+                    onStatusMessageChange = { statusMessage = it },
+                    modifier = Modifier.padding(24.dp),
                 )
-                if (externalReaderConnected || scannedUid != null || !scanStatus.isNullOrBlank()) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        if (scannedUid == null && externalReaderConnected) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                strokeWidth = 2.dp
-                            )
-                        }
-                        Text(
-                            text = scanHint,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = if (scannedUid != null) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
-                            textAlign = TextAlign.Center,
-                            fontWeight = if (scannedUid != null) FontWeight.SemiBold else FontWeight.Normal
-                        )
-                    }
-                }
-                scanSubHint?.let { hint ->
-                    Text(
-                        text = hint,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-                }
-                Text(
-                    text = stringResource(Res.string.enter_nfc_uid_title),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
-                OutlinedTextField(
-                    value = manualUid,
-                    onValueChange = { manualUid = it.uppercase() },
-                    label = { Text(stringResource(Res.string.nfc_uid_label)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-                statusMessage?.let {
-                    Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    TextButton(onClick = onDismiss) {
-                        Text(stringResource(Res.string.cancel))
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    Button(
-                        onClick = {
-                            val uid = manualUid.trim()
-                                .replace(" ", "")
-                                .replace(":", "")
-                                .uppercase()
-                            if (uid.isBlank()) {
-                                statusMessage = readFailedMsg
-                            } else {
-                                onConfirmUid(uid)
-                            }
-                        }
-                    ) {
-                        Text(stringResource(Res.string.confirm))
-                    }
-                }
             }
-        }
         }
     }
 }

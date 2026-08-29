@@ -24,10 +24,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.eventmanager.app.ui.components.FirebaseOrgSwitcher
+import com.eventmanager.app.ui.components.FirebaseOrgSwitcherPlacement
+import com.eventmanager.app.ui.viewmodel.EventManagerViewModel
 import com.eventmanager.app.data.models.*
 import com.eventmanager.app.resources.Res
 import com.eventmanager.app.resources.*
 import com.eventmanager.app.ui.components.NfcUidMatchOption
+import com.eventmanager.app.ui.components.OrgColorDot
 import com.eventmanager.app.ui.components.ScannerMatch
 import com.eventmanager.app.ui.components.VolunteerFutureEntriesSection
 import kotlinx.coroutines.delay
@@ -76,6 +80,7 @@ fun BilleterieScannerScanningScreen(
     externalReaderBusy: Boolean = false,
     cameraPreview: @Composable () -> Unit,
     nfcStatusFooter: (@Composable () -> Unit)? = null,
+    viewModel: EventManagerViewModel? = null,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -86,12 +91,25 @@ fun BilleterieScannerScanningScreen(
         Column(modifier = Modifier.fillMaxSize()) {
             CenterAlignedTopAppBar(
                 title = {
-                    Text(
-                        text = stringResource(Res.string.billeterie_button_scanner),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(
+                            text = stringResource(Res.string.billeterie_button_scanner),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            modifier = if (viewModel != null) Modifier.weight(1f) else Modifier,
+                        )
+                        if (viewModel != null) {
+                            FirebaseOrgSwitcher(
+                                viewModel = viewModel,
+                                placement = FirebaseOrgSwitcherPlacement.ScannerDarkTopEnd,
+                            )
+                        }
+                    }
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -348,6 +366,44 @@ private fun BilleterieNfcCompactStrip(
     }
 }
 
+fun BilleterieScanResult.scannedFirebaseOrgId(): String? = when (this) {
+    is BilleterieScanResult.FreeEntry -> volunteer.firebaseOrgId.takeIf { it.isNotBlank() }
+    is BilleterieScanResult.TicketsAvailable -> volunteer.firebaseOrgId.takeIf { it.isNotBlank() }
+    is BilleterieScanResult.NoEntry -> volunteer.firebaseOrgId.takeIf { it.isNotBlank() }
+    is BilleterieScanResult.GuestFound -> guest.firebaseOrgId.takeIf { it.isNotBlank() }
+    is BilleterieScanResult.ScanError -> null
+}
+
+@Composable
+fun BilleterieScannerScannedOrgLabel(
+    viewModel: EventManagerViewModel?,
+    orgId: String,
+    lightOnColoredBackground: Boolean = true,
+    modifier: Modifier = Modifier,
+) {
+    if (viewModel == null || !viewModel.isFirebaseAllOrgsMode() || orgId.isBlank()) return
+
+    val textColor = if (lightOnColoredBackground) {
+        Color.White.copy(alpha = 0.75f)
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        OrgColorDot(orgId = orgId, viewModel = viewModel, size = 10.dp)
+        Text(
+            text = stringResource(Res.string.billeterie_scanner_scanned_org, orgId),
+            style = MaterialTheme.typography.titleMedium,
+            color = textColor,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
 @Composable
 fun BilleterieScanResultOverlay(
     result: BilleterieScanResult,
@@ -357,6 +413,7 @@ fun BilleterieScanResultOverlay(
     onConfirmEntry: (Job, Int) -> Unit,
     onScanNext: () -> Unit,
     onCloseToMenu: () -> Unit,
+    viewModel: EventManagerViewModel? = null,
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         when (result) {
@@ -364,6 +421,7 @@ fun BilleterieScanResultOverlay(
                 volunteer = result.volunteer,
                 benefitStatus = result.benefitStatus,
                 perkTexts = result.perkTexts,
+                viewModel = viewModel,
                 onScanNext = onScanNext,
             )
             is BilleterieScanResult.TicketsAvailable -> BilleterieTicketValidationContent(
@@ -373,6 +431,7 @@ fun BilleterieScanResultOverlay(
                 jobTypeConfigs = jobTypeConfigs,
                 offsetHours = offsetHours,
                 ticketConfirmed = ticketConfirmed,
+                viewModel = viewModel,
                 onConfirmEntry = onConfirmEntry,
                 onScanNext = onScanNext,
             )
@@ -380,10 +439,12 @@ fun BilleterieScanResultOverlay(
                 volunteer = result.volunteer,
                 benefitStatus = result.benefitStatus,
                 perkTexts = result.perkTexts,
+                viewModel = viewModel,
                 onScanNext = onScanNext,
             )
             is BilleterieScanResult.GuestFound -> BilleterieGuestFoundContent(
                 guest = result.guest,
+                viewModel = viewModel,
                 onScanNext = onScanNext,
             )
             is BilleterieScanResult.ScanError -> BilleterieScanErrorContent(
@@ -415,6 +476,7 @@ private fun BilleterieFreeEntryContent(
     volunteer: Volunteer,
     benefitStatus: VolunteerBenefitStatus,
     perkTexts: List<String>,
+    viewModel: EventManagerViewModel? = null,
     onScanNext: () -> Unit,
 ) {
     val displayPerkTexts = perkTexts.ifEmpty {
@@ -476,6 +538,12 @@ private fun BilleterieFreeEntryContent(
             )
         }
 
+        BilleterieScannerScannedOrgLabel(
+            viewModel = viewModel,
+            orgId = volunteer.firebaseOrgId,
+            modifier = Modifier.padding(top = 8.dp),
+        )
+
         if (displayPerkTexts.isNotEmpty()) {
             Spacer(modifier = Modifier.height(24.dp))
             Card(
@@ -531,6 +599,7 @@ private fun BilleterieTicketValidationContent(
     jobTypeConfigs: List<JobTypeConfig>,
     offsetHours: Int,
     ticketConfirmed: Boolean,
+    viewModel: EventManagerViewModel? = null,
     onConfirmEntry: (Job, Int) -> Unit,
     onScanNext: () -> Unit,
 ) {
@@ -582,6 +651,11 @@ private fun BilleterieTicketValidationContent(
                 text = volunteer.name,
                 style = MaterialTheme.typography.headlineSmall,
                 color = Color.White.copy(alpha = 0.95f),
+            )
+            BilleterieScannerScannedOrgLabel(
+                viewModel = viewModel,
+                orgId = volunteer.firebaseOrgId,
+                modifier = Modifier.padding(top = 8.dp),
             )
             Spacer(modifier = Modifier.height(32.dp))
             BilleterieScanNextButton(onScanNext)
@@ -692,6 +766,7 @@ private fun BilleterieNoEntryContent(
     volunteer: Volunteer,
     benefitStatus: VolunteerBenefitStatus,
     perkTexts: List<String>,
+    viewModel: EventManagerViewModel? = null,
     onScanNext: () -> Unit,
 ) {
     val displayPerkTexts = perkTexts.ifEmpty {
@@ -737,6 +812,12 @@ private fun BilleterieNoEntryContent(
                 color = Color.White.copy(alpha = 0.7f),
             )
         }
+
+        BilleterieScannerScannedOrgLabel(
+            viewModel = viewModel,
+            orgId = volunteer.firebaseOrgId,
+            modifier = Modifier.padding(top = 8.dp),
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -791,6 +872,7 @@ private fun BilleterieNoEntryContent(
 @Composable
 private fun BilleterieGuestFoundContent(
     guest: Guest,
+    viewModel: EventManagerViewModel? = null,
     onScanNext: () -> Unit,
 ) {
     val checkScale = remember { Animatable(0f) }
@@ -839,6 +921,12 @@ private fun BilleterieGuestFoundContent(
             style = MaterialTheme.typography.headlineSmall,
             color = Color.White.copy(alpha = 0.95f),
             textAlign = TextAlign.Center,
+        )
+
+        BilleterieScannerScannedOrgLabel(
+            viewModel = viewModel,
+            orgId = guest.firebaseOrgId,
+            modifier = Modifier.padding(top = 8.dp),
         )
 
         if (guest.venueName.isNotBlank()) {
@@ -963,6 +1051,7 @@ private fun BilleterieScanNextButton(onScanNext: () -> Unit) {
 @Composable
 fun BilleterieDuplicateUidPickerDialog(
     matches: List<NfcUidMatchOption>,
+    viewModel: com.eventmanager.app.ui.viewmodel.EventManagerViewModel,
     onSelect: (ScannerMatch) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -985,11 +1074,27 @@ fun BilleterieDuplicateUidPickerDialog(
                         Column(
                             modifier = Modifier.padding(12.dp),
                         ) {
-                            Text(
-                                option.title,
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.SemiBold,
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                val orgId = when (val match = option.match) {
+                                    is ScannerMatch.VolunteerMatch -> match.volunteer.firebaseOrgId
+                                    is ScannerMatch.GuestMatch -> match.guest.firebaseOrgId
+                                }
+                                if (orgId.isNotBlank()) {
+                                    com.eventmanager.app.ui.components.OrgColorDot(
+                                        orgId = orgId,
+                                        viewModel = viewModel,
+                                        size = 10.dp,
+                                    )
+                                }
+                                Text(
+                                    option.title,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                )
+                            }
                             Text(
                                 option.typeLabel,
                                 style = MaterialTheme.typography.labelSmall,

@@ -122,8 +122,10 @@ actual fun SettingsScreen(
     var salesItemsSheet by remember { mutableStateOf(settingsManager.getSalesItemsSheet()) }
     var transfersSheet by remember { mutableStateOf(settingsManager.getTransfersSheet()) }
     var tempGuestListSheet by remember { mutableStateOf(settingsManager.getTempGuestListSheet()) }
+    var settingsSheet by remember { mutableStateOf(settingsManager.getSettingsSheet()) }
     var syncInterval by remember { mutableStateOf(settingsManager.getSyncInterval()) }
     var uploadStatus by remember { mutableStateOf<String?>(null) }
+    var migrationWizard by remember { mutableStateOf<com.eventmanager.app.data.remote.MigrationDirection?>(null) }
     var gmailLoading by remember { mutableStateOf(false) }
     var gmailSignedIn by remember { mutableStateOf(gmailAuth.isSignedIn) }
     var gmailEmail by remember { mutableStateOf(gmailAuth.accountEmail) }
@@ -183,7 +185,6 @@ actual fun SettingsScreen(
             add(DesktopSettingsNavItem(DesktopSettingsNav.About, stringResource(Res.string.app_info_title), Icons.Default.Info))
         } else {
             add(DesktopSettingsNavItem(DesktopSettingsNav.Appearance, stringResource(Res.string.settings_category_appearance), Icons.Default.Palette))
-            add(DesktopSettingsNavItem(DesktopSettingsNav.Sync, stringResource(Res.string.settings_category_sync), Icons.Default.CloudSync))
             add(DesktopSettingsNavItem(DesktopSettingsNav.Email, stringResource(Res.string.settings_category_email), Icons.Default.Email))
             add(DesktopSettingsNavItem(DesktopSettingsNav.ExternalReader, stringResource(Res.string.settings_category_external_reader), Icons.Default.Nfc))
             add(DesktopSettingsNavItem(DesktopSettingsNav.Announcements, stringResource(Res.string.settings_category_announcements), Icons.Default.Campaign))
@@ -245,6 +246,7 @@ actual fun SettingsScreen(
         settingsManager.saveSalesItemsSheet(salesItemsSheet.trim())
         settingsManager.saveTransfersSheet(transfersSheet.trim())
         settingsManager.saveTempGuestListSheet(tempGuestListSheet.trim())
+        settingsManager.saveSettingsSheet(settingsSheet.trim())
         showPlatformToast(platformContext, saveLabel)
     }
 
@@ -303,22 +305,21 @@ actual fun SettingsScreen(
             ) {
                 // Variant-specific background animation is embedded in Appearance below.
 
+        if (variant == SettingsScreenVariant.Full) {
         DesktopSettingsCategory(
             section = DesktopSettingsNav.Sync,
             selectedSection = selectedSection,
             title = stringResource(Res.string.settings_category_sync),
             icon = Icons.Default.CloudSync,
         ) {
-            OutlinedButton(
+            com.eventmanager.app.ui.components.SyncSetupInstructionsButton(
+                backendType = settingsManager.getBackendType(),
                 onClick = { showInstructions = true },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(Icons.AutoMirrored.Filled.Help, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(Res.string.view_setup_instructions))
-            }
+            )
 
-            if (variant == SettingsScreenVariant.Full) {
+            if (variant == SettingsScreenVariant.Full &&
+                settingsManager.getBackendType() == com.eventmanager.app.data.remote.BackendType.SHEETS
+            ) {
                 OutlinedTextField(
                     value = spreadsheetId,
                     onValueChange = { spreadsheetId = it },
@@ -334,6 +335,7 @@ actual fun SettingsScreen(
                 SheetNameField(stringResource(Res.string.sales_items_sheet_label), salesItemsSheet) { salesItemsSheet = it }
                 SheetNameField(stringResource(Res.string.transfers_sheet_label), transfersSheet) { transfersSheet = it }
                 SheetNameField(stringResource(Res.string.temp_guest_list_sheet_label), tempGuestListSheet) { tempGuestListSheet = it }
+                SheetNameField(stringResource(Res.string.settings_sheet_label), settingsSheet) { settingsSheet = it }
 
                 ServiceAccountKeyUploadButton(
                     platformContext = platformContext,
@@ -356,20 +358,153 @@ actual fun SettingsScreen(
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(Res.string.save_sheets_config))
                 }
+                com.eventmanager.app.ui.components.SheetsMigrateToFirebaseButton(
+                    onClick = {
+                        migrationWizard = com.eventmanager.app.data.remote.MigrationDirection.SHEETS_TO_FIREBASE
+                    }
+                )
+            }
+
+            if (variant == SettingsScreenVariant.Full &&
+                settingsManager.getBackendType() == com.eventmanager.app.data.remote.BackendType.FIREBASE
+            ) {
+                var firebaseConfiguredOrgs by remember { mutableStateOf(settingsManager.getFirebaseConfiguredOrgs()) }
+                var memberUid by remember { mutableStateOf("") }
+                var memberEmail by remember { mutableStateOf("") }
+                var firebaseProjectId by remember { mutableStateOf(settingsManager.getFirebaseProjectId()) }
+                var firebaseApiKey by remember { mutableStateOf(settingsManager.getFirebaseApiKey()) }
+                var firebaseApplicationId by remember { mutableStateOf(settingsManager.getFirebaseApplicationId()) }
+                var allowedEmailDomains by remember {
+                    mutableStateOf(settingsManager.getAllowedEmailDomains())
+                }
+                com.eventmanager.app.ui.components.FirebaseSyncSettingsSection(
+                    configuredOrgs = firebaseConfiguredOrgs,
+                    authEmail = settingsManager.getFirebaseAuthEmail().ifBlank { null },
+                    onConfiguredOrgsChange = {
+                        firebaseConfiguredOrgs = it
+                        viewModel.updateFirebaseConfiguredOrgsLocal(it)
+                    },
+                    onOrgIdCommitted = viewModel::provisionFirebaseOrg,
+                    onSignIn = {
+                        scope.launch {
+                            when (val result = com.eventmanager.app.data.remote.createFirebaseAuthService(platformContext).signInWithGoogle()) {
+                                is com.eventmanager.app.data.remote.FirebaseAuthResult.Success -> {
+                                    settingsManager.setFirebaseAuthEmail(result.email.orEmpty())
+                                    val org = settingsManager.getFirebaseOrgId()
+                                    if (org.isNotBlank() && result.uid.isNotBlank()) {
+                                        val gateway = com.eventmanager.app.data.remote.createFirestoreGateway(
+                                            platformContext,
+                                            settingsManager,
+                                        )
+                                        com.eventmanager.app.data.remote.FirebaseMemberSignIn.afterGoogleSignIn(
+                                            gateway = gateway,
+                                            settings = settingsManager,
+                                            uid = result.uid,
+                                            email = result.email,
+                                            joinWithBootstrapCode = settingsManager.getFirebaseBootstrapCode().isNotBlank(),
+                                        )
+                                    }
+                                }
+                                is com.eventmanager.app.data.remote.FirebaseAuthResult.Error -> {
+                                    // Surface via uploadStatus-style feedback when Auth SDK is missing
+                                    uploadStatus = result.message
+                                }
+                            }
+                        }
+                    },
+                    onSignOut = {
+                        scope.launch {
+                            com.eventmanager.app.data.remote.createFirebaseAuthService(platformContext).signOut()
+                            settingsManager.setFirebaseAuthEmail("")
+                        }
+                    },
+                    onMigrateToSheets = {
+                        migrationWizard = com.eventmanager.app.data.remote.MigrationDirection.FIREBASE_TO_SHEETS
+                    },
+                    onMirrorExport = {
+                        viewModel.exportSheetsMirrorNow()
+                    },
+                    platformContext = platformContext,
+                    onMirrorSettingsChanged = { viewModel.onSheetsMirrorSettingsChanged() },
+                    settingsManager = settingsManager,
+                    memberUid = memberUid,
+                    memberEmail = memberEmail,
+                    onMemberUidChange = { memberUid = it },
+                    onMemberEmailChange = { memberEmail = it },
+                    projectId = firebaseProjectId,
+                    apiKey = firebaseApiKey,
+                    applicationId = firebaseApplicationId,
+                    onProjectIdChange = {
+                        firebaseProjectId = it
+                        settingsManager.setFirebaseProjectId(it)
+                    },
+                    onApiKeyChange = {
+                        firebaseApiKey = it
+                        settingsManager.setFirebaseApiKey(it)
+                    },
+                    onApplicationIdChange = {
+                        firebaseApplicationId = it
+                        settingsManager.setFirebaseApplicationId(it)
+                    },
+                    webClientId = settingsManager.getFirebaseWebClientId(),
+                    onWebClientIdChange = { settingsManager.setFirebaseWebClientId(it) },
+                    webClientSecret = settingsManager.getFirebaseWebClientSecret(),
+                    onWebClientSecretChange = { settingsManager.setFirebaseWebClientSecret(it) },
+                    allowedEmailDomains = allowedEmailDomains,
+                    onAllowedEmailDomainsChange = { domains ->
+                        allowedEmailDomains = domains
+                        settingsManager.setAllowedEmailDomains(domains)
+                        scope.launch {
+                            val org = settingsManager.getFirebaseOrgId().trim()
+                            if (org.isBlank()) return@launch
+                            val gateway = com.eventmanager.app.data.remote.createFirestoreGateway(
+                                platformContext,
+                                settingsManager,
+                            )
+                            runCatching {
+                                com.eventmanager.app.data.remote.MemberRoleAdmin.publishAllowedEmailDomains(
+                                    gateway = gateway,
+                                    orgId = org,
+                                    domains = domains,
+                                )
+                            }.onFailure { uploadStatus = it.message }
+                        }
+                    },
+                    onAssignMemberRole = { role ->
+                        scope.launch {
+                            val gateway = com.eventmanager.app.data.remote.createFirestoreGateway(
+                                platformContext,
+                                settingsManager,
+                            )
+                            com.eventmanager.app.data.remote.MemberRoleAdmin.upsertMember(
+                                gateway = gateway,
+                                orgId = settingsManager.getFirebaseOrgId(),
+                                uid = memberUid.trim(),
+                                role = role,
+                                email = memberEmail.trim().ifBlank { null },
+                                allowedEmailDomains = settingsManager.getAllowedEmailDomains(),
+                            )
+                        }
+                    },
+                )
             }
 
             if (variant == SettingsScreenVariant.Full) {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
             }
 
-            DesktopSyncIntervalSettings(
-                settingsManager = settingsManager,
-                viewModel = viewModel,
-                syncInterval = syncInterval,
-                onSyncIntervalChange = { syncInterval = it }
-            )
+            if (com.eventmanager.app.ui.components.shouldShowSyncInterval(settingsManager.getBackendType())) {
+                DesktopSyncIntervalSettings(
+                    settingsManager = settingsManager,
+                    viewModel = viewModel,
+                    syncInterval = syncInterval,
+                    onSyncIntervalChange = { syncInterval = it }
+                )
+            }
 
-            if (variant == SettingsScreenVariant.Full) {
+            if (variant == SettingsScreenVariant.Full &&
+                com.eventmanager.app.ui.components.shouldShowSheetsManualSyncControls(settingsManager.getBackendType())
+            ) {
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
@@ -392,22 +527,8 @@ actual fun SettingsScreen(
                         Text(stringResource(Res.string.test_sync_status))
                     }
                 }
-            } else if (variant == SettingsScreenVariant.BilleterieBasic || variant == SettingsScreenVariant.PosBasic) {
-                Spacer(Modifier.height(8.dp))
-                Button(
-                    onClick = { viewModel.syncWithGoogleSheets() },
-                    enabled = !isSyncing,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    if (isSyncing) {
-                        CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                    } else {
-                        Icon(Icons.Default.Sync, contentDescription = null)
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(Res.string.manual_sync_now))
-                }
             }
+        }
         }
 
         if (variant == SettingsScreenVariant.Full || variant == SettingsScreenVariant.BilleterieBasic || variant == SettingsScreenVariant.PosBasic) {
@@ -587,7 +708,9 @@ actual fun SettingsScreen(
 
                 HorizontalDivider()
 
-                DesktopEmailTemplateSettings(settingsManager)
+                DesktopEmailTemplateSettings(settingsManager, onSyncedSettingChanged = {
+                    viewModel.backupInstitutionSettingsToSheets()
+                })
             }
         }
 
@@ -1181,6 +1304,19 @@ actual fun SettingsScreen(
                 }
             )
 
+            if (variant == SettingsScreenVariant.BilleterieBasic) {
+                var billeterieClockVisible by remember { mutableStateOf(settingsManager.isBilleterieClockVisible()) }
+                DesktopSettingsToggleRow(
+                    title = stringResource(Res.string.billeterie_clock_visibility_title),
+                    description = stringResource(Res.string.billeterie_clock_visibility_description),
+                    checked = billeterieClockVisible,
+                    onCheckedChange = {
+                        billeterieClockVisible = it
+                        settingsManager.setBilleterieClockVisible(it)
+                    }
+                )
+            }
+
             if (variant == SettingsScreenVariant.Full) {
                 var statisticsVisible by remember { mutableStateOf(settingsManager.isStatisticsVisible()) }
                 DesktopSettingsToggleRow(
@@ -1278,12 +1414,26 @@ actual fun SettingsScreen(
             Spacer(Modifier.height(12.dp))
             DesktopDateTimeFormatSettings(settingsManager)
             Spacer(Modifier.height(12.dp))
-            DesktopDateChangeOffset(settingsManager)
+            DesktopDateChangeOffset(settingsManager, onSyncedSettingChanged = {
+                viewModel.backupInstitutionSettingsToSheets()
+            })
             Spacer(Modifier.height(12.dp))
             DesktopCurrencyPicker(
                 selectedCurrency = settingsManager.getCurrencyCode(),
-                onCurrencySelected = { settingsManager.saveCurrencyCode(it) }
+                onCurrencySelected = {
+                    settingsManager.saveCurrencyCode(it)
+                    viewModel.backupInstitutionSettingsToSheets()
+                }
             )
+            if (variant == SettingsScreenVariant.Full) {
+                Spacer(modifier.height(12.dp))
+                DesktopPurchaseCreditBufferSetting(
+                    settingsManager = settingsManager,
+                    onSyncedSettingChanged = {
+                        viewModel.backupInstitutionSettingsToSheets()
+                    },
+                )
+            }
         }
 
         if (variant == SettingsScreenVariant.Full) {
@@ -1319,7 +1469,14 @@ actual fun SettingsScreen(
     }
 
     if (showInstructions) {
-        DesktopGoogleSheetsInstructionsDialog(onDismiss = { showInstructions = false })
+        when (settingsManager.getBackendType()) {
+            com.eventmanager.app.data.remote.BackendType.FIREBASE ->
+                com.eventmanager.app.ui.components.FirebaseSetupTutorialDialog(
+                    onDismiss = { showInstructions = false },
+                )
+            com.eventmanager.app.data.remote.BackendType.SHEETS ->
+                DesktopGoogleSheetsInstructionsDialog(onDismiss = { showInstructions = false })
+        }
     }
 
     if (showGmailOAuthHelp) {
@@ -1467,6 +1624,30 @@ actual fun SettingsScreen(
         statusMessage = syncStatusMessage
     )
 
+    com.eventmanager.app.ui.components.BackendMigrationUiHost(
+        viewModel = viewModel,
+        settingsManager = settingsManager,
+        platformContext = platformContext,
+        showMigrationWizard = migrationWizard,
+        onDismissMigrationWizard = { migrationWizard = null },
+        onRequestFirebaseSignIn = { onResult ->
+            scope.launch {
+                val result = com.eventmanager.app.data.remote
+                    .createFirebaseAuthService(platformContext)
+                    .signInWithGoogle()
+                when (result) {
+                    is com.eventmanager.app.data.remote.FirebaseAuthResult.Success -> {
+                        settingsManager.setFirebaseAuthEmail(result.email.orEmpty())
+                    }
+                    is com.eventmanager.app.data.remote.FirebaseAuthResult.Error -> {
+                        uploadStatus = result.message
+                    }
+                }
+                onResult(result)
+            }
+        },
+    )
+
     val updateCheckResult by viewModel.updateCheckState.collectAsState()
     val updateDownloadState by viewModel.updateDownloadState.collectAsState()
     AppUpdateFlowDialog(
@@ -1584,6 +1765,40 @@ private fun DesktopCurrencyPicker(selectedCurrency: String, onCurrencySelected: 
             }
         }
     }
+}
+
+@Composable
+private fun DesktopPurchaseCreditBufferSetting(
+    settingsManager: SettingsManager,
+    onSyncedSettingChanged: () -> Unit,
+) {
+    var bufferText by remember {
+        mutableStateOf(settingsManager.getPurchaseCreditBuffer().toString())
+    }
+    val currencyCode = settingsManager.getCurrencyCode()
+
+    Text(stringResource(Res.string.purchase_credit_buffer_label), style = MaterialTheme.typography.titleMedium)
+    Text(
+        text = stringResource(Res.string.purchase_credit_buffer_description),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Spacer(Modifier.height(8.dp))
+    OutlinedTextField(
+        value = bufferText,
+        onValueChange = { newValue ->
+            if (newValue.isEmpty() || newValue.matches(Regex("^\\d*\\.?\\d*$"))) {
+                bufferText = newValue
+                val amount = newValue.toDoubleOrNull() ?: 0.0
+                settingsManager.savePurchaseCreditBuffer(amount)
+                onSyncedSettingChanged()
+            }
+        },
+        label = { Text(stringResource(Res.string.amount_label)) },
+        suffix = { Text(currencyCode) },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+    )
 }
 
 @Composable
@@ -1778,7 +1993,10 @@ private fun DesktopSyncIntervalSettings(
 }
 
 @Composable
-private fun DesktopDateChangeOffset(settingsManager: SettingsManager) {
+private fun DesktopDateChangeOffset(
+    settingsManager: SettingsManager,
+    onSyncedSettingChanged: () -> Unit = {},
+) {
     var dateChangeOffsetHours by remember { mutableStateOf(settingsManager.getDateChangeOffsetHours()) }
 
     Text(stringResource(Res.string.date_change_offset_title), style = MaterialTheme.typography.titleMedium)
@@ -1799,6 +2017,7 @@ private fun DesktopDateChangeOffset(settingsManager: SettingsManager) {
                 if (dateChangeOffsetHours > -12) {
                     dateChangeOffsetHours--
                     settingsManager.saveDateChangeOffsetHours(dateChangeOffsetHours)
+                    onSyncedSettingChanged()
                 }
             },
             enabled = dateChangeOffsetHours > -12
@@ -1831,6 +2050,7 @@ private fun DesktopDateChangeOffset(settingsManager: SettingsManager) {
                 if (dateChangeOffsetHours < 12) {
                     dateChangeOffsetHours++
                     settingsManager.saveDateChangeOffsetHours(dateChangeOffsetHours)
+                    onSyncedSettingChanged()
                 }
             },
             enabled = dateChangeOffsetHours < 12
@@ -1842,7 +2062,10 @@ private fun DesktopDateChangeOffset(settingsManager: SettingsManager) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DesktopEmailTemplateSettings(settingsManager: SettingsManager) {
+private fun DesktopEmailTemplateSettings(
+    settingsManager: SettingsManager,
+    onSyncedSettingChanged: () -> Unit = {},
+) {
     val platformContext = LocalPlatformContext.current
     val subjectDefault = stringResource(Res.string.email_subject_default)
     val contentBeforeDefault = stringResource(Res.string.email_content_before_default)
@@ -1911,14 +2134,22 @@ private fun DesktopEmailTemplateSettings(settingsManager: SettingsManager) {
     if (selectedTab == 0) {
         OutlinedTextField(
             value = volunteerSubject,
-            onValueChange = { volunteerSubject = it; settingsManager.saveEmailSubject(it) },
+            onValueChange = {
+                volunteerSubject = it
+                settingsManager.saveEmailSubject(it)
+                onSyncedSettingChanged()
+            },
             label = { Text(stringResource(Res.string.email_subject_label)) },
             placeholder = { Text(stringResource(Res.string.email_subject_hint)) },
             modifier = Modifier.fillMaxWidth()
         )
         OutlinedTextField(
             value = volunteerContentBefore,
-            onValueChange = { volunteerContentBefore = it; settingsManager.saveEmailContentBefore(it) },
+            onValueChange = {
+                volunteerContentBefore = it
+                settingsManager.saveEmailContentBefore(it)
+                onSyncedSettingChanged()
+            },
             label = { Text(stringResource(Res.string.email_content_before_label)) },
             placeholder = { Text(stringResource(Res.string.email_content_before_hint)) },
             modifier = Modifier.fillMaxWidth(),
@@ -1931,11 +2162,16 @@ private fun DesktopEmailTemplateSettings(settingsManager: SettingsManager) {
             onCheckedChange = {
                 volunteerIncludeQr = it
                 settingsManager.setEmailIncludeQrEnabled(it)
+                onSyncedSettingChanged()
             }
         )
         OutlinedTextField(
             value = volunteerContentAfter,
-            onValueChange = { volunteerContentAfter = it; settingsManager.saveEmailContentAfter(it) },
+            onValueChange = {
+                volunteerContentAfter = it
+                settingsManager.saveEmailContentAfter(it)
+                onSyncedSettingChanged()
+            },
             label = { Text(stringResource(Res.string.email_content_after_label)) },
             placeholder = { Text(stringResource(Res.string.email_content_after_hint)) },
             modifier = Modifier.fillMaxWidth(),
@@ -1944,14 +2180,22 @@ private fun DesktopEmailTemplateSettings(settingsManager: SettingsManager) {
     } else {
         OutlinedTextField(
             value = guestSubject,
-            onValueChange = { guestSubject = it; settingsManager.saveGuestEmailSubject(it) },
+            onValueChange = {
+                guestSubject = it
+                settingsManager.saveGuestEmailSubject(it)
+                onSyncedSettingChanged()
+            },
             label = { Text(stringResource(Res.string.email_subject_label)) },
             placeholder = { Text(stringResource(Res.string.email_subject_hint)) },
             modifier = Modifier.fillMaxWidth()
         )
         OutlinedTextField(
             value = guestContentBefore,
-            onValueChange = { guestContentBefore = it; settingsManager.saveGuestEmailContentBefore(it) },
+            onValueChange = {
+                guestContentBefore = it
+                settingsManager.saveGuestEmailContentBefore(it)
+                onSyncedSettingChanged()
+            },
             label = { Text(stringResource(Res.string.email_content_before_label)) },
             placeholder = { Text(stringResource(Res.string.email_content_before_hint)) },
             modifier = Modifier.fillMaxWidth(),
@@ -1964,11 +2208,16 @@ private fun DesktopEmailTemplateSettings(settingsManager: SettingsManager) {
             onCheckedChange = {
                 guestIncludeQr = it
                 settingsManager.setGuestEmailIncludeQrEnabled(it)
+                onSyncedSettingChanged()
             }
         )
         OutlinedTextField(
             value = guestContentAfter,
-            onValueChange = { guestContentAfter = it; settingsManager.saveGuestEmailContentAfter(it) },
+            onValueChange = {
+                guestContentAfter = it
+                settingsManager.saveGuestEmailContentAfter(it)
+                onSyncedSettingChanged()
+            },
             label = { Text(stringResource(Res.string.email_content_after_label)) },
             placeholder = { Text(stringResource(Res.string.email_content_after_hint)) },
             modifier = Modifier.fillMaxWidth(),
@@ -1991,7 +2240,11 @@ private fun DesktopEmailTemplateSettings(settingsManager: SettingsManager) {
 
     OutlinedTextField(
         value = emailSignature,
-        onValueChange = { emailSignature = it; settingsManager.saveEmailSignature(it) },
+        onValueChange = {
+            emailSignature = it
+            settingsManager.saveEmailSignature(it)
+            onSyncedSettingChanged()
+        },
         label = { Text(stringResource(Res.string.email_signature_label)) },
         placeholder = { Text(stringResource(Res.string.email_signature_hint)) },
         modifier = Modifier.fillMaxWidth(),
@@ -1999,7 +2252,11 @@ private fun DesktopEmailTemplateSettings(settingsManager: SettingsManager) {
     )
     OutlinedTextField(
         value = emailAssociationName,
-        onValueChange = { emailAssociationName = it; settingsManager.saveEmailAssociationName(it) },
+        onValueChange = {
+            emailAssociationName = it
+            settingsManager.saveEmailAssociationName(it)
+            onSyncedSettingChanged()
+        },
         label = { Text(stringResource(Res.string.email_association_name_label)) },
         placeholder = { Text(stringResource(Res.string.email_association_name_hint)) },
         supportingText = { Text(stringResource(Res.string.email_association_name_description)) },
@@ -2052,6 +2309,7 @@ private fun DesktopEmailTemplateSettings(settingsManager: SettingsManager) {
                 settingsManager.saveEmailContentBefore(volunteerContentBefore)
                 settingsManager.setEmailIncludeQrEnabled(volunteerIncludeQr)
                 settingsManager.saveEmailContentAfter(volunteerContentAfter)
+                onSyncedSettingChanged()
             } else {
                 guestSubject = guestSubjectDefault
                 guestContentBefore = guestContentBeforeDefault
@@ -2061,6 +2319,7 @@ private fun DesktopEmailTemplateSettings(settingsManager: SettingsManager) {
                 settingsManager.saveGuestEmailContentBefore(guestContentBefore)
                 settingsManager.setGuestEmailIncludeQrEnabled(guestIncludeQr)
                 settingsManager.saveGuestEmailContentAfter(guestContentAfter)
+                onSyncedSettingChanged()
             }
         },
         modifier = Modifier.fillMaxWidth()

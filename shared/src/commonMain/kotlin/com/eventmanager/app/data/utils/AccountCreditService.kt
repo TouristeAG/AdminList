@@ -12,6 +12,7 @@ import com.eventmanager.app.resources.Res
 import com.eventmanager.app.resources.account_reversal_description
 import com.eventmanager.app.resources.pos_pay_cash_card
 import com.eventmanager.app.resources.pos_sale_complete_message
+import com.eventmanager.app.data.utils.NanoIdGenerator
 import kotlinx.coroutines.flow.first
 import org.jetbrains.compose.resources.getString
 
@@ -37,11 +38,13 @@ fun computePosPayment(
     cart: List<PosCartLine>,
     accountBalance: Double,
     barDiscountPercent: Int,
+    purchaseCreditBuffer: Double = 0.0,
 ): PosPaymentBreakdown {
     if (cart.isEmpty()) {
         return PosPaymentBreakdown(0.0, 0.0, 0.0)
     }
 
+    val cartTotal = cart.sumOf { it.unitPrice * it.quantity }
     var creditRemaining = accountBalance.coerceAtLeast(0.0)
     var creditPaid = 0.0
     val unpaidSegments = mutableListOf<Pair<Double, Boolean>>()
@@ -59,6 +62,17 @@ fun computePosPayment(
     }
 
     val cashBeforeDiscount = unpaidSegments.sumOf { it.first }
+    val buffer = purchaseCreditBuffer.coerceAtLeast(0.0)
+
+    // Absorb small shortfall into credit when balance is still positive (may go negative).
+    if (accountBalance > 0.0 && cashBeforeDiscount > 0.0 && cashBeforeDiscount <= buffer) {
+        return PosPaymentBreakdown(
+            creditPaid = cartTotal,
+            cashOrCardDue = 0.0,
+            cashOrCardBeforeDiscount = 0.0,
+        )
+    }
+
     val discountRate = barDiscountPercent.coerceIn(0, 100) / 100.0
     val cashDue = unpaidSegments.sumOf { (unpaid, eligible) ->
         if (eligible && discountRate > 0.0) {
@@ -103,7 +117,9 @@ data class PosSaleResult(
     val cashOrCardBeforeDiscount: Double = cashOrCardDue,
     val barDiscountPercent: Int = 0,
     val remainingBalance: Double,
-    val message: String
+    val message: String,
+    val wentNegativeViaBuffer: Boolean = false,
+    val transfer: AccountTransfer? = null,
 )
 
 class AccountCreditService(
@@ -200,9 +216,9 @@ class AccountCreditService(
             val original = repository.getAccountTransferBySourceReference(sourceRef) ?: continue
             val reversalRef = "reversal:$sourceRef"
             if (repository.getAccountTransferBySourceReference(reversalRef) != null) continue
-            val reversalAmount = -minOf(original.amount, remainingBalance)
+            val reversalAmount = -minOf(original.amount, maxOf(0.0, remainingBalance))
             if (reversalAmount == 0.0) continue
-            remainingBalance = maxOf(0.0, remainingBalance + reversalAmount)
+            remainingBalance += reversalAmount
             val transfer = AccountTransfer(
                 holderType = AccountHolderType.VOLUNTEER,
                 holderId = volunteer.id,
@@ -239,7 +255,7 @@ class AccountCreditService(
             amount = amount,
             currencyCode = currencyProvider(),
             type = AccountTransferType.MANUAL_ADJUSTMENT,
-            sourceReference = "manual:${System.currentTimeMillis()}:${holderId}:${amount}",
+            sourceReference = "manual:${NanoIdGenerator.generateGuestId()}:${holderId}",
             description = note
         )
         repository.insertAccountTransfer(transfer)
@@ -253,13 +269,15 @@ class AccountCreditService(
         cart: List<PosCartLine>,
         barDiscountPercent: Int = 0,
         posVenueName: String = PosVenueScope.GLOBAL,
+        purchaseCreditBuffer: Double = 0.0,
+        firebaseOrgId: String = "",
     ): PosSaleResult {
         val balance = AccountBalanceService.computeBalance(
             holderType,
             holderId,
             repository.getAllAccountTransfersOnce()
         )
-        val payment = computePosPayment(cart, balance, barDiscountPercent)
+        val payment = computePosPayment(cart, balance, barDiscountPercent, purchaseCreditBuffer)
         val creditPaid = payment.creditPaid
         val cashDue = payment.cashOrCardDue
         val barDiscountApplied = barDiscountPercent.takeIf {
@@ -277,15 +295,39 @@ class AccountCreditService(
                 amount = ledgerAmount,
                 currencyCode = currencyProvider(),
                 type = AccountTransferType.POS_SALE,
-                sourceReference = "pos:${System.currentTimeMillis()}:$holderId",
+                sourceReference = "pos:${NanoIdGenerator.generateGuestId()}:$holderId",
                 description = itemsSummary,
                 creditAmountPaid = creditPaid.takeIf { it > 0 },
                 cashAmountPaid = cashDue.takeIf { it > 0 },
                 posBarDiscountPercent = barDiscountApplied,
                 posItemsJson = posJson,
                 posVenueName = posVenueName,
+                firebaseOrgId = firebaseOrgId,
             )
             repository.insertAccountTransfer(transfer)
+            val remainingBalance = AccountBalanceService.computeBalance(
+                holderType,
+                holderId,
+                repository.getAllAccountTransfersOnce()
+            )
+            val wentNegativeViaBuffer = balance > 0.0 && remainingBalance < 0.0 && creditPaid > 0.0
+
+            return PosSaleResult(
+                success = true,
+                totalAmount = payment.effectiveTotal,
+                creditPaid = creditPaid,
+                cashOrCardDue = cashDue,
+                cashOrCardBeforeDiscount = payment.cashOrCardBeforeDiscount,
+                barDiscountPercent = barDiscountPercent,
+                remainingBalance = remainingBalance,
+                message = if (cashDue > 0) {
+                    getString(Res.string.pos_pay_cash_card, formatMoney(cashDue, currencyProvider()))
+                } else {
+                    getString(Res.string.pos_sale_complete_message)
+                },
+                wentNegativeViaBuffer = wentNegativeViaBuffer,
+                transfer = transfer,
+            )
         }
 
         val remainingBalance = AccountBalanceService.computeBalance(
@@ -293,6 +335,7 @@ class AccountCreditService(
             holderId,
             repository.getAllAccountTransfersOnce()
         )
+        val wentNegativeViaBuffer = balance > 0.0 && remainingBalance < 0.0 && creditPaid > 0.0
 
         return PosSaleResult(
             success = true,
@@ -306,7 +349,9 @@ class AccountCreditService(
                 getString(Res.string.pos_pay_cash_card, formatMoney(cashDue, currencyProvider()))
             } else {
                 getString(Res.string.pos_sale_complete_message)
-            }
+            },
+            wentNegativeViaBuffer = wentNegativeViaBuffer,
+            transfer = null,
         )
     }
 }

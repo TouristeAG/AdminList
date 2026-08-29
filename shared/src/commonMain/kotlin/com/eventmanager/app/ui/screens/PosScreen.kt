@@ -62,6 +62,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.eventmanager.app.data.models.*
+import com.eventmanager.app.data.remote.MultiOrgMerge
 import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.data.utils.PosCartLine
 import com.eventmanager.app.data.utils.PosPaymentBreakdown
@@ -268,6 +269,7 @@ fun PosScreen(
     }
     var customerVolunteer by remember { mutableStateOf<Volunteer?>(null) }
     var customerGuest by remember { mutableStateOf<Guest?>(null) }
+    var customerOrgId by remember { mutableStateOf("") }
     var cart by remember { mutableStateOf<List<PosCartEntry>>(emptyList()) }
     var showQr by remember { mutableStateOf(false) }
     var showManualAmount by remember { mutableStateOf(false) }
@@ -309,8 +311,18 @@ fun PosScreen(
         rememberPosBackgroundAnimationStyle(settingsManager)
     )
 
-    val filteredItems = remember(salesItems, selectedCategory, selectedVenue) {
-        salesItems.filter { it.isActive }.filter { item ->
+    val isAllOrgsMode = viewModel.isFirebaseAllOrgsMode()
+    val mergedPosProducts = remember(salesItems, isAllOrgsMode) {
+        if (isAllOrgsMode) MultiOrgMerge.mergePosProducts(salesItems) else emptyList()
+    }
+
+    val filteredItems = remember(salesItems, mergedPosProducts, selectedCategory, selectedVenue, isAllOrgsMode) {
+        val baseItems = if (isAllOrgsMode) {
+            mergedPosProducts.map { it.displayItem }
+        } else {
+            salesItems.filter { it.isActive }
+        }
+        baseItems.filter { item ->
             PosVenueScope.isItemAvailableAt(
                 PosVenueScope.parseVenueList(item.availableVenues),
                 selectedVenue,
@@ -328,8 +340,16 @@ fun PosScreen(
     val accountBalances by viewModel.accountBalances.collectAsState()
 
     val customerBalance = when {
-        customerVolunteer != null -> accountBalances[AccountHolderKey(AccountHolderType.VOLUNTEER, customerVolunteer!!.id)] ?: 0.0
-        customerGuest != null -> accountBalances[AccountHolderKey(AccountHolderType.GUEST, customerGuest!!.nanoId)] ?: 0.0
+        customerVolunteer != null -> viewModel.balanceForHolder(
+            AccountHolderType.VOLUNTEER,
+            customerVolunteer!!.id,
+            customerOrgId,
+        )
+        customerGuest != null -> viewModel.balanceForHolder(
+            AccountHolderType.GUEST,
+            customerGuest!!.nanoId,
+            customerOrgId,
+        )
         else -> 0.0
     }
 
@@ -353,12 +373,14 @@ fun PosScreen(
         selectedCategory = selectedCategory,
     )
     val cartShowsBarDiscount = paymentBarDiscount > 0 && paymentCartLines.any { it.barDiscountEligible }
-    val paymentPreview = remember(paymentCartLines, customerBalance, paymentBarDiscount) {
-        computePosPayment(paymentCartLines, customerBalance, paymentBarDiscount)
+    val purchaseCreditBuffer = settingsManager.getPurchaseCreditBuffer()
+    val paymentPreview = remember(paymentCartLines, customerBalance, paymentBarDiscount, purchaseCreditBuffer) {
+        computePosPayment(paymentCartLines, customerBalance, paymentBarDiscount, purchaseCreditBuffer)
     }
     val totalAfterDiscount = paymentPreview.effectiveTotal
 
     val canValidate = (customerVolunteer != null || customerGuest != null) && cart.isNotEmpty() && !isProcessing
+    val saleReady = (customerVolunteer != null || customerGuest != null) && cart.isNotEmpty()
 
     fun currentCustomerName(): String =
         customerVolunteer?.name ?: customerGuest?.name.orEmpty()
@@ -372,6 +394,8 @@ fun PosScreen(
     fun applyProfile(volunteer: Volunteer?, guest: Guest?) {
         customerVolunteer = volunteer
         customerGuest = guest
+        customerOrgId = volunteer?.firebaseOrgId?.takeIf { it.isNotBlank() }
+            ?: guest?.firebaseOrgId.orEmpty()
         scanFlashNonce++
     }
 
@@ -390,6 +414,7 @@ fun PosScreen(
     fun clearCustomer() {
         customerVolunteer = null
         customerGuest = null
+        customerOrgId = ""
         cart = emptyList()
         scanFeedback = null
         pendingProfileSwitch = null
@@ -398,12 +423,22 @@ fun PosScreen(
     fun resolveUid(uid: String) {
         showResult = null
         val normalized = uid.trim().replace(" ", "").replace(":", "").uppercase()
-        volunteers.find { it.nfcCardUid.normalizeNfc() == normalized }?.let { volunteer ->
-            handleProfileFound(volunteer, null, volunteer.name)
+        val volMatches = MultiOrgMerge.findVolunteersByNfcUid(volunteers, normalized)
+        if (volMatches.size == 1) {
+            handleProfileFound(volMatches.first().value, null, volMatches.first().value.name)
             return
         }
-        permanentGuests.find { it.nfcCardUid.normalizeNfc() == normalized }?.let { guest ->
-            handleProfileFound(null, guest, guest.name)
+        if (volMatches.size > 1) {
+            handleProfileFound(volMatches.first().value, null, volMatches.first().value.name)
+            return
+        }
+        val guestMatches = MultiOrgMerge.findGuestsByNfcUid(permanentGuests, normalized)
+        if (guestMatches.size == 1) {
+            handleProfileFound(null, guestMatches.first().value, guestMatches.first().value.name)
+            return
+        }
+        if (guestMatches.size > 1) {
+            handleProfileFound(null, guestMatches.first().value, guestMatches.first().value.name)
             return
         }
         if (pendingProfileSwitch == null) {
@@ -419,28 +454,38 @@ fun PosScreen(
     }
 
     fun executeSale() {
-        if (!canValidate) return
+        if (isProcessing) return
+        if (customerVolunteer == null && customerGuest == null) return
+        if (cart.isEmpty()) return
         val vol = customerVolunteer
         val gst = customerGuest
         val cartSnapshot = paymentCartLines
         val discountSnapshot = paymentBarDiscount
         val venueSnapshot = selectedVenue
-        // Close cash dialog first — otherwise live paymentPreview recomputes after the debit
-        // and the still-open dialog flashes wrong "unexplained" amounts.
-        pendingCashConfirmation = false
-        cashConfirmSnapshot = null
+        // Keep the cash dialog open with frozen snapshot + loading until the sale
+        // finishes — closing it early left a blank gap before the success overlay.
         isProcessing = true
         scope.launch {
-            val result = viewModel.completePosSale(
-                holderType = if (vol != null) AccountHolderType.VOLUNTEER else AccountHolderType.GUEST,
-                holderId = vol?.id ?: gst!!.nanoId,
-                holderName = vol?.name ?: gst!!.name,
-                cart = cartSnapshot,
-                barDiscountPercent = discountSnapshot,
-                posVenueName = venueSnapshot,
-            )
-            isProcessing = false
-            showResult = PosResultState.Success(result)
+            try {
+                val result = viewModel.completePosSale(
+                    holderType = if (vol != null) AccountHolderType.VOLUNTEER else AccountHolderType.GUEST,
+                    holderId = vol?.id ?: gst!!.nanoId,
+                    holderName = vol?.name ?: gst!!.name,
+                    cart = cartSnapshot,
+                    barDiscountPercent = discountSnapshot,
+                    posVenueName = venueSnapshot,
+                    customerOrgId = customerOrgId,
+                )
+                pendingCashConfirmation = false
+                cashConfirmSnapshot = null
+                isProcessing = false
+                showResult = PosResultState.Success(result)
+            } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                isProcessing = false
+                println("POS sale failed: ${e.message}")
+            }
         }
     }
 
@@ -457,9 +502,17 @@ fun PosScreen(
 
     fun addItemToCart(item: SalesSheetItem) {
         if (customerVolunteer == null && customerGuest == null) return
+        val resolved = if (isAllOrgsMode && customerOrgId.isNotBlank()) {
+            mergedPosProducts
+                .firstOrNull { it.displayItem.name == item.name && it.displayItem.price == item.price }
+                ?.let { MultiOrgMerge.resolvePosProductForOrg(it, customerOrgId) }
+                ?: item
+        } else {
+            item
+        }
         cart = addLineToCart(
             cart,
-            PosCartLine(item.id, item.name, item.price, 1, item.emoji, barDiscountEligible = item.isBarDiscountEligible())
+            PosCartLine(resolved.id, resolved.name, resolved.price, 1, resolved.emoji, barDiscountEligible = resolved.isBarDiscountEligible())
         )
     }
 
@@ -491,10 +544,13 @@ fun PosScreen(
             cashDueBeforeDiscount = snapshot.cashOrCardBeforeDiscount,
             barDiscountPercent = cashConfirmBarDiscount,
             currencyCode = currencyCode,
+            isProcessing = isProcessing,
             onConfirm = { executeSale() },
             onCancel = {
-                pendingCashConfirmation = false
-                cashConfirmSnapshot = null
+                if (!isProcessing) {
+                    pendingCashConfirmation = false
+                    cashConfirmSnapshot = null
+                }
             },
         )
     }
@@ -540,6 +596,7 @@ fun PosScreen(
                 onOpenSettings = onOpenSettings,
                 customerVolunteer = customerVolunteer,
                 customerGuest = customerGuest,
+                customerOrgId = customerOrgId,
                 balance = customerBalance,
                 currencyCode = currencyCode,
                 readerStatus = readerStatus,
@@ -568,23 +625,25 @@ fun PosScreen(
                             },
                             isDesktop = isDesktop,
                             onSelect = { selectedCategory = it },
+                            viewModel = viewModel,
                         )
                         PosItemsGrid(
                             items = filteredItems,
                             currencyCode = currencyCode,
                             hasCustomer = hasCustomer,
                             solidBackground = posAnimatedBackground,
-                            onItemClick = { addItemToCart(it) },
-                            onManualClick = { showManualAmount = true },
+                            onItemClick = { if (!isProcessing) addItemToCart(it) },
+                            onManualClick = { if (!isProcessing) showManualAmount = true },
                             modifier = Modifier.weight(1f),
                         )
                     }
                     PosCartBar(
                         cart, currencyCode, totalAfterDiscount, hasCustomer,
-                        onRemove = { key -> cart = cart.filterNot { it.key == key } },
-                        onClear = { cart = emptyList() },
+                        onRemove = { key -> if (!isProcessing) cart = cart.filterNot { it.key == key } },
+                        onClear = { if (!isProcessing) cart = emptyList() },
                         onValidate = { validateSale() },
-                        enabled = canValidate
+                        enabled = saleReady,
+                        isProcessing = isProcessing,
                     )
                 }
             } else {
@@ -599,16 +658,17 @@ fun PosScreen(
                         },
                         isDesktop = isDesktop,
                         onSelect = { selectedCategory = it },
+                        viewModel = viewModel,
                     )
                     PosItemsGrid(
                         items = filteredItems,
                         currencyCode = currencyCode,
                         hasCustomer = hasCustomer,
                         solidBackground = posAnimatedBackground,
-                        onItemClick = { addItemToCart(it) },
-                        onManualClick = { showManualAmount = true },
-                        modifier = Modifier.weight(2f),
-                    )
+                            onItemClick = { if (!isProcessing) addItemToCart(it) },
+                            onManualClick = { if (!isProcessing) showManualAmount = true },
+                            modifier = Modifier.weight(2f),
+                        )
                     PosCartPanel(
                         cart = cart,
                         currencyCode = currencyCode,
@@ -616,10 +676,11 @@ fun PosScreen(
                         barDiscount = paymentBarDiscount,
                         cartShowsBarDiscount = cartShowsBarDiscount,
                         hasCustomer = hasCustomer,
-                        onRemove = { key -> cart = cart.filterNot { it.key == key } },
-                        onClear = { cart = emptyList() },
+                        onRemove = { key -> if (!isProcessing) cart = cart.filterNot { it.key == key } },
+                        onClear = { if (!isProcessing) cart = emptyList() },
                         onValidate = { validateSale() },
-                        enabled = canValidate,
+                        enabled = saleReady,
+                        isProcessing = isProcessing,
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -845,9 +906,25 @@ private fun PosResultOverlay(
                             formatMoney(result.remainingBalance, currencyCode),
                             style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = if (result.remainingBalance < 0) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.primary
+                            },
                             textAlign = TextAlign.Center,
                         )
+                        if (result.wentNegativeViaBuffer) {
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                stringResource(
+                                    Res.string.pos_negative_balance_message,
+                                    formatMoney(result.remainingBalance, currencyCode),
+                                ),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.error,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
                     }
                 } else if (result.cashOrCardDue > 0) {
                     Text(
@@ -901,12 +978,13 @@ private fun PosCashPaymentDialog(
     cashDueBeforeDiscount: Double,
     barDiscountPercent: Int,
     currencyCode: String,
+    isProcessing: Boolean,
     onConfirm: () -> Unit,
     onCancel: () -> Unit,
 ) {
     val barDiscountApplied = barDiscountPercent > 0 && cashDueBeforeDiscount > cashDue + 0.001
     Dialog(
-        onDismissRequest = onCancel,
+        onDismissRequest = { if (!isProcessing) onCancel() },
         properties = phoneFractionDialogProperties(),
     ) {
         DialogFractionSizer(profile = FractionalDialogProfile.Card) { maxDialogWidth, maxDialogHeight ->
@@ -967,21 +1045,23 @@ private fun PosCashPaymentDialog(
                     )
                 }
                 Button(
-                    onClick = onConfirm,
-                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { if (!isProcessing) onConfirm() },
+                    enabled = true,
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
                     shape = PosTileShape,
                 ) {
-                    Text(stringResource(Res.string.pos_cash_payment_confirm))
+                    PosValidateButtonContent(isProcessing = isProcessing, cashConfirm = true)
                 }
                 OutlinedButton(
                     onClick = onCancel,
+                    enabled = !isProcessing,
                     modifier = Modifier.fillMaxWidth(),
                     shape = PosTileShape,
                 ) {
                     Text(stringResource(Res.string.pos_cash_payment_cancel))
                 }
             }
-        }
+            }
         }
     }
 }
@@ -1054,6 +1134,7 @@ private fun PosHeaderSection(
     onOpenSettings: (() -> Unit)?,
     customerVolunteer: Volunteer?,
     customerGuest: Guest?,
+    customerOrgId: String,
     balance: Double,
     currencyCode: String,
     readerStatus: String?,
@@ -1172,8 +1253,10 @@ private fun PosHeaderSection(
                     ) { customerSelected ->
                         if (customerSelected) {
                             PosCustomerProfileContent(
+                                viewModel = viewModel,
                                 customerVolunteer = customerVolunteer,
                                 customerGuest = customerGuest,
+                                customerOrgId = customerOrgId,
                                 balance = balance,
                                 currencyCode = currencyCode,
                                 volunteerActiveBarDiscount = volunteerActiveBarDiscount,
@@ -1349,15 +1432,25 @@ private fun PosBarDiscountBenefitBadge(
 
 @Composable
 private fun PosCustomerNameAndChip(
+    viewModel: EventManagerViewModel,
     customerVolunteer: Volunteer?,
     customerGuest: Guest?,
+    customerOrgId: String,
 ) {
     Column {
-        Text(
-            customerVolunteer?.name ?: customerGuest?.name.orEmpty(),
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            if (customerOrgId.isNotBlank() && viewModel.isFirebaseAllOrgsMode()) {
+                OrgColorDot(orgId = customerOrgId, viewModel = viewModel, size = 12.dp)
+            }
+            Text(
+                customerVolunteer?.name ?: customerGuest?.name.orEmpty(),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+            )
+        }
         AssistChip(
             onClick = {},
             label = {
@@ -1397,7 +1490,11 @@ private fun PosCustomerBalanceDisplay(
             formatMoney(balance, currencyCode),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
+            color = if (balance < 0) {
+                MaterialTheme.colorScheme.error
+            } else {
+                MaterialTheme.colorScheme.primary
+            },
         )
     }
 }
@@ -1450,8 +1547,10 @@ private fun PosCustomerAvatar(avatarScale: Float) {
 
 @Composable
 private fun PosCustomerProfileContent(
+    viewModel: EventManagerViewModel,
     customerVolunteer: Volunteer?,
     customerGuest: Guest?,
+    customerOrgId: String,
     balance: Double,
     currencyCode: String,
     volunteerActiveBarDiscount: Int,
@@ -1476,8 +1575,10 @@ private fun PosCustomerProfileContent(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     PosCustomerNameAndChip(
+                        viewModel = viewModel,
                         customerVolunteer = customerVolunteer,
                         customerGuest = customerGuest,
+                        customerOrgId = customerOrgId,
                     )
                     PosCustomerBalanceDisplay(
                         balance = balance,
@@ -1507,8 +1608,10 @@ private fun PosCustomerProfileContent(
                     ) {
                         PosCustomerAvatar(avatarScale)
                         PosCustomerNameAndChip(
+                            viewModel = viewModel,
                             customerVolunteer = customerVolunteer,
                             customerGuest = customerGuest,
+                            customerOrgId = customerOrgId,
                         )
                     }
                     PosCustomerProfileActions(
@@ -1684,6 +1787,7 @@ private fun PosCategoryFilterRail(
     onVenueSelected: (String) -> Unit,
     isDesktop: Boolean,
     onSelect: (SalesCategory?) -> Unit,
+    viewModel: EventManagerViewModel? = null,
     modifier: Modifier = Modifier,
 ) {
     val options = listOf(
@@ -1723,6 +1827,19 @@ private fun PosCategoryFilterRail(
                     .padding(vertical = 4.dp),
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
             )
+            if (viewModel != null) {
+                FirebaseOrgSwitcher(
+                    viewModel = viewModel,
+                    placement = FirebaseOrgSwitcherPlacement.PosVenueStyle,
+                    modifier = Modifier.padding(bottom = 4.dp),
+                )
+                HorizontalDivider(
+                    modifier = Modifier
+                        .width(28.dp)
+                        .padding(vertical = 4.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                )
+            }
             PosVenueFilterItem(
                 venues = venues,
                 selectedVenue = selectedVenue,
@@ -2260,6 +2377,31 @@ private fun PosManualTile(
 }
 
 @Composable
+private fun PosValidateButtonContent(
+    isProcessing: Boolean,
+    cashConfirm: Boolean = false,
+) {
+    if (isProcessing) {
+        CircularProgressIndicator(
+            modifier = Modifier.size(if (cashConfirm) 20.dp else 22.dp),
+            color = MaterialTheme.colorScheme.onPrimary,
+            strokeWidth = 2.dp,
+        )
+        Spacer(Modifier.width(if (cashConfirm) 8.dp else 8.dp))
+        Text(
+            stringResource(Res.string.pos_sale_processing),
+            style = if (cashConfirm) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium,
+        )
+    } else if (cashConfirm) {
+        Text(stringResource(Res.string.pos_cash_payment_confirm))
+    } else {
+        Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(22.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(stringResource(Res.string.pos_validate_sale), style = MaterialTheme.typography.titleMedium)
+    }
+}
+
+@Composable
 private fun PosCartPanel(
     cart: List<PosCartEntry>,
     currencyCode: String,
@@ -2271,6 +2413,7 @@ private fun PosCartPanel(
     onClear: () -> Unit,
     onValidate: () -> Unit,
     enabled: Boolean,
+    isProcessing: Boolean,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -2293,7 +2436,7 @@ private fun PosCartPanel(
                         }
                     }
                 }
-                TextButton(onClick = onClear, enabled = cart.isNotEmpty()) {
+                TextButton(onClick = onClear, enabled = cart.isNotEmpty() && !isProcessing) {
                     Text(stringResource(Res.string.pos_clear_cart))
                 }
             }
@@ -2349,7 +2492,11 @@ private fun PosCartPanel(
                                     fontWeight = FontWeight.Medium,
                                     style = MaterialTheme.typography.bodyMedium
                                 )
-                                IconButton(onClick = { onRemove(entry.key) }, modifier = Modifier.size(32.dp)) {
+                                IconButton(
+                                    onClick = { onRemove(entry.key) },
+                                    enabled = !isProcessing,
+                                    modifier = Modifier.size(32.dp),
+                                ) {
                                     Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
                                 }
                             }
@@ -2370,14 +2517,12 @@ private fun PosCartPanel(
                 Text(formatMoney(total, currencyCode), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
             }
             Button(
-                onClick = onValidate,
+                onClick = { if (!isProcessing) onValidate() },
                 enabled = enabled,
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = PosTileShape
             ) {
-                Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(22.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(Res.string.pos_validate_sale), style = MaterialTheme.typography.titleMedium)
+                PosValidateButtonContent(isProcessing = isProcessing)
             }
         }
     }
@@ -2392,7 +2537,8 @@ private fun PosCartBar(
     onRemove: (String) -> Unit,
     onClear: () -> Unit,
     onValidate: () -> Unit,
-    enabled: Boolean
+    enabled: Boolean,
+    isProcessing: Boolean,
 ) {
     Card(
         Modifier.fillMaxWidth(),
@@ -2439,7 +2585,11 @@ private fun PosCartBar(
                             )
                             Text(entry.line.name, maxLines = 1, style = MaterialTheme.typography.bodyMedium)
                         }
-                        IconButton(onClick = { onRemove(entry.key) }, modifier = Modifier.size(32.dp)) {
+                        IconButton(
+                            onClick = { onRemove(entry.key) },
+                            enabled = !isProcessing,
+                            modifier = Modifier.size(32.dp),
+                        ) {
                             Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
                         }
                     }
@@ -2449,20 +2599,34 @@ private fun PosCartBar(
                 OutlinedButton(
                     onClick = onClear,
                     modifier = Modifier.weight(1f),
-                    enabled = cart.isNotEmpty(),
+                    enabled = cart.isNotEmpty() && !isProcessing,
                     shape = PosTileShape
                 ) {
                     Text(stringResource(Res.string.pos_clear_cart))
                 }
                 Button(
-                    onClick = onValidate,
+                    onClick = { if (!isProcessing) onValidate() },
                     enabled = enabled,
-                    modifier = Modifier.weight(2f),
+                    modifier = Modifier.weight(2f).height(48.dp),
                     shape = PosTileShape
                 ) {
-                    Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(stringResource(Res.string.pos_validate_sale))
+                    if (isProcessing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            strokeWidth = 2.dp,
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            stringResource(Res.string.pos_sale_processing),
+                            style = MaterialTheme.typography.titleSmall,
+                            maxLines = 1,
+                        )
+                    } else {
+                        Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(Res.string.pos_validate_sale))
+                    }
                 }
             }
         }

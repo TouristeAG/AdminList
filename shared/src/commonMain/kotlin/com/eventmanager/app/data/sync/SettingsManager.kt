@@ -17,6 +17,7 @@ class SettingsManager(private val storage: AppStorage) {
     
     companion object {
         private const val KEY_SPREADSHEET_ID = "spreadsheet_id"
+        private const val KEY_SPREADSHEET_ID_PRE_MIRROR = "spreadsheet_id_pre_mirror_backup"
         private const val KEY_GUEST_LIST_SHEET = "guest_list_sheet"
         private const val KEY_VOLUNTEER_SHEET = "volunteer_sheet"
         private const val KEY_JOBS_SHEET = "jobs_sheet"
@@ -26,7 +27,10 @@ class SettingsManager(private val storage: AppStorage) {
         private const val KEY_SALES_ITEMS_SHEET = "sales_items_sheet"
         private const val KEY_TRANSFERS_SHEET = "transfers_sheet"
         private const val KEY_TEMP_GUEST_LIST_SHEET = "temp_guest_list_sheet"
+        private const val KEY_SETTINGS_SHEET = "settings_sheet"
         private const val KEY_CURRENCY_CODE = "currency_code"
+        private const val KEY_PURCHASE_CREDIT_BUFFER = "purchase_credit_buffer"
+        private const val KEY_INSTITUTION_SETTING_LM_PREFIX = "institution_setting_lm_"
         private const val KEY_SYNC_ENABLED = "sync_enabled"
         private const val KEY_AUTO_SYNC = "auto_sync"
         private const val KEY_SYNC_INTERVAL = "sync_interval"
@@ -59,6 +63,7 @@ class SettingsManager(private val storage: AppStorage) {
         private const val KEY_APP_ICON_STYLE = "app_icon_style"
         private const val KEY_APP_ICON_AUTO_ADAPT = "app_icon_auto_adapt"
         private const val KEY_PEOPLE_COUNTER_VISIBLE = "people_counter_visible"
+        private const val KEY_BILLETERIE_CLOCK_VISIBLE = "billeterie_clock_visible"
         private const val KEY_APP_DEVICE_NANOID = "app_device_nano_id"
         private const val KEY_PEOPLE_COUNTER_SELECTED_VENUE_ID = "people_counter_selected_venue_id"
         /** @deprecated Migrated into [KEY_PEOPLE_COUNTER_PRIORITY_VENUE_IDS]. */
@@ -123,6 +128,28 @@ class SettingsManager(private val storage: AppStorage) {
         private const val KEY_GUEST_EMAIL_INCLUDE_QR = "guest_email_include_qr"
         private const val KEY_GUEST_EMAIL_CONTENT_AFTER = "guest_email_content_after"
         private const val KEY_GUEST_EMAIL_SIGNATURE = "guest_email_signature"
+
+        // Backend selection (local device) + Firebase config — Sheets path unchanged when SHEETS
+        private const val KEY_BACKEND_TYPE = "backend_type"
+        private const val KEY_FIREBASE_PROJECT_ID = "firebase_project_id"
+        private const val KEY_FIREBASE_ORG_ID = "firebase_org_id"
+        private const val KEY_FIREBASE_ORG_VIEW_MODE = "firebase_org_view_mode"
+        private const val KEY_FIREBASE_LAST_SINGLE_ORG_ID = "firebase_last_single_org_id"
+        private const val KEY_FIREBASE_CONFIGURED_ORGS = "firebase_configured_orgs"
+        private const val KEY_FIREBASE_BOOTSTRAP_CODE = "firebase_bootstrap_code"
+        private const val KEY_FIREBASE_AUTH_EMAIL = "firebase_auth_email"
+        private const val KEY_FIREBASE_API_KEY = "firebase_api_key"
+        private const val KEY_FIREBASE_APPLICATION_ID = "firebase_application_id"
+        private const val KEY_FIREBASE_GCM_SENDER_ID = "firebase_gcm_sender_id"
+        private const val KEY_FIREBASE_STORAGE_BUCKET = "firebase_storage_bucket"
+        private const val KEY_FIREBASE_WEB_CLIENT_ID = "firebase_web_client_id"
+        private const val KEY_FIREBASE_WEB_CLIENT_SECRET = "firebase_web_client_secret"
+        private const val KEY_ALLOWED_EMAIL_DOMAINS = "allowed_email_domains"
+        private const val KEY_FOLLOWED_BACKEND_MIGRATION_ID = "followed_backend_migration_id"
+        private const val KEY_SHEETS_MIRROR_ENABLED = "sheets_mirror_enabled"
+        private const val KEY_SHEETS_MIRROR_SPREADSHEET_ID = "sheets_mirror_spreadsheet_id"
+        private const val KEY_SHEETS_MIRROR_LAST_EXPORT_AT = "sheets_mirror_last_export_at"
+        private const val KEY_SHEETS_MIRROR_INTERVAL_MINUTES = "sheets_mirror_interval_minutes"
         
         // Page Scroll Behavior Configuration Constants
         const val HEADER_PINNED = "header_pinned"
@@ -132,11 +159,343 @@ class SettingsManager(private val storage: AppStorage) {
     
     // Google Sheets Configuration
     fun getSpreadsheetId(): String {
+        // Crash recovery: if a mirror export was interrupted, restore the primary ID.
+        val backup = storage.getString(KEY_SPREADSHEET_ID_PRE_MIRROR, "") ?: ""
+        if (backup.isNotBlank()) {
+            storage.putString(KEY_SPREADSHEET_ID, backup)
+            storage.putString(KEY_SPREADSHEET_ID_PRE_MIRROR, "")
+        }
         return storage.getString(KEY_SPREADSHEET_ID, GoogleSheetsConfig.SPREADSHEET_ID) ?: GoogleSheetsConfig.SPREADSHEET_ID
     }
     
     fun saveSpreadsheetId(id: String) {
         storage.putString(KEY_SPREADSHEET_ID, id)
+    }
+
+    /**
+     * Temporarily point Sheets APIs at [overrideId] (e.g. mirror export), then restore.
+     * Persists a crash-recovery backup so [getSpreadsheetId] can heal after a kill mid-export.
+     */
+    suspend fun <T> withSpreadsheetIdOverride(overrideId: String, block: suspend () -> T): T {
+        val previous = storage.getString(KEY_SPREADSHEET_ID, GoogleSheetsConfig.SPREADSHEET_ID)
+            ?: GoogleSheetsConfig.SPREADSHEET_ID
+        storage.putString(KEY_SPREADSHEET_ID_PRE_MIRROR, previous)
+        storage.putString(KEY_SPREADSHEET_ID, overrideId)
+        return try {
+            block()
+        } finally {
+            storage.putString(KEY_SPREADSHEET_ID, previous)
+            storage.putString(KEY_SPREADSHEET_ID_PRE_MIRROR, "")
+        }
+    }
+
+    // --- Remote backend (local device) ---
+
+    fun getBackendType(): com.eventmanager.app.data.remote.BackendType =
+        com.eventmanager.app.data.remote.BackendType.fromStorage(storage.getString(KEY_BACKEND_TYPE, ""))
+
+    fun setBackendType(type: com.eventmanager.app.data.remote.BackendType) {
+        storage.putString(KEY_BACKEND_TYPE, type.name)
+        // Keep institution announcement in sync when this device intentionally chooses a backend
+        // (wizard / migration). Does not overwrite a newer remote migration already applied.
+        val announced = storage.getString("inst_val_" + InstitutionSettingsKeys.BACKEND_TYPE, "").orEmpty()
+        val announcedLm = getInstitutionSettingLastModified(InstitutionSettingsKeys.BACKEND_TYPE)
+        if (announced.isBlank() || (announced.equals(type.name, ignoreCase = true) && announcedLm <= 0L)) {
+            seedInstitutionBackendType(type)
+        }
+    }
+
+    /**
+     * Ensures the shared Settings sheet has an institution [backend_type] row.
+     * Call before Sheets upload so peers always see SHEETS (or FIREBASE after migration).
+     */
+    fun seedInstitutionBackendType(
+        type: com.eventmanager.app.data.remote.BackendType = getBackendType(),
+        at: Long = System.currentTimeMillis(),
+    ) {
+        applyInstitutionSettingFromRemote(InstitutionSettingsKeys.BACKEND_TYPE, type.name, at)
+    }
+
+    /**
+     * If institution backend_type was never written (legacy installs), seed the active local type.
+     * Does not clobber a value already present in inst_val_*.
+     */
+    fun ensureInstitutionBackendTypeSeeded() {
+        val existing = storage.getString("inst_val_" + InstitutionSettingsKeys.BACKEND_TYPE, "").orEmpty()
+        if (existing.isNotBlank() && getInstitutionSettingLastModified(InstitutionSettingsKeys.BACKEND_TYPE) > 0L) {
+            return
+        }
+        seedInstitutionBackendType(getBackendType())
+    }
+
+    fun getFirebaseProjectId(): String = storage.getString(KEY_FIREBASE_PROJECT_ID, "") ?: ""
+    fun setFirebaseProjectId(id: String) = storage.putString(KEY_FIREBASE_PROJECT_ID, id)
+
+    fun getFirebaseApiKey(): String = storage.getString(KEY_FIREBASE_API_KEY, "") ?: ""
+    fun setFirebaseApiKey(value: String) {
+        var s = value.trim().replace("\uFEFF", "")
+        if (s.contains("apiKey") && (s.contains('{') || s.contains(':'))) {
+            Regex("""(?i)["']?apiKey["']?\s*[:=]\s*["'](AIza[^"'\s]+)["']""")
+                .find(s)?.groupValues?.getOrNull(1)?.let { s = it }
+        }
+        Regex("""AIza[0-9A-Za-z_-]{30,}""").find(s)?.value?.let { s = it }
+        s = s.trim().trim('"', '\'', ',', '}', ']', ' ').replace(Regex("\\s+"), "")
+        storage.putString(KEY_FIREBASE_API_KEY, s)
+    }
+
+    fun getFirebaseApplicationId(): String = storage.getString(KEY_FIREBASE_APPLICATION_ID, "") ?: ""
+    fun setFirebaseApplicationId(value: String) = storage.putString(KEY_FIREBASE_APPLICATION_ID, value)
+
+    fun getFirebaseGcmSenderId(): String = storage.getString(KEY_FIREBASE_GCM_SENDER_ID, "") ?: ""
+    fun setFirebaseGcmSenderId(value: String) = storage.putString(KEY_FIREBASE_GCM_SENDER_ID, value)
+
+    fun getFirebaseStorageBucket(): String = storage.getString(KEY_FIREBASE_STORAGE_BUCKET, "") ?: ""
+    fun setFirebaseStorageBucket(value: String) = storage.putString(KEY_FIREBASE_STORAGE_BUCKET, value)
+
+    /** OAuth Web client ID used to request Google ID tokens for Firebase Auth (Android). */
+    fun getFirebaseWebClientId(): String = storage.getString(KEY_FIREBASE_WEB_CLIENT_ID, "") ?: ""
+    fun setFirebaseWebClientId(value: String) = storage.putString(KEY_FIREBASE_WEB_CLIENT_ID, value)
+
+    /** OAuth client secret for institution Web client (Desktop + Android browser OAuth code exchange). */
+    fun getFirebaseWebClientSecret(): String = storage.getString(KEY_FIREBASE_WEB_CLIENT_SECRET, "") ?: ""
+    fun setFirebaseWebClientSecret(value: String) = storage.putString(KEY_FIREBASE_WEB_CLIENT_SECRET, value)
+
+    fun getFirebaseOrgId(): String = storage.getString(KEY_FIREBASE_ORG_ID, "") ?: ""
+    fun setFirebaseOrgId(id: String) = storage.putString(KEY_FIREBASE_ORG_ID, id)
+
+    fun getFirebaseOrgViewMode(): com.eventmanager.app.data.remote.FirebaseOrgViewMode =
+        com.eventmanager.app.data.remote.FirebaseOrgViewMode.fromStorage(
+            storage.getString(KEY_FIREBASE_ORG_VIEW_MODE, ""),
+        )
+
+    fun setFirebaseOrgViewMode(mode: com.eventmanager.app.data.remote.FirebaseOrgViewMode) {
+        storage.putString(KEY_FIREBASE_ORG_VIEW_MODE, mode.name)
+    }
+
+    fun getFirebaseLastSingleOrgId(): String =
+        storage.getString(KEY_FIREBASE_LAST_SINGLE_ORG_ID, "")?.trim().orEmpty()
+
+    fun setFirebaseLastSingleOrgId(id: String) =
+        storage.putString(KEY_FIREBASE_LAST_SINGLE_ORG_ID, id.trim())
+
+    fun getFirebaseConfiguredOrgs(): List<com.eventmanager.app.data.remote.FirebaseConfiguredOrg> {
+        val stored = storage.getString(KEY_FIREBASE_CONFIGURED_ORGS, "").orEmpty()
+        val decoded = com.eventmanager.app.data.remote.FirebaseConfiguredOrgCodec.decode(stored)
+        if (decoded.isNotEmpty()) {
+            return runCatching {
+                com.eventmanager.app.data.remote.FirebaseConfiguredOrgCodec.normalize(decoded)
+            }.getOrElse { decoded }
+        }
+        val legacyOrgId = getFirebaseOrgId().trim()
+        if (legacyOrgId.isNotBlank()) {
+            val migrated = com.eventmanager.app.data.remote.FirebaseConfiguredOrgCodec.migrateFromSingleOrgId(legacyOrgId)
+            storage.putString(
+                KEY_FIREBASE_CONFIGURED_ORGS,
+                com.eventmanager.app.data.remote.FirebaseConfiguredOrgCodec.encode(migrated),
+            )
+            touchInstitutionSettingLastModified(InstitutionSettingsKeys.FIREBASE_CONFIGURED_ORGS)
+            return migrated
+        }
+        return emptyList()
+    }
+
+    fun setFirebaseConfiguredOrgs(orgs: List<com.eventmanager.app.data.remote.FirebaseConfiguredOrg>) {
+        val normalized = com.eventmanager.app.data.remote.FirebaseConfiguredOrgCodec.normalize(orgs)
+        storage.putString(
+            KEY_FIREBASE_CONFIGURED_ORGS,
+            com.eventmanager.app.data.remote.FirebaseConfiguredOrgCodec.encode(normalized),
+        )
+        touchInstitutionSettingLastModified(InstitutionSettingsKeys.FIREBASE_CONFIGURED_ORGS)
+        val activeId = getFirebaseOrgId().trim()
+        if (activeId.isBlank() || normalized.none { it.orgId == activeId }) {
+            setFirebaseOrgId(normalized.first().orgId)
+        }
+    }
+
+    fun getFirebaseOrgColorArgb(orgId: String): Long {
+        val trimmed = orgId.trim()
+        return getFirebaseConfiguredOrgs()
+            .firstOrNull { it.orgId == trimmed }
+            ?.colorArgb
+            ?: com.eventmanager.app.data.remote.FirebaseConfiguredOrgCodec.defaultColorForIndex(0)
+    }
+
+    /** Add org from QR/join if not already present; sets active org to the joined one. */
+    fun addFirebaseConfiguredOrgFromJoin(orgId: String) {
+        val trimmed = orgId.trim()
+        if (trimmed.isBlank()) return
+        val current = getFirebaseConfiguredOrgs()
+        if (current.any { it.orgId == trimmed }) {
+            setFirebaseOrgId(trimmed)
+            return
+        }
+        val color = com.eventmanager.app.data.remote.FirebaseConfiguredOrgCodec.nextAvailableColor(
+            current.map { it.colorArgb },
+        )
+        setFirebaseConfiguredOrgs(current + com.eventmanager.app.data.remote.FirebaseConfiguredOrg(trimmed, color))
+        setFirebaseOrgId(trimmed)
+    }
+
+    /** One-time org join code (admin shares verbally; not embedded in public QR). */
+    fun getFirebaseBootstrapCode(): String = storage.getString(KEY_FIREBASE_BOOTSTRAP_CODE, "") ?: ""
+    fun setFirebaseBootstrapCode(code: String) = storage.putString(KEY_FIREBASE_BOOTSTRAP_CODE, code.trim())
+
+    fun getFirebaseAuthEmail(): String = storage.getString(KEY_FIREBASE_AUTH_EMAIL, "") ?: ""
+    fun setFirebaseAuthEmail(email: String) = storage.putString(KEY_FIREBASE_AUTH_EMAIL, email)
+
+    fun getAllowedEmailDomains(): List<String> =
+        com.eventmanager.app.data.remote.FirebaseEmailDomainPolicy.parseStoredList(
+            storage.getString(KEY_ALLOWED_EMAIL_DOMAINS, "").orEmpty(),
+        )
+
+    fun setAllowedEmailDomains(domains: List<String>) {
+        val serialized = com.eventmanager.app.data.remote.FirebaseEmailDomainPolicy.serialize(domains)
+        storage.putString(KEY_ALLOWED_EMAIL_DOMAINS, serialized)
+        touchInstitutionSettingLastModified(InstitutionSettingsKeys.ALLOWED_EMAIL_DOMAINS)
+    }
+
+    fun getFollowedBackendMigrationId(): String =
+        storage.getString(KEY_FOLLOWED_BACKEND_MIGRATION_ID, "") ?: ""
+
+    fun setFollowedBackendMigrationId(id: String) =
+        storage.putString(KEY_FOLLOWED_BACKEND_MIGRATION_ID, id)
+
+    fun isSheetsMirrorEnabled(): Boolean = storage.getBoolean(KEY_SHEETS_MIRROR_ENABLED, false)
+    fun setSheetsMirrorEnabled(enabled: Boolean) {
+        storage.putBoolean(KEY_SHEETS_MIRROR_ENABLED, enabled)
+        touchInstitutionSettingLastModified(InstitutionSettingsKeys.SHEETS_MIRROR_ENABLED)
+    }
+
+    fun getSheetsMirrorSpreadsheetId(): String =
+        storage.getString(KEY_SHEETS_MIRROR_SPREADSHEET_ID, "") ?: ""
+
+    fun setSheetsMirrorSpreadsheetId(id: String) {
+        storage.putString(KEY_SHEETS_MIRROR_SPREADSHEET_ID, id)
+        touchInstitutionSettingLastModified(InstitutionSettingsKeys.SHEETS_MIRROR_SPREADSHEET_ID)
+    }
+
+    fun getSheetsMirrorLastExportAt(): Long = storage.getLong(KEY_SHEETS_MIRROR_LAST_EXPORT_AT, 0L)
+    fun setSheetsMirrorLastExportAt(ms: Long) {
+        storage.putLong(KEY_SHEETS_MIRROR_LAST_EXPORT_AT, ms)
+        touchInstitutionSettingLastModified(InstitutionSettingsKeys.SHEETS_MIRROR_LAST_EXPORT_AT)
+    }
+
+    /** 0 = manual only; otherwise minutes between automatic one-way mirror exports. */
+    fun getSheetsMirrorIntervalMinutes(): Int = storage.getInt(KEY_SHEETS_MIRROR_INTERVAL_MINUTES, 0)
+    fun setSheetsMirrorIntervalMinutes(minutes: Int) {
+        storage.putInt(KEY_SHEETS_MIRROR_INTERVAL_MINUTES, minutes.coerceAtLeast(0))
+        touchInstitutionSettingLastModified(InstitutionSettingsKeys.SHEETS_MIRROR_INTERVAL_MINUTES)
+    }
+
+    fun isFirebaseConfigured(): Boolean =
+        getBackendType() == com.eventmanager.app.data.remote.BackendType.FIREBASE &&
+            getFirebaseOrgId().isNotBlank()
+
+    fun getLocalInstitutionBackendAnnouncement(): com.eventmanager.app.data.remote.InstitutionBackendAnnouncement? {
+        val rows = getInstitutionSettingRows().associate { it.key to it.value }
+        val typeRaw = rows[InstitutionSettingsKeys.BACKEND_TYPE] ?: getBackendType().name
+        return com.eventmanager.app.data.remote.InstitutionBackendAnnouncement(
+            backendType = com.eventmanager.app.data.remote.BackendType.fromStorage(typeRaw),
+            migrationId = rows[InstitutionSettingsKeys.BACKEND_MIGRATION_ID].orEmpty(),
+            migratedAt = rows[InstitutionSettingsKeys.BACKEND_MIGRATION_AT]?.toLongOrNull() ?: 0L,
+            migratedBy = rows[InstitutionSettingsKeys.BACKEND_MIGRATION_BY].orEmpty(),
+            firebaseOrgId = rows[InstitutionSettingsKeys.FIREBASE_ORG_ID]?.takeIf { it.isNotBlank() }
+                ?: getFirebaseOrgId().takeIf { it.isNotBlank() },
+            sheetsSpreadsheetIdHint = rows[InstitutionSettingsKeys.SHEETS_SPREADSHEET_ID_HINT]
+                ?.takeIf { it.isNotBlank() },
+            firebaseProjectId = rows[InstitutionSettingsKeys.FIREBASE_PROJECT_ID]?.takeIf { it.isNotBlank() }
+                ?: getFirebaseProjectId().takeIf { it.isNotBlank() },
+            firebaseApplicationId = rows[InstitutionSettingsKeys.FIREBASE_APPLICATION_ID]?.takeIf { it.isNotBlank() }
+                ?: getFirebaseApplicationId().takeIf { it.isNotBlank() },
+            firebaseApiKey = rows[InstitutionSettingsKeys.FIREBASE_API_KEY]?.takeIf { it.isNotBlank() }
+                ?: getFirebaseApiKey().takeIf { it.isNotBlank() },
+            firebaseWebClientId = rows[InstitutionSettingsKeys.FIREBASE_WEB_CLIENT_ID]?.takeIf { it.isNotBlank() }
+                ?: getFirebaseWebClientId().takeIf { it.isNotBlank() },
+            firebaseWebClientSecret = rows[InstitutionSettingsKeys.FIREBASE_WEB_CLIENT_SECRET]?.takeIf { it.isNotBlank() }
+                ?: getFirebaseWebClientSecret().takeIf { it.isNotBlank() },
+        )
+    }
+
+    /**
+     * Persist institution announcement keys and switch this device's active backend.
+     * Call only after successful migration initiate/follow — never from a plain Settings pull.
+     * Firebase project options are applied silently to local settings (UI must not display them).
+     */
+    fun applyLocalInstitutionBackendAnnouncement(
+        announcement: com.eventmanager.app.data.remote.InstitutionBackendAnnouncement,
+    ) {
+        val now = announcement.migratedAt.takeIf { it > 0L } ?: System.currentTimeMillis()
+        applyInstitutionSettingFromRemote(InstitutionSettingsKeys.BACKEND_TYPE, announcement.backendType.name, now)
+        applyInstitutionSettingFromRemote(InstitutionSettingsKeys.BACKEND_MIGRATION_ID, announcement.migrationId, now)
+        applyInstitutionSettingFromRemote(InstitutionSettingsKeys.BACKEND_MIGRATION_AT, now.toString(), now)
+        applyInstitutionSettingFromRemote(InstitutionSettingsKeys.BACKEND_MIGRATION_BY, announcement.migratedBy, now)
+        announcement.firebaseOrgId?.let {
+            applyInstitutionSettingFromRemote(InstitutionSettingsKeys.FIREBASE_ORG_ID, it, now)
+            setFirebaseOrgId(it)
+        }
+        announcement.sheetsSpreadsheetIdHint?.let {
+            applyInstitutionSettingFromRemote(InstitutionSettingsKeys.SHEETS_SPREADSHEET_ID_HINT, it, now)
+        }
+        announcement.firebaseProjectId?.takeIf { it.isNotBlank() }?.let {
+            applyInstitutionSettingFromRemote(InstitutionSettingsKeys.FIREBASE_PROJECT_ID, it, now)
+            setFirebaseProjectId(it)
+        }
+        announcement.firebaseApplicationId?.takeIf { it.isNotBlank() }?.let {
+            applyInstitutionSettingFromRemote(InstitutionSettingsKeys.FIREBASE_APPLICATION_ID, it, now)
+            setFirebaseApplicationId(it)
+        }
+        announcement.firebaseApiKey?.takeIf { it.isNotBlank() }?.let {
+            applyInstitutionSettingFromRemote(InstitutionSettingsKeys.FIREBASE_API_KEY, it, now)
+            setFirebaseApiKey(it)
+        }
+        announcement.firebaseWebClientId?.takeIf { it.isNotBlank() }?.let {
+            applyInstitutionSettingFromRemote(InstitutionSettingsKeys.FIREBASE_WEB_CLIENT_ID, it, now)
+            setFirebaseWebClientId(it)
+        }
+        announcement.firebaseWebClientSecret?.takeIf { it.isNotBlank() }?.let {
+            applyInstitutionSettingFromRemote(InstitutionSettingsKeys.FIREBASE_WEB_CLIENT_SECRET, it, now)
+            setFirebaseWebClientSecret(it)
+        }
+        setBackendType(announcement.backendType)
+    }
+
+    /** Apply a QR/clipboard join payload without exposing values in the UI. */
+    fun applyFirebaseJoinPayload(payload: com.eventmanager.app.data.remote.FirebaseJoinPayload) {
+        addFirebaseConfiguredOrgFromJoin(payload.orgId.trim())
+        setFirebaseProjectId(payload.projectId.trim())
+        setFirebaseApplicationId(payload.applicationId.trim())
+        setFirebaseApiKey(payload.apiKey.trim())
+        setFirebaseWebClientId(payload.webClientId.trim())
+        if (payload.webClientSecret.isNotBlank()) {
+            setFirebaseWebClientSecret(payload.webClientSecret.trim())
+        }
+    }
+
+    /**
+     * Copy Firebase project options from an announcement into local settings without switching backend.
+     * Used by follow / join UIs before Sign-In so secrets never need to be typed or shown.
+     */
+    fun applySilentFirebaseOptionsFromAnnouncement(
+        announcement: com.eventmanager.app.data.remote.InstitutionBackendAnnouncement,
+    ) {
+        announcement.firebaseOrgId?.takeIf { it.isNotBlank() }?.let { setFirebaseOrgId(it) }
+        announcement.firebaseProjectId?.takeIf { it.isNotBlank() }?.let { setFirebaseProjectId(it) }
+        announcement.firebaseApplicationId?.takeIf { it.isNotBlank() }?.let { setFirebaseApplicationId(it) }
+        announcement.firebaseApiKey?.takeIf { it.isNotBlank() }?.let { setFirebaseApiKey(it) }
+        announcement.firebaseWebClientId?.takeIf { it.isNotBlank() }?.let { setFirebaseWebClientId(it) }
+        announcement.firebaseWebClientSecret?.takeIf { it.isNotBlank() }?.let { setFirebaseWebClientSecret(it) }
+    }
+
+    fun buildFirebaseJoinPayloadOrNull(): com.eventmanager.app.data.remote.FirebaseJoinPayload? {
+        val payload = com.eventmanager.app.data.remote.FirebaseJoinPayload(
+            orgId = getFirebaseOrgId().trim(),
+            projectId = getFirebaseProjectId().trim(),
+            applicationId = getFirebaseApplicationId().trim(),
+            apiKey = getFirebaseApiKey().trim(),
+            webClientId = getFirebaseWebClientId().trim(),
+            webClientSecret = getFirebaseWebClientSecret().trim(),
+        )
+        return payload.takeIf { it.isComplete() }
     }
     
     fun getGuestListSheet(): String {
@@ -145,6 +504,7 @@ class SettingsManager(private val storage: AppStorage) {
     
     fun saveGuestListSheet(sheet: String) {
         storage.putString(KEY_GUEST_LIST_SHEET, sheet)
+        touchInstitutionSettingLastModified(InstitutionSettingsKeys.GUEST_LIST_SHEET)
     }
     
     fun getVolunteerSheet(): String {
@@ -153,6 +513,7 @@ class SettingsManager(private val storage: AppStorage) {
     
     fun saveVolunteerSheet(sheet: String) {
         storage.putString(KEY_VOLUNTEER_SHEET, sheet)
+        touchInstitutionSettingLastModified(InstitutionSettingsKeys.VOLUNTEER_SHEET)
     }
     
     fun getJobsSheet(): String {
@@ -161,6 +522,7 @@ class SettingsManager(private val storage: AppStorage) {
     
     fun saveJobsSheet(sheet: String) {
         storage.putString(KEY_JOBS_SHEET, sheet)
+        touchInstitutionSettingLastModified(InstitutionSettingsKeys.JOBS_SHEET)
     }
     
     fun getVolunteersSheet(): String {
@@ -197,6 +559,7 @@ class SettingsManager(private val storage: AppStorage) {
     
     fun saveJobTypesSheet(sheet: String) {
         storage.putString(KEY_JOB_TYPES_SHEET, sheet)
+        touchInstitutionSettingLastModified(InstitutionSettingsKeys.JOB_TYPES_SHEET)
     }
 
     fun getVolunteerGuestListSheet(): String {
@@ -213,6 +576,7 @@ class SettingsManager(private val storage: AppStorage) {
 
     fun saveVenuesSheet(sheet: String) {
         storage.putString(KEY_VENUES_SHEET, sheet)
+        touchInstitutionSettingLastModified(InstitutionSettingsKeys.VENUES_SHEET)
     }
 
     fun getSalesItemsSheet(): String {
@@ -222,6 +586,7 @@ class SettingsManager(private val storage: AppStorage) {
 
     fun saveSalesItemsSheet(sheet: String) {
         storage.putString(KEY_SALES_ITEMS_SHEET, sheet)
+        touchInstitutionSettingLastModified(InstitutionSettingsKeys.SALES_ITEMS_SHEET)
     }
 
     fun getTransfersSheet(): String {
@@ -231,6 +596,7 @@ class SettingsManager(private val storage: AppStorage) {
 
     fun saveTransfersSheet(sheet: String) {
         storage.putString(KEY_TRANSFERS_SHEET, sheet)
+        touchInstitutionSettingLastModified(InstitutionSettingsKeys.TRANSFERS_SHEET)
     }
 
     fun getCurrencyCode(): String {
@@ -239,6 +605,18 @@ class SettingsManager(private val storage: AppStorage) {
 
     fun saveCurrencyCode(code: String) {
         storage.putString(KEY_CURRENCY_CODE, code.trim().uppercase())
+        touchInstitutionSettingLastModified(InstitutionSettingsKeys.CURRENCY_CODE)
+    }
+
+    /** Max shortfall (absolute, >= 0) that can be absorbed into credit, allowing a temporary negative balance. */
+    fun getPurchaseCreditBuffer(): Double {
+        return storage.getString(KEY_PURCHASE_CREDIT_BUFFER, "0")?.toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0
+    }
+
+    fun savePurchaseCreditBuffer(amount: Double) {
+        val normalized = amount.coerceAtLeast(0.0)
+        storage.putString(KEY_PURCHASE_CREDIT_BUFFER, normalized.toString())
+        touchInstitutionSettingLastModified(InstitutionSettingsKeys.PURCHASE_CREDIT_BUFFER)
     }
 
     fun getTempGuestListSheet(): String {
@@ -248,6 +626,255 @@ class SettingsManager(private val storage: AppStorage) {
 
     fun saveTempGuestListSheet(sheet: String) {
         storage.putString(KEY_TEMP_GUEST_LIST_SHEET, sheet)
+        touchInstitutionSettingLastModified(InstitutionSettingsKeys.TEMP_GUEST_LIST_SHEET)
+    }
+
+    fun getSettingsSheet(): String {
+        return storage.getString(KEY_SETTINGS_SHEET, GoogleSheetsConfig.SETTINGS_SHEET)
+            ?: GoogleSheetsConfig.SETTINGS_SHEET
+    }
+
+    fun saveSettingsSheet(sheet: String) {
+        storage.putString(KEY_SETTINGS_SHEET, sheet)
+        touchInstitutionSettingLastModified(InstitutionSettingsKeys.SETTINGS_SHEET)
+    }
+
+    fun getInstitutionSettingLastModified(key: String): Long {
+        return storage.getLong(KEY_INSTITUTION_SETTING_LM_PREFIX + key, 0L)
+    }
+
+    fun setInstitutionSettingLastModified(key: String, timestamp: Long) {
+        storage.putLong(KEY_INSTITUTION_SETTING_LM_PREFIX + key, timestamp)
+    }
+
+    fun touchInstitutionSettingLastModified(key: String) {
+        setInstitutionSettingLastModified(key, System.currentTimeMillis())
+    }
+
+    /** Snapshot of all institution-synced settings for Google Sheets upload. */
+    fun getInstitutionSettingRows(): List<InstitutionSettingRow> {
+        seedLegacySheetsMirrorInstitutionTimestamps()
+        return InstitutionSettingsKeys.ALL.map { key ->
+            InstitutionSettingRow(
+                key = key,
+                value = readInstitutionSettingValue(key),
+                lastModified = getInstitutionSettingLastModified(key),
+            )
+        }
+    }
+
+    /**
+     * Apply a remote institution setting and its last-modified timestamp
+     * without bumping the local timestamp to "now".
+     */
+    fun applyInstitutionSettingFromRemote(key: String, value: String, lastModified: Long) {
+        writeInstitutionSettingValue(key, value)
+        setInstitutionSettingLastModified(key, lastModified)
+    }
+
+    /**
+     * Mirror prefs saved before institution sync existed may have values but lastModified=0.
+     * Stamp them once so the first Firestore push wins over empty peers.
+     */
+    private fun seedLegacySheetsMirrorInstitutionTimestamps() {
+        val now = System.currentTimeMillis()
+        fun touchIfUnset(key: String, hasValue: Boolean) {
+            if (hasValue && getInstitutionSettingLastModified(key) == 0L) {
+                setInstitutionSettingLastModified(key, now)
+            }
+        }
+        touchIfUnset(InstitutionSettingsKeys.SHEETS_MIRROR_ENABLED, isSheetsMirrorEnabled())
+        touchIfUnset(
+            InstitutionSettingsKeys.SHEETS_MIRROR_SPREADSHEET_ID,
+            getSheetsMirrorSpreadsheetId().isNotBlank(),
+        )
+        touchIfUnset(
+            InstitutionSettingsKeys.SHEETS_MIRROR_INTERVAL_MINUTES,
+            getSheetsMirrorIntervalMinutes() > 0,
+        )
+        touchIfUnset(
+            InstitutionSettingsKeys.SHEETS_MIRROR_LAST_EXPORT_AT,
+            getSheetsMirrorLastExportAt() > 0L,
+        )
+    }
+
+    private fun readInstitutionSettingValue(key: String): String {
+        return when (key) {
+            InstitutionSettingsKeys.CURRENCY_CODE -> getCurrencyCode()
+            InstitutionSettingsKeys.DATE_CHANGE_OFFSET_HOURS -> getDateChangeOffsetHours().toString()
+            InstitutionSettingsKeys.PURCHASE_CREDIT_BUFFER -> getPurchaseCreditBuffer().toString()
+            InstitutionSettingsKeys.EMAIL_QR_SUBJECT -> getEmailSubject()
+            InstitutionSettingsKeys.EMAIL_QR_CONTENT_BEFORE -> getEmailContentBefore()
+            InstitutionSettingsKeys.EMAIL_QR_CONTENT_AFTER -> getEmailContentAfter()
+            InstitutionSettingsKeys.EMAIL_INCLUDE_QR -> isEmailIncludeQrEnabled().toString()
+            InstitutionSettingsKeys.GUEST_EMAIL_SUBJECT -> getGuestEmailSubject()
+            InstitutionSettingsKeys.GUEST_EMAIL_CONTENT_BEFORE -> getGuestEmailContentBefore()
+            InstitutionSettingsKeys.GUEST_EMAIL_CONTENT_AFTER -> getGuestEmailContentAfter()
+            InstitutionSettingsKeys.GUEST_EMAIL_INCLUDE_QR -> isGuestEmailIncludeQrEnabled().toString()
+            InstitutionSettingsKeys.EMAIL_SIGNATURE -> getEmailSignature()
+            InstitutionSettingsKeys.EMAIL_ASSOCIATION_NAME -> getEmailAssociationName()
+            InstitutionSettingsKeys.BACKEND_TYPE ->
+                storage.getString("inst_val_" + InstitutionSettingsKeys.BACKEND_TYPE, "").ifBlank { getBackendType().name }
+            InstitutionSettingsKeys.BACKEND_MIGRATION_ID ->
+                storage.getString("inst_val_" + InstitutionSettingsKeys.BACKEND_MIGRATION_ID, "") ?: ""
+            InstitutionSettingsKeys.BACKEND_MIGRATION_AT ->
+                storage.getString("inst_val_" + InstitutionSettingsKeys.BACKEND_MIGRATION_AT, "") ?: ""
+            InstitutionSettingsKeys.BACKEND_MIGRATION_BY ->
+                storage.getString("inst_val_" + InstitutionSettingsKeys.BACKEND_MIGRATION_BY, "") ?: ""
+            InstitutionSettingsKeys.FIREBASE_ORG_ID ->
+                storage.getString("inst_val_" + InstitutionSettingsKeys.FIREBASE_ORG_ID, "").ifBlank { getFirebaseOrgId() }
+            InstitutionSettingsKeys.FIREBASE_CONFIGURED_ORGS ->
+                storage.getString("inst_val_" + InstitutionSettingsKeys.FIREBASE_CONFIGURED_ORGS, "").ifBlank {
+                    storage.getString(KEY_FIREBASE_CONFIGURED_ORGS, "").orEmpty()
+                }
+            InstitutionSettingsKeys.SHEETS_SPREADSHEET_ID_HINT ->
+                storage.getString("inst_val_" + InstitutionSettingsKeys.SHEETS_SPREADSHEET_ID_HINT, "") ?: ""
+            InstitutionSettingsKeys.ALLOWED_EMAIL_DOMAINS ->
+                com.eventmanager.app.data.remote.FirebaseEmailDomainPolicy.serialize(getAllowedEmailDomains())
+            InstitutionSettingsKeys.SHEETS_MIRROR_ENABLED -> isSheetsMirrorEnabled().toString()
+            InstitutionSettingsKeys.SHEETS_MIRROR_SPREADSHEET_ID -> getSheetsMirrorSpreadsheetId()
+            InstitutionSettingsKeys.SHEETS_MIRROR_INTERVAL_MINUTES ->
+                getSheetsMirrorIntervalMinutes().toString()
+            InstitutionSettingsKeys.SHEETS_MIRROR_LAST_EXPORT_AT ->
+                getSheetsMirrorLastExportAt().toString()
+            InstitutionSettingsKeys.GUEST_LIST_SHEET -> getGuestListSheet()
+            InstitutionSettingsKeys.VOLUNTEER_SHEET -> getVolunteerSheet()
+            InstitutionSettingsKeys.JOBS_SHEET -> getJobsSheet()
+            InstitutionSettingsKeys.JOB_TYPES_SHEET -> getJobTypesSheet()
+            InstitutionSettingsKeys.VENUES_SHEET -> getVenuesSheet()
+            InstitutionSettingsKeys.SALES_ITEMS_SHEET -> getSalesItemsSheet()
+            InstitutionSettingsKeys.TRANSFERS_SHEET -> getTransfersSheet()
+            InstitutionSettingsKeys.TEMP_GUEST_LIST_SHEET -> getTempGuestListSheet()
+            InstitutionSettingsKeys.SETTINGS_SHEET -> getSettingsSheet()
+            else -> ""
+        }
+    }
+
+    private fun writeInstitutionSettingValue(key: String, value: String) {
+        when (key) {
+            InstitutionSettingsKeys.CURRENCY_CODE ->
+                storage.putString(KEY_CURRENCY_CODE, value.trim().uppercase().ifEmpty { "CHF" })
+            InstitutionSettingsKeys.DATE_CHANGE_OFFSET_HOURS ->
+                storage.putInt(KEY_DATE_CHANGE_OFFSET_HOURS, value.trim().toIntOrNull() ?: 0)
+            InstitutionSettingsKeys.PURCHASE_CREDIT_BUFFER ->
+                storage.putString(
+                    KEY_PURCHASE_CREDIT_BUFFER,
+                    (value.trim().toDoubleOrNull() ?: 0.0).coerceAtLeast(0.0).toString(),
+                )
+            InstitutionSettingsKeys.EMAIL_QR_SUBJECT ->
+                storage.putString(KEY_EMAIL_SUBJECT, value)
+            InstitutionSettingsKeys.EMAIL_QR_CONTENT_BEFORE ->
+                storage.putString(KEY_EMAIL_CONTENT_BEFORE, value)
+            InstitutionSettingsKeys.EMAIL_QR_CONTENT_AFTER ->
+                storage.putString(KEY_EMAIL_CONTENT_AFTER, value)
+            InstitutionSettingsKeys.EMAIL_INCLUDE_QR ->
+                storage.putBoolean(KEY_EMAIL_INCLUDE_QR, value.trim().equals("true", ignoreCase = true))
+            InstitutionSettingsKeys.GUEST_EMAIL_SUBJECT ->
+                storage.putString(KEY_GUEST_EMAIL_SUBJECT, value)
+            InstitutionSettingsKeys.GUEST_EMAIL_CONTENT_BEFORE ->
+                storage.putString(KEY_GUEST_EMAIL_CONTENT_BEFORE, value)
+            InstitutionSettingsKeys.GUEST_EMAIL_CONTENT_AFTER ->
+                storage.putString(KEY_GUEST_EMAIL_CONTENT_AFTER, value)
+            InstitutionSettingsKeys.GUEST_EMAIL_INCLUDE_QR ->
+                storage.putBoolean(KEY_GUEST_EMAIL_INCLUDE_QR, value.trim().equals("true", ignoreCase = true))
+            InstitutionSettingsKeys.EMAIL_SIGNATURE ->
+                storage.putString(KEY_EMAIL_SIGNATURE, value)
+            InstitutionSettingsKeys.EMAIL_ASSOCIATION_NAME ->
+                storage.putString(
+                    KEY_EMAIL_ASSOCIATION_NAME,
+                    value.ifBlank { "Collectif Nocturne" },
+                )
+            InstitutionSettingsKeys.BACKEND_TYPE -> {
+                // Institution announcement only — do NOT switch local backend_type here.
+                // Mismatch is detected by SyncCoordinator.refreshInstitutionBackendGuard → follow flow.
+                // Ignore blank remote values so we never wipe a known SHEETS/FIREBASE announcement.
+                if (value.isNotBlank()) {
+                    storage.putString("inst_val_" + InstitutionSettingsKeys.BACKEND_TYPE, value)
+                }
+            }
+            InstitutionSettingsKeys.BACKEND_MIGRATION_ID,
+            InstitutionSettingsKeys.BACKEND_MIGRATION_AT,
+            InstitutionSettingsKeys.BACKEND_MIGRATION_BY,
+            InstitutionSettingsKeys.SHEETS_SPREADSHEET_ID_HINT,
+            -> storage.putString("inst_val_$key", value)
+            InstitutionSettingsKeys.FIREBASE_ORG_ID -> {
+                storage.putString("inst_val_" + InstitutionSettingsKeys.FIREBASE_ORG_ID, value)
+                // Do not override the locally selected active org from remote institution settings.
+            }
+            InstitutionSettingsKeys.FIREBASE_CONFIGURED_ORGS -> {
+                storage.putString("inst_val_" + InstitutionSettingsKeys.FIREBASE_CONFIGURED_ORGS, value)
+                if (value.isNotBlank()) {
+                    val parsed = com.eventmanager.app.data.remote.FirebaseConfiguredOrgCodec.decode(value)
+                    if (parsed.isNotEmpty()) {
+                        val normalized = com.eventmanager.app.data.remote.FirebaseConfiguredOrgCodec.normalize(parsed)
+                        storage.putString(
+                            KEY_FIREBASE_CONFIGURED_ORGS,
+                            com.eventmanager.app.data.remote.FirebaseConfiguredOrgCodec.encode(normalized),
+                        )
+                    }
+                }
+            }
+            InstitutionSettingsKeys.ALLOWED_EMAIL_DOMAINS -> {
+                storage.putString(
+                    KEY_ALLOWED_EMAIL_DOMAINS,
+                    com.eventmanager.app.data.remote.FirebaseEmailDomainPolicy.serialize(
+                        com.eventmanager.app.data.remote.FirebaseEmailDomainPolicy.parseStoredList(value),
+                    ),
+                )
+            }
+            InstitutionSettingsKeys.FIREBASE_PROJECT_ID -> {
+                storage.putString("inst_val_$key", value)
+                if (value.isNotBlank()) setFirebaseProjectId(value)
+            }
+            InstitutionSettingsKeys.FIREBASE_APPLICATION_ID -> {
+                storage.putString("inst_val_$key", value)
+                if (value.isNotBlank()) setFirebaseApplicationId(value)
+            }
+            InstitutionSettingsKeys.FIREBASE_API_KEY -> {
+                storage.putString("inst_val_$key", value)
+                if (value.isNotBlank()) setFirebaseApiKey(value)
+            }
+            InstitutionSettingsKeys.FIREBASE_WEB_CLIENT_ID -> {
+                storage.putString("inst_val_$key", value)
+                if (value.isNotBlank()) setFirebaseWebClientId(value)
+            }
+            InstitutionSettingsKeys.FIREBASE_WEB_CLIENT_SECRET -> {
+                storage.putString("inst_val_$key", value)
+                if (value.isNotBlank()) setFirebaseWebClientSecret(value)
+            }
+            InstitutionSettingsKeys.SHEETS_MIRROR_ENABLED ->
+                storage.putBoolean(KEY_SHEETS_MIRROR_ENABLED, value.trim().equals("true", ignoreCase = true))
+            InstitutionSettingsKeys.SHEETS_MIRROR_SPREADSHEET_ID ->
+                storage.putString(KEY_SHEETS_MIRROR_SPREADSHEET_ID, value)
+            InstitutionSettingsKeys.SHEETS_MIRROR_INTERVAL_MINUTES ->
+                storage.putInt(
+                    KEY_SHEETS_MIRROR_INTERVAL_MINUTES,
+                    value.trim().toIntOrNull()?.coerceAtLeast(0) ?: 0,
+                )
+            InstitutionSettingsKeys.SHEETS_MIRROR_LAST_EXPORT_AT ->
+                storage.putLong(
+                    KEY_SHEETS_MIRROR_LAST_EXPORT_AT,
+                    value.trim().toLongOrNull()?.coerceAtLeast(0L) ?: 0L,
+                )
+            InstitutionSettingsKeys.GUEST_LIST_SHEET ->
+                storage.putString(KEY_GUEST_LIST_SHEET, value)
+            InstitutionSettingsKeys.VOLUNTEER_SHEET ->
+                storage.putString(KEY_VOLUNTEER_SHEET, value)
+            InstitutionSettingsKeys.JOBS_SHEET ->
+                storage.putString(KEY_JOBS_SHEET, value)
+            InstitutionSettingsKeys.JOB_TYPES_SHEET ->
+                storage.putString(KEY_JOB_TYPES_SHEET, value)
+            InstitutionSettingsKeys.VENUES_SHEET ->
+                storage.putString(KEY_VENUES_SHEET, value)
+            InstitutionSettingsKeys.SALES_ITEMS_SHEET ->
+                storage.putString(KEY_SALES_ITEMS_SHEET, value)
+            InstitutionSettingsKeys.TRANSFERS_SHEET ->
+                storage.putString(KEY_TRANSFERS_SHEET, value)
+            InstitutionSettingsKeys.TEMP_GUEST_LIST_SHEET ->
+                storage.putString(KEY_TEMP_GUEST_LIST_SHEET, value)
+            InstitutionSettingsKeys.SETTINGS_SHEET ->
+                storage.putString(KEY_SETTINGS_SHEET, value)
+        }
     }
     
     // Sync Configuration
@@ -528,6 +1155,7 @@ class SettingsManager(private val storage: AppStorage) {
     
     fun saveDateChangeOffsetHours(hours: Int) {
         storage.putInt(KEY_DATE_CHANGE_OFFSET_HOURS, hours)
+        touchInstitutionSettingLastModified(InstitutionSettingsKeys.DATE_CHANGE_OFFSET_HOURS)
     }
     
     // Seasonal Fun Configuration
@@ -591,6 +1219,14 @@ class SettingsManager(private val storage: AppStorage) {
     
     fun setPeopleCounterVisible(visible: Boolean) {
         storage.putBoolean(KEY_PEOPLE_COUNTER_VISIBLE, visible)
+    }
+
+    fun isBilleterieClockVisible(): Boolean {
+        return storage.getBoolean(KEY_BILLETERIE_CLOCK_VISIBLE, true)
+    }
+
+    fun setBilleterieClockVisible(visible: Boolean) {
+        storage.putBoolean(KEY_BILLETERIE_CLOCK_VISIBLE, visible)
     }
 
     /** Stable per-installation ID used for people-counter writer arbitration on Google Sheets. */
@@ -804,6 +1440,7 @@ class SettingsManager(private val storage: AppStorage) {
     
     fun saveEmailSubject(subject: String) {
         storage.putString(KEY_EMAIL_SUBJECT, subject)
+        touchInstitutionSettingLastModified(InstitutionSettingsKeys.EMAIL_QR_SUBJECT)
     }
     
     fun getEmailContentBefore(): String {
@@ -812,6 +1449,7 @@ class SettingsManager(private val storage: AppStorage) {
     
     fun saveEmailContentBefore(content: String) {
         storage.putString(KEY_EMAIL_CONTENT_BEFORE, content)
+        touchInstitutionSettingLastModified(InstitutionSettingsKeys.EMAIL_QR_CONTENT_BEFORE)
     }
     
     fun isEmailIncludeQrEnabled(): Boolean {
@@ -820,6 +1458,7 @@ class SettingsManager(private val storage: AppStorage) {
     
     fun setEmailIncludeQrEnabled(enabled: Boolean) {
         storage.putBoolean(KEY_EMAIL_INCLUDE_QR, enabled)
+        touchInstitutionSettingLastModified(InstitutionSettingsKeys.EMAIL_INCLUDE_QR)
     }
     
     fun getEmailContentAfter(): String {
@@ -828,6 +1467,7 @@ class SettingsManager(private val storage: AppStorage) {
     
     fun saveEmailContentAfter(content: String) {
         storage.putString(KEY_EMAIL_CONTENT_AFTER, content)
+        touchInstitutionSettingLastModified(InstitutionSettingsKeys.EMAIL_QR_CONTENT_AFTER)
     }
     
     fun getEmailSignature(): String {
@@ -836,6 +1476,7 @@ class SettingsManager(private val storage: AppStorage) {
     
     fun saveEmailSignature(signature: String) {
         storage.putString(KEY_EMAIL_SIGNATURE, signature)
+        touchInstitutionSettingLastModified(InstitutionSettingsKeys.EMAIL_SIGNATURE)
     }
     
     fun isEmailIncludeLogoEnabled(): Boolean {
@@ -884,6 +1525,7 @@ class SettingsManager(private val storage: AppStorage) {
 
     fun saveEmailAssociationName(name: String) {
         storage.putString(KEY_EMAIL_ASSOCIATION_NAME, name)
+        touchInstitutionSettingLastModified(InstitutionSettingsKeys.EMAIL_ASSOCIATION_NAME)
     }
     
     fun getEmailLogoUri(): String {
@@ -946,6 +1588,7 @@ class SettingsManager(private val storage: AppStorage) {
     
     fun saveGuestEmailSubject(subject: String) {
         storage.putString(KEY_GUEST_EMAIL_SUBJECT, subject)
+        touchInstitutionSettingLastModified(InstitutionSettingsKeys.GUEST_EMAIL_SUBJECT)
     }
     
     fun getGuestEmailContentBefore(): String {
@@ -954,6 +1597,7 @@ class SettingsManager(private val storage: AppStorage) {
     
     fun saveGuestEmailContentBefore(content: String) {
         storage.putString(KEY_GUEST_EMAIL_CONTENT_BEFORE, content)
+        touchInstitutionSettingLastModified(InstitutionSettingsKeys.GUEST_EMAIL_CONTENT_BEFORE)
     }
     
     fun isGuestEmailIncludeQrEnabled(): Boolean {
@@ -962,6 +1606,7 @@ class SettingsManager(private val storage: AppStorage) {
     
     fun setGuestEmailIncludeQrEnabled(enabled: Boolean) {
         storage.putBoolean(KEY_GUEST_EMAIL_INCLUDE_QR, enabled)
+        touchInstitutionSettingLastModified(InstitutionSettingsKeys.GUEST_EMAIL_INCLUDE_QR)
     }
     
     fun getGuestEmailContentAfter(): String {
@@ -970,6 +1615,7 @@ class SettingsManager(private val storage: AppStorage) {
     
     fun saveGuestEmailContentAfter(content: String) {
         storage.putString(KEY_GUEST_EMAIL_CONTENT_AFTER, content)
+        touchInstitutionSettingLastModified(InstitutionSettingsKeys.GUEST_EMAIL_CONTENT_AFTER)
     }
     
     fun getGuestEmailSignature(): String {

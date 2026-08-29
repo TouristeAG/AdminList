@@ -18,6 +18,9 @@ interface VenueDao {
     @Query("SELECT * FROM venues WHERE name = :name")
     suspend fun getVenueByName(name: String): VenueEntity?
 
+    @Query("SELECT * FROM venues WHERE name = :name AND firebaseOrgId = :orgId LIMIT 1")
+    suspend fun getVenueByNameAndOrg(name: String, orgId: String): VenueEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertVenue(venue: VenueEntity): Long
 
@@ -44,4 +47,10 @@ interface VenueDao {
 
     @Query("DELETE FROM venues")
     suspend fun deleteAllVenues()
+
+    @Query("DELETE FROM venues WHERE firebaseOrgId = :orgId")
+    suspend fun deleteAllForOrg(orgId: String)
+
+    @Query("DELETE FROM venues WHERE firebaseOrgId != '' AND firebaseOrgId NOT IN (:orgIds)")
+    suspend fun deleteAllNotInOrgs(orgIds: List<String>)
 }

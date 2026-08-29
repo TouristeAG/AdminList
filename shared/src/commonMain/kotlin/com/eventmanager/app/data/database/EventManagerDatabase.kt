@@ -15,11 +15,13 @@ import com.eventmanager.app.data.dao.JobTypeConfigDao
 import com.eventmanager.app.data.dao.SalesSheetItemDao
 import com.eventmanager.app.data.dao.VenueDao
 import com.eventmanager.app.data.dao.VolunteerDao
+import com.eventmanager.app.data.dao.PendingRemoteWriteDao
 import com.eventmanager.app.data.models.AccountTransfer
 import com.eventmanager.app.data.models.Converters
 import com.eventmanager.app.data.models.Guest
 import com.eventmanager.app.data.models.Job
 import com.eventmanager.app.data.models.JobTypeConfig
+import com.eventmanager.app.data.models.PendingRemoteWrite
 import com.eventmanager.app.data.models.SalesSheetItem
 import com.eventmanager.app.data.models.VenueEntity
 import com.eventmanager.app.data.models.Volunteer
@@ -38,8 +40,17 @@ private fun SQLiteConnection.query(sql: String): MigrationCursor =
     MigrationCursor(prepare(sql))
 
 @Database(
-    entities = [Guest::class, Volunteer::class, Job::class, JobTypeConfig::class, VenueEntity::class, SalesSheetItem::class, AccountTransfer::class],
-    version = 36,
+    entities = [
+        Guest::class,
+        Volunteer::class,
+        Job::class,
+        JobTypeConfig::class,
+        VenueEntity::class,
+        SalesSheetItem::class,
+        AccountTransfer::class,
+        PendingRemoteWrite::class,
+    ],
+    version = 39,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -51,6 +62,7 @@ abstract class EventManagerDatabase : RoomDatabase() {
     abstract fun venueDao(): VenueDao
     abstract fun salesSheetItemDao(): SalesSheetItemDao
     abstract fun accountTransferDao(): AccountTransferDao
+    abstract fun pendingRemoteWriteDao(): PendingRemoteWriteDao
 
     companion object {
         @Volatile
@@ -1291,6 +1303,110 @@ abstract class EventManagerDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_36_37 = object : Migration(36, 37) {
+            override fun migrate(connection: SQLiteConnection) {
+                try {
+                    println("Starting migration 36→37: jobNanoId, transfer syncState, pending_remote_writes")
+                    connection.execSQL(
+                        "ALTER TABLE jobs ADD COLUMN jobNanoId TEXT NOT NULL DEFAULT ''"
+                    )
+                    // Backfill empty jobNanoId values with a simple unique surrogate
+                    connection.execSQL(
+                        """
+                        UPDATE jobs SET jobNanoId =
+                            'job_' || id || '_' || volunteerId || '_' || date
+                        WHERE jobNanoId = '' OR jobNanoId IS NULL
+                        """.trimIndent()
+                    )
+                    connection.execSQL(
+                        "ALTER TABLE account_transfers ADD COLUMN syncState TEXT NOT NULL DEFAULT 'CONFIRMED'"
+                    )
+                    connection.execSQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS pending_remote_writes (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                            collection TEXT NOT NULL,
+                            documentId TEXT NOT NULL,
+                            payloadJson TEXT NOT NULL,
+                            operation TEXT NOT NULL,
+                            createdAt INTEGER NOT NULL,
+                            attempts INTEGER NOT NULL DEFAULT 0
+                        )
+                        """.trimIndent()
+                    )
+                    connection.execSQL(
+                        "CREATE INDEX IF NOT EXISTS index_pending_remote_writes_createdAt ON pending_remote_writes(createdAt)"
+                    )
+                    connection.execSQL(
+                        "CREATE INDEX IF NOT EXISTS index_pending_remote_writes_collection_documentId ON pending_remote_writes(collection, documentId)"
+                    )
+                    println("Migration 36→37 completed successfully")
+                } catch (e: Exception) {
+                    println("Migration 36→37 failed: ${e.message}")
+                    e.printStackTrace()
+                    throw e
+                }
+            }
+        }
+
+        private val MIGRATION_37_38 = object : Migration(37, 38) {
+            override fun migrate(connection: SQLiteConnection) {
+                try {
+                    println("Starting migration 37→38: orgId on pending_remote_writes")
+                    connection.execSQL(
+                        "ALTER TABLE pending_remote_writes ADD COLUMN orgId TEXT NOT NULL DEFAULT ''"
+                    )
+                    println("Migration 37→38 completed successfully")
+                } catch (e: Exception) {
+                    println("Migration 37→38 failed: ${e.message}")
+                    e.printStackTrace()
+                    throw e
+                }
+            }
+        }
+
+        private val MIGRATION_38_39 = object : Migration(38, 39) {
+            override fun migrate(connection: SQLiteConnection) {
+                try {
+                    println("Starting migration 38→39: firebaseOrgId on entity tables")
+                    val tables = listOf(
+                        "guests",
+                        "volunteers",
+                        "jobs",
+                        "job_type_configs",
+                        "venues",
+                        "sales_sheet_items",
+                        "account_transfers",
+                    )
+                    tables.forEach { table ->
+                        connection.execSQL(
+                            "ALTER TABLE $table ADD COLUMN firebaseOrgId TEXT NOT NULL DEFAULT ''",
+                        )
+                    }
+                    connection.execSQL("DROP INDEX IF EXISTS index_job_type_configs_name")
+                    connection.execSQL(
+                        "CREATE UNIQUE INDEX IF NOT EXISTS index_job_type_configs_firebaseOrgId_name " +
+                            "ON job_type_configs(firebaseOrgId, name)",
+                    )
+                    connection.execSQL("DROP INDEX IF EXISTS index_venues_name")
+                    connection.execSQL(
+                        "CREATE UNIQUE INDEX IF NOT EXISTS index_venues_firebaseOrgId_name " +
+                            "ON venues(firebaseOrgId, name)",
+                    )
+                    connection.execSQL("DROP INDEX IF EXISTS index_sales_sheet_items_name")
+                    connection.execSQL(
+                        "CREATE UNIQUE INDEX IF NOT EXISTS index_sales_sheet_items_firebaseOrgId_name " +
+                            "ON sales_sheet_items(firebaseOrgId, name)",
+                    )
+                    println("Migration 38→39 completed successfully")
+                } catch (e: Exception) {
+                    println("Migration 38→39 failed: ${e.message}")
+                    e.printStackTrace()
+                    throw e
+                }
+            }
+        }
+
         val ALL_MIGRATIONS: Array<Migration> = arrayOf(
             MIGRATION_1_2,
             MIGRATION_2_3,
@@ -1326,7 +1442,10 @@ abstract class EventManagerDatabase : RoomDatabase() {
             MIGRATION_32_33,
             MIGRATION_33_34,
             MIGRATION_34_35,
-            MIGRATION_35_36
+            MIGRATION_35_36,
+            MIGRATION_36_37,
+            MIGRATION_37_38,
+            MIGRATION_38_39
         )
     }
 }

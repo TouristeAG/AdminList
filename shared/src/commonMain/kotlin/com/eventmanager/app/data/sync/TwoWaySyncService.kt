@@ -3,6 +3,7 @@ package com.eventmanager.app.data.sync
 import com.eventmanager.app.platform.PlatformContext
 import com.eventmanager.app.platform.createAppStorage
 import com.eventmanager.app.data.models.*
+import com.eventmanager.app.data.remote.BackendType
 import com.eventmanager.app.data.repository.EventManagerRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -150,6 +151,19 @@ class TwoWaySyncService(
             googleSheetsService.syncSalesSheetItemsToSheets(mergedSalesSheetItems)
             googleSheetsService.syncTransfersToSheets(mergedTransfers)
 
+            // Institution settings (key/value prefs shared across devices)
+            settingsManager.ensureInstitutionBackendTypeSeeded()
+            val localInstitutionSettings = settingsManager.getInstitutionSettingRows()
+            val remoteInstitutionSettings = try {
+                googleSheetsService.syncInstitutionSettingsFromSheets()
+            } catch (e: Exception) {
+                println("⚠️ Could not read remote institution settings for merge: ${e.message}")
+                emptyList()
+            }
+            val mergedInstitutionSettings = mergeInstitutionSettings(localInstitutionSettings, remoteInstitutionSettings)
+            applyInstitutionSettings(mergedInstitutionSettings)
+            googleSheetsService.syncInstitutionSettingsToSheets(mergedInstitutionSettings)
+
             // Reflect merged snapshot locally so UI updates without a second sync.
             applyMergedSnapshotToLocal(
                 guests = allGuestsForUpload,
@@ -215,8 +229,35 @@ class TwoWaySyncService(
                 println("⚠️ Could not download transfers: ${e.message}")
                 emptyList()
             }
+
+            val remoteInstitutionSettings = try {
+                googleSheetsService.syncInstitutionSettingsFromSheets()
+            } catch (e: Exception) {
+                println("⚠️ Could not download institution settings: ${e.message}")
+                emptyList()
+            }
+            settingsManager.ensureInstitutionBackendTypeSeeded()
+            val mergedInstitutionSettings = mergeInstitutionSettings(
+                settingsManager.getInstitutionSettingRows(),
+                remoteInstitutionSettings
+            )
+            applyInstitutionSettings(mergedInstitutionSettings)
+            // Seed empty Settings sheet / missing backend_type so other devices can pull them
+            val remoteBackend = remoteInstitutionSettings.find {
+                it.key == InstitutionSettingsKeys.BACKEND_TYPE
+            }
+            if (remoteInstitutionSettings.isEmpty() ||
+                remoteBackend == null ||
+                remoteBackend.value.isBlank()
+            ) {
+                try {
+                    googleSheetsService.syncInstitutionSettingsToSheets(mergedInstitutionSettings)
+                } catch (e: Exception) {
+                    println("⚠️ Could not seed institution settings sheet: ${e.message}")
+                }
+            }
             
-            println("Downloaded from sheets: ${remoteGuests.size} guests, ${remoteVolunteers.size} volunteers, ${remoteJobs.size} jobs, ${remoteJobTypeConfigs.size} job types, ${remoteVenues.size} venues, ${remoteSalesSheetItems.size} sales items, ${remoteTransfers.size} transfers")
+            println("Downloaded from sheets: ${remoteGuests.size} guests, ${remoteVolunteers.size} volunteers, ${remoteJobs.size} jobs, ${remoteJobTypeConfigs.size} job types, ${remoteVenues.size} venues, ${remoteSalesSheetItems.size} sales items, ${remoteTransfers.size} transfers, ${remoteInstitutionSettings.size} institution settings")
             
             // Safety check: Only replace local data if we have remote data to prevent data loss
             val hasRemoteData = remoteGuests.isNotEmpty() || remoteVolunteers.isNotEmpty() || 
@@ -224,7 +265,7 @@ class TwoWaySyncService(
                                remoteSalesSheetItems.isNotEmpty() || remoteTransfers.isNotEmpty()
             
             if (!hasRemoteData) {
-                println("⚠️ No data found in Google Sheets - keeping existing local data")
+                println("⚠️ No entity data found in Google Sheets - keeping existing local data (institution settings already applied)")
                 println("This might be a first-time setup or the sheets are empty.")
                 return@withContext
             }
@@ -365,6 +406,34 @@ class TwoWaySyncService(
             googleSheetsService.validateAndRepairSheetsStructure()
             
             println("🔄 Starting differential sync from Google Sheets...")
+
+            // Always refresh institution settings (includes backend_type migration announcements)
+            // before entity diffs so peers soft-lock as soon as Sheets says FIREBASE.
+            try {
+                settingsManager.ensureInstitutionBackendTypeSeeded()
+                val localInstitutionSettings = settingsManager.getInstitutionSettingRows()
+                val remoteInstitutionSettings = googleSheetsService.syncInstitutionSettingsFromSheets()
+                val mergedInstitutionSettings =
+                    mergeInstitutionSettings(localInstitutionSettings, remoteInstitutionSettings)
+                applyInstitutionSettings(mergedInstitutionSettings)
+                val remoteBackend = remoteInstitutionSettings.find {
+                    it.key == InstitutionSettingsKeys.BACKEND_TYPE
+                }
+                val mergedBackend = mergedInstitutionSettings.find {
+                    it.key == InstitutionSettingsKeys.BACKEND_TYPE
+                }
+                val shouldPushInstitutionSettings = remoteInstitutionSettings.isEmpty() ||
+                    remoteBackend == null ||
+                    remoteBackend.value.isBlank() ||
+                    (mergedBackend != null &&
+                        remoteBackend != null &&
+                        mergedBackend.lastModified > remoteBackend.lastModified)
+                if (shouldPushInstitutionSettings) {
+                    googleSheetsService.syncInstitutionSettingsToSheets(mergedInstitutionSettings)
+                }
+            } catch (e: Exception) {
+                println("⚠️ Institution settings differential refresh failed: ${e.message}")
+            }
             
             // STEP 1: Download all data from sheets (TEMP_DB) - OPTIMIZED: parallel downloads
             val (remoteJobTypeConfigs, remoteGuests, remoteVolunteers, remoteVenues, remoteSalesSheetItems) = coroutineScope {
@@ -627,6 +696,12 @@ class TwoWaySyncService(
                 pagesToSync.contains("venue_management") ||
                 pagesToSync.contains("management:venue")) {
                 syncVenuesWithDifferentialUpdate()
+            }
+
+            if (pagesToSync.contains("settings") ||
+                pagesToSync.contains("institution_settings") ||
+                pagesToSync.contains("management:settings")) {
+                syncInstitutionSettingsWithDifferentialUpdate()
             }
             
             println("Page change sync completed successfully")
@@ -1473,6 +1548,8 @@ class TwoWaySyncService(
                 val transfers = repository.getAllAccountTransfersOnce()
                 val remoteTransfers = try {
                     googleSheetsService.syncTransfersFromSheets()
+                } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     println("⚠️ Could not read remote transfers for merge: ${e.message}")
                     emptyList()
@@ -1488,10 +1565,148 @@ class TwoWaySyncService(
                 googleSheetsService.syncTransfersToSheets(merged)
                 applyMergedSnapshotToLocal(transfers = merged)
                 println("✅ Successfully backed up ${merged.size} transfers to Google Sheets")
+            } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 println("❌ Failed to backup transfers: ${e.message}")
                 throw e
             }
+        }
+    }
+
+    /**
+     * Merge institution settings per key (last-modified wins), apply locally, then upload.
+     */
+    suspend fun backupInstitutionSettingsToSheets() = withContext(Dispatchers.IO) {
+        sheetsOpMutex.withLock {
+            try {
+                if (!isGoogleSheetsConfigured()) throw IOException("Google Sheets not configured")
+                googleSheetsService.initializeSheetsService()
+                settingsManager.ensureInstitutionBackendTypeSeeded()
+                val local = settingsManager.getInstitutionSettingRows()
+                val remote = try {
+                    googleSheetsService.syncInstitutionSettingsFromSheets()
+                } catch (e: Exception) {
+                    println("⚠️ Could not read remote institution settings for merge: ${e.message}")
+                    emptyList()
+                }
+                val merged = mergeInstitutionSettings(local, remote)
+                applyInstitutionSettings(merged)
+                googleSheetsService.syncInstitutionSettingsToSheets(merged)
+                println("✅ Successfully backed up ${merged.size} institution settings to Google Sheets")
+            } catch (e: Exception) {
+                println("❌ Failed to backup institution settings: ${e.message}")
+                throw e
+            }
+        }
+    }
+
+    /**
+     * Pull institution settings and apply remote-newer keys; seed sheet if empty.
+     */
+    suspend fun syncInstitutionSettingsWithDifferentialUpdate(): Boolean =
+        withContext(Dispatchers.IO) {
+            sheetsOpMutex.withLock {
+                try {
+                    settingsManager.ensureInstitutionBackendTypeSeeded()
+                    val local = settingsManager.getInstitutionSettingRows()
+                    val remote = googleSheetsService.syncInstitutionSettingsFromSheets()
+                    val merged = mergeInstitutionSettings(local, remote)
+                    var appliedRemote = false
+                    for (row in merged) {
+                        val localRow = local.find { it.key == row.key }
+                        if (localRow == null || row.lastModified > localRow.lastModified || row.value != localRow.value) {
+                            if (remote.any { it.key == row.key && it.lastModified == row.lastModified }) {
+                                appliedRemote = true
+                            }
+                        }
+                    }
+                    applyInstitutionSettings(merged)
+                    val remoteBackend = remote.find { it.key == InstitutionSettingsKeys.BACKEND_TYPE }
+                    val mergedBackend = merged.find { it.key == InstitutionSettingsKeys.BACKEND_TYPE }
+                    if (remote.isEmpty() ||
+                        remoteBackend == null ||
+                        remoteBackend.value.isBlank() ||
+                        (mergedBackend != null && mergedBackend.lastModified > (remoteBackend?.lastModified ?: 0L))
+                    ) {
+                        googleSheetsService.syncInstitutionSettingsToSheets(merged)
+                    }
+                    updateLastSyncTime()
+                    appliedRemote
+                } catch (e: Exception) {
+                    throw IOException("Institution settings sync failed: ${e.message}", e)
+                }
+            }
+        }
+
+    private fun mergeInstitutionSettings(
+        local: List<InstitutionSettingRow>,
+        remote: List<InstitutionSettingRow>,
+    ): List<InstitutionSettingRow> {
+        val localByKey = local.associateBy { it.key }
+        val remoteByKey = remote.associateBy { it.key }
+        return InstitutionSettingsKeys.ALL.map { key ->
+            val localRow = localByKey[key]
+            val remoteRow = remoteByKey[key]
+            if (key in InstitutionSettingsKeys.BACKEND_KEYS) {
+                mergeBackendInstitutionSetting(key, localRow, remoteRow)
+            } else {
+                when {
+                    localRow == null && remoteRow == null ->
+                        InstitutionSettingRow(key = key, value = "", lastModified = 0L)
+                    localRow == null -> remoteRow!!
+                    remoteRow == null -> localRow
+                    remoteRow.lastModified > localRow.lastModified -> remoteRow
+                    else -> localRow
+                }
+            }
+        }
+    }
+
+    /**
+     * Backend announcement keys must not be stomped by a peer that still has the fallback
+     * local type (SHEETS) with lastModified=0, or by blank rows from an older Settings sheet.
+     */
+    private fun mergeBackendInstitutionSetting(
+        key: String,
+        localRow: InstitutionSettingRow?,
+        remoteRow: InstitutionSettingRow?,
+    ): InstitutionSettingRow {
+        fun meaningful(row: InstitutionSettingRow?): InstitutionSettingRow? {
+            if (row == null) return null
+            if (key == InstitutionSettingsKeys.BACKEND_TYPE && row.value.isBlank()) return null
+            return row
+        }
+        val local = meaningful(localRow)
+        val remote = meaningful(remoteRow)
+        return when {
+            local == null && remote == null ->
+                InstitutionSettingRow(key = key, value = "", lastModified = 0L)
+            local == null -> remote!!
+            remote == null -> local
+            remote.lastModified > local.lastModified -> remote
+            local.lastModified > remote.lastModified -> local
+            // Equal timestamps: prefer FIREBASE over SHEETS for backend_type so a migration
+            // announce is not lost to a same-ms peer seed.
+            key == InstitutionSettingsKeys.BACKEND_TYPE -> {
+                val remoteType = BackendType.fromStorage(remote.value)
+                val localType = BackendType.fromStorage(local.value)
+                when {
+                    remoteType == BackendType.FIREBASE && localType != BackendType.FIREBASE -> remote
+                    localType == BackendType.FIREBASE && remoteType != BackendType.FIREBASE -> local
+                    else -> remote
+                }
+            }
+            // Prefer non-blank migration metadata
+            remote.value.isNotBlank() && local.value.isBlank() -> remote
+            local.value.isNotBlank() && remote.value.isBlank() -> local
+            else -> remote
+        }
+    }
+
+    private fun applyInstitutionSettings(rows: List<InstitutionSettingRow>) {
+        for (row in rows) {
+            settingsManager.applyInstitutionSettingFromRemote(row.key, row.value, row.lastModified)
         }
     }
 

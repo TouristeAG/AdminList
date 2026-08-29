@@ -36,6 +36,9 @@ import com.eventmanager.app.data.models.*
 import com.eventmanager.app.resources.Res
 import com.eventmanager.app.resources.*
 import com.eventmanager.app.ui.components.VolunteerFutureEntriesSection
+import com.eventmanager.app.ui.components.FirebaseOrgSwitcher
+import com.eventmanager.app.ui.components.FirebaseOrgSwitcherPlacement
+import com.eventmanager.app.ui.viewmodel.EventManagerViewModel
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -49,6 +52,7 @@ fun DesktopBilleterieScanningScreen(
     nfcReaderLabel: String,
     nfcReaderBusy: Boolean,
     cameraPreview: @Composable () -> Unit,
+    viewModel: EventManagerViewModel? = null,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -99,6 +103,7 @@ fun DesktopBilleterieScanningScreen(
                     connected = nfcConnected,
                     readerLabel = nfcReaderLabel,
                     busy = nfcReaderBusy,
+                    viewModel = viewModel,
                     modifier = Modifier.weight(0.9f).fillMaxHeight(),
                 )
             }
@@ -253,6 +258,7 @@ private fun DesktopBilleterieNfcPanel(
     connected: Boolean,
     readerLabel: String,
     busy: Boolean,
+    viewModel: EventManagerViewModel? = null,
     modifier: Modifier = Modifier,
 ) {
     val statusColor = when {
@@ -277,19 +283,32 @@ private fun DesktopBilleterieNfcPanel(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Icon(
-                    Icons.Default.Nfc,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-                Text(
-                    text = stringResource(Res.string.desktop_billeterie_nfc_section),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Icon(
+                        Icons.Default.Nfc,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                    Text(
+                        text = stringResource(Res.string.desktop_billeterie_nfc_section),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+                if (viewModel != null) {
+                    FirebaseOrgSwitcher(
+                        viewModel = viewModel,
+                        placement = FirebaseOrgSwitcherPlacement.TopBarTitleEnd,
+                    )
+                }
             }
 
             Surface(
@@ -385,6 +404,7 @@ fun DesktopBilleterieResultScreen(
     onConfirmEntry: (Job, Int) -> Unit,
     onScanNext: () -> Unit,
     onCloseToMenu: () -> Unit,
+    viewModel: com.eventmanager.app.ui.viewmodel.EventManagerViewModel? = null,
     modifier: Modifier = Modifier,
 ) {
     val focusRequester = remember { FocusRequester() }
@@ -457,6 +477,7 @@ fun DesktopBilleterieResultScreen(
                 DesktopBilleterieFullScreenVerdict(
                     result = result,
                     ticketConfirmed = ticketConfirmed,
+                    viewModel = viewModel,
                     modifier = Modifier.fillMaxSize(),
                 )
                 DesktopBilleterieResultActionBar(
@@ -499,6 +520,7 @@ fun DesktopBilleterieResultScreen(
 private fun DesktopBilleterieFullScreenVerdict(
     result: BilleterieScanResult,
     ticketConfirmed: Boolean,
+    viewModel: com.eventmanager.app.ui.viewmodel.EventManagerViewModel? = null,
     modifier: Modifier = Modifier,
 ) {
     val isSuccess = when (result) {
@@ -583,6 +605,14 @@ private fun DesktopBilleterieFullScreenVerdict(
                     text = rank,
                     style = MaterialTheme.typography.titleLarge,
                     color = Color.White.copy(alpha = 0.75f),
+                )
+            }
+
+            result.scannedFirebaseOrgId()?.let { orgId ->
+                Spacer(Modifier.height(8.dp))
+                BilleterieScannerScannedOrgLabel(
+                    viewModel = viewModel,
+                    orgId = orgId,
                 )
             }
 

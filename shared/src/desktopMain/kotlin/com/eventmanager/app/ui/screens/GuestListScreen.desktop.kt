@@ -30,12 +30,15 @@ import com.eventmanager.app.platform.LocalPlatformContext
 import com.eventmanager.app.resources.Res
 import com.eventmanager.app.resources.*
 import com.eventmanager.app.ui.components.GuestDetailPanel
+import com.eventmanager.app.ui.components.GuestVenueDropdownField
 import com.eventmanager.app.ui.components.SearchBarWithFilter
 import com.eventmanager.app.ui.components.VolunteerBenefitsPanel
 import com.eventmanager.app.data.models.BenefitCalculator
 import com.eventmanager.app.data.models.AccountHolderType
 import com.eventmanager.app.data.utils.formatMoney
+import com.eventmanager.app.data.remote.MultiOrgMerge
 import com.eventmanager.app.ui.utils.GuestListDefaultZoneId
+import com.eventmanager.app.ui.components.OrgColorDot
 import com.eventmanager.app.ui.utils.generateVenueFilterOptions
 import com.eventmanager.app.ui.utils.getVenueDisplayString
 import com.eventmanager.app.ui.utils.rememberGuestListEffectiveToday
@@ -95,10 +98,11 @@ actual fun GuestListScreen(
 
     val volunteersMap = remember(volunteers) { volunteers.associateBy { it.id } }
     val venueFilterOptions = generateVenueFilterOptions(venues)
+    val allOrgsMode = viewModel?.isFirebaseAllOrgsMode() == true
 
     val filteredGuests = remember(
         guests, selectedVenueName, searchQuery, selectedFilter, volunteersMap, effectiveToday,
-        filterPermanentGuests, filterTemporaryGuests, filterVolunteerBenefits
+        filterPermanentGuests, filterTemporaryGuests, filterVolunteerBenefits, allOrgsMode, venues,
     ) {
         val q = searchQuery.trim()
         val hasSearch = q.isNotEmpty()
@@ -110,14 +114,7 @@ actual fun GuestListScreen(
                 if (Instant.ofEpochMilli(eventTs).atZone(zone).toLocalDate() != effectiveToday) continue
             }
 
-            if (selectedVenueName != null) {
-                val matchesVenue = if (selectedVenueName == "BOTH") {
-                    guest.venueName == "BOTH"
-                } else {
-                    guest.venueName == selectedVenueName || guest.venueName == "BOTH"
-                }
-                if (!matchesVenue) continue
-            }
+            if (!MultiOrgMerge.matchesGuestVenueSelection(guest, selectedVenueName, venues, allOrgsMode)) continue
 
             if (hasSearch) {
                 val matchesSearch =
@@ -262,7 +259,8 @@ actual fun GuestListScreen(
                         }
                     },
                     onEdit = { showEditDialog = guest },
-                    onDelete = { guestToDelete = guest }
+                    onDelete = { guestToDelete = guest },
+                    viewModel = viewModel,
                 )
             }
         }
@@ -397,7 +395,8 @@ private fun GuestListRow(
     readOnly: Boolean,
     onClick: () -> Unit,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    viewModel: EventManagerViewModel? = null,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     Card(
@@ -413,6 +412,9 @@ private fun GuestListRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(guest.name, fontWeight = FontWeight.SemiBold)
+                    if (viewModel?.isFirebaseAllOrgsMode() == true && guest.firebaseOrgId.isNotBlank()) {
+                        OrgColorDot(orgId = guest.firebaseOrgId, viewModel = viewModel, size = 8.dp)
+                    }
                     when {
                         guest.isVolunteerBenefit -> {
                             AssistChip(
@@ -609,7 +611,7 @@ private fun DesktopAddGuestDialog(
     var email by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var invitations by remember { mutableStateOf("1") }
-    var venueName by remember { mutableStateOf(activeVenues.firstOrNull()?.name.orEmpty()) }
+    var selectedVenueName by remember { mutableStateOf<String?>(null) }
     var notes by remember { mutableStateOf("") }
 
     var temporaryArtist by remember { mutableStateOf("") }
@@ -662,7 +664,12 @@ private fun DesktopAddGuestDialog(
                         OutlinedTextField(email, { email = it }, label = { Text(stringResource(Res.string.email)) }, modifier = Modifier.fillMaxWidth())
                         OutlinedTextField(phone, { phone = it }, label = { Text(stringResource(Res.string.phone)) }, modifier = Modifier.fillMaxWidth())
                         OutlinedTextField(invitations, { invitations = it }, label = { Text(stringResource(Res.string.invitations)) }, modifier = Modifier.fillMaxWidth())
-                        OutlinedTextField(venueName, { venueName = it }, label = { Text(stringResource(Res.string.venue)) }, modifier = Modifier.fillMaxWidth())
+                        GuestVenueDropdownField(
+                            venues = venues,
+                            selectedVenueName = selectedVenueName,
+                            onVenueSelected = { selectedVenueName = it },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
                         OutlinedTextField(notes, { notes = it }, label = { Text(stringResource(Res.string.notes)) }, modifier = Modifier.fillMaxWidth())
                     } else {
                         OutlinedTextField(
@@ -731,13 +738,14 @@ private fun DesktopAddGuestDialog(
                     Button(
                         onClick = {
                             if (selectedTab == 0) {
+                                val defaultVenue = activeVenues.firstOrNull()?.name ?: "GROOVE"
                                 onConfirmPermanent(
                                     Guest(
                                         name = name.trim(),
                                         email = email.trim(),
                                         phoneNumber = phone.trim(),
                                         invitations = invitations.toIntOrNull() ?: 0,
-                                        venueName = venueName.trim(),
+                                        venueName = selectedVenueName ?: defaultVenue,
                                         notes = notes.trim()
                                     )
                                 )
@@ -754,7 +762,7 @@ private fun DesktopAddGuestDialog(
                                 )
                             }
                         },
-                        enabled = if (selectedTab == 0) name.isNotBlank() && venueName.isNotBlank() else temporaryFormValid
+                        enabled = if (selectedTab == 0) name.isNotBlank() && selectedVenueName != null else temporaryFormValid
                     ) { Text(stringResource(Res.string.add)) }
                 }
             }
@@ -773,7 +781,7 @@ private fun DesktopEditGuestDialog(
     var email by remember(guest) { mutableStateOf(guest.email) }
     var phone by remember(guest) { mutableStateOf(guest.phoneNumber) }
     var invitations by remember(guest) { mutableStateOf(guest.invitations.toString()) }
-    var venueName by remember(guest) { mutableStateOf(guest.venueName) }
+    var selectedVenueName by remember(guest) { mutableStateOf(guest.venueName) }
     var notes by remember(guest) { mutableStateOf(guest.notes) }
 
     AlertDialog(
@@ -785,7 +793,12 @@ private fun DesktopEditGuestDialog(
                 OutlinedTextField(email, { email = it }, label = { Text(stringResource(Res.string.email)) }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(phone, { phone = it }, label = { Text(stringResource(Res.string.phone)) }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(invitations, { invitations = it }, label = { Text(stringResource(Res.string.invitations)) }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(venueName, { venueName = it }, label = { Text(stringResource(Res.string.venue)) }, modifier = Modifier.fillMaxWidth())
+                GuestVenueDropdownField(
+                    venues = venues,
+                    selectedVenueName = selectedVenueName,
+                    onVenueSelected = { selectedVenueName = it },
+                    modifier = Modifier.fillMaxWidth(),
+                )
                 OutlinedTextField(notes, { notes = it }, label = { Text(stringResource(Res.string.notes)) }, modifier = Modifier.fillMaxWidth())
             }
         },
@@ -798,7 +811,7 @@ private fun DesktopEditGuestDialog(
                             email = email.trim(),
                             phoneNumber = phone.trim(),
                             invitations = invitations.toIntOrNull() ?: guest.invitations,
-                            venueName = venueName.trim(),
+                            venueName = selectedVenueName.trim(),
                             notes = notes.trim(),
                             lastModified = System.currentTimeMillis()
                         )

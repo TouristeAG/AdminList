@@ -24,8 +24,15 @@ fun main() {
     DesktopWebcamSupport.ensureInitialized()
     application {
         val platformContext = createPlatformContext()
-        FileAppLogger.init(platformContext, SettingsManager(createAppStorage(platformContext)))
-        bootstrapAppLocale(SettingsManager(createAppStorage(platformContext)).getLanguage())
+        val settingsManager = SettingsManager(createAppStorage(platformContext))
+        FileAppLogger.init(platformContext, settingsManager)
+        bootstrapAppLocale(settingsManager.getLanguage())
+        runCatching {
+            com.eventmanager.app.data.remote.FirebaseBootstrap.ensureInitialized(
+                platformContext,
+                com.eventmanager.app.data.remote.FirebaseOptionsReader.fromSettings(settingsManager),
+            )
+        }
         val windowState = rememberWindowState(width = 1280.dp, height = 900.dp)
 
         Window(

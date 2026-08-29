@@ -539,7 +539,8 @@ private fun ExpandableSettingsCategory(
 @Composable
 private fun EmailSettingsContent(
     settingsManager: SettingsManager,
-    context: android.content.Context
+    context: android.content.Context,
+    onSyncedSettingChanged: () -> Unit = {},
 ) {
     // Cache string resources to avoid repeated lookups
     val strings = remember {
@@ -641,6 +642,7 @@ private fun EmailSettingsContent(
         saveJob = coroutineScope.launch {
             kotlinx.coroutines.delay(500) // 500ms debounce
             block()
+            onSyncedSettingChanged()
         }
     }
     
@@ -722,6 +724,7 @@ private fun EmailSettingsContent(
                 onIncludeQrChange = {
                     volunteerIncludeQr = it
                     settingsManager.setEmailIncludeQrEnabled(it)
+                    onSyncedSettingChanged()
                 },
                 contentAfter = volunteerContentAfter,
                 onContentAfterChange = { 
@@ -747,6 +750,7 @@ private fun EmailSettingsContent(
                 onIncludeQrChange = {
                     guestIncludeQr = it
                     settingsManager.setGuestEmailIncludeQrEnabled(it)
+                    onSyncedSettingChanged()
                 },
                 contentAfter = guestContentAfter,
                 onContentAfterChange = { 
@@ -987,6 +991,7 @@ private fun EmailSettingsContent(
                         settingsManager.saveEmailContentBefore(volunteerContentBefore)
                         settingsManager.setEmailIncludeQrEnabled(volunteerIncludeQr)
                         settingsManager.saveEmailContentAfter(volunteerContentAfter)
+                        onSyncedSettingChanged()
                     }
                 } else {
                     // Reset guest settings
@@ -1000,6 +1005,7 @@ private fun EmailSettingsContent(
                         settingsManager.saveGuestEmailContentBefore(guestContentBefore)
                         settingsManager.setGuestEmailIncludeQrEnabled(guestIncludeQr)
                         settingsManager.saveGuestEmailContentAfter(guestContentAfter)
+                        onSyncedSettingChanged()
                     }
                 }
             },
@@ -1497,6 +1503,7 @@ actual fun SettingsScreen(
     var salesItemsSheet by remember { mutableStateOf(settingsManager.getSalesItemsSheet()) }
     var transfersSheet by remember { mutableStateOf(settingsManager.getTransfersSheet()) }
     var tempGuestListSheet by remember { mutableStateOf(settingsManager.getTempGuestListSheet()) }
+    var settingsSheet by remember { mutableStateOf(settingsManager.getSettingsSheet()) }
     var showInstructions by remember { mutableStateOf(false) }
     var jsonKeyInfo by remember { mutableStateOf<JsonKeyInfo?>(null) }
     var showActiveVolunteersDialog by remember { mutableStateOf(false) }
@@ -1505,6 +1512,63 @@ actual fun SettingsScreen(
     val coroutineScope = rememberCoroutineScope()
     var selectedFileUri by remember { mutableStateOf<Uri?>(null) }
     var syncInterval by remember { mutableStateOf(settingsManager.getSyncInterval()) }
+    var migrationWizard by remember { mutableStateOf<com.eventmanager.app.data.remote.MigrationDirection?>(null) }
+    var firebaseConfiguredOrgs by remember { mutableStateOf(settingsManager.getFirebaseConfiguredOrgs()) }
+    var memberUid by remember { mutableStateOf("") }
+    var memberEmail by remember { mutableStateOf("") }
+    var firebaseAuthEmail by remember { mutableStateOf(settingsManager.getFirebaseAuthEmail()) }
+    var allowedEmailDomains by remember { mutableStateOf(settingsManager.getAllowedEmailDomains()) }
+    val firebaseAuthService = remember {
+        com.eventmanager.app.data.remote.createFirebaseAuthService(platformContext)
+            as? com.eventmanager.app.data.remote.AndroidFirebaseAuthService
+    }
+    var pendingMigrationSignInResult by remember {
+        mutableStateOf<((com.eventmanager.app.data.remote.FirebaseAuthResult) -> Unit)?>(null)
+    }
+    val firebaseAuthLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { activityResult ->
+        coroutineScope.launch {
+            val auth = firebaseAuthService
+            if (auth == null) {
+                val err = com.eventmanager.app.data.remote.FirebaseAuthResult.Error(
+                    "Firebase Auth unavailable on this build",
+                )
+                uploadStatus = err.message
+                pendingMigrationSignInResult?.invoke(err)
+                pendingMigrationSignInResult = null
+                return@launch
+            }
+            when (val result = auth.completeSignInFromIntent(activityResult.data)) {
+                is com.eventmanager.app.data.remote.FirebaseAuthResult.Success -> {
+                    firebaseAuthEmail = result.email.orEmpty()
+                    settingsManager.setFirebaseAuthEmail(result.email.orEmpty())
+                    val org = settingsManager.getFirebaseOrgId()
+                    if (org.isNotBlank() && result.uid.isNotBlank()) {
+                        val gateway = com.eventmanager.app.data.remote.createFirestoreGateway(
+                            platformContext,
+                            settingsManager,
+                        )
+                        com.eventmanager.app.data.remote.FirebaseMemberSignIn.afterGoogleSignIn(
+                            gateway = gateway,
+                            settings = settingsManager,
+                            uid = result.uid,
+                            email = result.email,
+                            joinWithBootstrapCode = settingsManager.getFirebaseBootstrapCode().isNotBlank(),
+                        )
+                    }
+                    uploadStatus = "Firebase signed in as ${result.email ?: result.uid}"
+                    pendingMigrationSignInResult?.invoke(result)
+                    pendingMigrationSignInResult = null
+                }
+                is com.eventmanager.app.data.remote.FirebaseAuthResult.Error -> {
+                    uploadStatus = result.message
+                    pendingMigrationSignInResult?.invoke(result)
+                    pendingMigrationSignInResult = null
+                }
+            }
+        }
+    }
     var showSyncSettings by remember { mutableStateOf(settingsManager.isCategorySyncExpanded()) }
     var showEmailSettings by remember { mutableStateOf(settingsManager.isCategoryEmailExpanded()) }
     var showAppearanceSettings by remember { mutableStateOf(settingsManager.isCategoryAppearanceExpanded()) }
@@ -1632,6 +1696,112 @@ actual fun SettingsScreen(
                 settingsManager.setCategorySyncExpanded(showSyncSettings)
             }
         ) {
+            if (variant == SettingsScreenVariant.Full &&
+                settingsManager.getBackendType() == com.eventmanager.app.data.remote.BackendType.FIREBASE
+            ) {
+                com.eventmanager.app.ui.components.SyncSetupInstructionsButton(
+                    backendType = com.eventmanager.app.data.remote.BackendType.FIREBASE,
+                    onClick = { showInstructions = true },
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                com.eventmanager.app.ui.components.FirebaseSyncSettingsSection(
+                    configuredOrgs = firebaseConfiguredOrgs,
+                    authEmail = firebaseAuthEmail.ifBlank { null },
+                    onConfiguredOrgsChange = {
+                        firebaseConfiguredOrgs = it
+                        viewModel.updateFirebaseConfiguredOrgsLocal(it)
+                    },
+                    onOrgIdCommitted = viewModel::provisionFirebaseOrg,
+                    onSignIn = {
+                        val auth = firebaseAuthService
+                        if (auth != null) {
+                            firebaseAuthLauncher.launch(auth.getSignInIntent())
+                        } else {
+                            coroutineScope.launch {
+                                when (val result = com.eventmanager.app.data.remote.createFirebaseAuthService(platformContext).signInWithGoogle()) {
+                                    is com.eventmanager.app.data.remote.FirebaseAuthResult.Success -> {
+                                        firebaseAuthEmail = result.email.orEmpty()
+                                        settingsManager.setFirebaseAuthEmail(result.email.orEmpty())
+                                        uploadStatus = "Firebase signed in as ${result.email ?: result.uid}"
+                                    }
+                                    is com.eventmanager.app.data.remote.FirebaseAuthResult.Error -> {
+                                        uploadStatus = result.message
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    onSignOut = {
+                        coroutineScope.launch {
+                            com.eventmanager.app.data.remote.createFirebaseAuthService(platformContext).signOut()
+                            firebaseAuthEmail = ""
+                            settingsManager.setFirebaseAuthEmail("")
+                        }
+                    },
+                    onMigrateToSheets = {
+                        migrationWizard = com.eventmanager.app.data.remote.MigrationDirection.FIREBASE_TO_SHEETS
+                    },
+                    onMirrorExport = {
+                        viewModel.exportSheetsMirrorNow()
+                    },
+                    platformContext = platformContext,
+                    onMirrorSettingsChanged = { viewModel.onSheetsMirrorSettingsChanged() },
+                    settingsManager = settingsManager,
+                    memberUid = memberUid,
+                    memberEmail = memberEmail,
+                    onMemberUidChange = { memberUid = it },
+                    onMemberEmailChange = { memberEmail = it },
+                    projectId = settingsManager.getFirebaseProjectId(),
+                    apiKey = settingsManager.getFirebaseApiKey(),
+                    applicationId = settingsManager.getFirebaseApplicationId(),
+                    onProjectIdChange = { settingsManager.setFirebaseProjectId(it) },
+                    onApiKeyChange = { settingsManager.setFirebaseApiKey(it) },
+                    onApplicationIdChange = { settingsManager.setFirebaseApplicationId(it) },
+                    webClientId = settingsManager.getFirebaseWebClientId(),
+                    onWebClientIdChange = { settingsManager.setFirebaseWebClientId(it) },
+                    webClientSecret = settingsManager.getFirebaseWebClientSecret(),
+                    onWebClientSecretChange = { settingsManager.setFirebaseWebClientSecret(it) },
+                    allowedEmailDomains = allowedEmailDomains,
+                    onAllowedEmailDomainsChange = { domains ->
+                        allowedEmailDomains = domains
+                        settingsManager.setAllowedEmailDomains(domains)
+                        coroutineScope.launch {
+                            val org = settingsManager.getFirebaseOrgId().trim()
+                            if (org.isBlank()) return@launch
+                            val gateway = com.eventmanager.app.data.remote.createFirestoreGateway(
+                                platformContext,
+                                settingsManager,
+                            )
+                            runCatching {
+                                com.eventmanager.app.data.remote.MemberRoleAdmin.publishAllowedEmailDomains(
+                                    gateway = gateway,
+                                    orgId = org,
+                                    domains = domains,
+                                )
+                            }.onFailure { uploadStatus = it.message }
+                        }
+                    },
+                    onAssignMemberRole = { role ->
+                        coroutineScope.launch {
+                            val gateway = com.eventmanager.app.data.remote.createFirestoreGateway(
+                                platformContext,
+                                settingsManager,
+                            )
+                            com.eventmanager.app.data.remote.MemberRoleAdmin.upsertMember(
+                                gateway = gateway,
+                                orgId = settingsManager.getFirebaseOrgId(),
+                                uid = memberUid.trim(),
+                                role = role,
+                                email = memberEmail.trim().ifBlank { null },
+                                allowedEmailDomains = settingsManager.getAllowedEmailDomains(),
+                            )
+                        }
+                    },
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            if (settingsManager.getBackendType() == com.eventmanager.app.data.remote.BackendType.SHEETS) {
             // Google Sheets Configuration Section
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -1804,6 +1974,18 @@ actual fun SettingsScreen(
                             Icon(Icons.Default.SwapHoriz, contentDescription = null)
                         }
                     )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    OutlinedTextField(
+                        value = settingsSheet,
+                        onValueChange = { settingsSheet = it },
+                        label = { Text(context.getString(R.string.settings_sheet_label)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        leadingIcon = {
+                            Icon(Icons.Default.Settings, contentDescription = null)
+                        }
+                    )
                     
                     Spacer(modifier = Modifier.height(24.dp))
                     
@@ -1820,6 +2002,7 @@ actual fun SettingsScreen(
                             settingsManager.saveVenuesSheet(venuesSheet)
                             settingsManager.saveSalesItemsSheet(salesItemsSheet)
                             settingsManager.saveTransfersSheet(transfersSheet)
+                            settingsManager.saveSettingsSheet(settingsSheet)
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -1830,8 +2013,21 @@ actual fun SettingsScreen(
                 }
             }
             
+            } // end SHEETS-only sync fields
+
+            if (variant == SettingsScreenVariant.Full &&
+                settingsManager.getBackendType() == com.eventmanager.app.data.remote.BackendType.SHEETS
+            ) {
+                com.eventmanager.app.ui.components.SheetsMigrateToFirebaseButton(
+                    onClick = {
+                        migrationWizard = com.eventmanager.app.data.remote.MigrationDirection.SHEETS_TO_FIREBASE
+                    }
+                )
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
             
+            if (settingsManager.getBackendType() == com.eventmanager.app.data.remote.BackendType.SHEETS) {
             // Service Account Configuration Section
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -2027,90 +2223,40 @@ actual fun SettingsScreen(
                     Spacer(modifier = Modifier.height(8.dp))
                 }
             }
+            } // end SHEETS service account + sync interval
         }
-        
         }
-        
-        if (variant == SettingsScreenVariant.BilleterieBasic || variant == SettingsScreenVariant.PosBasic) {
-            ExpandableSettingsCategory(
-                title = context.getString(R.string.settings_category_sync),
-                icon = Icons.Default.CloudSync,
-                isExpanded = showSyncSettings,
-                onToggleExpanded = {
-                    showSyncSettings = !showSyncSettings
-                    settingsManager.setCategorySyncExpanded(showSyncSettings)
-                }
-            ) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                Icons.Default.Sync,
-                                contentDescription = null,
-                                modifier = Modifier.size(24.dp),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = context.getString(R.string.sync_config_title),
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(16.dp))
-                        OutlinedTextField(
-                            value = syncInterval.toString(),
-                            onValueChange = {
-                                val newInterval = it.toIntOrNull() ?: 5
-                                if (newInterval >= 1 && newInterval <= 60) {
-                                    syncInterval = newInterval
-                                    settingsManager.saveSyncInterval(newInterval)
-                                    coroutineScope.launch {
-                                        kotlinx.coroutines.delay(500)
-                                        viewModel.updateSyncInterval()
-                                    }
-                                }
-                            },
-                            label = { Text(context.getString(R.string.sync_interval_label)) },
-                            modifier = Modifier.fillMaxWidth(),
-                            supportingText = {
-                                Text(context.getString(R.string.sync_interval_hint))
-                            },
-                            leadingIcon = {
-                                Icon(Icons.Default.Timer, contentDescription = null)
+
+        com.eventmanager.app.ui.components.BackendMigrationUiHost(
+            viewModel = viewModel,
+            settingsManager = settingsManager,
+            platformContext = platformContext,
+            showMigrationWizard = migrationWizard,
+            onDismissMigrationWizard = { migrationWizard = null },
+            onRequestFirebaseSignIn = { onResult ->
+                val auth = firebaseAuthService
+                if (auth != null) {
+                    pendingMigrationSignInResult = onResult
+                    firebaseAuthLauncher.launch(auth.getSignInIntent())
+                } else {
+                    coroutineScope.launch {
+                        val result = com.eventmanager.app.data.remote
+                            .createFirebaseAuthService(platformContext)
+                            .signInWithGoogle()
+                        when (result) {
+                            is com.eventmanager.app.data.remote.FirebaseAuthResult.Success -> {
+                                settingsManager.setFirebaseAuthEmail(result.email.orEmpty())
+                                firebaseAuthEmail = result.email.orEmpty()
                             }
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(
-                            onClick = { viewModel.testSyncStatus() },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(Icons.Default.BugReport, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(context.getString(R.string.test_sync_status))
+                            is com.eventmanager.app.data.remote.FirebaseAuthResult.Error -> {
+                                uploadStatus = result.message
+                            }
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Button(
-                            onClick = { viewModel.syncWithGoogleSheets() },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(Icons.Default.Sync, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(context.getString(R.string.manual_sync_now))
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
+                        onResult(result)
                     }
                 }
-            }
-        }
+            },
+        )
         
         Spacer(modifier = Modifier.height(24.dp))
         
@@ -2126,7 +2272,8 @@ actual fun SettingsScreen(
         ) {
             EmailSettingsContent(
                 settingsManager = settingsManager,
-                context = context
+                context = context,
+                onSyncedSettingChanged = { viewModel.backupInstitutionSettingsToSheets() }
             )
         }
 
@@ -2719,6 +2866,38 @@ actual fun SettingsScreen(
                             }
                         )
                     }
+
+                    if (variant == SettingsScreenVariant.BilleterieBasic) {
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Start,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            var billeterieClockVisible by remember {
+                                mutableStateOf(settingsManager.isBilleterieClockVisible())
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = context.getString(R.string.billeterie_clock_visibility_title),
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                Text(
+                                    text = context.getString(R.string.billeterie_clock_visibility_description),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Switch(
+                                checked = billeterieClockVisible,
+                                onCheckedChange = {
+                                    billeterieClockVisible = it
+                                    settingsManager.setBilleterieClockVisible(it)
+                                }
+                            )
+                        }
+                    }
                     
                     Spacer(modifier = Modifier.height(16.dp))
                     
@@ -3109,6 +3288,7 @@ actual fun SettingsScreen(
                                 onClick = {
                                     selectedCurrency = code
                                     settingsManager.saveCurrencyCode(code)
+                                    viewModel.backupInstitutionSettingsToSheets()
                                     showCurrencyMenu = false
                                 }
                             )
@@ -3116,8 +3296,43 @@ actual fun SettingsScreen(
                     }
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(16.dp))
+
+            if (variant == SettingsScreenVariant.Full) {
+                var purchaseBufferText by remember {
+                    mutableStateOf(settingsManager.getPurchaseCreditBuffer().toString())
+                }
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = context.getString(R.string.purchase_credit_buffer_label),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = context.getString(R.string.purchase_credit_buffer_description),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = purchaseBufferText,
+                        onValueChange = { newValue ->
+                            if (newValue.isEmpty() || newValue.matches(Regex("^\\d*\\.?\\d*$"))) {
+                                purchaseBufferText = newValue
+                                val amount = newValue.toDoubleOrNull() ?: 0.0
+                                settingsManager.savePurchaseCreditBuffer(amount)
+                                viewModel.backupInstitutionSettingsToSheets()
+                            }
+                        },
+                        label = { Text(context.getString(R.string.amount_label)) },
+                        suffix = { Text(selectedCurrency) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+            }
             
             // Date and Time Format Selection
             Column(
@@ -3287,6 +3502,7 @@ actual fun SettingsScreen(
                             if (dateChangeOffsetHours > -12) {
                                 dateChangeOffsetHours--
                                 settingsManager.saveDateChangeOffsetHours(dateChangeOffsetHours)
+                                viewModel.backupInstitutionSettingsToSheets()
                             }
                         },
                         enabled = dateChangeOffsetHours > -12
@@ -3315,6 +3531,7 @@ actual fun SettingsScreen(
                             if (dateChangeOffsetHours < 12) {
                                 dateChangeOffsetHours++
                                 settingsManager.saveDateChangeOffsetHours(dateChangeOffsetHours)
+                                viewModel.backupInstitutionSettingsToSheets()
                             }
                         },
                         enabled = dateChangeOffsetHours < 12
@@ -4366,9 +4583,16 @@ actual fun SettingsScreen(
     
     // Instructions Dialog
     if (showInstructions) {
-        GoogleSheetsInstructionsDialog(
-            onDismiss = { showInstructions = false }
-        )
+        when (settingsManager.getBackendType()) {
+            com.eventmanager.app.data.remote.BackendType.FIREBASE ->
+                com.eventmanager.app.ui.components.FirebaseSetupTutorialDialog(
+                    onDismiss = { showInstructions = false },
+                )
+            com.eventmanager.app.data.remote.BackendType.SHEETS ->
+                GoogleSheetsInstructionsDialog(
+                    onDismiss = { showInstructions = false },
+                )
+        }
     }
     
     // Sync Status Dialog (used by test connection button)

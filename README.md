@@ -177,6 +177,7 @@ NoctuList uses a **Google Cloud service account** (JSON key uploaded in the setu
 | Temp Guest List | One-off event guests |
 | Sales | POS catalog |
 | Transfers | Wallet / POS ledger |
+| Settings | Shared institution settings (email texts, currency, date offset, purchase credit buffer) |
 
 The app can repair or normalize many headers on sync. The **`JobTypes`** tab name is fixed in code — that sheet must be named exactly `JobTypes`.
 

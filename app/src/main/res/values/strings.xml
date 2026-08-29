@@ -31,6 +31,7 @@
     <string name="sheet_epoch_calc_hint_ms">Type epoch ms here (e.g. 1776711088094)</string>
     <string name="sheet_epoch_calc_hint_datetime">Pick or type a date/time cell</string>
     <string name="temp_guest_list_sheet_label">Temp Guest List Sheet</string>
+    <string name="settings_sheet_label">Settings Sheet</string>
     <string name="shift_types_sheet_label">Shift Types Sheet</string>
     <string name="venues_sheet_label">Venues Sheet</string>
     <string name="admin_label">Admin</string>
@@ -183,6 +184,8 @@
     <string name="system_is_in_light_mode">System is in light mode</string>
     <string name="people_counter_visibility_title">Show People Counter</string>
     <string name="people_counter_visibility_description">Show or hide the people counter on the home page</string>
+    <string name="billeterie_clock_visibility_title">Show clock widget</string>
+    <string name="billeterie_clock_visibility_description">Show the date and time card on the ticketing home screen (like the admin dashboard)</string>
     <string name="statistics_visibility_title">Show Statistics Graphs</string>
     <string name="statistics_visibility_description">Show or hide the statistics graphs section on the home page</string>
     <string name="scroll_behavior_title">Scroll Behavior for Manager Pages</string>
@@ -324,6 +327,11 @@
     <string name="account_amount_label">Account amount</string>
     <string name="currency_setting_label">Currency</string>
     <string name="currency_setting_description">Currency shown for account balances and POS</string>
+    <string name="purchase_credit_buffer_label">Purchase credit buffer</string>
+    <string name="purchase_credit_buffer_description">Maximum shortfall absorbed into credit (e.g. 5). Account may go down to −buffer. 0 = no overdraft. Synced across devices.</string>
+    <string name="pos_negative_balance_title">Account now negative</string>
+    <string name="pos_negative_balance_message">The purchase credit buffer was used. The account balance is now %1$s.</string>
+    <string name="amount_label">Amount</string>
     <string name="pos_welcome_button">Internal POS</string>
     <string name="sales_items_management_title">Sales Items Management</string>
     <string name="sales_items_management_description">Configure sales items synced from Google Sheets</string>

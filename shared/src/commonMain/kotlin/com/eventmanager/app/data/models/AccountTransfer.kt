@@ -17,6 +17,13 @@ enum class AccountTransferType {
     POS_SALE
 }
 
+/** Firebase ledger sync state — Sheets mode treats all rows as confirmed. */
+enum class AccountTransferSyncState {
+    PENDING,
+    CONFIRMED,
+    REJECTED
+}
+
 data class AccountHolderKey(
     val holderType: AccountHolderType,
     val holderId: String
@@ -57,7 +64,9 @@ data class AccountTransfer(
     val posItemsJson: String = "",
     val posVenueName: String = "",
     val createdAt: Long = System.currentTimeMillis(),
-    val lastModified: Long = System.currentTimeMillis()
+    val lastModified: Long = System.currentTimeMillis(),
+    val syncState: AccountTransferSyncState = AccountTransferSyncState.CONFIRMED,
+    val firebaseOrgId: String = "",
 )
 
 fun jobReferenceKey(job: Job): String =

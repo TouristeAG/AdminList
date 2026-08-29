@@ -10,6 +10,9 @@ navigation = "2.8.5"
 multiplatformSettings = "1.2.0"
 apdu4jJnasmartcardio = "26.01.12"
 jna = "5.14.0"
+gitliveFirebase = "2.1.0"
+serialization = "1.7.3"
+grpc = "1.68.2"
 
 [libraries]
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
@@ -38,3 +41,15 @@ webcam-capture-driver-native = { module = "io.github.eduramiba:webcam-capture-dr
 poi-ooxml = { module = "org.apache.poi:poi-ooxml", version = "5.3.0" }
 apdu4j-jnasmartcardio = { module = "com.github.martinpaljak:apdu4j-jnasmartcardio", version.ref = "apdu4jJnasmartcardio" }
 jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
+gitlive-firebase-app = { module = "dev.gitlive:firebase-app", version.ref = "gitliveFirebase" }
+gitlive-firebase-auth = { module = "dev.gitlive:firebase-auth", version.ref = "gitliveFirebase" }
+gitlive-firebase-firestore = { module = "dev.gitlive:firebase-firestore", version.ref = "gitliveFirebase" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
+grpc-api = { module = "io.grpc:grpc-api", version.ref = "grpc" }
+grpc-core = { module = "io.grpc:grpc-core", version.ref = "grpc" }
+grpc-context = { module = "io.grpc:grpc-context", version.ref = "grpc" }
+grpc-util = { module = "io.grpc:grpc-util", version.ref = "grpc" }
+grpc-android = { module = "io.grpc:grpc-android", version.ref = "grpc" }
+grpc-okhttp = { module = "io.grpc:grpc-okhttp", version.ref = "grpc" }
+grpc-protobuf-lite = { module = "io.grpc:grpc-protobuf-lite", version.ref = "grpc" }
+grpc-stub = { module = "io.grpc:grpc-stub", version.ref = "grpc" }

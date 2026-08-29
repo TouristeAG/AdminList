@@ -50,6 +50,15 @@ interface GuestDao {
 
     @Query("SELECT * FROM guests WHERE nanoId = :nanoId LIMIT 1")
     suspend fun getGuestByNanoId(nanoId: String): Guest?
+
+    @Query("SELECT * FROM guests WHERE nanoId = :nanoId AND firebaseOrgId = :orgId LIMIT 1")
+    suspend fun getGuestByNanoIdAndOrg(nanoId: String, orgId: String): Guest?
+
+    @Query("DELETE FROM guests WHERE firebaseOrgId = :orgId")
+    suspend fun deleteAllForOrg(orgId: String)
+
+    @Query("DELETE FROM guests WHERE firebaseOrgId != '' AND firebaseOrgId NOT IN (:orgIds)")
+    suspend fun deleteAllNotInOrgs(orgIds: List<String>)
     
     @Query("SELECT * FROM guests WHERE name = :name")
     suspend fun getGuestByName(name: String): Guest?

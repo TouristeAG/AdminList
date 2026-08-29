@@ -90,6 +90,8 @@ actual fun AppRootContent(
         var showWelcome by nav::showWelcome
         var showSetupWizard by nav::showSetupWizard
         var showAdminAuth by nav::showAdminAuth
+        var showAdminOrgPicker by remember { mutableStateOf(false) }
+        val adminOrgPickerScope = rememberCoroutineScope()
         var showTicketCheck by nav::showTicketCheck
         var showPos by nav::showPos
         var selectedTab by nav::selectedTab
@@ -109,6 +111,10 @@ actual fun AppRootContent(
         }
 
         if (showSetupWizard) {
+            val wizardScope = rememberCoroutineScope()
+            var wizardAuthEmail by remember {
+                mutableStateOf(settingsManager.getFirebaseAuthEmail().ifBlank { null })
+            }
             SetupWizardScreen(
                 platformContext = platformContext,
                 onSetupComplete = {
@@ -117,7 +123,22 @@ actual fun AppRootContent(
                     showWelcome = true
                     onThemeModeChanged(settingsManager.getThemeMode())
                 },
-                onThemeModeChanged = onThemeModeChanged
+                onThemeModeChanged = onThemeModeChanged,
+                firebaseAuthEmail = wizardAuthEmail,
+                onRequestFirebaseSignIn = {
+                    wizardScope.launch {
+                        when (val result = com.eventmanager.app.data.remote
+                            .createFirebaseAuthService(platformContext)
+                            .signInWithGoogle()
+                        ) {
+                            is com.eventmanager.app.data.remote.FirebaseAuthResult.Success -> {
+                                wizardAuthEmail = result.email
+                                settingsManager.setFirebaseAuthEmail(result.email.orEmpty())
+                            }
+                            is com.eventmanager.app.data.remote.FirebaseAuthResult.Error -> Unit
+                        }
+                    }
+                },
             )
             return@CompositionLocalProvider
         }
@@ -143,7 +164,12 @@ actual fun AppRootContent(
         }
         val sheets = remember { GoogleSheetsService(platformContext) }
         val viewModel: EventManagerViewModel = viewModel {
-            EventManagerViewModel(repository, sheets, platformContext)
+            EventManagerViewModel(
+                repository,
+                sheets,
+                platformContext,
+                pendingRemoteWriteDao = db.pendingRemoteWriteDao(),
+            )
         }
 
         var showAdminSetup by nav::showAdminSetup
@@ -181,15 +207,11 @@ actual fun AppRootContent(
             adminCheckDone = true
         }
 
+        val followScope = rememberCoroutineScope()
+
         when {
             showAdminSetup -> {
                 val adminSetupVenues by viewModel.venues.collectAsState()
-                LaunchedEffect(Unit) {
-                    if (!skipStartupSync) {
-                        delay(400)
-                        try { viewModel.performFullSyncAwait(suppressSyncErrorDialog = true) } catch (_: Exception) { }
-                    }
-                }
                 AdminSetupScreen(
                     platformContext = platformContext,
                     venues = adminSetupVenues,
@@ -219,9 +241,14 @@ actual fun AppRootContent(
                         isDesktop = true,
                     )
                     DesktopWelcomeScreen(
+                        viewModel = viewModel,
                         onAdminSelected = {
-                            showWelcome = false
-                            showAdminAuth = true
+                            if (viewModel.isFirebaseAllOrgsMode()) {
+                                showAdminOrgPicker = true
+                            } else {
+                                showWelcome = false
+                                showAdminAuth = true
+                            }
                         },
                         onTicketCheckSelected = {
                             showWelcome = false
@@ -427,6 +454,7 @@ actual fun AppRootContent(
                             showSalesSheetItemManagement = false
                             showPosAccountingReport = false
                         },
+                        viewModel = viewModel,
                         modifier = Modifier.fillMaxSize()
                     ) { padding ->
                         Box(
@@ -548,10 +576,10 @@ actual fun AppRootContent(
                                 Icon(Icons.Default.QrCodeScanner, contentDescription = null)
                             }
 
-                            DesktopSyncPill(
+                            SyncStatusPill(
                                 viewModel = viewModel,
                                 modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
-                                onClick = { touchAdminSession(); viewModel.performDifferentialFullSync() }
+                                onSync = { touchAdminSession(); viewModel.performDifferentialFullSync() },
                             )
                         }
                     }
@@ -685,11 +713,48 @@ actual fun AppRootContent(
                 )
             }
         }
+
+        if (showAdminOrgPicker) {
+            com.eventmanager.app.ui.components.AdminOrgPickerDialog(
+                configuredOrgs = viewModel.getFirebaseConfiguredOrgs(),
+                viewModel = viewModel,
+                onOrgSelected = { orgId ->
+                    showAdminOrgPicker = false
+                    adminOrgPickerScope.launch {
+                        viewModel.enterSingleOrgMode(orgId)
+                        showWelcome = false
+                        showAdminAuth = true
+                    }
+                },
+                onDismiss = { showAdminOrgPicker = false },
+            )
+        }
+
+        com.eventmanager.app.ui.components.BackendMigrationUiHost(
+            viewModel = viewModel,
+            settingsManager = settingsManager,
+            platformContext = platformContext,
+            onRequestFirebaseSignIn = { onResult ->
+                followScope.launch {
+                    val result = com.eventmanager.app.data.remote
+                        .createFirebaseAuthService(platformContext)
+                        .signInWithGoogle()
+                    when (result) {
+                        is com.eventmanager.app.data.remote.FirebaseAuthResult.Success -> {
+                            settingsManager.setFirebaseAuthEmail(result.email.orEmpty())
+                        }
+                        is com.eventmanager.app.data.remote.FirebaseAuthResult.Error -> Unit
+                    }
+                    onResult(result)
+                }
+            },
+        )
     }
 }
 
 @Composable
 private fun DesktopWelcomeScreen(
+    viewModel: EventManagerViewModel,
     onAdminSelected: () -> Unit,
     onTicketCheckSelected: () -> Unit,
     onPosSelected: () -> Unit,
@@ -697,8 +762,18 @@ private fun DesktopWelcomeScreen(
 ) {
     Box(
         modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
     ) {
+        FirebaseOrgSwitcher(
+            viewModel = viewModel,
+            placement = FirebaseOrgSwitcherPlacement.WelcomeTopEnd,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(16.dp),
+        )
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
         WelcomeForegroundPanel(modifier = Modifier.fillMaxWidth(0.46f)) {
             WelcomeTitleText("NoctuList")
             if (showAdminAccessSyncIndicator) {
@@ -732,6 +807,7 @@ private fun DesktopWelcomeScreen(
                 Spacer(Modifier.width(8.dp))
                 Text(stringResource(Res.string.pos_welcome_button))
             }
+        }
         }
     }
 }
@@ -811,7 +887,8 @@ private fun DesktopBilleterieFlow(
                     jobs = jobs,
                     jobTypeConfigs = jobTypeConfigs,
                     onBack = { section = scannerReturnSection },
-                    onConfirmEntry = { job, invites -> viewModel.markBenefitAsUsed(job, invites) }
+                    onConfirmEntry = { job, invites -> viewModel.markBenefitAsUsed(job, invites) },
+                    viewModel = viewModel,
                 )
             }
             BilleterieSection.Pos.name -> {
@@ -833,7 +910,19 @@ private fun DesktopBilleterieFlow(
                     },
                     topBar = {
                         TopAppBar(
-                            title = { Text(stringResource(Res.string.nav_guests)) },
+                            title = {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                ) {
+                                    Text(stringResource(Res.string.nav_guests))
+                                    FirebaseOrgSwitcher(
+                                        viewModel = viewModel,
+                                        placement = FirebaseOrgSwitcherPlacement.TopBarTitleEnd,
+                                    )
+                                }
+                            },
                             navigationIcon = {
                                 IconButton(onClick = { section = BilleterieSection.Home.name }) {
                                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.setup_back))
@@ -898,103 +987,6 @@ private fun DesktopGuestListWithViewModel(
         searchFocusTick = searchFocusTick,
         viewModel = viewModel
     )
-}
-
-@Composable
-private fun DesktopSyncPill(viewModel: EventManagerViewModel, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    val platformContext = LocalPlatformContext.current
-    val isSyncing by viewModel.isSyncing.collectAsState()
-    val lastSyncTime by viewModel.lastSyncTime.collectAsState()
-    var syncPillTick by remember { mutableIntStateOf(0) }
-    LaunchedEffect(lastSyncTime) {
-        if (lastSyncTime <= 0L) return@LaunchedEffect
-        while (true) {
-            delay(30_000L)
-            syncPillTick++
-        }
-    }
-    val lastUpdateLabel = remember(lastSyncTime, syncPillTick) {
-        if (lastSyncTime <= 0L) {
-            null
-        } else {
-            DateFormatUtils.formatSyncPillTimeAgo(platformContext, lastSyncTime)
-        }
-    }
-
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed && !isSyncing) 0.95f else 1f,
-        animationSpec = tween(100),
-        label = "sync_pill_scale"
-    )
-
-    Card(
-        modifier = modifier
-            .padding(4.dp)
-            .clickable(
-                enabled = !isSyncing,
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick
-            ),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSyncing) {
-                MaterialTheme.colorScheme.primaryContainer
-            } else {
-                MaterialTheme.colorScheme.surfaceVariant
-            }
-        ),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = if (isPressed && !isSyncing) 4.dp else 2.dp
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(horizontal = 12.dp, vertical = 6.dp)
-                .scale(scale),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            if (isSyncing) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(16.dp),
-                    strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = stringResource(Res.string.syncing),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            } else {
-                Icon(
-                    imageVector = Icons.Default.Sync,
-                    contentDescription = stringResource(Res.string.manual_sync_now),
-                    modifier = Modifier.size(16.dp),
-                    tint = if (lastSyncTime > 0) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    }
-                )
-                Text(
-                    text = if (lastSyncTime <= 0L) {
-                        stringResource(Res.string.last_update_none_line)
-                    } else {
-                        stringResource(Res.string.last_update_line, lastUpdateLabel.orEmpty())
-                    },
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (lastSyncTime > 0) {
-                        MaterialTheme.colorScheme.onPrimaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    }
-                )
-            }
-        }
-    }
 }
 
 @Composable

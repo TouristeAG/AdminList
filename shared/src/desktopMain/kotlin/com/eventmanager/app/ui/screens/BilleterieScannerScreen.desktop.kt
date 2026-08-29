@@ -30,6 +30,7 @@ actual fun BilleterieScannerScreen(
     jobTypeConfigs: List<JobTypeConfig>,
     onBack: () -> Unit,
     onConfirmEntry: (Job, Int) -> Unit,
+    viewModel: com.eventmanager.app.ui.viewmodel.EventManagerViewModel?,
 ) {
     val platformContext = LocalPlatformContext.current
     val settingsManager = remember(platformContext) { settingsManagerFor(platformContext) }
@@ -192,10 +193,12 @@ actual fun BilleterieScannerScreen(
             },
             onScanNext = ::resetForNextScan,
             onCloseToMenu = onBack,
+            viewModel = viewModel,
         )
     } else {
         DesktopBilleterieScanningScreen(
             onBack = onBack,
+            viewModel = viewModel,
             cameraEnabled = cameraEnabled,
             onToggleCamera = { cameraEnabled = !cameraEnabled },
             errorMessage = errorMessage,
@@ -222,6 +225,7 @@ actual fun BilleterieScannerScreen(
     if (duplicateUidMatches.isNotEmpty()) {
         BilleterieDuplicateUidPickerDialog(
             matches = duplicateUidMatches,
+            viewModel = viewModel ?: return,
             onSelect = { match ->
                 resolveScanMatch(match)
                 duplicateUidMatches = emptyList()

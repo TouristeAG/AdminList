@@ -38,8 +38,9 @@ data class Guest(
     val temporaryEventDate: Long? = null,
     val temporaryContactPhone: String = "",
     val nfcCardUid: String = "",
-    val isAdmin: Boolean = false
-) 
+    val isAdmin: Boolean = false,
+    val firebaseOrgId: String = "",
+)
 
 /**
  * Manual add of temporary guests from the guest list: one Google Sheet row per [guestNames]
@@ -77,8 +78,9 @@ data class Volunteer(
     val lastShiftDate: Long? = null, // Timestamp of last shift
     val lastModified: Long = System.currentTimeMillis(),
     val nfcCardUid: String = "",
-    val isAdmin: Boolean = false
-) 
+    val isAdmin: Boolean = false,
+    val firebaseOrgId: String = "",
+)
 
 @Entity(
     tableName = "jobs",
@@ -97,6 +99,8 @@ data class Job(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val sheetsId: String? = null, // Google Sheets row ID for syncing
+    /** Stable cross-device ID for Firestore document keys (Room v37+). */
+    val jobNanoId: String = NanoIdGenerator.generateGuestId(),
     val volunteerId: String, // NanoID of the volunteer
     val jobType: JobType,
     val jobTypeName: String, // Store the actual job type name for personalized types
@@ -108,8 +112,9 @@ data class Job(
     /** How many friends/invites accompany each future entry use. null = not tracking; 0 = solo entry; n = n guests with the holder. */
     val benefitFutureEntryInvites: Int? = null,
     val notes: String = "",
-    val lastModified: Long = System.currentTimeMillis()
-) 
+    val lastModified: Long = System.currentTimeMillis(),
+    val firebaseOrgId: String = "",
+)
 
 data class Benefit(
     val rank: VolunteerRank?,
@@ -127,7 +132,7 @@ data class Benefit(
     val futureEventEntriesRemaining: Int? = null,
     /** Invites (friends) per future entry use; null = not applicable. */
     val futureEventEntryInvites: Int? = null
-) 
+)
 
 /**
  * True for active NOVA perks that match a Nova **MEETING** same-day package (one off-event drink only).
@@ -206,7 +211,7 @@ enum class Gender {
     tableName = "job_type_configs",
     indices = [
         Index(value = ["sheetsId"]),
-        Index(value = ["name"], unique = true),
+        Index(value = ["firebaseOrgId", "name"], unique = true),
         Index(value = ["isActive"]),
         Index(value = ["lastModified"])
     ]
@@ -226,14 +231,15 @@ data class JobTypeConfig(
     /** null = use default drink-equivalent CHF; 0 = no credit; >0 = override per shift */
     val accountCreditChf: Double? = null,
     val description: String = "",
-    val lastModified: Long = System.currentTimeMillis()
-) 
+    val lastModified: Long = System.currentTimeMillis(),
+    val firebaseOrgId: String = "",
+)
 
 @Entity(
     tableName = "venues",
     indices = [
         Index(value = ["sheetsId"]),
-        Index(value = ["name"], unique = true),
+        Index(value = ["firebaseOrgId", "name"], unique = true),
         Index(value = ["isActive"]),
         Index(value = ["lastModified"])
     ]
@@ -259,14 +265,15 @@ data class VenueEntity(
     /** Google Sheets column J — header "Announcement Sent At"; millis when the announcement was sent. */
     val announcementSentAt: Long = 0L,
     /** Google Sheets column K — header "Announcement Sender Device ID"; device that sent the announcement. */
-    val announcementSenderDeviceId: String = ""
-) 
+    val announcementSenderDeviceId: String = "",
+    val firebaseOrgId: String = "",
+)
 
 @Entity(
     tableName = "sales_sheet_items",
     indices = [
         Index(value = ["sheetsId"]),
-        Index(value = ["name"], unique = true),
+        Index(value = ["firebaseOrgId", "name"], unique = true),
         Index(value = ["requiredRank"]),
         Index(value = ["isActive"]),
         Index(value = ["lastModified"])
@@ -284,7 +291,8 @@ data class SalesSheetItem(
     val emoji: String = "",
     val availableVenues: String = "",
     val isActive: Boolean = true,
-    val lastModified: Long = System.currentTimeMillis()
+    val lastModified: Long = System.currentTimeMillis(),
+    val firebaseOrgId: String = "",
 )
 
 enum class SalesCategory {
@@ -570,6 +578,13 @@ class Converters {
 
     @TypeConverter
     fun toAccountTransferType(type: String): AccountTransferType = AccountTransferType.valueOf(type)
+
+    @TypeConverter
+    fun fromAccountTransferSyncState(state: AccountTransferSyncState): String = state.name
+
+    @TypeConverter
+    fun toAccountTransferSyncState(state: String): AccountTransferSyncState =
+        runCatching { AccountTransferSyncState.valueOf(state) }.getOrDefault(AccountTransferSyncState.CONFIRMED)
 }
 
 object BenefitCalculator {

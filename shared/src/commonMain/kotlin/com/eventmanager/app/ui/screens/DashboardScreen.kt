@@ -58,7 +58,10 @@ fun DashboardScreen(
             .verticalScroll(rememberScrollState())
             .padding(if (isPhone) 12.dp else 16.dp)
     ) {
-        DashboardClockCard(settingsManager = settingsManager, isPhone = isPhone)
+        DashboardClockCard(
+            settingsManager = settingsManager,
+            isPhone = isPhone,
+        )
         Spacer(Modifier.height(if (isPhone) 16.dp else 24.dp))
 
         val (permanentGuestCount, temporaryGuestCount) = remember(guests, guestListEffectiveToday) {

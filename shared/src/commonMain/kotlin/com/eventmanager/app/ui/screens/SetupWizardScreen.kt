@@ -54,8 +54,10 @@ private enum class SetupStep {
     THEME,
     COLOR_PROFILE,
     LAYOUT,
+    CHOOSE_BACKEND,
     GOOGLE_SHEETS,
     SHEETS,
+    FIREBASE_SETUP,
     FIRST_SYNC,
 }
 
@@ -72,15 +74,17 @@ private val allSetupSteps: List<SetupStep> = buildList {
     add(SetupStep.THEME)
     add(SetupStep.COLOR_PROFILE)
     if (supportsResolutionScaleStep()) add(SetupStep.LAYOUT)
+    add(SetupStep.CHOOSE_BACKEND)
     add(SetupStep.GOOGLE_SHEETS)
     add(SetupStep.SHEETS)
+    add(SetupStep.FIREBASE_SETUP)
     add(SetupStep.FIRST_SYNC)
 }
 
 private fun SetupStep.phase(): SetupPhase = when (this) {
     SetupStep.WELCOME -> SetupPhase.WELCOME
     SetupStep.LANGUAGE, SetupStep.THEME, SetupStep.COLOR_PROFILE, SetupStep.LAYOUT -> SetupPhase.PERSONALIZE
-    SetupStep.GOOGLE_SHEETS, SetupStep.SHEETS -> SetupPhase.CONNECT
+    SetupStep.CHOOSE_BACKEND, SetupStep.GOOGLE_SHEETS, SetupStep.SHEETS, SetupStep.FIREBASE_SETUP -> SetupPhase.CONNECT
     SetupStep.FIRST_SYNC -> SetupPhase.FINISH
 }
 
@@ -91,8 +95,10 @@ private fun SetupStep.title(): String = when (this) {
     SetupStep.THEME -> stringResource(Res.string.setup_theme_title)
     SetupStep.COLOR_PROFILE -> stringResource(Res.string.setup_color_profile_title)
     SetupStep.LAYOUT -> stringResource(Res.string.setup_layout_size_title)
+    SetupStep.CHOOSE_BACKEND -> stringResource(Res.string.setup_choose_backend_title)
     SetupStep.GOOGLE_SHEETS -> stringResource(Res.string.setup_google_sheets_title)
     SetupStep.SHEETS -> stringResource(Res.string.setup_sheets_title)
+    SetupStep.FIREBASE_SETUP -> stringResource(Res.string.setup_firebase_title)
     SetupStep.FIRST_SYNC -> stringResource(Res.string.setup_wizard_first_sync_title)
 }
 
@@ -103,8 +109,10 @@ private fun SetupStep.description(): String = when (this) {
     SetupStep.THEME -> stringResource(Res.string.setup_theme_description)
     SetupStep.COLOR_PROFILE -> stringResource(Res.string.setup_color_profile_description)
     SetupStep.LAYOUT -> stringResource(Res.string.setup_layout_size_description)
+    SetupStep.CHOOSE_BACKEND -> stringResource(Res.string.setup_choose_backend_description)
     SetupStep.GOOGLE_SHEETS -> stringResource(Res.string.setup_google_sheets_description)
     SetupStep.SHEETS -> stringResource(Res.string.setup_sheets_description)
+    SetupStep.FIREBASE_SETUP -> stringResource(Res.string.setup_firebase_description)
     SetupStep.FIRST_SYNC -> stringResource(Res.string.setup_first_sync_ready)
 }
 
@@ -114,8 +122,10 @@ private fun SetupStep.icon(): ImageVector = when (this) {
     SetupStep.THEME -> Icons.Default.DarkMode
     SetupStep.COLOR_PROFILE -> Icons.Default.Palette
     SetupStep.LAYOUT -> Icons.Default.AspectRatio
+    SetupStep.CHOOSE_BACKEND -> Icons.Default.Storage
     SetupStep.GOOGLE_SHEETS -> Icons.Default.CloudSync
     SetupStep.SHEETS -> Icons.Default.TableChart
+    SetupStep.FIREBASE_SETUP -> Icons.Default.Cloud
     SetupStep.FIRST_SYNC -> Icons.Default.Sync
 }
 
@@ -132,11 +142,35 @@ private fun SetupPhase.label(): String = when (this) {
 fun SetupWizardScreen(
     platformContext: PlatformContext,
     onSetupComplete: () -> Unit,
-    onThemeModeChanged: (String) -> Unit = {}
+    onThemeModeChanged: (String) -> Unit = {},
+    onRequestFirebaseSignIn: (() -> Unit)? = null,
+    firebaseAuthEmail: String? = null,
 ) {
     val settingsManager = remember(platformContext) { settingsManagerFor(platformContext) }
     val scope = rememberCoroutineScope()
-    val steps = remember { allSetupSteps }
+    var selectedBackend by remember {
+        mutableStateOf(settingsManager.getBackendType())
+    }
+    val steps = remember(selectedBackend) {
+        buildList {
+            add(SetupStep.WELCOME)
+            add(SetupStep.LANGUAGE)
+            add(SetupStep.THEME)
+            add(SetupStep.COLOR_PROFILE)
+            if (supportsResolutionScaleStep()) add(SetupStep.LAYOUT)
+            add(SetupStep.CHOOSE_BACKEND)
+            when (selectedBackend) {
+                com.eventmanager.app.data.remote.BackendType.SHEETS -> {
+                    add(SetupStep.GOOGLE_SHEETS)
+                    add(SetupStep.SHEETS)
+                }
+                com.eventmanager.app.data.remote.BackendType.FIREBASE -> {
+                    add(SetupStep.FIREBASE_SETUP)
+                }
+            }
+            add(SetupStep.FIRST_SYNC)
+        }
+    }
 
     val pagerState = rememberPagerState(pageCount = { steps.size })
     var selectedLanguage by remember { mutableStateOf(settingsManager.getLanguage()) }
@@ -153,11 +187,61 @@ fun SetupWizardScreen(
     var venuesSheet by remember { mutableStateOf(settingsManager.getVenuesSheet()) }
     var salesItemsSheet by remember { mutableStateOf(settingsManager.getSalesItemsSheet()) }
     var tempGuestListSheet by remember { mutableStateOf(settingsManager.getTempGuestListSheet()) }
+    var settingsSheet by remember { mutableStateOf(settingsManager.getSettingsSheet()) }
 
     var jsonKeyStatus by remember { mutableStateOf<String?>(null) }
+    var firebaseConfiguredOrgs by remember {
+        mutableStateOf(
+            settingsManager.getFirebaseConfiguredOrgs().ifEmpty {
+                listOf(
+                    com.eventmanager.app.data.remote.FirebaseConfiguredOrg(
+                        orgId = settingsManager.getFirebaseOrgId(),
+                        colorArgb = com.eventmanager.app.data.remote.FirebaseConfiguredOrgCodec.defaultColorForIndex(0),
+                    ),
+                )
+            },
+        )
+    }
+    var firebaseProjectId by remember { mutableStateOf(settingsManager.getFirebaseProjectId()) }
+    var firebaseApplicationId by remember { mutableStateOf(settingsManager.getFirebaseApplicationId()) }
+    var firebaseApiKey by remember { mutableStateOf(settingsManager.getFirebaseApiKey()) }
+    var firebaseWebClientId by remember { mutableStateOf(settingsManager.getFirebaseWebClientId()) }
+    var firebaseWebClientSecret by remember { mutableStateOf(settingsManager.getFirebaseWebClientSecret()) }
+    var authEmail by remember {
+        mutableStateOf(firebaseAuthEmail ?: settingsManager.getFirebaseAuthEmail().ifBlank { null })
+    }
+    LaunchedEffect(firebaseAuthEmail) {
+        if (!firebaseAuthEmail.isNullOrBlank()) authEmail = firebaseAuthEmail
+        else {
+            val fromSettings = settingsManager.getFirebaseAuthEmail().ifBlank { null }
+            if (fromSettings != null) authEmail = fromSettings
+        }
+    }
     var firstSyncRunning by remember { mutableStateOf(false) }
     var firstSyncError by remember { mutableStateOf<String?>(null) }
     var firstSyncDone by remember { mutableStateOf(false) }
+
+    fun persistFirebaseFields() {
+        settingsManager.setFirebaseConfiguredOrgs(firebaseConfiguredOrgs)
+        settingsManager.setFirebaseProjectId(firebaseProjectId.trim())
+        settingsManager.setFirebaseApplicationId(firebaseApplicationId.trim())
+        settingsManager.setFirebaseApiKey(firebaseApiKey.trim())
+        settingsManager.setFirebaseWebClientId(firebaseWebClientId.trim())
+        settingsManager.setFirebaseWebClientSecret(firebaseWebClientSecret.trim())
+    }
+
+    fun firebaseStepReady(): Boolean =
+        com.eventmanager.app.ui.components.firebaseConnectionReady(
+            configuredOrgs = firebaseConfiguredOrgs,
+            projectId = firebaseProjectId,
+            applicationId = firebaseApplicationId,
+            apiKey = firebaseApiKey,
+            authEmail = authEmail,
+            requireAuth = true,
+        )
+
+    fun sheetsStepReady(): Boolean =
+        spreadsheetId.isNotBlank() && spreadsheetId != "YOUR_SPREADSHEET_ID_HERE"
 
     fun finishSetup() {
         settingsManager.setSetupWizardCompleted(true)
@@ -168,27 +252,95 @@ fun SetupWizardScreen(
         scope.launch {
             firstSyncRunning = true
             firstSyncError = null
-            settingsManager.saveSpreadsheetId(spreadsheetId)
-            settingsManager.saveGuestListSheet(guestListSheet)
-            settingsManager.saveVolunteerSheet(volunteerSheet)
-            settingsManager.saveJobsSheet(jobsSheet)
-            settingsManager.saveVolunteerGuestListSheet(volunteerGuestListSheet)
-            settingsManager.saveJobTypesSheet(jobTypesSheet)
-            settingsManager.saveVenuesSheet(venuesSheet)
-            settingsManager.saveSalesItemsSheet(salesItemsSheet)
-            settingsManager.saveTempGuestListSheet(tempGuestListSheet)
+            settingsManager.setBackendType(selectedBackend)
             val result = withContext(Dispatchers.IO) {
                 try {
-                    val db = createDatabase(platformContext)
-                    val repository = EventManagerRepository(
-                        db.guestDao(), db.volunteerDao(), db.jobDao(),
-                        db.jobTypeConfigDao(), db.venueDao(), db.salesSheetItemDao(),
-                        db.accountTransferDao()
-                    )
-                    val syncManager = com.eventmanager.app.data.sync.SyncManager(
-                        platformContext, repository, GoogleSheetsService(platformContext)
-                    )
-                    syncManager.repairSheetStructureThenFullDownload()
+                    when (selectedBackend) {
+                        com.eventmanager.app.data.remote.BackendType.FIREBASE -> {
+                            persistFirebaseFields()
+                            if (!firebaseStepReady()) {
+                                SyncResult.Error("Complete Firebase org ID, project options, and Google Sign-In first")
+                            } else {
+                                val auth = com.eventmanager.app.data.remote.createFirebaseAuthService(platformContext)
+                                val authResult = when {
+                                    auth.isSignedIn() -> com.eventmanager.app.data.remote.FirebaseAuthResult.Success(
+                                        uid = auth.currentUserId().orEmpty(),
+                                        email = auth.currentUserEmail(),
+                                    )
+                                    else -> auth.restoreSession() ?: auth.signInWithGoogle()
+                                }
+                                when (authResult) {
+                                    is com.eventmanager.app.data.remote.FirebaseAuthResult.Error ->
+                                        SyncResult.Error(authResult.message)
+                                    is com.eventmanager.app.data.remote.FirebaseAuthResult.Success -> {
+                                        authEmail = authResult.email
+                                        settingsManager.setFirebaseAuthEmail(authResult.email.orEmpty())
+                                        val gateway = com.eventmanager.app.data.remote.createFirestoreGateway(
+                                            platformContext,
+                                            settingsManager,
+                                        )
+                                        val activeOrgId = settingsManager.getFirebaseOrgId().trim()
+                                        val bootstrapCode = com.eventmanager.app.data.remote.MemberRoleAdmin
+                                            .bootstrapOrgAdmin(
+                                                gateway = gateway,
+                                                orgId = activeOrgId,
+                                                uid = authResult.uid,
+                                                email = authResult.email,
+                                                allowedEmailDomains = settingsManager.getAllowedEmailDomains(),
+                                            )
+                                        settingsManager.setFirebaseBootstrapCode(bootstrapCode)
+                                        settingsManager.applyLocalInstitutionBackendAnnouncement(
+                                            com.eventmanager.app.data.remote.InstitutionBackendAnnouncement(
+                                                backendType = com.eventmanager.app.data.remote.BackendType.FIREBASE,
+                                                migrationId = "",
+                                                migratedAt = System.currentTimeMillis(),
+                                                firebaseOrgId = activeOrgId,
+                                            )
+                                        )
+                                        val db = createDatabase(platformContext)
+                                        val repository = EventManagerRepository(
+                                            db.guestDao(), db.volunteerDao(), db.jobDao(),
+                                            db.jobTypeConfigDao(), db.venueDao(), db.salesSheetItemDao(),
+                                            db.accountTransferDao()
+                                        )
+                                        val ledger = com.eventmanager.app.data.remote.FirebaseLedgerService(
+                                            repository, settingsManager, gateway,
+                                        )
+                                        val firebase = com.eventmanager.app.data.remote.FirebaseRemoteBackend(
+                                            platformContext = platformContext,
+                                            repository = repository,
+                                            settingsManager = settingsManager,
+                                            firestoreGateway = gateway,
+                                            ledgerService = ledger,
+                                        )
+                                        firebase.performStartupSync()
+                                    }
+                                }
+                            }
+                        }
+                        com.eventmanager.app.data.remote.BackendType.SHEETS -> {
+                            settingsManager.saveSpreadsheetId(spreadsheetId)
+                            settingsManager.saveGuestListSheet(guestListSheet)
+                            settingsManager.saveVolunteerSheet(volunteerSheet)
+                            settingsManager.saveJobsSheet(jobsSheet)
+                            settingsManager.saveVolunteerGuestListSheet(volunteerGuestListSheet)
+                            settingsManager.saveJobTypesSheet(jobTypesSheet)
+                            settingsManager.saveVenuesSheet(venuesSheet)
+                            settingsManager.saveSalesItemsSheet(salesItemsSheet)
+                            settingsManager.saveTempGuestListSheet(tempGuestListSheet)
+                            settingsManager.saveSettingsSheet(settingsSheet)
+                            val db = createDatabase(platformContext)
+                            val repository = EventManagerRepository(
+                                db.guestDao(), db.volunteerDao(), db.jobDao(),
+                                db.jobTypeConfigDao(), db.venueDao(), db.salesSheetItemDao(),
+                                db.accountTransferDao()
+                            )
+                            val syncManager = com.eventmanager.app.data.sync.SyncManager(
+                                platformContext, repository, GoogleSheetsService(platformContext)
+                            )
+                            syncManager.repairSheetStructureThenFullDownload()
+                        }
+                    }
                 } catch (e: Exception) {
                     SyncResult.Error(e.message ?: "Sync failed")
                 }
@@ -242,6 +394,8 @@ fun SetupWizardScreen(
                                 }
                             },
                             enabled = when (currentStep) {
+                                SetupStep.FIREBASE_SETUP -> firebaseStepReady()
+                                SetupStep.GOOGLE_SHEETS -> sheetsStepReady()
                                 SetupStep.FIRST_SYNC -> firstSyncDone || !firstSyncRunning
                                 else -> true
                             }
@@ -351,6 +505,13 @@ fun SetupWizardScreen(
                                         applyLocaleOrThemeChange(platformContext)
                                     }
                                 )
+                                SetupStep.CHOOSE_BACKEND -> ChooseBackendPage(
+                                    selected = selectedBackend,
+                                    onSelect = {
+                                        selectedBackend = it
+                                        settingsManager.setBackendType(it)
+                                    }
+                                )
                                 SetupStep.GOOGLE_SHEETS -> GoogleSheetsPage(
                                     spreadsheetId = spreadsheetId,
                                     onSpreadsheetIdChange = { spreadsheetId = it },
@@ -366,7 +527,54 @@ fun SetupWizardScreen(
                                     jobTypesSheet, { jobTypesSheet = it },
                                     venuesSheet, { venuesSheet = it },
                                     salesItemsSheet, { salesItemsSheet = it },
-                                    tempGuestListSheet, { tempGuestListSheet = it }
+                                    tempGuestListSheet, { tempGuestListSheet = it },
+                                    settingsSheet, { settingsSheet = it }
+                                )
+                                SetupStep.FIREBASE_SETUP -> FirebaseSetupPage(
+                                    settingsManager = settingsManager,
+                                    platformContext = platformContext,
+                                    configuredOrgs = firebaseConfiguredOrgs,
+                                    onConfiguredOrgsChange = { firebaseConfiguredOrgs = it },
+                                    projectId = firebaseProjectId,
+                                    onProjectIdChange = { firebaseProjectId = it },
+                                    applicationId = firebaseApplicationId,
+                                    onApplicationIdChange = { firebaseApplicationId = it },
+                                    apiKey = firebaseApiKey,
+                                    onApiKeyChange = { firebaseApiKey = it },
+                                    webClientId = firebaseWebClientId,
+                                    onWebClientIdChange = { firebaseWebClientId = it },
+                                    webClientSecret = firebaseWebClientSecret,
+                                    onWebClientSecretChange = { firebaseWebClientSecret = it },
+                                    authEmail = authEmail,
+                                    onSignIn = {
+                                        persistFirebaseFields()
+                                        if (onRequestFirebaseSignIn != null) {
+                                            onRequestFirebaseSignIn()
+                                        } else {
+                                            scope.launch {
+                                                when (val result = com.eventmanager.app.data.remote
+                                                    .createFirebaseAuthService(platformContext)
+                                                    .signInWithGoogle()
+                                                ) {
+                                                    is com.eventmanager.app.data.remote.FirebaseAuthResult.Success -> {
+                                                        authEmail = result.email
+                                                        settingsManager.setFirebaseAuthEmail(result.email.orEmpty())
+                                                    }
+                                                    is com.eventmanager.app.data.remote.FirebaseAuthResult.Error -> {
+                                                        firstSyncError = result.message
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    },
+                                    onJoinedFromQr = {
+                                        firebaseConfiguredOrgs = settingsManager.getFirebaseConfiguredOrgs()
+                                        firebaseProjectId = settingsManager.getFirebaseProjectId()
+                                        firebaseApplicationId = settingsManager.getFirebaseApplicationId()
+                                        firebaseApiKey = settingsManager.getFirebaseApiKey()
+                                        firebaseWebClientId = settingsManager.getFirebaseWebClientId()
+                                        firebaseWebClientSecret = settingsManager.getFirebaseWebClientSecret()
+                                    },
                                 )
                                 SetupStep.FIRST_SYNC -> FirstSyncPage(firstSyncRunning, firstSyncDone, firstSyncError)
                             }
@@ -615,7 +823,8 @@ private fun SheetsPage(
     jobTypesSheet: String, onJobTypesSheet: (String) -> Unit,
     venuesSheet: String, onVenuesSheet: (String) -> Unit,
     salesItemsSheet: String, onSalesItemsSheet: (String) -> Unit,
-    tempGuestListSheet: String, onTempGuestListSheet: (String) -> Unit
+    tempGuestListSheet: String, onTempGuestListSheet: (String) -> Unit,
+    settingsSheet: String, onSettingsSheet: (String) -> Unit
 ) {
     var showAdvanced by remember { mutableStateOf(false) }
 
@@ -668,7 +877,218 @@ private fun SheetsPage(
             sheetField(venuesSheet, onVenuesSheet, Res.string.venues_sheet_label)
             sheetField(salesItemsSheet, onSalesItemsSheet, Res.string.sales_items_sheet_label)
             sheetField(tempGuestListSheet, onTempGuestListSheet, Res.string.temp_guest_list_sheet_label)
+            sheetField(settingsSheet, onSettingsSheet, Res.string.settings_sheet_label)
         }
+    }
+}
+
+@Composable
+private fun ChooseBackendPage(
+    selected: com.eventmanager.app.data.remote.BackendType,
+    onSelect: (com.eventmanager.app.data.remote.BackendType) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+        Text(stringResource(Res.string.setup_choose_backend_description))
+        listOf(
+            com.eventmanager.app.data.remote.BackendType.SHEETS to Res.string.setup_backend_sheets,
+            com.eventmanager.app.data.remote.BackendType.FIREBASE to Res.string.setup_backend_firebase,
+        ).forEach { (type, label) ->
+            val selectedBorder = if (selected == type) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+            OutlinedCard(
+                onClick = { onSelect(type) },
+                border = BorderStroke(if (selected == type) 2.dp else 1.dp, selectedBorder),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    stringResource(label),
+                    modifier = Modifier.padding(16.dp),
+                    fontWeight = if (selected == type) FontWeight.Bold else FontWeight.Normal,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FirebaseSetupPage(
+    settingsManager: SettingsManager,
+    platformContext: PlatformContext,
+    configuredOrgs: List<com.eventmanager.app.data.remote.FirebaseConfiguredOrg>,
+    onConfiguredOrgsChange: (List<com.eventmanager.app.data.remote.FirebaseConfiguredOrg>) -> Unit,
+    projectId: String,
+    onProjectIdChange: (String) -> Unit,
+    applicationId: String,
+    onApplicationIdChange: (String) -> Unit,
+    apiKey: String,
+    onApiKeyChange: (String) -> Unit,
+    webClientId: String,
+    onWebClientIdChange: (String) -> Unit,
+    webClientSecret: String,
+    onWebClientSecretChange: (String) -> Unit,
+    authEmail: String?,
+    onSignIn: () -> Unit,
+    onJoinedFromQr: () -> Unit,
+) {
+    var mode by remember {
+        mutableStateOf(
+            if (projectId.isNotBlank() && applicationId.isNotBlank() && apiKey.isNotBlank()) {
+                "joined"
+            } else {
+                "choose"
+            },
+        )
+    }
+    var showScan by remember { mutableStateOf(false) }
+    val activeOrgId = settingsManager.getFirebaseOrgId().ifBlank {
+        configuredOrgs.firstOrNull { it.orgId.isNotBlank() }?.orgId.orEmpty()
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+        Text(stringResource(Res.string.setup_firebase_description))
+
+        when (mode) {
+            "choose" -> {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { mode = "join" },
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                ) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            stringResource(Res.string.firebase_join_wizard_option),
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            stringResource(Res.string.firebase_join_wizard_option_body),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { mode = "admin" },
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                ) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            stringResource(Res.string.firebase_create_new_option),
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                }
+            }
+            "join" -> {
+                com.eventmanager.app.ui.components.FirebaseJoinImportSection(
+                    settingsManager = settingsManager,
+                    onJoined = {
+                        onJoinedFromQr()
+                        mode = "joined"
+                    },
+                    onRequestScan = { showScan = true },
+                )
+                TextButton(onClick = { mode = "choose" }) {
+                    Text(stringResource(Res.string.back))
+                }
+            }
+            "joined" -> {
+                com.eventmanager.app.ui.components.FirebaseConfigReceivedBanner(orgId = activeOrgId)
+                com.eventmanager.app.ui.components.FirebaseConnectionFields(
+                    configuredOrgs = configuredOrgs,
+                    onConfiguredOrgsChange = onConfiguredOrgsChange,
+                    projectId = projectId,
+                    onProjectIdChange = onProjectIdChange,
+                    applicationId = applicationId,
+                    onApplicationIdChange = onApplicationIdChange,
+                    apiKey = apiKey,
+                    onApiKeyChange = onApiKeyChange,
+                    webClientId = webClientId,
+                    onWebClientIdChange = onWebClientIdChange,
+                    webClientSecret = webClientSecret,
+                    onWebClientSecretChange = onWebClientSecretChange,
+                    authEmail = authEmail,
+                    onSignIn = onSignIn,
+                    hideProjectSecrets = true,
+                    orgIdReadOnly = activeOrgId.isNotBlank(),
+                )
+            }
+            else -> {
+                com.eventmanager.app.ui.components.FirebaseAdminConfigAndJoinQrSection(
+                    settingsManager = settingsManager,
+                    orgId = activeOrgId,
+                    projectId = projectId,
+                    applicationId = applicationId,
+                    apiKey = apiKey,
+                    webClientId = webClientId,
+                    webClientSecret = webClientSecret,
+                    onOrgIdChange = { newId ->
+                        val updated = configuredOrgs.toMutableList()
+                        if (updated.isEmpty()) {
+                            onConfiguredOrgsChange(
+                                listOf(
+                                    com.eventmanager.app.data.remote.FirebaseConfiguredOrg(
+                                        orgId = newId,
+                                        colorArgb = com.eventmanager.app.data.remote.FirebaseConfiguredOrgCodec.defaultColorForIndex(0),
+                                    ),
+                                ),
+                            )
+                        } else {
+                            updated[0] = updated[0].copy(orgId = newId)
+                            onConfiguredOrgsChange(updated)
+                        }
+                    },
+                    onProjectIdChange = onProjectIdChange,
+                    onApplicationIdChange = onApplicationIdChange,
+                    onApiKeyChange = onApiKeyChange,
+                    onWebClientIdChange = onWebClientIdChange,
+                    onWebClientSecretChange = onWebClientSecretChange,
+                )
+                com.eventmanager.app.ui.components.FirebaseConnectionFields(
+                    configuredOrgs = configuredOrgs,
+                    onConfiguredOrgsChange = onConfiguredOrgsChange,
+                    projectId = projectId,
+                    onProjectIdChange = onProjectIdChange,
+                    applicationId = applicationId,
+                    onApplicationIdChange = onApplicationIdChange,
+                    apiKey = apiKey,
+                    onApiKeyChange = onApiKeyChange,
+                    webClientId = webClientId,
+                    onWebClientIdChange = onWebClientIdChange,
+                    webClientSecret = webClientSecret,
+                    onWebClientSecretChange = onWebClientSecretChange,
+                    authEmail = authEmail,
+                    onSignIn = onSignIn,
+                    hideProjectSecrets = true,
+                )
+                TextButton(onClick = { mode = "choose" }) {
+                    Text(stringResource(Res.string.back))
+                }
+            }
+        }
+
+        if (mode != "choose") {
+            Text(
+                stringResource(Res.string.setup_firebase_auth_hint),
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+    }
+
+    if (showScan) {
+        com.eventmanager.app.ui.components.RawPayloadQrScannerDialog(
+            platformContext = platformContext,
+            onDismiss = { showScan = false },
+            onPayload = { raw ->
+                com.eventmanager.app.data.remote.FirebaseJoinCodec.decode(raw).onSuccess { payload ->
+                    settingsManager.applyFirebaseJoinPayload(payload)
+                    onJoinedFromQr()
+                    mode = "joined"
+                }
+                showScan = false
+            },
+        )
     }
 }
 

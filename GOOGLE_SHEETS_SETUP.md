@@ -62,7 +62,7 @@ This guide will help you set up Google Sheets synchronization for the Event Mana
 
 ### 7. Create Required Sheets
 
-In your spreadsheet, create these six sheets exactly as named:
+In your spreadsheet, create these sheets exactly as named (the app can also create missing tabs on first sync):
 
 1. **Guest List** - for guest management
 2. **Volunteers** - for volunteer management  
@@ -70,6 +70,10 @@ In your spreadsheet, create these six sheets exactly as named:
 4. **Shift Types** - for shift type configuration
 5. **Volunteer Guest List** - for automatic volunteer guest entries
 6. **Venues** - for venue management
+7. **Sales** - POS catalog
+8. **Transfers** - wallet / POS ledger
+9. **Temp Guest List** - one-off event guests
+10. **Settings** - shared institution settings (email texts, currency, date offset)
 
 ### 8. Share Spreadsheet with Service Account
 
@@ -90,6 +94,7 @@ In your spreadsheet, create these six sheets exactly as named:
    - Shift Types Sheet: "Shift Types"
    - Volunteer Guest List Sheet: "Volunteer Guest List"
    - Venues Sheet: "Venues"
+   - Settings Sheet: "Settings"
 5. Click "Save Settings"
 6. Click "Test Connection" to verify setup
 
@@ -168,6 +173,26 @@ The app will automatically create the following columns in your sheets:
 - Status
 - Last Modified
 
+### Settings Sheet (shared institution settings)
+Key/value rows synchronized across all devices of the same spreadsheet:
+
+| Column | Description |
+|--------|-------------|
+| Key | Setting identifier |
+| Value | Setting value |
+| Last Modified | Epoch millis (last-modified wins on merge) |
+
+Synced keys:
+- `currency_code`
+- `date_change_offset_hours`
+- `purchase_credit_buffer` (max credit shortfall absorbed into account; `0` = no overdraft)
+- `email_qr_subject` / `email_qr_content_before` / `email_qr_content_after` / `email_include_qr`
+- `guest_email_subject` / `guest_email_content_before` / `guest_email_content_after` / `guest_email_include_qr`
+- `email_signature`
+- `email_association_name`
+
+The association logo for emails is **not** synced (stays local on each device).
+
 ## Success!
 
 Once configured, your app will automatically sync data with Google Sheets whenever you:
@@ -175,6 +200,7 @@ Once configured, your app will automatically sync data with Google Sheets whenev
 - Manage volunteers
 - Track jobs
 - Manage venues
+- Change shared institution settings (email texts, currency, date offset)
 - Use the manual sync button
 
 The sync happens in real-time, so your data is always up-to-date across all devices!

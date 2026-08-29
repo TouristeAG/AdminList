@@ -64,7 +64,11 @@ fun AccountInfoSection(
                     Text(
                         text = formatMoney(balance, currencyCode),
                         style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.primary
+                        color = if (balance < 0) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.primary
+                        }
                     )
                 }
                 if (allowAdjustment) {

@@ -147,6 +147,14 @@
   @com.google.gson.annotations.SerializedName <fields>;
 }
 
+# Firebase / Firestore (GitLive + native Android SDK) — gRPC must stay on classpath after R8
+-keep class io.grpc.** { *; }
+-keepclassmembers class io.grpc.** { *; }
+-dontwarn io.grpc.**
+-dontwarn com.google.protobuf.**
+-keep class com.google.firebase.** { *; }
+-keep class dev.gitlive.firebase.** { *; }
+
 # Optimization settings
 -optimizationpasses 5
 -dontusemixedcaseclassnames

@@ -445,7 +445,11 @@ fun VolunteerCard(
                         text = "${stringResource(Res.string.account_amount_label)}: ${formatMoney(accountBalance, currencyCode)}",
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.primary
+                        color = if (accountBalance < 0) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.primary
+                        }
                     )
                 }
                 

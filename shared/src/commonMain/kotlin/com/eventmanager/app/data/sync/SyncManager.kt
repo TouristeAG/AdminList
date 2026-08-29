@@ -225,6 +225,24 @@ class SyncManager(
             SyncResult.Error("Failed to backup job types: ${e.message}")
         }
     }
+
+    suspend fun backupInstitutionSettingsToSheets(): SyncResult {
+        return try {
+            twoWaySyncService.backupInstitutionSettingsToSheets()
+            SyncResult.Success("Institution settings backed up successfully")
+        } catch (e: Exception) {
+            SyncResult.Error("Failed to backup institution settings: ${e.message}")
+        }
+    }
+
+    suspend fun performInstitutionSettingsDifferentialSync(): SyncResult {
+        return try {
+            twoWaySyncService.syncInstitutionSettingsWithDifferentialUpdate()
+            SyncResult.Success("Institution settings synced successfully")
+        } catch (e: Exception) {
+            SyncResult.Error("Institution settings sync failed: ${e.message}")
+        }
+    }
     
     /**
      * VALIDATION: Check Google Sheets structure
@@ -283,7 +301,8 @@ class SyncManager(
             "job_types" to listOf("job_types", "job_type_configs"),
             "sales_items" to listOf("sales_items", "management:sales-items"),
             "transfers" to listOf("transfers", "pos", "management:transfers"),
-            "venues" to listOf("venues", "venue_management", "management:venue")
+            "venues" to listOf("venues", "venue_management", "management:venue"),
+            "institution_settings" to listOf("settings", "institution_settings", "management:settings")
         )
     }
     
@@ -347,6 +366,7 @@ class SyncManager(
                     "sales_items" -> twoWaySyncService.syncSalesSheetItemsWithDifferentialUpdate()
                     "transfers" -> twoWaySyncService.syncTransfersWithDifferentialUpdate()
                     "venues" -> twoWaySyncService.syncVenuesWithDifferentialUpdate()
+                    "institution_settings" -> twoWaySyncService.syncInstitutionSettingsWithDifferentialUpdate()
                 }
             }
             

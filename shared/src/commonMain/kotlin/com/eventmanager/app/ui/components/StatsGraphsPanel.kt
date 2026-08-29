@@ -26,7 +26,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.produceState
@@ -89,6 +89,18 @@ data class InteractionState(
     val hoveredValue: Float = 0f,
     val hoveredLabel: String = ""
 )
+
+/** Stable holder so [pointerInput] coroutines never capture stale lambda classes after recomposition. */
+private class CallbackRef<T>(initial: T) {
+    var value: T = initial
+}
+
+@Composable
+private fun <T> rememberCallbackRef(callback: T): CallbackRef<T> {
+    val ref = remember { CallbackRef(callback) }
+    SideEffect { ref.value = callback }
+    return ref
+}
 
 /**
  * PERFORMANCE OPTIMIZATION: Deferred graph container that shows a loading placeholder
@@ -2029,88 +2041,98 @@ private fun calculateNearestPointIndex(xPosition: Float, width: Float, dataPoint
 }
 
 @OptIn(ExperimentalFoundationApi::class)
+@Composable
 private fun Modifier.graphCardExportInteraction(
     useTouchGestures: Boolean,
     onExportRequest: () -> Unit,
-): Modifier = then(
-    if (useTouchGestures) {
-        Modifier.combinedClickable(
-            onClick = {},
-            onLongClick = onExportRequest
-        )
-    } else {
-        Modifier.pointerInput(Unit) {
-            awaitPointerEventScope {
-                while (true) {
-                    val event = awaitPointerEvent()
-                    if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
-                        onExportRequest()
-                        event.changes.forEach { it.consume() }
+): Modifier {
+    val onExportRef = rememberCallbackRef(onExportRequest)
+    return then(
+        if (useTouchGestures) {
+            Modifier.combinedClickable(
+                onClick = {},
+                onLongClick = { onExportRef.value() },
+            )
+        } else {
+            Modifier.pointerInput(onExportRef) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        if (event.type == PointerEventType.Scroll) continue
+                        if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
+                            onExportRef.value()
+                            event.changes.forEach { it.consume() }
+                        }
                     }
                 }
             }
         }
-    }
-)
+    )
+}
 
+@Composable
 private fun Modifier.singleSeriesGraphInteraction(
     useTouchGestures: Boolean,
     dataPoints: List<DataPoint>,
     onInteractionChange: (InteractionState) -> Unit,
     onExportRequest: () -> Unit,
-): Modifier = pointerInput(
-    useTouchGestures,
-    dataPoints.size,
-    dataPoints.firstOrNull()?.timestamp,
-    dataPoints.lastOrNull()?.timestamp,
-) {
-    val currentDataPoints = dataPoints
-    var isPointerDown = false
-    awaitPointerEventScope {
-        while (true) {
-            val event = awaitPointerEvent()
+): Modifier {
+    val exportRef = rememberCallbackRef(onExportRequest)
+    val interactionRef = rememberCallbackRef(onInteractionChange)
+    return pointerInput(
+        useTouchGestures,
+        dataPoints.size,
+        dataPoints.firstOrNull()?.timestamp,
+        dataPoints.lastOrNull()?.timestamp,
+    ) {
+        val currentDataPoints = dataPoints
+        var isPointerDown = false
+        awaitPointerEventScope {
+            while (true) {
+                val event = awaitPointerEvent()
 
-            if (event.type == PointerEventType.Scroll) continue
+                if (event.type == PointerEventType.Scroll) continue
 
-            when (event.type) {
-                PointerEventType.Press -> {
-                    if (!useTouchGestures && event.buttons.isSecondaryPressed) {
-                        onExportRequest()
-                        event.changes.forEach { it.consume() }
-                    } else if (useTouchGestures) {
-                        val change = event.changes.firstOrNull() ?: continue
-                        isPointerDown = true
-                        updateSingleSeriesInteraction(change, currentDataPoints, onInteractionChange, pressed = true)
-                        event.changes.forEach { it.consume() }
-                    }
-                }
-                PointerEventType.Move -> {
-                    val change = event.changes.firstOrNull() ?: continue
-                    if (!useTouchGestures || isPointerDown) {
-                        updateSingleSeriesInteraction(
-                            change,
-                            currentDataPoints,
-                            onInteractionChange,
-                            pressed = !useTouchGestures || isPointerDown,
-                        )
-                        if (useTouchGestures && isPointerDown) {
+                when (event.type) {
+                    PointerEventType.Press -> {
+                        if (!useTouchGestures && event.buttons.isSecondaryPressed) {
+                            exportRef.value()
+                            event.changes.forEach { it.consume() }
+                        } else if (useTouchGestures) {
+                            val change = event.changes.firstOrNull() ?: continue
+                            isPointerDown = true
+                            updateSingleSeriesInteraction(change, currentDataPoints, interactionRef.value, pressed = true)
                             event.changes.forEach { it.consume() }
                         }
                     }
-                }
-                PointerEventType.Release -> {
-                    if (useTouchGestures) {
-                        isPointerDown = false
-                        onInteractionChange(InteractionState(isPressed = false))
-                        event.changes.forEach { it.consume() }
+                    PointerEventType.Move -> {
+                        val change = event.changes.firstOrNull() ?: continue
+                        if (!useTouchGestures || isPointerDown) {
+                            updateSingleSeriesInteraction(
+                                change,
+                                currentDataPoints,
+                                interactionRef.value,
+                                pressed = !useTouchGestures || isPointerDown,
+                            )
+                            if (useTouchGestures && isPointerDown) {
+                                event.changes.forEach { it.consume() }
+                            }
+                        }
                     }
-                }
-                PointerEventType.Exit -> {
-                    if (!useTouchGestures) {
-                        onInteractionChange(InteractionState())
+                    PointerEventType.Release -> {
+                        if (useTouchGestures) {
+                            isPointerDown = false
+                            interactionRef.value(InteractionState(isPressed = false))
+                            event.changes.forEach { it.consume() }
+                        }
                     }
+                    PointerEventType.Exit -> {
+                        if (!useTouchGestures) {
+                            interactionRef.value(InteractionState())
+                        }
+                    }
+                    else -> {}
                 }
-                else -> {}
             }
         }
     }
@@ -2137,65 +2159,70 @@ private fun PointerInputScope.updateSingleSeriesInteraction(
     }
 }
 
+@Composable
 private fun Modifier.multiSeriesGraphInteraction(
     useTouchGestures: Boolean,
     seriesData: List<Triple<String, List<DataPoint>, Color>>,
     onInteractionChange: (InteractionState) -> Unit,
     onExportRequest: () -> Unit,
-): Modifier = pointerInput(
-    useTouchGestures,
-    seriesData.size,
-    seriesData.firstOrNull()?.second?.size ?: 0,
-    seriesData.firstOrNull()?.second?.firstOrNull()?.timestamp,
-    seriesData.firstOrNull()?.second?.lastOrNull()?.timestamp,
-) {
-    val currentDataPoints = seriesData.firstOrNull()?.second ?: emptyList()
-    var isPointerDown = false
-    awaitPointerEventScope {
-        while (true) {
-            val event = awaitPointerEvent()
+): Modifier {
+    val exportRef = rememberCallbackRef(onExportRequest)
+    val interactionRef = rememberCallbackRef(onInteractionChange)
+    return pointerInput(
+        useTouchGestures,
+        seriesData.size,
+        seriesData.firstOrNull()?.second?.size ?: 0,
+        seriesData.firstOrNull()?.second?.firstOrNull()?.timestamp,
+        seriesData.firstOrNull()?.second?.lastOrNull()?.timestamp,
+    ) {
+        val currentDataPoints = seriesData.firstOrNull()?.second ?: emptyList()
+        var isPointerDown = false
+        awaitPointerEventScope {
+            while (true) {
+                val event = awaitPointerEvent()
 
-            if (event.type == PointerEventType.Scroll) continue
+                if (event.type == PointerEventType.Scroll) continue
 
-            when (event.type) {
-                PointerEventType.Press -> {
-                    if (!useTouchGestures && event.buttons.isSecondaryPressed) {
-                        onExportRequest()
-                        event.changes.forEach { it.consume() }
-                    } else if (useTouchGestures) {
-                        val change = event.changes.firstOrNull() ?: continue
-                        isPointerDown = true
-                        updateMultiSeriesInteraction(change, currentDataPoints, onInteractionChange, pressed = true)
-                        event.changes.forEach { it.consume() }
-                    }
-                }
-                PointerEventType.Move -> {
-                    val change = event.changes.firstOrNull() ?: continue
-                    if (!useTouchGestures || isPointerDown) {
-                        updateMultiSeriesInteraction(
-                            change,
-                            currentDataPoints,
-                            onInteractionChange,
-                            pressed = !useTouchGestures || isPointerDown,
-                        )
-                        if (useTouchGestures && isPointerDown) {
+                when (event.type) {
+                    PointerEventType.Press -> {
+                        if (!useTouchGestures && event.buttons.isSecondaryPressed) {
+                            exportRef.value()
+                            event.changes.forEach { it.consume() }
+                        } else if (useTouchGestures) {
+                            val change = event.changes.firstOrNull() ?: continue
+                            isPointerDown = true
+                            updateMultiSeriesInteraction(change, currentDataPoints, interactionRef.value, pressed = true)
                             event.changes.forEach { it.consume() }
                         }
                     }
-                }
-                PointerEventType.Release -> {
-                    if (useTouchGestures) {
-                        isPointerDown = false
-                        onInteractionChange(InteractionState(isPressed = false))
-                        event.changes.forEach { it.consume() }
+                    PointerEventType.Move -> {
+                        val change = event.changes.firstOrNull() ?: continue
+                        if (!useTouchGestures || isPointerDown) {
+                            updateMultiSeriesInteraction(
+                                change,
+                                currentDataPoints,
+                                interactionRef.value,
+                                pressed = !useTouchGestures || isPointerDown,
+                            )
+                            if (useTouchGestures && isPointerDown) {
+                                event.changes.forEach { it.consume() }
+                            }
+                        }
                     }
-                }
-                PointerEventType.Exit -> {
-                    if (!useTouchGestures) {
-                        onInteractionChange(InteractionState())
+                    PointerEventType.Release -> {
+                        if (useTouchGestures) {
+                            isPointerDown = false
+                            interactionRef.value(InteractionState(isPressed = false))
+                            event.changes.forEach { it.consume() }
+                        }
                     }
+                    PointerEventType.Exit -> {
+                        if (!useTouchGestures) {
+                            interactionRef.value(InteractionState())
+                        }
+                    }
+                    else -> {}
                 }
-                else -> {}
             }
         }
     }

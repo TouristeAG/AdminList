@@ -31,6 +31,19 @@ import com.eventmanager.app.data.utils.AccountBalanceService
 import com.eventmanager.app.data.utils.AccountCreditService
 import com.eventmanager.app.data.utils.PosCartLine
 import com.eventmanager.app.data.utils.PosSaleResult
+import com.eventmanager.app.data.remote.BackendType
+import com.eventmanager.app.data.remote.FirebaseOrgBootstrap
+import com.eventmanager.app.data.remote.FirebaseSyncStatus
+import com.eventmanager.app.data.remote.InstitutionBackendAnnouncement
+import com.eventmanager.app.data.remote.RemoteBackendFactory
+import com.eventmanager.app.data.remote.SyncCoordinator
+import com.eventmanager.app.data.remote.BackendMigrationService
+import com.eventmanager.app.data.remote.SheetsMirrorExporter
+import com.eventmanager.app.data.remote.FirebaseLedgerService
+import com.eventmanager.app.data.remote.FirebaseLedgerResult
+import com.eventmanager.app.data.remote.PendingRemoteWriteQueue
+import com.eventmanager.app.data.remote.createFirestoreGateway
+import com.eventmanager.app.data.remote.createFirebaseAuthService
 import com.eventmanager.app.data.utils.effectiveBenefitFutureEntriesRemaining
 import com.eventmanager.app.data.utils.effectiveBenefitFutureEntryInvites
 import com.eventmanager.app.data.utils.jobTypeSupportsTrackedFutureEntries
@@ -39,6 +52,9 @@ import com.eventmanager.app.data.update.UpdateCheckResult
 import com.eventmanager.app.data.update.UpdateDownloader
 import com.eventmanager.app.data.update.DownloadState
 import com.eventmanager.app.platform.PlatformFileManager
+import com.eventmanager.app.data.security.LocalAdminAccessResult
+import com.eventmanager.app.data.security.displayName
+import com.eventmanager.app.data.security.isAdminFlag
 import com.eventmanager.app.ui.components.ScannerMatch
 import com.eventmanager.app.ui.components.shouldShowSyncError
 import java.io.File
@@ -61,7 +77,8 @@ fun getRankDisplayName(rank: VolunteerRank?): String {
 class EventManagerViewModel(
     val repository: EventManagerRepository,
     private val googleSheetsService: GoogleSheetsService,
-    private val platformContext: PlatformContext? = null
+    private val platformContext: PlatformContext? = null,
+    private val pendingRemoteWriteDao: com.eventmanager.app.data.dao.PendingRemoteWriteDao? = null,
 ) : ViewModel() {
     private val benefitConsumeMutex = Mutex()
     
@@ -76,6 +93,467 @@ class EventManagerViewModel(
     // Sync manager for clean interface
     private val syncManager = platformContext?.let { 
         SyncManager(platformContext, repository, googleSheetsService) 
+    }
+
+    private val settingsManagerCached = platformContext?.let { SettingsManager(it) }
+
+    /** Routes Sheets vs Firebase intents. Null when no platform context. */
+    private val syncCoordinator: SyncCoordinator? = if (
+        platformContext != null && twoWaySyncService != null && syncManager != null
+    ) {
+        RemoteBackendFactory.createSyncCoordinator(
+            platformContext = platformContext,
+            repository = repository,
+            googleSheetsService = googleSheetsService,
+            twoWaySyncService = twoWaySyncService,
+            syncManager = syncManager,
+            deletionTracker = deletionTracker,
+            onVolunteerGuestListRecalc = { recalcAndUploadVolunteerGuestList() },
+            onBackgroundDifferentialSync = {
+                withContext(Dispatchers.IO) {
+                    syncManager.performDifferentialSync()
+                }
+            },
+            onTemporaryGuestsRefresh = {
+                if (settingsManagerCached?.getBackendType() != BackendType.FIREBASE) {
+                    refreshTemporaryGuestsFromSheets()
+                }
+            },
+            pendingRemoteWriteDao = pendingRemoteWriteDao,
+            onFirebaseRemoteRepositoryChanged = {
+                viewModelScope.launch {
+                    withContext(Dispatchers.Main) { refreshAllData() }
+                    refreshFirebaseSyncStatus()
+                    if (settingsManagerCached?.getBackendType() == BackendType.FIREBASE) {
+                        restartSheetsMirrorSchedule()
+                    }
+                }
+            },
+            onFirebaseSyncStatusChanged = {
+                viewModelScope.launch { refreshFirebaseSyncStatus() }
+            },
+        )
+    } else null
+
+    /** Cached so [cancelBackendMigration] hits the in-flight migration instance. */
+    @Volatile
+    private var cachedMigrationService: BackendMigrationService? = null
+
+    val pendingBackendFollow = syncCoordinator?.pendingBackendFollow
+    val crudSoftLocked = syncCoordinator?.crudSoftLocked
+
+    private fun isCrudSoftLocked(): Boolean = syncCoordinator?.crudSoftLocked?.value == true
+
+    private fun rejectIfCrudSoftLocked(action: String): Boolean {
+        if (!isCrudSoftLocked()) return false
+        _syncError.value =
+            "Institution backend migration pending — open Admin to reconnect before $action."
+        return true
+    }
+
+    fun clearPendingBackendFollow(migrationId: String) {
+        syncCoordinator?.clearPendingFollowAfterSuccess(migrationId)
+    }
+
+    suspend fun followPendingBackendMigration(
+        announcement: InstitutionBackendAnnouncement,
+        orgId: String?,
+        spreadsheetId: String?,
+    ): SyncResult {
+        val service = backendMigrationServiceOrNull()
+            ?: return SyncResult.Error("Migration service unavailable")
+        syncCoordinator?.stopBackgroundRemoteSync()
+        val result = service.followMigration(
+            announcement = announcement,
+            spreadsheetIdOverride = spreadsheetId,
+            orgIdOverride = orgId,
+        )
+        if (result is SyncResult.Success) {
+            syncCoordinator?.clearPendingFollowAfterSuccess(announcement.migrationId)
+            syncCoordinator?.stopBackgroundRemoteSync()
+            syncCoordinator?.startBackgroundRemoteSync(viewModelScope)
+            withContext(Dispatchers.Main) { refreshAllData() }
+        }
+        return result
+    }
+
+    fun getFirebaseConfiguredOrgs(): List<com.eventmanager.app.data.remote.FirebaseConfiguredOrg> =
+        settingsManagerCached?.getFirebaseConfiguredOrgs().orEmpty()
+
+    fun getActiveFirebaseOrgId(): String {
+        val settings = settingsManagerCached ?: return ""
+        return if (settings.getFirebaseOrgViewMode() == com.eventmanager.app.data.remote.FirebaseOrgViewMode.ALL) {
+            com.eventmanager.app.data.remote.FIREBASE_ORG_ALL_SENTINEL
+        } else {
+            settings.getFirebaseOrgId()
+        }
+    }
+
+    fun getFirebaseOrgViewMode(): com.eventmanager.app.data.remote.FirebaseOrgViewMode =
+        settingsManagerCached?.getFirebaseOrgViewMode()
+            ?: com.eventmanager.app.data.remote.FirebaseOrgViewMode.SINGLE
+
+    fun isFirebaseAllOrgsMode(): Boolean =
+        getFirebaseOrgViewMode() == com.eventmanager.app.data.remote.FirebaseOrgViewMode.ALL
+
+    private fun resolveActiveFirebaseOrgIdForWrites(): String {
+        val settings = settingsManagerCached ?: return ""
+        val active = settings.getFirebaseOrgId().trim()
+        if (active.isNotBlank() && !com.eventmanager.app.data.remote.isFirebaseOrgAllSentinel(active)) {
+            return active
+        }
+        return settings.getFirebaseLastSingleOrgId().trim()
+    }
+
+    private fun tagGuestWithActiveOrg(guest: Guest): Guest {
+        if (guest.firebaseOrgId.isNotBlank()) return guest
+        val orgId = resolveActiveFirebaseOrgIdForWrites()
+        return if (orgId.isNotBlank()) guest.copy(firebaseOrgId = orgId) else guest
+    }
+
+    private fun tagVolunteerWithActiveOrg(volunteer: Volunteer): Volunteer {
+        if (volunteer.firebaseOrgId.isNotBlank()) return volunteer
+        val orgId = resolveActiveFirebaseOrgIdForWrites()
+        return if (orgId.isNotBlank()) volunteer.copy(firebaseOrgId = orgId) else volunteer
+    }
+
+    fun enterAllOrgsModeAsync() {
+        viewModelScope.launch {
+            val result = enterAllOrgsMode()
+            if (result is SyncResult.Error) {
+                showSyncErrorIfNotSuppressed(result.message)
+            }
+        }
+    }
+
+    fun enterSingleOrgModeAsync(orgId: String, purgeOtherOrgs: Boolean = false) {
+        viewModelScope.launch {
+            val result = enterSingleOrgMode(orgId, purgeOtherOrgs)
+            if (result is SyncResult.Error) {
+                showSyncErrorIfNotSuppressed(result.message)
+            }
+        }
+    }
+
+    suspend fun enterAllOrgsMode(): SyncResult {
+        val settings = settingsManagerCached
+            ?: return SyncResult.Error("Settings unavailable")
+        if (settings.getBackendType() != BackendType.FIREBASE) {
+            return SyncResult.Error("Firebase mode required")
+        }
+        val configured = settings.getFirebaseConfiguredOrgs()
+        if (configured.size < 2) {
+            return SyncResult.Error("At least two configured orgs required")
+        }
+        if (settings.getFirebaseOrgViewMode() == com.eventmanager.app.data.remote.FirebaseOrgViewMode.ALL) {
+            return SyncResult.Success("Already viewing all organizations")
+        }
+        if (_firebaseOrgSwitching.value) {
+            return SyncResult.Error("Org switch already in progress")
+        }
+        _firebaseOrgSwitching.value = true
+        return try {
+            val currentOrg = settings.getFirebaseOrgId().trim()
+            if (currentOrg.isNotBlank() && !com.eventmanager.app.data.remote.isFirebaseOrgAllSentinel(currentOrg)) {
+                settings.setFirebaseLastSingleOrgId(currentOrg)
+            }
+            settings.setFirebaseOrgViewMode(com.eventmanager.app.data.remote.FirebaseOrgViewMode.ALL)
+            settings.setFirebaseOrgId(com.eventmanager.app.data.remote.FIREBASE_ORG_ALL_SENTINEL)
+            val backfillOrg = settings.getFirebaseLastSingleOrgId().ifBlank { currentOrg }
+            if (backfillOrg.isNotBlank()) {
+                repository.backfillEmptyOrgIds(backfillOrg)
+            }
+            platformContext?.let {
+                com.eventmanager.app.data.remote.createFirebaseAuthService(it).restoreSession()
+            }
+            configured.forEach { org ->
+                runCatching { syncCoordinator?.ensureFirebaseOrgReady(org.orgId) }
+            }
+            syncCoordinator?.stopBackgroundRemoteSync()
+            val syncResult = syncCoordinator?.pullAllConfiguredFirebaseOrgs()
+                ?: SyncResult.Error("Sync coordinator unavailable")
+            if (syncResult is SyncResult.Error) {
+                settings.setFirebaseOrgViewMode(com.eventmanager.app.data.remote.FirebaseOrgViewMode.SINGLE)
+                if (currentOrg.isNotBlank() && !com.eventmanager.app.data.remote.isFirebaseOrgAllSentinel(currentOrg)) {
+                    settings.setFirebaseOrgId(currentOrg)
+                } else {
+                    val fallback = settings.getFirebaseLastSingleOrgId().ifBlank { configured.first().orgId }
+                    settings.setFirebaseOrgId(fallback)
+                }
+                return syncResult
+            }
+            syncCoordinator?.startBackgroundRemoteSync(viewModelScope)
+            withContext(Dispatchers.Main) { refreshAllData() }
+            refreshFirebaseSyncStatus()
+            syncResult
+        } catch (e: Exception) {
+            SyncResult.Error(e.message ?: "Failed to enter all-orgs mode")
+        } finally {
+            _firebaseOrgSwitching.value = false
+        }
+    }
+
+    suspend fun enterSingleOrgMode(orgId: String, purgeOtherOrgs: Boolean = false): SyncResult {
+        val settings = settingsManagerCached
+            ?: return SyncResult.Error("Settings unavailable")
+        if (settings.getBackendType() != BackendType.FIREBASE) {
+            return SyncResult.Error("Firebase mode required")
+        }
+        val trimmed = orgId.trim()
+        if (trimmed.isBlank()) return SyncResult.Error("Org ID required")
+        if (settings.getFirebaseConfiguredOrgs().none { it.orgId == trimmed }) {
+            return SyncResult.Error("Org not configured")
+        }
+        if (_firebaseOrgSwitching.value) {
+            return SyncResult.Error("Org switch already in progress")
+        }
+        _firebaseOrgSwitching.value = true
+        return try {
+            platformContext?.let {
+                com.eventmanager.app.data.remote.createFirebaseAuthService(it).restoreSession()
+            }
+            syncCoordinator?.ensureFirebaseOrgReady(trimmed)
+                ?: return SyncResult.Error("Sync coordinator unavailable")
+            syncCoordinator?.stopBackgroundRemoteSync()
+            settings.setFirebaseOrgViewMode(com.eventmanager.app.data.remote.FirebaseOrgViewMode.SINGLE)
+            settings.setFirebaseOrgId(trimmed)
+            settings.setFirebaseLastSingleOrgId(trimmed)
+            if (purgeOtherOrgs) {
+                repository.deleteAllDataNotInOrgs(listOf(trimmed))
+            }
+            val syncResult = syncCoordinator?.performStartupSync()
+                ?: SyncResult.Error("Sync coordinator unavailable")
+            syncCoordinator?.startBackgroundRemoteSync(viewModelScope)
+            runCatching { syncCoordinator?.replicateFirebaseConfiguredOrgs() }
+            withContext(Dispatchers.Main) { refreshAllData() }
+            refreshFirebaseSyncStatus()
+            syncResult
+        } catch (e: Exception) {
+            SyncResult.Error(e.message ?: "Failed to enter single-org mode")
+        } finally {
+            _firebaseOrgSwitching.value = false
+        }
+    }
+
+    fun orgColorArgb(orgId: String): Long =
+        settingsManagerCached?.getFirebaseOrgColorArgb(orgId)
+            ?: com.eventmanager.app.data.remote.FirebaseConfiguredOrgCodec.defaultColorForIndex(0)
+
+    fun balanceForHolder(
+        holderType: AccountHolderType,
+        holderId: String,
+        orgId: String,
+    ): Double {
+        val transfers = if (isFirebaseAllOrgsMode() && orgId.isNotBlank()) {
+            _accountTransfers.value.filter { it.firebaseOrgId.isBlank() || it.firebaseOrgId == orgId }
+        } else {
+            _accountTransfers.value
+        }
+        return AccountBalanceService.computeBalance(holderType, holderId, transfers)
+    }
+
+    fun updateFirebaseConfiguredOrgsLocal(orgs: List<com.eventmanager.app.data.remote.FirebaseConfiguredOrg>) {
+        settingsManagerCached?.setFirebaseConfiguredOrgs(orgs)
+    }
+
+    fun provisionFirebaseOrg(orgId: String) {
+        viewModelScope.launch {
+            val settings = settingsManagerCached ?: return@launch
+            if (settings.getBackendType() != BackendType.FIREBASE) return@launch
+            if (!FirebaseOrgBootstrap.isValidOrgId(orgId)) return@launch
+            try {
+                platformContext?.let { createFirebaseAuthService(it).restoreSession() }
+                syncCoordinator?.provisionFirebaseOrg(orgId.trim())
+                syncCoordinator?.replicateFirebaseConfiguredOrgs()
+            } catch (e: Exception) {
+                showSyncErrorIfNotSuppressed(
+                    "Could not create Firebase organization \"$orgId\": ${e.message}",
+                )
+            }
+        }
+    }
+
+    /** @deprecated Use [updateFirebaseConfiguredOrgsLocal] + [provisionFirebaseOrg] on field commit. */
+    fun saveFirebaseConfiguredOrgs(orgs: List<com.eventmanager.app.data.remote.FirebaseConfiguredOrg>) {
+        updateFirebaseConfiguredOrgsLocal(orgs)
+    }
+
+    fun switchFirebaseOrgAsync(orgId: String) {
+        viewModelScope.launch {
+            val result = switchFirebaseOrg(orgId)
+            if (result is SyncResult.Error) {
+                showSyncErrorIfNotSuppressed(result.message)
+            }
+        }
+    }
+
+    suspend fun switchFirebaseOrg(orgId: String): SyncResult {
+        val settings = settingsManagerCached
+            ?: return SyncResult.Error("Settings unavailable")
+        if (settings.getBackendType() != BackendType.FIREBASE) {
+            return SyncResult.Error("Firebase mode required")
+        }
+        val trimmed = orgId.trim()
+        if (trimmed.isBlank()) return SyncResult.Error("Org ID required")
+        val configured = settings.getFirebaseConfiguredOrgs()
+        if (configured.none { it.orgId == trimmed }) {
+            return SyncResult.Error("Org not configured")
+        }
+        if (settings.getFirebaseOrgId().trim() == trimmed) {
+            return SyncResult.Success("Already on this organization")
+        }
+        if (_firebaseOrgSwitching.value) {
+            return SyncResult.Error("Org switch already in progress")
+        }
+        _firebaseOrgSwitching.value = true
+        val previousOrg = settings.getFirebaseOrgId().trim()
+        val leavingAllMode = com.eventmanager.app.data.remote.isFirebaseOrgAllSentinel(previousOrg)
+        return try {
+            platformContext?.let {
+                com.eventmanager.app.data.remote.createFirebaseAuthService(it).restoreSession()
+            }
+            syncCoordinator?.ensureFirebaseOrgReady(trimmed)
+                ?: return SyncResult.Error("Sync coordinator unavailable")
+            syncCoordinator?.stopBackgroundRemoteSync()
+            if (leavingAllMode) {
+                configured.map { it.orgId }.forEach { orgId ->
+                    syncCoordinator?.flushFirebasePendingWritesForOrg(orgId)
+                }
+            } else {
+                syncCoordinator?.flushFirebasePendingWritesForOrg(previousOrg)
+            }
+            pendingRemoteWriteDao?.clearAll()
+            repository.clearAllData()
+            settings.setFirebaseOrgViewMode(com.eventmanager.app.data.remote.FirebaseOrgViewMode.SINGLE)
+            settings.setFirebaseOrgId(trimmed)
+            settings.setFirebaseLastSingleOrgId(trimmed)
+            val syncResult = syncCoordinator?.performStartupSync()
+                ?: return SyncResult.Error("Sync coordinator unavailable")
+            if (syncResult is SyncResult.Error) {
+                settings.setFirebaseOrgId(previousOrg)
+                repository.clearAllData()
+                pendingRemoteWriteDao?.clearAll()
+                syncCoordinator?.performStartupSync()
+                syncCoordinator?.startBackgroundRemoteSync(viewModelScope)
+                withContext(Dispatchers.Main) { refreshAllData() }
+                return SyncResult.Error(
+                    "Could not switch to \"$trimmed\": ${syncResult.message}",
+                )
+            }
+            syncCoordinator?.startBackgroundRemoteSync(viewModelScope)
+            runCatching { syncCoordinator?.replicateFirebaseConfiguredOrgs() }
+            withContext(Dispatchers.Main) { refreshAllData() }
+            refreshFirebaseSyncStatus()
+            if (settings.getBackendType() == BackendType.FIREBASE) {
+                restartSheetsMirrorSchedule()
+            }
+            syncResult
+        } catch (e: Exception) {
+            if (settings.getFirebaseOrgId().trim() == trimmed && previousOrg.isNotBlank()) {
+                settings.setFirebaseOrgId(previousOrg)
+                runCatching {
+                    repository.clearAllData()
+                    pendingRemoteWriteDao?.clearAll()
+                    syncCoordinator?.performStartupSync()
+                    syncCoordinator?.startBackgroundRemoteSync(viewModelScope)
+                    withContext(Dispatchers.Main) { refreshAllData() }
+                }
+            }
+            SyncResult.Error("Failed to switch org: ${e.message}")
+        } finally {
+            _firebaseOrgSwitching.value = false
+        }
+    }
+
+    suspend fun migrateBackendToFirebase(orgId: String, migratedBy: String = "admin"): SyncResult {
+        val service = backendMigrationServiceOrNull()
+            ?: return SyncResult.Error("Migration service unavailable")
+        syncCoordinator?.stopBackgroundRemoteSync()
+        return service.migrateSheetsToFirebase(orgId, migratedBy).also {
+            cachedMigrationService = null
+            if (it is SyncResult.Success) {
+                syncCoordinator?.stopBackgroundRemoteSync()
+                syncCoordinator?.startBackgroundRemoteSync(viewModelScope)
+                withContext(Dispatchers.Main) { refreshAllData() }
+            }
+        }
+    }
+
+    suspend fun migrateBackendToSheets(spreadsheetId: String, migratedBy: String = "admin"): SyncResult {
+        val service = backendMigrationServiceOrNull()
+            ?: return SyncResult.Error("Migration service unavailable")
+        return service.migrateFirebaseToSheets(spreadsheetId, migratedBy).also {
+            cachedMigrationService = null
+            if (it is SyncResult.Success) {
+                syncCoordinator?.stopBackgroundRemoteSync()
+                syncCoordinator?.startBackgroundRemoteSync(viewModelScope)
+                withContext(Dispatchers.Main) { refreshAllData() }
+            }
+        }
+    }
+
+    suspend fun exportSheetsMirrorNow(): SyncResult {
+        val exporter = sheetsMirrorExporterOrNull()
+            ?: return SyncResult.Error("Sheets mirror unavailable")
+        val result = exporter.exportNow()
+        if (result is SyncResult.Success) {
+            backupInstitutionSettingsToSheets()
+        }
+        return result
+    }
+
+    fun onSheetsMirrorSettingsChanged() {
+        restartSheetsMirrorSchedule()
+        backupInstitutionSettingsToSheets()
+    }
+
+    fun backendMigrationServiceOrNull(): BackendMigrationService? {
+        cachedMigrationService?.let { return it }
+        val ctx = platformContext ?: return null
+        val tws = twoWaySyncService ?: return null
+        val sm = syncManager ?: return null
+        val settings = settingsManagerCached ?: return null
+        if (syncCoordinator == null) return null
+        val gateway = createFirestoreGateway(ctx, settings)
+        val firebase = com.eventmanager.app.data.remote.FirebaseRemoteBackend(
+            platformContext = ctx,
+            repository = repository,
+            settingsManager = settings,
+            firestoreGateway = gateway,
+            ledgerService = FirebaseLedgerService(repository, settings, gateway),
+            pendingWrites = PendingRemoteWriteQueue(
+                dao = pendingRemoteWriteDao,
+                activeOrgId = { settings.getFirebaseOrgId().trim() },
+            ),
+        )
+        val sheetsBackend = com.eventmanager.app.data.remote.SheetsRemoteBackend(
+            platformContext = ctx,
+            repository = repository,
+            googleSheetsService = googleSheetsService,
+            twoWaySyncService = tws,
+            syncManager = sm,
+            deletionTracker = deletionTracker,
+            settingsManager = settings,
+        )
+        return BackendMigrationService(
+            platformContext = ctx,
+            repository = repository,
+            settingsManager = settings,
+            sheetsBackend = sheetsBackend,
+            firebaseBackend = firebase,
+            twoWaySyncService = tws,
+            googleSheetsService = googleSheetsService,
+        ).also { cachedMigrationService = it }
+    }
+
+    fun cancelBackendMigration() {
+        cachedMigrationService?.requestCancel()
+    }
+
+    fun sheetsMirrorExporterOrNull(): SheetsMirrorExporter? {
+        val tws = twoWaySyncService ?: return null
+        val settings = settingsManagerCached ?: return null
+        return SheetsMirrorExporter(settings, tws)
     }
 
     // State for guests
@@ -175,8 +653,28 @@ class EventManagerViewModel(
     private val _lastSyncTime = MutableStateFlow(0L)
     val lastSyncTime: StateFlow<Long> = _lastSyncTime.asStateFlow()
 
+    /** null = admin gate sync in progress; true/false = outcome for NFC/QR/biometric gate. */
+    private val _adminGateSyncSucceeded = MutableStateFlow<Boolean?>(null)
+    val adminGateSyncSucceeded: StateFlow<Boolean?> = _adminGateSyncSucceeded.asStateFlow()
+
+    private val _firebaseSyncStatus = MutableStateFlow(FirebaseSyncStatus.offline())
+    val firebaseSyncStatus: StateFlow<FirebaseSyncStatus> = _firebaseSyncStatus.asStateFlow()
+
+    private val _firebaseOrgSwitching = MutableStateFlow(false)
+    val firebaseOrgSwitching: StateFlow<Boolean> = _firebaseOrgSwitching.asStateFlow()
+
+    fun getActiveBackendType(): BackendType =
+        settingsManagerCached?.getBackendType() ?: BackendType.SHEETS
+
     // Background sync job
     private var backgroundSyncJob: kotlinx.coroutines.Job? = null
+    private var sheetsMirrorJob: kotlinx.coroutines.Job? = null
+
+    fun restartSheetsMirrorSchedule() {
+        sheetsMirrorJob?.cancel()
+        sheetsMirrorJob = null
+        sheetsMirrorJob = sheetsMirrorExporterOrNull()?.startScheduled(viewModelScope)
+    }
 
     // Update check state
     private val _updateCheckState = MutableStateFlow<UpdateCheckResult?>(null)
@@ -194,6 +692,7 @@ class EventManagerViewModel(
         loadData()
         startBackgroundSync()
         loadLastSyncTime()
+        viewModelScope.launch { refreshFirebaseSyncStatus() }
         // Clean up any existing duplicates in the database
         cleanupDuplicates()
         // Ensure volunteer activity is calculated after initial data load
@@ -252,6 +751,8 @@ class EventManagerViewModel(
         super.onCleared()
         backgroundSyncJob?.cancel()
         backgroundSyncJob = null
+        sheetsMirrorJob?.cancel()
+        sheetsMirrorJob = null
         println("ViewModel cleared - background sync stopped")
     }
 
@@ -262,44 +763,61 @@ class EventManagerViewModel(
         }
     }
 
+    private suspend fun refreshFirebaseSyncStatus() {
+        if (settingsManagerCached?.getBackendType() != BackendType.FIREBASE) return
+        _firebaseSyncStatus.value = syncCoordinator?.snapshotFirebaseSyncStatus()
+            ?: FirebaseSyncStatus.offline()
+    }
+
     private fun startBackgroundSync() {
         platformContext?.let { ctx ->
             val settingsManager = SettingsManager(ctx)
-            val syncInterval = settingsManager.getSyncInterval()
-            
-            // Cancel any existing job first
             backgroundSyncJob?.cancel()
-            
-            println("Starting background sync with interval: $syncInterval minutes")
-            println("Google Sheets configured: ${isGoogleSheetsConfigured()}")
-            
-            backgroundSyncJob = viewModelScope.launch {
-                while (true) {
-                    try {
-                        println("Background sync waiting for $syncInterval minutes...")
-                        delay(syncInterval * 60 * 1000L) // Convert minutes to milliseconds
-                        
-                        println("Background sync timer triggered")
-                        if (isGoogleSheetsConfigured()) {
-                            println("Google Sheets is configured, starting differential sync...")
-                            // Use differential sync for background updates - more efficient
-                            // as it only updates changed items instead of refreshing everything
-                            performDifferentialFullSync()
-                        } else {
-                            println("Google Sheets not configured, skipping sync")
+
+            when (settingsManager.getBackendType()) {
+                BackendType.FIREBASE -> {
+                    println("Starting Firebase live sync (listeners)")
+                    viewModelScope.launch {
+                        val auth = com.eventmanager.app.data.remote.createFirebaseAuthService(ctx)
+                        auth.restoreSession()
+                        when (val repair = syncCoordinator?.repairFirebaseActiveOrgIfNeeded()) {
+                            is com.eventmanager.app.data.remote.FirebaseOrgRepairResult.Recovered -> {
+                                repository.clearAllData()
+                                syncCoordinator?.performStartupSync()
+                            }
+                            else -> Unit
                         }
-                    } catch (_: kotlinx.coroutines.CancellationException) {
-                        println("Background sync cancelled - this is normal when updating interval")
-                        break // Exit the loop when cancelled
-                    } catch (e: Exception) {
-                        println("Background sync error: ${e.message}")
-                        e.printStackTrace()
-                        // Continue the loop for other errors
+                        syncCoordinator?.startBackgroundRemoteSync(viewModelScope)
+                        syncCoordinator?.performStartupSync()
+                        restartSheetsMirrorSchedule()
+                        refreshFirebaseSyncStatus()
+                        withContext(Dispatchers.Main) { refreshAllData() }
+                    }
+                }
+                BackendType.SHEETS -> {
+                    // Prefer SheetsRemoteBackend timer so interval/enable flags stay in one place
+                    val coordinator = syncCoordinator
+                    if (coordinator != null) {
+                        println("Starting Sheets background sync via SyncCoordinator")
+                        coordinator.startBackgroundRemoteSync(viewModelScope)
+                    } else {
+                        val syncInterval = settingsManager.getSyncInterval()
+                        println("Starting background sync with interval: $syncInterval minutes")
+                        backgroundSyncJob = viewModelScope.launch {
+                            while (true) {
+                                try {
+                                    delay(syncInterval * 60 * 1000L)
+                                    if (isGoogleSheetsConfigured()) {
+                                        performDifferentialFullSync()
+                                    }
+                                } catch (e: Exception) {
+                                    println("Background sync error: ${e.message}")
+                                }
+                            }
+                        }
                     }
                 }
             }
-        } ?: run {
-            println("No context available for background sync")
         }
     }
 
@@ -379,12 +897,17 @@ class EventManagerViewModel(
                                     repository.updateGuest(fixedGuest)
                                 }
                                 println("✅ Updated ${guestsToFix.size} guest(s) with fixed NanoIDs in local database")
-                                if (isGoogleSheetsConfigured()) {
-                                    try {
-                                        twoWaySyncService?.backupGuestsToSheets()
-                                        println("✅ Synced all guests (including ${guestsToFix.size} with fixed NanoIDs) to Google Sheets")
-                                    } catch (e: Exception) {
-                                        println("⚠️ Failed to sync fixed guest NanoIDs to Google Sheets: ${e.message}")
+                                when {
+                                    settingsManagerCached?.getBackendType() == BackendType.FIREBASE -> {
+                                        guestsToFix.forEach { syncCoordinator?.afterGuestSaved(it) }
+                                    }
+                                    isGoogleSheetsConfigured() -> {
+                                        try {
+                                            twoWaySyncService?.backupGuestsToSheets()
+                                            println("✅ Synced all guests (including ${guestsToFix.size} with fixed NanoIDs) to Google Sheets")
+                                        } catch (e: Exception) {
+                                            println("⚠️ Failed to sync fixed guest NanoIDs to Google Sheets: ${e.message}")
+                                        }
                                     }
                                 }
                             } catch (e: Exception) {
@@ -430,15 +953,17 @@ class EventManagerViewModel(
                                     repository.updateVolunteer(fixedVolunteer)
                                 }
                                 println("✅ Updated ${volunteersToFix.size} volunteer(s) with fixed NanoIDs in local database")
-                                
-                                // Then sync all volunteers to Google Sheets (includes the fixed IDs)
-                                // This ensures the new IDs are uploaded to Google Sheets
-                                if (isGoogleSheetsConfigured()) {
-                                    try {
-                                        twoWaySyncService?.backupVolunteersToSheets()
-                                        println("✅ Synced all volunteers (including ${volunteersToFix.size} with fixed NanoIDs) to Google Sheets")
-                                    } catch (e: Exception) {
-                                        println("⚠️ Failed to sync fixed NanoIDs to Google Sheets: ${e.message}")
+                                when {
+                                    settingsManagerCached?.getBackendType() == BackendType.FIREBASE -> {
+                                        volunteersToFix.forEach { syncCoordinator?.afterVolunteerSaved(it) }
+                                    }
+                                    isGoogleSheetsConfigured() -> {
+                                        try {
+                                            twoWaySyncService?.backupVolunteersToSheets()
+                                            println("✅ Synced all volunteers (including ${volunteersToFix.size} with fixed NanoIDs) to Google Sheets")
+                                        } catch (e: Exception) {
+                                            println("⚠️ Failed to sync fixed NanoIDs to Google Sheets: ${e.message}")
+                                        }
                                     }
                                 }
                             } catch (e: Exception) {
@@ -532,7 +1057,7 @@ class EventManagerViewModel(
         val created = accountCreditService.evaluatePendingShiftCredits(_jobTypeConfigs.value, offset)
         if (created.isNotEmpty()) {
             refreshAccountBalancesFromDb()
-            twoWaySyncService?.backupTransfersToSheets()
+            syncCreatedTransfers(created)
         }
     }
     
@@ -555,11 +1080,12 @@ class EventManagerViewModel(
     fun addGuest(guest: Guest) {
         viewModelScope.launch {
             try {
-                repository.insertGuest(guest)
-                // BACKUP MODE: Upload entire guest dataset to Google Sheets
-                twoWaySyncService?.backupGuestsToSheets()
-                // Keep volunteer list in sync
-                recalcAndUploadVolunteerGuestList()
+                if (rejectIfCrudSoftLocked("adding guests")) return@launch
+                val saved = repository.insertGuest(guest)
+                syncCoordinator?.afterGuestSaved(saved)
+                    ?: twoWaySyncService?.backupGuestsToSheets()?.also {
+                        recalcAndUploadVolunteerGuestList()
+                    }
             } catch (e: Exception) {
             println("Failed to add guest: ${e.message}")
             _syncError.value = "Failed to add guest: ${e.message}"
@@ -574,14 +1100,23 @@ class EventManagerViewModel(
     fun addTemporaryGuestBatch(batch: ManualTemporaryGuestBatch) {
         viewModelScope.launch {
             try {
-                if (!isGoogleSheetsConfigured()) {
-                    _syncError.value = "Google Sheets is not configured."
-                    return@launch
-                }
+                if (rejectIfCrudSoftLocked("adding temporary guests")) return@launch
                 val names = batch.guestNames.map { it.trim() }.filter { it.isNotEmpty() }
                 if (names.isEmpty()) return@launch
-                googleSheetsService.appendTemporaryGuestManualBatch(batch.copy(guestNames = names))
-                refreshTemporaryGuestsFromSheets()
+                val prepared = batch.copy(guestNames = names)
+                if (syncCoordinator != null) {
+                    syncCoordinator.afterTemporaryGuestBatch(prepared)
+                    if (settingsManagerCached?.getBackendType() == BackendType.FIREBASE) {
+                        withContext(Dispatchers.Main) { refreshGuestData() }
+                    }
+                } else {
+                    if (!isGoogleSheetsConfigured()) {
+                        _syncError.value = "Google Sheets is not configured."
+                        return@launch
+                    }
+                    googleSheetsService.appendTemporaryGuestManualBatch(prepared)
+                    refreshTemporaryGuestsFromSheets()
+                }
             } catch (e: Exception) {
                 println("Failed to add temporary guests: ${e.message}")
                 _syncError.value = "Failed to add temporary guests: ${e.message}"
@@ -592,19 +1127,27 @@ class EventManagerViewModel(
     fun updateGuest(guest: Guest) {
         viewModelScope.launch {
             try {
+                if (rejectIfCrudSoftLocked("updating guests")) return@launch
                 // Update lastModified timestamp
                 val updatedGuest = guest.copy(lastModified = System.currentTimeMillis())
                 if (updatedGuest.isTemporaryGuest) {
-                    // Temporary guests are managed in their dedicated Google Sheet
-                    googleSheetsService.updateTemporaryGuestInSheets(updatedGuest)
                     repository.updateGuest(updatedGuest)
-                    refreshTemporaryGuestsFromSheets()
+                    syncCoordinator?.afterGuestSaved(updatedGuest)
+                        ?: run {
+                            googleSheetsService.updateTemporaryGuestInSheets(updatedGuest)
+                            refreshTemporaryGuestsFromSheets()
+                        }
+                    if (syncCoordinator != null &&
+                        settingsManagerCached?.getBackendType() != BackendType.FIREBASE
+                    ) {
+                        refreshTemporaryGuestsFromSheets()
+                    }
                 } else {
                     repository.updateGuest(updatedGuest)
-                    // BACKUP MODE: Upload entire guest dataset to Google Sheets
-                    twoWaySyncService?.backupGuestsToSheets()
-                    // Keep volunteer list in sync
-                    recalcAndUploadVolunteerGuestList()
+                    syncCoordinator?.afterGuestSaved(updatedGuest)
+                        ?: twoWaySyncService?.backupGuestsToSheets()?.also {
+                            recalcAndUploadVolunteerGuestList()
+                        }
                 }
             } catch (e: Exception) {
                 println("Failed to update guest: ${e.message}")
@@ -616,11 +1159,19 @@ class EventManagerViewModel(
     fun deleteGuest(guest: Guest) {
         viewModelScope.launch {
             try {
+                if (rejectIfCrudSoftLocked("deleting guests")) return@launch
                 if (guest.isTemporaryGuest) {
-                    // Temporary guests are managed in their dedicated Google Sheet
-                    googleSheetsService.deleteTemporaryGuestFromSheets(guest.sheetsId)
                     repository.deleteGuest(guest)
-                    refreshTemporaryGuestsFromSheets()
+                    syncCoordinator?.afterGuestDeleted(guest)
+                        ?: run {
+                            googleSheetsService.deleteTemporaryGuestFromSheets(guest.sheetsId)
+                            refreshTemporaryGuestsFromSheets()
+                        }
+                    if (syncCoordinator != null &&
+                        settingsManagerCached?.getBackendType() != BackendType.FIREBASE
+                    ) {
+                        refreshTemporaryGuestsFromSheets()
+                    }
                     println("Successfully deleted temporary guest: ${guest.name}")
                 } else {
                     // Track the deletion (businessKey = nanoId for merge-safe upload)
@@ -629,12 +1180,12 @@ class EventManagerViewModel(
                     // Delete from local database
                     repository.deleteGuest(guest)
 
-                    // BACKUP MODE: Upload entire guest dataset to Google Sheets
-                    twoWaySyncService?.backupGuestsToSheets()
+                    syncCoordinator?.afterGuestDeleted(guest)
+                        ?: twoWaySyncService?.backupGuestsToSheets()?.also {
+                            recalcAndUploadVolunteerGuestList()
+                        }
 
                     println("Successfully deleted guest: ${guest.name}")
-                    // Keep volunteer list in sync
-                    recalcAndUploadVolunteerGuestList()
                 }
             } catch (e: Exception) {
                 println("Failed to delete guest: ${e.message}")
@@ -647,9 +1198,10 @@ class EventManagerViewModel(
     fun addVolunteer(volunteer: Volunteer) {
         viewModelScope.launch {
             try {
+                if (rejectIfCrudSoftLocked("adding volunteers")) return@launch
                 repository.insertVolunteer(volunteer)
                 // BACKUP MODE: Upload entire volunteer dataset to Google Sheets
-                twoWaySyncService?.backupVolunteersToSheets()
+                syncCoordinator?.afterVolunteerSaved(volunteer) ?: twoWaySyncService?.backupVolunteersToSheets()
                 recalcAndUploadVolunteerGuestList()
             } catch (e: Exception) {
             println("Failed to add volunteer: ${e.message}")
@@ -661,9 +1213,10 @@ class EventManagerViewModel(
     fun updateVolunteer(volunteer: Volunteer) {
         viewModelScope.launch {
         try {
+            if (rejectIfCrudSoftLocked("updating volunteers")) return@launch
             repository.updateVolunteer(volunteer)
                 // BACKUP MODE: Upload entire volunteer dataset to Google Sheets
-                twoWaySyncService?.backupVolunteersToSheets()
+                syncCoordinator?.afterVolunteerSaved(volunteer) ?: twoWaySyncService?.backupVolunteersToSheets()
                 recalcAndUploadVolunteerGuestList()
             } catch (e: Exception) {
             println("Failed to update volunteer: ${e.message}")
@@ -675,6 +1228,7 @@ class EventManagerViewModel(
     fun deleteVolunteer(volunteer: Volunteer, deleteShifts: Boolean = false) {
         viewModelScope.launch {
             try {
+                if (rejectIfCrudSoftLocked("deleting volunteers")) return@launch
                 // If deleteShifts is true, delete all associated jobs/shifts first
                 if (deleteShifts) {
                     val allJobs = repository.getAllJobs().first()
@@ -682,41 +1236,40 @@ class EventManagerViewModel(
                     
                     println("Deleting ${volunteerJobs.size} job(s) for volunteer ${volunteer.name}")
                     
-                    // Delete each job following the same pattern as deleteJob()
                     for (job in volunteerJobs) {
                         try {
-                            // Track deletion first (same as deleteJob)
-                            deletionTracker?.trackJobDeletion(job.id.toString(), job.sheetsId, businessKey = "${job.volunteerId}_${job.jobTypeName}_${job.date}_${job.venueName}_${job.shiftTime}")
-                            
-                            // Delete from local database
+                            deletionTracker?.trackJobDeletion(
+                                job.id.toString(),
+                                job.sheetsId,
+                                businessKey = "${job.volunteerId}_${job.jobTypeName}_${job.date}_${job.venueName}_${job.shiftTime}",
+                            )
                             repository.deleteJob(job)
-                            
-                            // Delete individual job from Google Sheets if sheetsId exists
-                            if (job.sheetsId != null) {
-                                try {
-                                    googleSheetsService.deleteJobFromSheets(job.id.toString(), job.sheetsId)
-                                    println("Successfully deleted job from Google Sheets: ${job.jobTypeName}")
-                                } catch (e: Exception) {
-                                    println("Individual job deletion failed, falling back to backup mode: ${e.message}")
-                                    // Fallback to backup mode if individual deletion fails
+                            syncCoordinator?.afterJobDeleted(job)
+                                ?: if (job.sheetsId != null) {
+                                    try {
+                                        googleSheetsService.deleteJobFromSheets(job.id.toString(), job.sheetsId)
+                                    } catch (_: Exception) {
+                                        twoWaySyncService?.backupJobsToSheets()
+                                    }
+                                } else {
                                     twoWaySyncService?.backupJobsToSheets()
                                 }
-                            } else {
-                                // If no sheetsId, use backup mode
-                                println("No sheetsId found, using backup mode for job deletion")
-                                twoWaySyncService?.backupJobsToSheets()
+                            val vol = repository.getVolunteerById(job.volunteerId)
+                            if (vol != null) {
+                                val offset = platformContext?.let { SettingsManager(it).getDateChangeOffsetHours() } ?: 0
+                                val reversals = accountCreditService.reverseShiftCredits(
+                                    job, vol, _jobTypeConfigs.value, offset
+                                )
+                                syncCreatedTransfers(reversals)
                             }
-                            
-                            println("Deleted job: ${job.jobTypeName} (ID: ${job.id}) for volunteer ${volunteer.name}")
                         } catch (e: Exception) {
                             println("Failed to delete job ${job.id} (${job.jobTypeName}) for volunteer ${volunteer.name}: ${e.message}")
-                            // Continue with other jobs even if one fails
                         }
                     }
                     
-                    // Small delay to ensure database commits are complete before syncing
                     if (volunteerJobs.isNotEmpty()) {
                         delay(100)
+                        refreshAccountBalancesFromDb()
                     }
                 }
                 
@@ -726,8 +1279,8 @@ class EventManagerViewModel(
                 // Delete from local database
                 repository.deleteVolunteer(volunteer)
                 
-                // BACKUP MODE: Upload entire volunteer dataset to Google Sheets
-                twoWaySyncService?.backupVolunteersToSheets()
+                syncCoordinator?.afterVolunteerDeleted(volunteer, deleteShifts)
+                    ?: twoWaySyncService?.backupVolunteersToSheets()
                 
                 println("Successfully deleted volunteer: ${volunteer.name}")
                 recalcAndUploadVolunteerGuestList()
@@ -751,38 +1304,49 @@ class EventManagerViewModel(
      * Creates a guest with isAdmin = true, persists it, and syncs to Sheets.
      * Calls [onResult] with (success, errorMessage?).
      */
-    fun createAdminGuest(guest: Guest, onResult: (Boolean, String?) -> Unit) {
+    fun createAdminGuest(guest: Guest, onResult: (Boolean, Guest?, String?) -> Unit) {
         viewModelScope.launch {
             try {
-                val adminGuest = guest.copy(isAdmin = true)
-                repository.insertGuest(adminGuest)
-                twoWaySyncService?.backupGuestsToSheets()
+                if (rejectIfCrudSoftLocked("creating admin")) {
+                    onResult(false, null, "Institution backend migration pending")
+                    return@launch
+                }
+                val adminGuest = tagGuestWithActiveOrg(guest.copy(isAdmin = true))
+                val saved = repository.insertGuest(adminGuest)
+                syncCoordinator?.afterGuestSaved(saved)
+                    ?: twoWaySyncService?.backupGuestsToSheets()
                 recalcAndUploadVolunteerGuestList()
-                onResult(true, null)
+                withContext(Dispatchers.Main) { refreshGuestData() }
+                withContext(Dispatchers.Main) { onResult(true, saved, null) }
             } catch (e: Exception) {
                 println("Failed to create admin guest: ${e.message}")
                 _syncError.value = "Failed to create admin guest: ${e.message}"
-                onResult(false, e.message)
+                withContext(Dispatchers.Main) { onResult(false, null, e.message) }
             }
         }
     }
 
     /**
      * Creates a volunteer with isAdmin = true, persists it, and syncs to Sheets.
-     * Calls [onResult] with (success, errorMessage?).
+     * Calls [onResult] with (success, savedVolunteer?, errorMessage?).
      */
-    fun createAdminVolunteer(volunteer: Volunteer, onResult: (Boolean, String?) -> Unit) {
+    fun createAdminVolunteer(volunteer: Volunteer, onResult: (Boolean, Volunteer?, String?) -> Unit) {
         viewModelScope.launch {
             try {
-                val adminVolunteer = volunteer.copy(isAdmin = true)
-                repository.insertVolunteer(adminVolunteer)
-                twoWaySyncService?.backupVolunteersToSheets()
+                if (rejectIfCrudSoftLocked("creating admin")) {
+                    onResult(false, null, "Institution backend migration pending")
+                    return@launch
+                }
+                val adminVolunteer = tagVolunteerWithActiveOrg(volunteer.copy(isAdmin = true))
+                val saved = repository.insertVolunteer(adminVolunteer)
+                syncCoordinator?.afterVolunteerSaved(saved) ?: twoWaySyncService?.backupVolunteersToSheets()
                 recalcAndUploadVolunteerGuestList()
-                onResult(true, null)
+                withContext(Dispatchers.Main) { refreshVolunteerData() }
+                withContext(Dispatchers.Main) { onResult(true, saved, null) }
             } catch (e: Exception) {
                 println("Failed to create admin volunteer: ${e.message}")
                 _syncError.value = "Failed to create admin volunteer: ${e.message}"
-                onResult(false, e.message)
+                withContext(Dispatchers.Main) { onResult(false, null, e.message) }
             }
         }
     }
@@ -799,14 +1363,14 @@ class EventManagerViewModel(
                     if (guest != null) {
                         val updated = guest.copy(nfcCardUid = uid, lastModified = System.currentTimeMillis())
                         repository.updateGuest(updated)
-                        twoWaySyncService?.backupGuestsToSheets()
+                        syncCoordinator?.afterGuestSaved(updated) ?: twoWaySyncService?.backupGuestsToSheets()
                     }
                 } else {
                     val volunteer = repository.getVolunteerById(entityId)
                     if (volunteer != null) {
                         val updated = volunteer.copy(nfcCardUid = uid, lastModified = System.currentTimeMillis())
                         repository.updateVolunteer(updated)
-                        twoWaySyncService?.backupVolunteersToSheets()
+                        syncCoordinator?.afterVolunteerSaved(updated) ?: twoWaySyncService?.backupVolunteersToSheets()
                     }
                 }
             } catch (e: Exception) {
@@ -842,6 +1406,47 @@ class EventManagerViewModel(
                     repository.getGuestByNanoId(link.profileId)?.let { ScannerMatch.GuestMatch(it) }
             }
         }
+
+    /**
+     * Central local admin check: re-reads Room and verifies `isAdmin` on guest/volunteer.
+     * Revokes biometric enrollment when the linked profile is no longer admin.
+     */
+    suspend fun verifyLocalAdminAccess(candidates: List<ScannerMatch>): LocalAdminAccessResult =
+        withContext(Dispatchers.IO) {
+            if (candidates.isEmpty()) return@withContext LocalAdminAccessResult.NotFound
+            var deniedName: String? = null
+            for (candidate in candidates) {
+                val fresh = try {
+                    resolveFreshAdminScanMatch(candidate)
+                } catch (_: Exception) {
+                    candidate
+                }
+                if (fresh.isAdminFlag()) {
+                    return@withContext LocalAdminAccessResult.Granted(fresh, fresh.displayName())
+                }
+                deniedName = fresh.displayName()
+                revokeBiometricAdminIfMatches(fresh)
+            }
+            LocalAdminAccessResult.Denied(deniedName.orEmpty())
+        }
+
+    suspend fun verifyLocalAdminAccess(match: ScannerMatch): LocalAdminAccessResult =
+        verifyLocalAdminAccess(listOf(match))
+
+    fun revokeBiometricAdminIfMatches(match: ScannerMatch) {
+        val ctx = platformContext ?: return
+        val settings = SettingsManager(ctx)
+        val link = settings.getBiometricAdminProfileLink() ?: return
+        val matches = when (match) {
+            is ScannerMatch.VolunteerMatch ->
+                link.type == BiometricAdminProfileType.VOLUNTEER && link.profileId == match.volunteer.id
+            is ScannerMatch.GuestMatch ->
+                link.type == BiometricAdminProfileType.GUEST && link.profileId == match.guest.nanoId
+        }
+        if (matches) {
+            settings.setBiometricAdminLoginEnabled(false)
+        }
+    }
 
     private fun applyInitialBenefitFutureEntries(
         job: Job,
@@ -884,10 +1489,27 @@ class EventManagerViewModel(
         return if (v != null) "${v.name} ${v.lastNameAbbreviation}".trim() else ""
     }
 
+    private suspend fun syncCreatedTransfers(transfers: List<AccountTransfer>) {
+        if (transfers.isEmpty()) return
+        if (settingsManagerCached?.getBackendType() == BackendType.FIREBASE) {
+            for (transfer in transfers) {
+                when (val ledger = syncCoordinator?.commitTransfer(transfer)) {
+                    is FirebaseLedgerResult.Rejected -> {
+                        _syncError.value = ledger.reason
+                    }
+                    else -> Unit
+                }
+            }
+        } else {
+            syncCoordinator?.afterTransfersChanged() ?: twoWaySyncService?.backupTransfersToSheets()
+        }
+    }
+
     // Job operations
     fun addJob(job: Job) {
         viewModelScope.launch {
             try {
+                if (rejectIfCrudSoftLocked("adding shifts")) return@launch
                 val volunteerJobsSame = _jobs.value.filter { it.volunteerId == job.volunteerId }
                 val meetingNovaExcluded = BenefitCalculator.isVolunteerOrionActive(
                     volunteerJobsSame, _jobTypeConfigs.value
@@ -898,28 +1520,32 @@ class EventManagerViewModel(
                 
                 // Insert job into local database first
                 val jobId = repository.insertJob(jobWithBenefit)
-                val jobWithId = jobWithBenefit.copy(id = jobId)
-                
-                // Add individual job to Google Sheets and get sheetsId
-                val sheetsId = googleSheetsService.addJobToSheets(
-                    jobWithId,
-                    _venues.value,
-                    _jobTypeConfigs.value,
-                    volunteerDisplayNameForSheetsJob(jobWithId.volunteerId)
-                )
-                val jobWithSheetsId = jobWithId.copy(sheetsId = sheetsId)
-                repository.updateJob(jobWithSheetsId)
-                println("Successfully added job to Google Sheets with sheetsId: $sheetsId")
+                var jobWithId = jobWithBenefit.copy(id = jobId)
+
+                val coordinator = syncCoordinator
+                if (coordinator != null) {
+                    coordinator.afterJobSaved(jobWithId)
+                } else if (isGoogleSheetsConfigured()) {
+                    // Fallback when coordinator unavailable
+                    val sheetsId = googleSheetsService.addJobToSheets(
+                        jobWithId,
+                        _venues.value,
+                        _jobTypeConfigs.value,
+                        volunteerDisplayNameForSheetsJob(jobWithId.volunteerId),
+                    )
+                    jobWithId = jobWithId.copy(sheetsId = sheetsId)
+                    repository.updateJob(jobWithId)
+                }
                 
                 println("Successfully added job: ${job.jobTypeName}")
-                val volunteer = repository.getVolunteerById(jobWithSheetsId.volunteerId)
+                val volunteer = repository.getVolunteerById(jobWithId.volunteerId)
                 if (volunteer != null) {
                     val offset = platformContext?.let { SettingsManager(it).getDateChangeOffsetHours() } ?: 0
-                    accountCreditService.applyShiftCredits(
-                        jobWithSheetsId, volunteer, _jobTypeConfigs.value, offset
+                    val credits = accountCreditService.applyShiftCredits(
+                        jobWithId, volunteer, _jobTypeConfigs.value, offset
                     )
                     refreshAccountBalancesFromDb()
-                    twoWaySyncService?.backupTransfersToSheets()
+                    syncCreatedTransfers(credits)
                 }
                 recalcAndUploadVolunteerGuestList()
             } catch (e: Exception) {
@@ -932,32 +1558,30 @@ class EventManagerViewModel(
     fun updateJob(job: Job) {
         viewModelScope.launch {
             try {
-                // Update job in local database
+                if (rejectIfCrudSoftLocked("updating shifts")) return@launch
                 repository.updateJob(job)
-                
-                // Update individual job in Google Sheets if sheetsId exists
-                if (job.sheetsId != null) {
-                    try {
-                        googleSheetsService.updateJobInSheets(
-                            job,
-                            _venues.value,
-                            _jobTypeConfigs.value,
-                            volunteerDisplayNameForSheetsJob(job.volunteerId)
-                        )
-                        println("Successfully updated job in Google Sheets: ${job.jobTypeName}")
-                    } catch (e: Exception) {
-                        println("Individual job update failed, falling back to backup mode: ${e.message}")
-                        // Fallback to backup mode if individual update fails
+                val coordinator = syncCoordinator
+                if (coordinator != null) {
+                    coordinator.afterJobSaved(job)
+                } else if (job.sheetsId != null) {
+                        try {
+                            googleSheetsService.updateJobInSheets(
+                                job,
+                                _venues.value,
+                                _jobTypeConfigs.value,
+                                volunteerDisplayNameForSheetsJob(job.volunteerId),
+                            )
+                        } catch (_: Exception) {
+                            twoWaySyncService?.backupJobsToSheets()
+                        }
+                    } else {
                         twoWaySyncService?.backupJobsToSheets()
                     }
-                } else {
-                    // If no sheetsId, use backup mode
-                    println("No sheetsId found, using backup mode for job update")
-                    twoWaySyncService?.backupJobsToSheets()
-                }
                 
                 println("Successfully updated job: ${job.jobTypeName}")
-                recalcAndUploadVolunteerGuestList()
+                if (coordinator == null) {
+                    recalcAndUploadVolunteerGuestList()
+                }
             } catch (e: Exception) {
                 println("Failed to update job: ${e.message}")
                 _syncError.value = "Failed to update job: ${e.message}"
@@ -968,35 +1592,35 @@ class EventManagerViewModel(
     fun deleteJob(job: Job) {
         viewModelScope.launch {
             try {
-                // Track the deletion (businessKey = composite key for merge-safe upload)
-                deletionTracker?.trackJobDeletion(job.id.toString(), job.sheetsId, businessKey = "${job.volunteerId}_${job.jobTypeName}_${job.date}_${job.venueName}_${job.shiftTime}")
+                if (rejectIfCrudSoftLocked("deleting shifts")) return@launch
+                deletionTracker?.trackJobDeletion(
+                    job.id.toString(),
+                    job.sheetsId,
+                    businessKey = "${job.volunteerId}_${job.jobTypeName}_${job.date}_${job.venueName}_${job.shiftTime}",
+                )
                 
-                // Delete from local database first
                 repository.deleteJob(job)
                 
-                // Delete individual job from Google Sheets if sheetsId exists
-                if (job.sheetsId != null) {
-                    try {
-                        googleSheetsService.deleteJobFromSheets(job.id.toString(), job.sheetsId)
-                        println("Successfully deleted job from Google Sheets: ${job.jobTypeName}")
-                    } catch (e: Exception) {
-                        println("Individual job deletion failed, falling back to backup mode: ${e.message}")
-                        // Fallback to backup mode if individual deletion fails
+                syncCoordinator?.afterJobDeleted(job)
+                    ?: if (job.sheetsId != null) {
+                        try {
+                            googleSheetsService.deleteJobFromSheets(job.id.toString(), job.sheetsId)
+                        } catch (_: Exception) {
+                            twoWaySyncService?.backupJobsToSheets()
+                        }
+                    } else {
                         twoWaySyncService?.backupJobsToSheets()
                     }
-                } else {
-                    // If no sheetsId, use backup mode
-                    println("No sheetsId found, using backup mode for job deletion")
-                    twoWaySyncService?.backupJobsToSheets()
-                }
                 
                 println("Successfully deleted job: ${job.jobTypeName}")
                 val volunteer = repository.getVolunteerById(job.volunteerId)
                 if (volunteer != null) {
                     val offset = platformContext?.let { SettingsManager(it).getDateChangeOffsetHours() } ?: 0
-                    accountCreditService.reverseShiftCredits(job, volunteer, _jobTypeConfigs.value, offset)
+                    val reversals = accountCreditService.reverseShiftCredits(
+                        job, volunteer, _jobTypeConfigs.value, offset
+                    )
                     refreshAccountBalancesFromDb()
-                    twoWaySyncService?.backupTransfersToSheets()
+                    syncCreatedTransfers(reversals)
                 }
                 recalcAndUploadVolunteerGuestList()
             } catch (e: Exception) {
@@ -1008,12 +1632,13 @@ class EventManagerViewModel(
 
     /**
      * Consumes one future event entry from a job (stellar after-midnight or manual single-use pool).
-     * Updates the job locally and in Google Sheets, then recalculates the guest list.
+     * Updates the job locally and via SyncCoordinator, then recalculates the guest list.
      */
     fun markBenefitAsUsed(job: Job, selectedInvitesOverride: Int? = null) {
         viewModelScope.launch {
             benefitConsumeMutex.withLock {
                 try {
+                    if (rejectIfCrudSoftLocked("consuming benefits")) return@withLock
                     val offsetHours = platformContext?.let { SettingsManager(it).getDateChangeOffsetHours() } ?: 0
                     val now = System.currentTimeMillis()
                     val configsByName = _jobTypeConfigs.value.associateBy { it.name }
@@ -1067,28 +1692,24 @@ class EventManagerViewModel(
 
                     repository.updateJob(updatedJob)
 
-                    // Sync to Google Sheets
-                    if (updatedJob.sheetsId != null) {
-                        try {
-                            googleSheetsService.updateJobInSheets(
-                                updatedJob,
-                                _venues.value,
-                                _jobTypeConfigs.value,
-                                volunteerDisplayNameForSheetsJob(updatedJob.volunteerId)
-                            )
-                        } catch (e: Exception) {
+                    syncCoordinator?.afterBenefitEntryConsumed(updatedJob)
+                        ?: if (updatedJob.sheetsId != null) {
+                            try {
+                                googleSheetsService.updateJobInSheets(
+                                    updatedJob,
+                                    _venues.value,
+                                    _jobTypeConfigs.value,
+                                    volunteerDisplayNameForSheetsJob(updatedJob.volunteerId),
+                                )
+                            } catch (_: Exception) {
+                                twoWaySyncService?.backupJobsToSheets()
+                            }
+                        } else {
                             twoWaySyncService?.backupJobsToSheets()
                         }
-                    } else {
-                        twoWaySyncService?.backupJobsToSheets()
-                    }
 
-                    // Refresh job UI state from DB so the ticket counts update immediately.
                     refreshJobData()
-
                     recalcAndUploadVolunteerGuestList()
-
-                    // Refresh guest UI from DB to pick up any changes from recalc.
                     refreshGuestData()
                 } catch (e: Exception) {
                     _syncError.value = "Failed to mark benefit as used: ${e.message}"
@@ -1101,12 +1722,10 @@ class EventManagerViewModel(
     fun addJobTypeConfig(config: JobTypeConfig) {
         viewModelScope.launch {
             try {
+                if (rejectIfCrudSoftLocked("adding shift types")) return@launch
                 // Insert job type config into local database
                 repository.insertJobTypeConfig(config)
-                
-                // BACKUP MODE: Upload entire job type dataset to Google Sheets
-                // This ensures Google Sheets has the complete, up-to-date dataset
-                twoWaySyncService?.backupJobTypesToSheets()
+                syncCoordinator?.afterJobTypeSaved(config) ?: twoWaySyncService?.backupJobTypesToSheets()
                 
                 println("Successfully added job type: ${config.name}")
             } catch (e: Exception) {
@@ -1119,12 +1738,10 @@ class EventManagerViewModel(
     fun updateJobTypeConfig(config: JobTypeConfig) {
         viewModelScope.launch {
             try {
+                if (rejectIfCrudSoftLocked("updating shift types")) return@launch
                 // Update job type config in local database
                 repository.updateJobTypeConfig(config)
-                
-                // BACKUP MODE: Upload entire job type dataset to Google Sheets
-                // This ensures Google Sheets has the complete, up-to-date dataset
-                twoWaySyncService?.backupJobTypesToSheets()
+                syncCoordinator?.afterJobTypeSaved(config) ?: twoWaySyncService?.backupJobTypesToSheets()
                 
                 println("Successfully updated job type: ${config.name}")
             } catch (e: Exception) {
@@ -1137,15 +1754,14 @@ class EventManagerViewModel(
     fun deleteJobTypeConfig(config: JobTypeConfig) {
         viewModelScope.launch {
             try {
+                if (rejectIfCrudSoftLocked("deleting shift types")) return@launch
                 // Track the deletion (businessKey = name for merge-safe upload)
                 deletionTracker?.trackJobTypeDeletion(config.id.toString(), config.sheetsId, businessKey = config.name)
                 
                 // Delete from local database
                 repository.deleteJobTypeConfig(config)
                 
-                // BACKUP MODE: Upload entire job type dataset to Google Sheets
-                // This ensures Google Sheets has the complete, up-to-date dataset
-                twoWaySyncService?.backupJobTypesToSheets()
+                syncCoordinator?.afterJobTypeDeleted(config) ?: twoWaySyncService?.backupJobTypesToSheets()
                 
                 println("Successfully deleted job type: ${config.name}")
             } catch (e: Exception) {
@@ -1159,12 +1775,13 @@ class EventManagerViewModel(
     fun addVenue(venue: VenueEntity) {
         viewModelScope.launch {
             try {
+                if (rejectIfCrudSoftLocked("adding venues")) return@launch
                 // Insert venue into local database
                 repository.insertVenue(venue)
                 
                 // BACKUP MODE: Upload entire venue dataset to Google Sheets
                 // This ensures Google Sheets has the complete, up-to-date dataset
-                twoWaySyncService?.backupVenuesToSheets()
+                syncCoordinator?.afterVenueSaved(venue) ?: twoWaySyncService?.backupVenuesToSheets()
                 
                 println("Successfully added venue: ${venue.name}")
             } catch (e: Exception) {
@@ -1177,12 +1794,13 @@ class EventManagerViewModel(
     fun updateVenue(venue: VenueEntity) {
         viewModelScope.launch {
             try {
+                if (rejectIfCrudSoftLocked("updating venues")) return@launch
                 // Update venue in local database
                 repository.updateVenue(venue)
                 
                 // BACKUP MODE: Upload entire venue dataset to Google Sheets
                 // This ensures Google Sheets has the complete, up-to-date dataset
-                twoWaySyncService?.backupVenuesToSheets()
+                syncCoordinator?.afterVenueSaved(venue) ?: twoWaySyncService?.backupVenuesToSheets()
                 
                 println("Successfully updated venue: ${venue.name}")
             } catch (e: Exception) {
@@ -1195,6 +1813,7 @@ class EventManagerViewModel(
     fun deleteVenue(venue: VenueEntity) {
         viewModelScope.launch {
             try {
+                if (rejectIfCrudSoftLocked("deleting venues")) return@launch
                 // Track the deletion (businessKey = name for merge-safe upload)
                 deletionTracker?.trackVenueDeletion(venue.id.toString(), venue.sheetsId, businessKey = venue.name)
                 
@@ -1203,7 +1822,7 @@ class EventManagerViewModel(
                 
                 // BACKUP MODE: Upload entire venue dataset to Google Sheets
                 // This ensures Google Sheets has the complete, up-to-date dataset
-                twoWaySyncService?.backupVenuesToSheets()
+                syncCoordinator?.afterVenueDeleted(venue) ?: twoWaySyncService?.backupVenuesToSheets()
                 
                 println("Successfully deleted venue: ${venue.name}")
             } catch (e: Exception) {
@@ -1216,10 +1835,14 @@ class EventManagerViewModel(
     fun updateVenueStatus(id: Long, isActive: Boolean) {
         viewModelScope.launch {
             try {
+                if (rejectIfCrudSoftLocked("updating venue status")) return@launch
                 repository.updateVenueStatus(id, isActive)
-                
-                // BACKUP MODE: Upload entire venue dataset to Google Sheets
-                twoWaySyncService?.backupVenuesToSheets()
+                val venue = repository.getVenueById(id)
+                if (venue != null) {
+                    syncCoordinator?.afterVenueSaved(venue) ?: twoWaySyncService?.backupVenuesToSheets()
+                } else {
+                    twoWaySyncService?.backupVenuesToSheets()
+                }
                 
                 println("Successfully updated venue status: $id to $isActive")
             } catch (e: Exception) {
@@ -1233,8 +1856,9 @@ class EventManagerViewModel(
     fun addSalesSheetItem(item: SalesSheetItem) {
         viewModelScope.launch {
             try {
+                if (rejectIfCrudSoftLocked("adding sales items")) return@launch
                 repository.insertSalesSheetItem(item)
-                twoWaySyncService?.backupSalesSheetItemsToSheets()
+                syncCoordinator?.afterSalesItemSaved(item) ?: twoWaySyncService?.backupSalesSheetItemsToSheets()
                 println("Successfully added sales sheet item: ${item.name}")
             } catch (e: Exception) {
                 println("Failed to add sales sheet item: ${e.message}")
@@ -1246,8 +1870,9 @@ class EventManagerViewModel(
     fun updateSalesSheetItem(item: SalesSheetItem) {
         viewModelScope.launch {
             try {
+                if (rejectIfCrudSoftLocked("updating sales items")) return@launch
                 repository.updateSalesSheetItem(item)
-                twoWaySyncService?.backupSalesSheetItemsToSheets()
+                syncCoordinator?.afterSalesItemSaved(item) ?: twoWaySyncService?.backupSalesSheetItemsToSheets()
                 println("Successfully updated sales sheet item: ${item.name}")
             } catch (e: Exception) {
                 println("Failed to update sales sheet item: ${e.message}")
@@ -1259,9 +1884,10 @@ class EventManagerViewModel(
     fun deleteSalesSheetItem(item: SalesSheetItem) {
         viewModelScope.launch {
             try {
+                if (rejectIfCrudSoftLocked("deleting sales items")) return@launch
                 deletionTracker?.trackSalesSheetItemDeletion(item.id.toString(), item.sheetsId, businessKey = item.name)
                 repository.deleteSalesSheetItem(item)
-                twoWaySyncService?.backupSalesSheetItemsToSheets()
+                syncCoordinator?.afterSalesItemDeleted(item) ?: twoWaySyncService?.backupSalesSheetItemsToSheets()
                 println("Successfully deleted sales sheet item: ${item.name}")
             } catch (e: Exception) {
                 println("Failed to delete sales sheet item: ${e.message}")
@@ -1270,11 +1896,35 @@ class EventManagerViewModel(
         }
     }
 
+    private var institutionSettingsBackupJob: kotlinx.coroutines.Job? = null
+
+    /** Upload shared institution settings (email texts, currency, date offset) to Google Sheets. Debounced for text fields. */
+    fun backupInstitutionSettingsToSheets() {
+        institutionSettingsBackupJob?.cancel()
+        institutionSettingsBackupJob = viewModelScope.launch {
+            delay(1500)
+            try {
+                if (rejectIfCrudSoftLocked("updating institution settings")) return@launch
+                syncCoordinator?.afterInstitutionSettingsChanged()
+                    ?: twoWaySyncService?.backupInstitutionSettingsToSheets()
+            } catch (e: Exception) {
+                println("Failed to backup institution settings: ${e.message}")
+                _syncError.value = "Failed to backup institution settings: ${e.message}"
+            }
+        }
+    }
+
     fun updateSalesSheetItemStatus(id: Long, isActive: Boolean) {
         viewModelScope.launch {
             try {
+                if (rejectIfCrudSoftLocked("updating sales item status")) return@launch
                 repository.updateSalesSheetItemStatus(id, isActive)
-                twoWaySyncService?.backupSalesSheetItemsToSheets()
+                val item = repository.getAllSalesSheetItems().first().find { it.id == id }
+                if (item != null) {
+                    syncCoordinator?.afterSalesItemSaved(item) ?: twoWaySyncService?.backupSalesSheetItemsToSheets()
+                } else {
+                    twoWaySyncService?.backupSalesSheetItemsToSheets()
+                }
                 println("Successfully updated sales sheet item status: $id to $isActive")
             } catch (e: Exception) {
                 println("Failed to update sales sheet item status: ${e.message}")
@@ -1288,17 +1938,19 @@ class EventManagerViewModel(
     fun assignJobToVolunteer(job: Job, volunteer: Volunteer) {
         viewModelScope.launch {
             try {
+                if (rejectIfCrudSoftLocked("assigning jobs")) return@launch
                 val updatedJob = job.copy(
-                    volunteerId = volunteer.id
+                    volunteerId = volunteer.id,
+                    lastModified = System.currentTimeMillis(),
                 )
                 repository.updateJob(updatedJob)
                 
                 // Update volunteer's last shift date
                 val updatedVolunteer = volunteer.copy(lastShiftDate = System.currentTimeMillis())
                 repository.updateVolunteer(updatedVolunteer)
+                syncCoordinator?.afterJobSaved(updatedJob)
+                syncCoordinator?.afterVolunteerSaved(updatedVolunteer)
                 
-                // Note: Individual backup methods are already called in updateJob() and updateVolunteer()
-                // so we don't need to call them again here to prevent duplicates
                 println("Successfully assigned job ${job.jobTypeName} to volunteer ${volunteer.name}")
         } catch (e: Exception) {
                 println("Failed to assign job: ${e.message}")
@@ -1311,10 +1963,14 @@ class EventManagerViewModel(
     fun updateVolunteerStatus(volunteer: Volunteer, isActive: Boolean) {
         viewModelScope.launch {
             try {
-                val updatedVolunteer = volunteer.copy(isActive = isActive)
+                if (rejectIfCrudSoftLocked("updating volunteers")) return@launch
+                val updatedVolunteer = volunteer.copy(
+                    isActive = isActive,
+                    lastModified = System.currentTimeMillis(),
+                )
                 repository.updateVolunteer(updatedVolunteer)
-                // BACKUP MODE: Upload entire volunteer dataset to Google Sheets
-                twoWaySyncService?.backupVolunteersToSheets()
+                syncCoordinator?.afterVolunteerSaved(updatedVolunteer)
+                    ?: twoWaySyncService?.backupVolunteersToSheets()
             } catch (e: Exception) {
                 println("Failed to update volunteer status: ${e.message}")
                 _syncError.value = "Failed to update volunteer status: ${e.message}"
@@ -1451,6 +2107,10 @@ class EventManagerViewModel(
     @Suppress("unused")
     fun syncGuestsOnly() {
         viewModelScope.launch {
+            if (settingsManagerCached?.getBackendType() == BackendType.FIREBASE) {
+                syncCoordinator?.performManualSync()
+                return@launch
+            }
             _isSyncing.value = true
             _syncError.value = null
             
@@ -1520,6 +2180,10 @@ class EventManagerViewModel(
     @Suppress("unused")
     fun syncVolunteersOnly() {
         viewModelScope.launch {
+            if (settingsManagerCached?.getBackendType() == BackendType.FIREBASE) {
+                syncCoordinator?.performManualSync()
+                return@launch
+            }
             _isSyncing.value = true
             _syncError.value = null
             
@@ -1590,6 +2254,10 @@ class EventManagerViewModel(
     @Suppress("unused")
     fun syncJobsOnly() {
         viewModelScope.launch {
+            if (settingsManagerCached?.getBackendType() == BackendType.FIREBASE) {
+                syncCoordinator?.performManualSync()
+                return@launch
+            }
             _isSyncing.value = true
             _syncError.value = null
             
@@ -1777,51 +2445,47 @@ class EventManagerViewModel(
             _syncError.value = null
             
             try {
+                val coordinator = syncCoordinator
+                if (coordinator != null) {
+                    println("Manual sync via SyncCoordinator")
+                    val result = withContext(Dispatchers.IO) { coordinator.performManualSync() }
+                    if (result.isSuccess) {
+                        refreshAllData()
+                        recalcAndUploadVolunteerGuestList()
+                        if (settingsManagerCached?.getBackendType() != BackendType.FIREBASE) {
+                            refreshTemporaryGuestsFromSheets()
+                        }
+                        updateSyncTime()
+                    } else {
+                        val errorMsg = (result as? SyncResult.Error)?.message ?: "Sync failed"
+                        _syncError.value = errorMsg
+                        showSyncErrorIfNotSuppressed(errorMsg)
+                    }
+                    return@launch
+                }
+
                 println("Starting smart bidirectional sync with Google Sheets")
-            
-            // Check if Google Sheets is configured first
-            if (!isGoogleSheetsConfigured()) {
+                if (!isGoogleSheetsConfigured()) {
                     val errorMsg = "Google Sheets not configured. Please check your service account key and spreadsheet settings."
                     println(errorMsg)
                     _syncError.value = errorMsg
                     return@launch
                 }
                 
-                println("Google Sheets configuration verified")
-                
-                // Initialize Google Sheets service
                 googleSheetsService.initializeSheetsService()
-                
-                // Get current local data
                 val localGuests = repository.getAllGuests().first()
                 val localVolunteers = repository.getAllActiveVolunteers().first()
                 val localJobs = repository.getAllJobs().first()
                 val localJobTypeConfigs = repository.getAllJobTypeConfigs().first()
                 val localVenues = repository.getAllVenues().first()
-                
-                println("Local data - Guests: ${localGuests.size}, Volunteers: ${localVolunteers.size}, Jobs: ${localJobs.size}, JobTypes: ${localJobTypeConfigs.size}, Venues: ${localVenues.size}")
-                
-                // STEP 1: Upload local changes via merge-safe backup (reads remote first, preserves other devices' data)
-                println("Step 1: Uploading local changes to Google Sheets (merge-safe)...")
                 twoWaySyncService?.backupToGoogleSheets()
-                
-                // STEP 2: Download changes from Google Sheets (Sheets priority for remote modifications)
-                println("Step 2: Downloading changes from Google Sheets...")
                 val (remoteGuests, remoteVolunteers, remoteJobs, remoteJobTypeConfigs, remoteVenues) = downloadChangesFromSheets()
-                
-                // STEP 3: Smart merge - resolve conflicts intelligently
-                println("Step 3: Smart merging data...")
                 smartMergeData(localGuests, localVolunteers, localJobs, localJobTypeConfigs, localVenues,
                               remoteGuests, remoteVolunteers, remoteJobs, remoteJobTypeConfigs, remoteVenues)
-                
-                    // Refresh all data after successful sync
-                    refreshAllData()
-
+                refreshAllData()
                 updateSyncTime()
-
                 println("Smart bidirectional sync completed successfully")
-            
-        } catch (e: Exception) {
+            } catch (e: Exception) {
                 val errorMsg = when {
                     e.message?.contains("429") == true || e.message?.contains("Rate limit") == true -> "Rate limit exceeded. Please try again later."
                     else -> "Sync failed: ${e.message}"
@@ -2229,6 +2893,11 @@ class EventManagerViewModel(
         try {
             val ctx = platformContext ?: return@withContext
             val settingsManager = SettingsManager(ctx)
+            if (settingsManager.getBackendType() == BackendType.FIREBASE) {
+                // Temp guests live in Room + Firestore; do not wipe from Sheets.
+                withContext(Dispatchers.Main) { refreshGuestData() }
+                return@withContext
+            }
 
             if (!settingsManager.isConfigured()) {
                 println("Skipping temporary guest refresh - Google Sheets not configured")
@@ -2839,7 +3508,7 @@ class EventManagerViewModel(
 
         return try {
             val result = withContext(Dispatchers.IO) {
-                syncManager?.performFullSync()
+                syncCoordinator?.performStartupSync() ?: syncManager?.performFullSync()
             } ?: SyncResult.Error("Full sync failed")
 
             if (result.isSuccess) {
@@ -2853,7 +3522,9 @@ class EventManagerViewModel(
                 }
 
                 recalcAndUploadVolunteerGuestList()
-                refreshTemporaryGuestsFromSheets()
+                if (settingsManagerCached?.getBackendType() != BackendType.FIREBASE) {
+                    refreshTemporaryGuestsFromSheets()
+                }
                 updateSyncTime()
 
                 AppLogger.i("EventManagerViewModel", "Full sync completed successfully")
@@ -2903,6 +3574,7 @@ class EventManagerViewModel(
      */
     fun prepareForAdminAuthentication() {
         viewModelScope.launch {
+            _adminGateSyncSucceeded.value = null
             _syncError.value = null
             try {
                 // Startup precheck may still be running — wait for it instead of stacking another sync.
@@ -2912,13 +3584,15 @@ class EventManagerViewModel(
                         "Admin gate waiting for in-flight sync instead of starting another"
                     )
                     isSyncing.first { !it }
-                    if (hasFreshSheetsPullForAdminGate()) {
+                    if (hasFreshRemotePullForAdminGate()) {
                         withContext(Dispatchers.Main) { refreshAllData() }
+                        _adminGateSyncSucceeded.value = true
                         AppLogger.i("EventManagerViewModel", "Admin gate preparation reused fresh sync")
                         return@launch
                     }
-                } else if (hasFreshSheetsPullForAdminGate()) {
+                } else if (hasFreshRemotePullForAdminGate()) {
                     withContext(Dispatchers.Main) { refreshAllData() }
+                    _adminGateSyncSucceeded.value = true
                     AppLogger.i(
                         "EventManagerViewModel",
                         "Admin gate preparation skipped full sync (data fresh)"
@@ -2929,10 +3603,11 @@ class EventManagerViewModel(
                 _isSyncing.value = true
                 AppLogger.i(
                     "EventManagerViewModel",
-                    "Preparing sheets and syncing for admin authentication gate"
+                    "Preparing remote sync for admin authentication gate"
                 )
                 val result = withContext(Dispatchers.IO) {
-                    syncManager?.repairSheetStructureThenFullDownload()
+                    syncCoordinator?.prepareForAdminGate()
+                        ?: syncManager?.repairSheetStructureThenFullDownload()
                 }
                 if (result?.isSuccess == true) {
                     println("🔄 Admin gate sync successful, refreshing UI data...")
@@ -2940,13 +3615,17 @@ class EventManagerViewModel(
                         refreshAllData()
                     }
                     recalcAndUploadVolunteerGuestList()
-                    refreshTemporaryGuestsFromSheets()
+                    if (settingsManagerCached?.getBackendType() != BackendType.FIREBASE) {
+                        refreshTemporaryGuestsFromSheets()
+                    }
                     updateSyncTime()
+                    _adminGateSyncSucceeded.value = true
                     AppLogger.i("EventManagerViewModel", "Admin gate preparation completed")
                 } else {
                     val errorResult = result as? SyncResult.Error
                     val errorMsg = errorResult?.message ?: "Admin gate sync failed"
                     _syncError.value = errorMsg
+                    _adminGateSyncSucceeded.value = false
                     AppLogger.e("EventManagerViewModel", "Admin gate sync failed: $errorMsg")
                     showSyncErrorIfNotSuppressed(errorMsg)
                 }
@@ -2957,6 +3636,7 @@ class EventManagerViewModel(
                     else -> "Admin gate sync failed: ${e.message}"
                 }
                 _syncError.value = errorMsg
+                _adminGateSyncSucceeded.value = false
                 AppLogger.e("EventManagerViewModel", "Admin gate sync exception", e)
                 showSyncErrorIfNotSuppressed(errorMsg)
             } finally {
@@ -2965,7 +3645,11 @@ class EventManagerViewModel(
         }
     }
 
-    private fun hasFreshSheetsPullForAdminGate(
+    fun retryAdminGateSync() {
+        prepareForAdminAuthentication()
+    }
+
+    private fun hasFreshRemotePullForAdminGate(
         maxAgeMs: Long = adminGateFreshSyncMs,
     ): Boolean {
         val memory = _lastSyncTime.value
@@ -3111,11 +3795,19 @@ class EventManagerViewModel(
 
             // Upload to Google Sheets only after local/UI state is updated so the guest list reacts
             // immediately even if network sync is slow or rate-limited.
-            if (!skipSheetsUpload && isGoogleSheetsConfigured()) {
+            val firebaseMode = settingsManagerCached?.getBackendType() == BackendType.FIREBASE
+            if (!skipSheetsUpload && !firebaseMode && isGoogleSheetsConfigured()) {
                 println("Uploading volunteer guest list to Google Sheets...")
                 googleSheetsService.initializeSheetsService()
                 googleSheetsService.syncVolunteerGuestListToSheets(newVolunteerGuests, _venues.value)
                 println("Successfully uploaded volunteer guest list to Google Sheets")
+            } else if (firebaseMode) {
+                toDelete.forEach { guest ->
+                    syncCoordinator?.afterGuestDeleted(guest)
+                }
+                (toInsert + toUpdate).forEach { guest ->
+                    syncCoordinator?.afterGuestSaved(guest)
+                }
             }
             
             println("Volunteer guest list recalculation completed successfully")
@@ -3135,7 +3827,10 @@ class EventManagerViewModel(
             _syncError.value = null
             
             try {
-                val result = syncManager?.performSmartPageChangeSync(currentPage, newPage)
+                val result = withContext(Dispatchers.IO) {
+                    syncCoordinator?.performPageChangeSync(currentPage, newPage)
+                        ?: syncManager?.performSmartPageChangeSync(currentPage, newPage)
+                }
                 
                 if (result?.isSuccess == true) {
                     // Refresh all data after successful sync
@@ -3169,7 +3864,10 @@ class EventManagerViewModel(
             _syncError.value = null
             
             try {
-                val result = syncManager?.performPageChangeSync(currentPage, newPage)
+                val result = withContext(Dispatchers.IO) {
+                    syncCoordinator?.performPageChangeSync(currentPage, newPage)
+                        ?: syncManager?.performPageChangeSync(currentPage, newPage)
+                }
                 
                 if (result?.isSuccess == true) {
                     // Refresh all data after successful sync
@@ -3639,6 +4337,9 @@ class EventManagerViewModel(
                 }
                 
                 println("Duplicate cleanup completed")
+                if (syncCoordinator != null) {
+                    syncCoordinator?.performManualSync()
+                }
                 
             } catch (e: Exception) {
                 println("Failed to cleanup duplicates: ${e.message}")
@@ -3873,6 +4574,7 @@ class EventManagerViewModel(
                         (updatedVolunteer.lastShiftDate != originalVolunteer.lastShiftDate || 
                          updatedVolunteer.isActive != originalVolunteer.isActive)) {
                         repository.updateVolunteer(updatedVolunteer)
+                        syncCoordinator?.afterVolunteerSaved(updatedVolunteer)
                         updatedCount++
                         println("Updated volunteer activity: ${updatedVolunteer.name} - last shift: ${updatedVolunteer.lastShiftDate}, active: ${updatedVolunteer.isActive}")
                     }
@@ -3880,7 +4582,6 @@ class EventManagerViewModel(
                 
                 if (updatedCount > 0) {
                     println("Updated activity for $updatedCount volunteers")
-                    // The continuous .collect() in loadData() will automatically pick up the repository changes
                 } else {
                     println("No volunteer activity changes needed")
                 }
@@ -3904,6 +4605,7 @@ class EventManagerViewModel(
     fun cleanupInactiveVolunteers(yearsInactive: Int = 4) {
         viewModelScope.launch {
             try {
+                if (rejectIfCrudSoftLocked("cleaning up volunteers")) return@launch
                 // Use StateFlow volunteers to match what the dialog preview shows
                 // This ensures consistency between preview and actual cleanup
                 val volunteers = _volunteers.value
@@ -3941,6 +4643,8 @@ class EventManagerViewModel(
                 var jobsDeleted = 0
                 val failedVolunteers = mutableListOf<String>()
                 val failedJobs = mutableListOf<String>()
+                val deletedJobs = mutableListOf<Job>()
+                val deletedVolunteers = mutableListOf<Volunteer>()
                 
                 // Process each volunteer: delete all their jobs first, then delete the volunteer
                 // Use proper coroutine handling to ensure deletions are awaited
@@ -3958,6 +4662,7 @@ class EventManagerViewModel(
                                 
                                 // Delete from local database
                                 repository.deleteJob(job)
+                                deletedJobs.add(job)
                                 jobsDeleted++
                                 
                                 println("Deleted job: ${job.jobTypeName} (ID: ${job.id}) for volunteer ${volunteer.name}")
@@ -3972,6 +4677,7 @@ class EventManagerViewModel(
                         // Follows the same deletion pattern as deleteVolunteer() for consistency
                         deletionTracker?.trackVolunteerDeletion(volunteer.id, volunteer.sheetsId)
                         repository.deleteVolunteer(volunteer)
+                        deletedVolunteers.add(volunteer)
                         volunteersDeleted++
                         
                         println("Successfully cleaned up inactive volunteer: ${volunteer.name} (ID: ${volunteer.id}) and ${volunteerJobs.size} associated job(s)")
@@ -3986,14 +4692,17 @@ class EventManagerViewModel(
                     // Small delay to ensure database commits are complete before syncing
                     delay(100)
                     
-                    // Sync deletions to Google Sheets using backup mode
-                    // This follows the same deletion mechanism used in deleteVolunteer() and deleteJob()
                     try {
-                        twoWaySyncService?.backupVolunteersToSheets()
-                        twoWaySyncService?.backupJobsToSheets()
-                        println("Successfully synced deletions to Google Sheets")
+                        if (settingsManagerCached?.getBackendType() == BackendType.FIREBASE) {
+                            deletedJobs.forEach { syncCoordinator?.afterJobDeleted(it) }
+                            deletedVolunteers.forEach { syncCoordinator?.afterVolunteerDeleted(it, deleteShifts = true) }
+                        } else {
+                            twoWaySyncService?.backupVolunteersToSheets()
+                            twoWaySyncService?.backupJobsToSheets()
+                            println("Successfully synced deletions to Google Sheets")
+                        }
                     } catch (e: Exception) {
-                        println("Warning: Failed to sync deletions to Google Sheets: ${e.message}")
+                        println("Warning: Failed to sync cleanup deletions: ${e.message}")
                         // Continue even if sync fails - local deletion was successful
                     }
                     
@@ -4038,6 +4747,29 @@ class EventManagerViewModel(
      */
     fun performDifferentialFullSync() {
         viewModelScope.launch {
+            if (settingsManagerCached?.getBackendType() == BackendType.FIREBASE) {
+                _isSyncing.value = true
+                _syncError.value = null
+                try {
+                    val result = withContext(Dispatchers.IO) {
+                        syncCoordinator?.performManualSync()
+                    }
+                    withContext(Dispatchers.Main) { refreshAllData() }
+                    refreshFirebaseSyncStatus()
+                    if (result?.isError == true) {
+                        val errorMsg = (result as SyncResult.Error).message
+                        _syncError.value = errorMsg
+                        showSyncErrorIfNotSuppressed(errorMsg)
+                    }
+                } catch (e: Exception) {
+                    val errorMsg = "Firebase sync failed: ${e.message}"
+                    _syncError.value = errorMsg
+                    showSyncErrorIfNotSuppressed(errorMsg)
+                } finally {
+                    _isSyncing.value = false
+                }
+                return@launch
+            }
             _isSyncing.value = true
             _syncError.value = null
             
@@ -4070,8 +4802,9 @@ class EventManagerViewModel(
                     // Uses differential updates internally so it won't cause full refresh
                     recalcAndUploadVolunteerGuestList()
 
-                    // Refresh temporary guests from dedicated sheet for artist/entourage invites
-                    refreshTemporaryGuestsFromSheets()
+                    if (settingsManagerCached?.getBackendType() != BackendType.FIREBASE) {
+                        refreshTemporaryGuestsFromSheets()
+                    }
                     
                     // Update sync time
                     updateSyncTime()
@@ -4281,6 +5014,10 @@ class EventManagerViewModel(
      */
     fun syncVolunteersWithTargetedUpdates() {
         viewModelScope.launch {
+            if (settingsManagerCached?.getBackendType() == BackendType.FIREBASE) {
+                syncCoordinator?.performManualSync()
+                return@launch
+            }
             _isSyncing.value = true
             _syncError.value = null
             
@@ -4399,6 +5136,10 @@ class EventManagerViewModel(
      */
     fun syncGuestsWithTargetedUpdates() {
         viewModelScope.launch {
+            if (settingsManagerCached?.getBackendType() == BackendType.FIREBASE) {
+                syncCoordinator?.performManualSync()
+                return@launch
+            }
             _isSyncing.value = true
             _syncError.value = null
             
@@ -4579,6 +5320,10 @@ class EventManagerViewModel(
      */
     fun syncJobsWithTargetedUpdates() {
         viewModelScope.launch {
+            if (settingsManagerCached?.getBackendType() == BackendType.FIREBASE) {
+                syncCoordinator?.performManualSync()
+                return@launch
+            }
             _isSyncing.value = true
             _syncError.value = null
             
@@ -4852,9 +5597,21 @@ class EventManagerViewModel(
     ) {
         viewModelScope.launch {
             try {
-                accountCreditService.applyManualAdjustment(holderType, holderId, holderName, amount, note)
+                if (rejectIfCrudSoftLocked("adjusting accounts")) return@launch
+                val transfer = accountCreditService.applyManualAdjustment(
+                    holderType, holderId, holderName, amount, note
+                )
+                if (settingsManagerCached?.getBackendType() == BackendType.FIREBASE) {
+                    when (val ledger = syncCoordinator?.commitTransfer(transfer)) {
+                        is FirebaseLedgerResult.Rejected -> {
+                            _syncError.value = ledger.reason
+                        }
+                        else -> Unit
+                    }
+                } else {
+                    syncCoordinator?.afterTransfersChanged() ?: twoWaySyncService?.backupTransfersToSheets()
+                }
                 refreshAccountBalancesFromDb()
-                twoWaySyncService?.backupTransfersToSheets()
             } catch (e: Exception) {
                 _syncError.value = "Failed to adjust account: ${e.message}"
             }
@@ -4868,12 +5625,56 @@ class EventManagerViewModel(
         cart: List<PosCartLine>,
         barDiscountPercent: Int = 0,
         posVenueName: String = PosVenueScope.GLOBAL,
+        customerOrgId: String = "",
     ): PosSaleResult {
+        if (isCrudSoftLocked()) {
+            return PosSaleResult(
+                success = false,
+                totalAmount = 0.0,
+                creditPaid = 0.0,
+                cashOrCardDue = 0.0,
+                remainingBalance = 0.0,
+                message = "Institution backend migration pending — open Admin to reconnect.",
+            )
+        }
+        val settings = settingsManagerCached
+        val buffer = settings?.getPurchaseCreditBuffer() ?: 0.0
+
+        // Firebase: transactional ledger path
+        if (settings?.getBackendType() == BackendType.FIREBASE) {
+            val draft = accountCreditService.completePosSale(
+                holderType, holderId, holderName, cart, barDiscountPercent, posVenueName, buffer, customerOrgId
+            )
+            draft.transfer?.let { transfer ->
+                when (val ledger = syncCoordinator?.commitTransfer(transfer, customerOrgId)) {
+                    is FirebaseLedgerResult.Rejected -> {
+                        _syncError.value = ledger.reason
+                        return draft.copy(success = false, message = ledger.reason)
+                    }
+                    is FirebaseLedgerResult.Pending -> {
+                        // Offline / SDK missing — keep local pending
+                    }
+                    else -> Unit
+                }
+            }
+            refreshAccountBalancesFromDb()
+            return draft
+        }
+
         val result = accountCreditService.completePosSale(
-            holderType, holderId, holderName, cart, barDiscountPercent, posVenueName
+            holderType, holderId, holderName, cart, barDiscountPercent, posVenueName, buffer
         )
         refreshAccountBalancesFromDb()
-        twoWaySyncService?.backupTransfersToSheets()
+        viewModelScope.launch {
+            try {
+                syncCoordinator?.afterTransfersChanged()
+                    ?: twoWaySyncService?.backupTransfersToSheets()
+            } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                println("Transfer backup after POS sale failed: ${e.message}")
+            }
+        }
         return result
     }
 
@@ -4884,12 +5685,20 @@ class EventManagerViewModel(
     fun bootstrapPosSession() {
         if (posSessionBootstrapDone) return
         posSessionBootstrapDone = true
-        syncSalesSheetItemsWithTargetedUpdates()
-        syncTransfersWithTargetedUpdates()
+        viewModelScope.launch {
+            syncCoordinator?.bootstrapPosSessionSync() ?: run {
+                syncSalesSheetItemsWithTargetedUpdates()
+                syncTransfersWithTargetedUpdates()
+            }
+        }
     }
 
     fun syncTransfersWithTargetedUpdates() {
         viewModelScope.launch {
+            if (settingsManagerCached?.getBackendType() == BackendType.FIREBASE) {
+                syncCoordinator?.bootstrapPosSessionSync()
+                return@launch
+            }
             _isSyncing.value = true
             try {
                 if (!isGoogleSheetsConfigured()) return@launch
@@ -4927,6 +5736,10 @@ class EventManagerViewModel(
 
     fun syncSalesSheetItemsWithTargetedUpdates() {
         viewModelScope.launch {
+            if (settingsManagerCached?.getBackendType() == BackendType.FIREBASE) {
+                syncCoordinator?.bootstrapPosSessionSync()
+                return@launch
+            }
             _isSyncing.value = true
             _syncError.value = null
 
@@ -5157,7 +5970,12 @@ class EventManagerViewModel(
     fun refreshVenuesForPeopleCounterQuietly() {
         viewModelScope.launch {
             try {
-                pullVenuesDifferentialQuiet()
+                if (settingsManagerCached?.getBackendType() == BackendType.FIREBASE) {
+                    syncCoordinator?.performStartupSync()
+                    withContext(Dispatchers.Main) { reconcilePeopleCounterAfterVenuesChangedInternal() }
+                } else {
+                    pullVenuesDifferentialQuiet()
+                }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Throwable) {
@@ -5168,25 +5986,30 @@ class EventManagerViewModel(
     }
 
     /**
-     * Tap on the counter "last updated" line: with priority for this venue, push local count to Sheets;
-     * without priority, pull venue rows so the counter reflects the sheet.
+     * Tap on the counter "last updated" line: with priority for this venue, push local count;
+     * without priority, pull remote venue state.
      */
     fun resyncPeopleCounterLastUpdatedLine() {
         val ctx = platformContext ?: return
         viewModelScope.launch {
             try {
-                if (!isGoogleSheetsConfigured()) return@launch
                 val sm = SettingsManager(ctx)
+                val backendFirebase = sm.getBackendType() == BackendType.FIREBASE
+                if (!backendFirebase && !isGoogleSheetsConfigured()) return@launch
                 val vid = _peopleCounterSelectedVenueId.value
                 if (vid <= 0L) return@launch
                 if (sm.isPeopleCounterPriority(vid)) {
                     val venue = repository.getVenueById(vid) ?: return@launch
-                    val row = venue.sheetsId?.toIntOrNull() ?: return@launch
                     val myId = sm.getOrCreatePersistentDeviceId()
                     val now = System.currentTimeMillis()
                     val count = venue.peopleCounterCount
                     peopleCounterUploadMutex.withLock {
-                        twoWaySyncService?.updateVenuePeopleCounterOnSheets(row, count, myId, now)
+                        if (backendFirebase) {
+                            syncCoordinator?.updatePeopleCounter(venue, count, venue.firebaseOrgId)
+                        } else {
+                            val row = venue.sheetsId?.toIntOrNull() ?: return@withLock
+                            twoWaySyncService?.updateVenuePeopleCounterOnSheets(row, count, myId, now)
+                        }
                         val fresh = repository.getVenueById(vid) ?: return@withLock
                         repository.updateVenue(
                             fresh.copy(peopleCounterWriterDeviceId = myId, peopleCounterLastModified = now)
@@ -5195,6 +6018,9 @@ class EventManagerViewModel(
                         t.lastUploadAtMs = now
                         t.countAtLastUpload = count
                     }
+                } else if (backendFirebase) {
+                    syncCoordinator?.performStartupSync()
+                    withContext(Dispatchers.Main) { reconcilePeopleCounterAfterVenuesChangedInternal() }
                 } else {
                     pullVenuesDifferentialQuiet()
                 }
@@ -5255,21 +6081,20 @@ class EventManagerViewModel(
         ctx: PlatformContext,
         forceStealFromOtherDevice: Boolean
     ) {
+        if (rejectIfCrudSoftLocked("claiming people counter")) return
         val sm = SettingsManager(ctx)
-        if (!isGoogleSheetsConfigured()) {
+        val backendFirebase = sm.getBackendType() == BackendType.FIREBASE
+        if (!backendFirebase && !isGoogleSheetsConfigured()) {
             _peopleCounterUiHint.value = "Configure Google Sheets first."
             return
         }
-        pullVenuesDifferentialQuiet()
+        if (!backendFirebase) {
+            pullVenuesDifferentialQuiet()
+        }
         val vid = _peopleCounterSelectedVenueId.value
         val venue = repository.getVenueById(vid)
         if (venue == null) {
             _peopleCounterUiHint.value = "Select a venue."
-            return
-        }
-        val row = venue.sheetsId?.toIntOrNull()
-        if (row == null) {
-            _peopleCounterUiHint.value = "Venue has no sheet row."
             return
         }
         val myId = sm.getOrCreatePersistentDeviceId()
@@ -5278,18 +6103,28 @@ class EventManagerViewModel(
             _peopleCounterUiHint.value = "Another device controls the counter."
             return
         }
-        val countForSheetAndDb = if (forceStealFromOtherDevice) {
-            twoWaySyncService?.readVenuePeopleCounterFromSheet(row)?.first ?: venue.peopleCounterCount
-        } else {
-            venue.peopleCounterCount
-        }
         val now = System.currentTimeMillis()
-        twoWaySyncService?.updateVenuePeopleCounterOnSheets(
-            row,
-            countForSheetAndDb,
-            myId,
-            now
-        )
+        val countForSheetAndDb = if (!backendFirebase) {
+            val row = venue.sheetsId?.toIntOrNull()
+            if (row == null) {
+                _peopleCounterUiHint.value = "Venue has no sheet row."
+                return
+            }
+            val count = if (forceStealFromOtherDevice) {
+                twoWaySyncService?.readVenuePeopleCounterFromSheet(row)?.first ?: venue.peopleCounterCount
+            } else {
+                venue.peopleCounterCount
+            }
+            twoWaySyncService?.updateVenuePeopleCounterOnSheets(row, count, myId, now)
+            count
+        } else {
+            val count = venue.peopleCounterCount
+            syncCoordinator?.updatePeopleCounter(
+                venue.copy(peopleCounterWriterDeviceId = myId, peopleCounterLastModified = now),
+                count,
+            )
+            count
+        }
         repository.updateVenue(
             venue.copy(
                 peopleCounterCount = countForSheetAndDb,
@@ -5394,15 +6229,22 @@ class EventManagerViewModel(
         val myId = sm.getOrCreatePersistentDeviceId()
         val vid = _peopleCounterSelectedVenueId.value
         val venue = repository.getVenueById(vid) ?: return
-        val row = venue.sheetsId?.toIntOrNull() ?: return
         if (venue.peopleCounterWriterDeviceId.trim() != myId) return
         val now = System.currentTimeMillis()
-        twoWaySyncService?.updateVenuePeopleCounterOnSheets(
-            row,
-            venue.peopleCounterCount,
-            "",
-            now
-        )
+        if (sm.getBackendType() == BackendType.FIREBASE) {
+            syncCoordinator?.updatePeopleCounter(
+                venue.copy(peopleCounterWriterDeviceId = "", peopleCounterLastModified = now),
+                venue.peopleCounterCount,
+            )
+        } else {
+            val row = venue.sheetsId?.toIntOrNull() ?: return
+            twoWaySyncService?.updateVenuePeopleCounterOnSheets(
+                row,
+                venue.peopleCounterCount,
+                "",
+                now,
+            )
+        }
         repository.updateVenue(
             venue.copy(peopleCounterWriterDeviceId = "", peopleCounterLastModified = now)
         )
@@ -5410,6 +6252,7 @@ class EventManagerViewModel(
 
     fun adjustPeopleCounterCount(venueId: Long, delta: Int) {
         viewModelScope.launch {
+            if (rejectIfCrudSoftLocked("editing people counter")) return@launch
             if (!canEditPeopleCounter(venueId)) return@launch
             val venue = repository.getVenueById(venueId) ?: return@launch
             val before = venue.peopleCounterCount
@@ -5422,6 +6265,7 @@ class EventManagerViewModel(
 
     fun resetPeopleCounterForVenue(venueId: Long) {
         viewModelScope.launch {
+            if (rejectIfCrudSoftLocked("editing people counter")) return@launch
             if (!canEditPeopleCounter(venueId)) return@launch
             val venue = repository.getVenueById(venueId) ?: return@launch
             val prev = venue.peopleCounterCount
@@ -5463,22 +6307,32 @@ class EventManagerViewModel(
         val w = venue.peopleCounterWriterDeviceId.trim()
         val myId = sm.getOrCreatePersistentDeviceId()
         if (w.isEmpty() || w != myId) return
-        val row = venue.sheetsId?.toIntOrNull() ?: return
-
         peopleCounterUploadMutex.withLock {
             val fresh = repository.getVenueById(venueId) ?: return@withLock
             val count = fresh.peopleCounterCount
             val t = peopleCounterThrottleByVenue.getOrPut(venueId) { PeopleCounterThrottle() }
             val now = System.currentTimeMillis()
-            val lastUp = t.countAtLastUpload
-            val hitTenBoundary = count % 10 == 0 && count != lastUp
-            val idleOneMinuteSinceLastUpload =
-                t.lastUploadAtMs > 0L &&
-                    now - t.lastUploadAtMs >= 60_000L &&
-                    count != lastUp
-            if (!hitTenBoundary && !idleOneMinuteSinceLastUpload) return@withLock
+            val backendFirebase = sm.getBackendType() == BackendType.FIREBASE
+            if (!backendFirebase) {
+                val lastUp = t.countAtLastUpload
+                val hitTenBoundary = count % 10 == 0 && count != lastUp
+                val idleOneMinuteSinceLastUpload =
+                    t.lastUploadAtMs > 0L &&
+                        now - t.lastUploadAtMs >= 60_000L &&
+                        count != lastUp
+                if (!hitTenBoundary && !idleOneMinuteSinceLastUpload) return@withLock
+            }
 
-            twoWaySyncService?.updateVenuePeopleCounterOnSheets(row, count, myId, now)
+            if (backendFirebase) {
+                syncCoordinator?.updatePeopleCounter(
+                    fresh.copy(peopleCounterWriterDeviceId = myId, peopleCounterLastModified = now),
+                    count,
+                    fresh.firebaseOrgId,
+                )
+            } else {
+                val row = fresh.sheetsId?.toIntOrNull() ?: return@withLock
+                twoWaySyncService?.updateVenuePeopleCounterOnSheets(row, count, myId, now)
+            }
             repository.updateVenue(
                 fresh.copy(peopleCounterWriterDeviceId = myId, peopleCounterLastModified = now)
             )
@@ -5504,26 +6358,45 @@ class EventManagerViewModel(
         val sentAt = System.currentTimeMillis()
 
         viewModelScope.launch {
+            if (rejectIfCrudSoftLocked("sending announcements")) return@launch
             _isAnnouncementSending.value = true
             try {
                 val allVenues = _venues.value
                 val targets = allVenues.filter { it.id in targetVenueIds }
 
                 withContext(Dispatchers.IO) {
-                    for (venue in targets) {
-                        val row = venue.sheetsId?.toIntOrNull() ?: continue
-                        syncManager?.sendAnnouncement(row, title, message, deviceId)
-                        repository.updateVenue(
-                            venue.copy(
-                                announcementTitle = title,
-                                announcementMessage = message,
-                                announcementSentAt = sentAt,
-                                announcementSenderDeviceId = deviceId
+                    val coordinator = syncCoordinator
+                    if (coordinator != null) {
+                        coordinator.sendVenueAnnouncement(targetVenueIds, title, message)
+                        for (venue in targets) {
+                            repository.updateVenue(
+                                venue.copy(
+                                    announcementTitle = title,
+                                    announcementMessage = message,
+                                    announcementSentAt = sentAt,
+                                    announcementSenderDeviceId = deviceId
+                                )
                             )
-                        )
-                        settingsManager.setAnnouncementLastSeenTimestamp(
-                            venue.sheetsId ?: venue.name, sentAt
-                        )
+                            settingsManager.setAnnouncementLastSeenTimestamp(
+                                venue.sheetsId ?: venue.name, sentAt
+                            )
+                        }
+                    } else {
+                        for (venue in targets) {
+                            val row = venue.sheetsId?.toIntOrNull() ?: continue
+                            syncManager?.sendAnnouncement(row, title, message, deviceId)
+                            repository.updateVenue(
+                                venue.copy(
+                                    announcementTitle = title,
+                                    announcementMessage = message,
+                                    announcementSentAt = sentAt,
+                                    announcementSenderDeviceId = deviceId
+                                )
+                            )
+                            settingsManager.setAnnouncementLastSeenTimestamp(
+                                venue.sheetsId ?: venue.name, sentAt
+                            )
+                        }
                     }
                 }
 

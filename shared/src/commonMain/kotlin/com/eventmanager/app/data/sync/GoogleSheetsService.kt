@@ -16,6 +16,7 @@ import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.security.GeneralSecurityException
 import java.net.UnknownHostException
+import kotlin.coroutines.cancellation.CancellationException
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -102,6 +103,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
         private const val SHEET_LAST_COL_VENUES = 10 // K
         private const val SHEET_LAST_COL_SALES_ITEMS = 8 // I
         private const val SHEET_LAST_COL_TRANSFERS = 18 // S
+        private const val SHEET_LAST_COL_SETTINGS = 2 // C (Key, Value, Last Modified)
 
         /** 0-based column where the 2-column epoch helper starts (last data col + 2 blanks). */
         private fun epochPanelColumn0(lastDataColumnZeroBased: Int) = lastDataColumnZeroBased + 3
@@ -200,6 +202,20 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
         } else {
             "Failed to $operation: ${errorMessage}"
         }
+    }
+
+    /**
+     * Wrap a Sheets failure as [IOException], but never swallow coroutine cancellation —
+     * wrapping [CancellationException] turns a normal leave-composition cancel into a fatal crash.
+     */
+    private fun networkFailure(operation: String, e: Exception): IOException {
+        if (e is CancellationException) throw e
+        var cause = e.cause
+        while (cause != null) {
+            if (cause is CancellationException) throw cause
+            cause = cause.cause
+        }
+        return IOException(createNetworkErrorMessage(operation, e), e)
     }
     private var sheetsService: Sheets? = null
     private val settingsManager = SettingsManager(createAppStorage(platformContext))
@@ -926,7 +942,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
         } catch (e: GeneralSecurityException) {
             throw IOException("Failed to initialize Google Sheets service: ${e.message}", e)
         } catch (e: Exception) {
-            throw IOException(createNetworkErrorMessage("initialize Google Sheets service", e), e)
+            throw networkFailure("initialize Google Sheets service", e)
         }
     }
 
@@ -982,7 +998,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
             )
         } catch (e: Exception) {
             println("Failed to add guest to sheets: ${e.message}")
-            throw IOException(createNetworkErrorMessage("add guest to Google Sheets", e), e)
+            throw networkFailure("add guest to Google Sheets", e)
         }
     }
     
@@ -1056,7 +1072,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
             )
         } catch (e: Exception) {
             println("Failed to update guest in sheets: ${e.message}")
-            throw IOException(createNetworkErrorMessage("update guest in Google Sheets", e), e)
+            throw networkFailure("update guest in Google Sheets", e)
         }
     }
 
@@ -1123,7 +1139,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
             if (e.message?.contains("429") == true || e.message?.contains("Rate limit") == true) {
                 throw IOException(ApiRateLimitHandler.getBriefRateLimitMessage(), e)
             } else {
-                throw IOException(createNetworkErrorMessage("sync guests to Google Sheets", e), e)
+                throw networkFailure("sync guests to Google Sheets", e)
             }
         }
     }
@@ -1191,7 +1207,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
             if (e.message?.contains("429") == true || e.message?.contains("Rate limit") == true) {
                 throw IOException(ApiRateLimitHandler.getBriefRateLimitMessage(), e)
             } else {
-                throw IOException(createNetworkErrorMessage("sync volunteer guest list to Google Sheets", e), e)
+                throw networkFailure("sync volunteer guest list to Google Sheets", e)
             }
         }
     }
@@ -1357,7 +1373,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
             if (e.message?.contains("429") == true || e.message?.contains("Rate limit") == true) {
                 throw IOException(ApiRateLimitHandler.getBriefRateLimitMessage(), e)
             } else {
-                throw IOException(createNetworkErrorMessage("sync guests from Google Sheets", e), e)
+                throw networkFailure("sync guests from Google Sheets", e)
             }
         }
     }
@@ -1422,7 +1438,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
             )
         } catch (e: Exception) {
             println("Failed to add volunteer to sheets: ${e.message}")
-            throw IOException(createNetworkErrorMessage("add volunteer to Google Sheets", e), e)
+            throw networkFailure("add volunteer to Google Sheets", e)
         }
     }
     
@@ -1483,7 +1499,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
             )
         } catch (e: Exception) {
             println("Failed to update volunteer in sheets: ${e.message}")
-            throw IOException(createNetworkErrorMessage("update volunteer in Google Sheets", e), e)
+            throw networkFailure("update volunteer in Google Sheets", e)
         }
     }
 
@@ -1562,7 +1578,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
             if (e.message?.contains("429") == true || e.message?.contains("Rate limit") == true) {
                 throw IOException(ApiRateLimitHandler.getBriefRateLimitMessage(), e)
             } else {
-                throw IOException(createNetworkErrorMessage("sync volunteers to Google Sheets", e), e)
+                throw networkFailure("sync volunteers to Google Sheets", e)
             }
         }
     }
@@ -1749,7 +1765,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
             if (e.message?.contains("429") == true || e.message?.contains("Rate limit") == true) {
                 throw IOException(ApiRateLimitHandler.getBriefRateLimitMessage(), e)
             } else {
-                throw IOException(createNetworkErrorMessage("sync volunteers from Google Sheets", e), e)
+                throw networkFailure("sync volunteers from Google Sheets", e)
             }
         }
     }
@@ -1807,7 +1823,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
             sheetsId
         } catch (e: Exception) {
             println("Failed to add job to sheets: ${e.message}")
-            throw IOException(createNetworkErrorMessage("add job to Google Sheets", e), e)
+            throw networkFailure("add job to Google Sheets", e)
         }
     }
     
@@ -1859,7 +1875,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
             )
         } catch (e: Exception) {
             println("Failed to update job in sheets: ${e.message}")
-            throw IOException(createNetworkErrorMessage("update job in Google Sheets", e), e)
+            throw networkFailure("update job in Google Sheets", e)
         }
     }
 
@@ -1931,7 +1947,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
             if (e.message?.contains("429") == true || e.message?.contains("Rate limit") == true) {
                 throw IOException(ApiRateLimitHandler.getBriefRateLimitMessage(), e)
             } else {
-                throw IOException(createNetworkErrorMessage("sync jobs to Google Sheets", e), e)
+                throw networkFailure("sync jobs to Google Sheets", e)
             }
         }
     }
@@ -2116,7 +2132,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
             if (e.message?.contains("429") == true || e.message?.contains("Rate limit") == true) {
                 throw IOException(ApiRateLimitHandler.getBriefRateLimitMessage(), e)
             } else {
-                throw IOException(createNetworkErrorMessage("sync jobs from Google Sheets", e), e)
+                throw networkFailure("sync jobs from Google Sheets", e)
             }
         }
     }
@@ -2173,7 +2189,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
             )
         } catch (e: Exception) {
             println("Failed to add job type to sheets: ${e.message}")
-            throw IOException(createNetworkErrorMessage("add job type to Google Sheets", e), e)
+            throw networkFailure("add job type to Google Sheets", e)
         }
     }
     
@@ -2210,7 +2226,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
             )
         } catch (e: Exception) {
             println("Failed to update job type in sheets: ${e.message}")
-            throw IOException(createNetworkErrorMessage("update job type in Google Sheets", e), e)
+            throw networkFailure("update job type in Google Sheets", e)
         }
     }
 
@@ -2265,7 +2281,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
             if (e.message?.contains("429") == true || e.message?.contains("Rate limit") == true) {
                 throw IOException(ApiRateLimitHandler.getBriefRateLimitMessage(), e)
             } else {
-                throw IOException(createNetworkErrorMessage("sync job type configs to Google Sheets", e), e)
+                throw networkFailure("sync job type configs to Google Sheets", e)
             }
         }
     }
@@ -2416,7 +2432,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
             if (e.message?.contains("429") == true || e.message?.contains("Rate limit") == true) {
                 throw IOException(ApiRateLimitHandler.getBriefRateLimitMessage(), e)
             } else {
-                throw IOException(createNetworkErrorMessage("sync job type configs from Google Sheets", e), e)
+                throw networkFailure("sync job type configs from Google Sheets", e)
             }
         }
     }
@@ -2502,7 +2518,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
             if (e.message?.contains("429") == true || e.message?.contains("Rate limit") == true) {
                 throw IOException(ApiRateLimitHandler.getBriefRateLimitMessage(), e)
             } else {
-                throw IOException(createNetworkErrorMessage("sync venues to Google Sheets", e), e)
+                throw networkFailure("sync venues to Google Sheets", e)
             }
         }
     }
@@ -2568,7 +2584,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
             if (e.message?.contains("429") == true || e.message?.contains("Rate limit") == true) {
                 throw IOException(ApiRateLimitHandler.getBriefRateLimitMessage(), e)
             } else {
-                throw IOException(createNetworkErrorMessage("sync venues from Google Sheets", e), e)
+                throw networkFailure("sync venues from Google Sheets", e)
             }
         }
     }
@@ -2646,7 +2662,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
             if (e.message?.contains("429") == true || e.message?.contains("Rate limit") == true) {
                 throw IOException(ApiRateLimitHandler.getBriefRateLimitMessage(), e)
             } else {
-                throw IOException(createNetworkErrorMessage("sync sales sheet items to Google Sheets", e), e)
+                throw networkFailure("sync sales sheet items to Google Sheets", e)
             }
         }
     }
@@ -2725,7 +2741,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
             if (e.message?.contains("429") == true || e.message?.contains("Rate limit") == true) {
                 throw IOException(ApiRateLimitHandler.getBriefRateLimitMessage(), e)
             } else {
-                throw IOException(createNetworkErrorMessage("sync sales sheet items from Google Sheets", e), e)
+                throw networkFailure("sync sales sheet items from Google Sheets", e)
             }
         }
     }
@@ -2737,6 +2753,110 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
         "Credit Paid", "Cash Paid", "Bar Discount %", "POS Items", "Created At", "Last Modified",
         "Venue",
     )
+
+    private val INSTITUTION_SETTINGS_HEADERS = listOf("Key", "Value", "Last Modified")
+
+    // Institution Settings Operations
+    suspend fun syncInstitutionSettingsToSheets(rows: List<InstitutionSettingRow>) = withContext(Dispatchers.IO) {
+        try {
+            if (sheetsService == null) {
+                initializeSheetsService()
+            }
+
+            println("🔄 Syncing ${rows.size} institution settings to Google Sheets (OVERWRITE MODE)...")
+
+            ApiRateLimitHandler.executeWithRetry(
+                operation = {
+                    clearSheetDataColumns(settingsManager.getSettingsSheet(), SHEET_LAST_COL_SETTINGS)
+
+                    val values = rows.map { row ->
+                        listOf(row.key, row.value, row.lastModified.toString())
+                    }
+
+                    val valueRange = ValueRange()
+                        .setValues(listOf(INSTITUTION_SETTINGS_HEADERS) + values)
+
+                    val response = sheetsService?.spreadsheets()?.values()?.update(
+                        settingsManager.getSpreadsheetId(),
+                        "${settingsManager.getSettingsSheet()}!A1",
+                        valueRange
+                    )?.setValueInputOption("RAW")?.execute()
+
+                    if (response == null) {
+                        throw IOException("Failed to update institution settings in Google Sheets - no response received")
+                    }
+
+                    println("✅ Successfully synced ${rows.size} institution settings to Google Sheets")
+                },
+                operationName = "sync institution settings to sheets"
+            )
+        } catch (e: Exception) {
+            println("❌ Failed to sync institution settings to sheets: ${e.message}")
+            if (e.message?.contains("429") == true || e.message?.contains("Rate limit") == true) {
+                throw IOException(ApiRateLimitHandler.getBriefRateLimitMessage(), e)
+            } else {
+                throw networkFailure("sync institution settings to Google Sheets", e)
+            }
+        }
+    }
+
+    suspend fun syncInstitutionSettingsFromSheets(): List<InstitutionSettingRow> = withContext(Dispatchers.IO) {
+        try {
+            if (sheetsService == null) {
+                initializeSheetsService()
+            }
+
+            ApiRateLimitHandler.executeWithRetry(
+                operation = {
+                    val response = sheetsService?.spreadsheets()?.values()?.get(
+                        settingsManager.getSpreadsheetId(),
+                        "${settingsManager.getSettingsSheet()}!A2:C"
+                    )?.execute()
+
+                    if (response == null) {
+                        throw IOException("Failed to retrieve institution settings from Google Sheets - no response received")
+                    }
+
+                    val values = response.getValues() ?: emptyList()
+                    val skippedRows = mutableListOf<Pair<Int, Int>>()
+                    val knownKeys = InstitutionSettingsKeys.ALL.toSet()
+                    val rows = values.mapIndexedNotNull { index, row ->
+                        if (row.isNotEmpty()) {
+                            try {
+                                val key = row[0].toString().trim()
+                                if (key.isEmpty() || key !in knownKeys) {
+                                    null
+                                } else {
+                                    InstitutionSettingRow(
+                                        key = key,
+                                        value = row.getOrNull(1)?.toString().orEmpty(),
+                                        lastModified = parseLastModified(row.getOrNull(2)?.toString().orEmpty()),
+                                    )
+                                }
+                            } catch (e: Exception) {
+                                println("Failed to parse institution setting row ${index + 2}: ${e.message}")
+                                null
+                            }
+                        } else {
+                            skippedRows.add((index + 2) to row.size)
+                            null
+                        }
+                    }
+                    logSkippedSheetRows("institution setting", skippedRows)
+                    println("Successfully parsed ${rows.size} institution settings")
+                    rows
+                },
+                operationName = "sync institution settings from sheets"
+            )
+        } catch (e: Exception) {
+            println("Failed to sync institution settings from sheets: ${e.message}")
+            if (e.message?.contains("429") == true || e.message?.contains("Rate limit") == true) {
+                throw IOException(ApiRateLimitHandler.getBriefRateLimitMessage(), e)
+            } else {
+                throw networkFailure("sync institution settings from Google Sheets", e)
+            }
+        }
+    }
 
     suspend fun syncTransfersToSheets(transfers: List<AccountTransfer>) = withContext(Dispatchers.IO) {
         try {
@@ -2789,7 +2909,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
             )
         } catch (e: Exception) {
             if (e.message?.contains("429") == true) throw IOException(ApiRateLimitHandler.getBriefRateLimitMessage(), e)
-            throw IOException(createNetworkErrorMessage("sync transfers to Google Sheets", e), e)
+            throw networkFailure("sync transfers to Google Sheets", e)
         }
     }
 
@@ -2864,7 +2984,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
             )
         } catch (e: Exception) {
             if (e.message?.contains("429") == true) throw IOException(ApiRateLimitHandler.getBriefRateLimitMessage(), e)
-            throw IOException(createNetworkErrorMessage("sync transfers from Google Sheets", e), e)
+            throw networkFailure("sync transfers from Google Sheets", e)
         }
     }
 
@@ -2935,7 +3055,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
             if (e.message?.contains("429") == true || e.message?.contains("Rate limit") == true) {
                 throw IOException(ApiRateLimitHandler.getBriefRateLimitMessage(), e)
             } else {
-                throw IOException(createNetworkErrorMessage("update venue people counter in Google Sheets", e), e)
+                throw networkFailure("update venue people counter in Google Sheets", e)
             }
         }
     }
@@ -3017,7 +3137,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
             if (e.message?.contains("429") == true || e.message?.contains("Rate limit") == true) {
                 throw IOException(ApiRateLimitHandler.getBriefRateLimitMessage(), e)
             } else {
-                throw IOException(createNetworkErrorMessage("update venue announcement in Google Sheets", e), e)
+                throw networkFailure("update venue announcement in Google Sheets", e)
             }
         }
     }
@@ -3096,7 +3216,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
             if (e.message?.contains("429") == true || e.message?.contains("Rate limit") == true) {
                 throw IOException(ApiRateLimitHandler.getBriefRateLimitMessage(), e)
             } else {
-                throw IOException(createNetworkErrorMessage("delete job from Google Sheets", e), e)
+                throw networkFailure("delete job from Google Sheets", e)
             }
         }
     }
@@ -3161,6 +3281,10 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
         SheetDefinition(
             settingsManager.getTransfersSheet(),
             TRANSFER_SHEET_HEADERS
+        ),
+        SheetDefinition(
+            settingsManager.getSettingsSheet(),
+            INSTITUTION_SETTINGS_HEADERS
         )
     )
 
@@ -3267,7 +3391,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
             if (e.message?.contains("429") == true || e.message?.contains("Rate limit") == true) {
                 throw IOException(ApiRateLimitHandler.getBriefRateLimitMessage(), e)
             } else {
-                throw IOException(createNetworkErrorMessage("sync temp guests from Google Sheets", e), e)
+                throw networkFailure("sync temp guests from Google Sheets", e)
             }
         }
     }
@@ -3325,7 +3449,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
             if (e.message?.contains("429") == true || e.message?.contains("Rate limit") == true) {
                 throw IOException(ApiRateLimitHandler.getBriefRateLimitMessage(), e)
             } else {
-                throw IOException(createNetworkErrorMessage("update temporary guest in Google Sheets", e), e)
+                throw networkFailure("update temporary guest in Google Sheets", e)
             }
         }
     }
@@ -3387,7 +3511,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
             if (e.message?.contains("429") == true || e.message?.contains("Rate limit") == true) {
                 throw IOException(ApiRateLimitHandler.getBriefRateLimitMessage(), e)
             } else {
-                throw IOException(createNetworkErrorMessage("append temporary guests to Google Sheets", e), e)
+                throw networkFailure("append temporary guests to Google Sheets", e)
             }
         }
     }
@@ -3439,7 +3563,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
             if (e.message?.contains("429") == true || e.message?.contains("Rate limit") == true) {
                 throw IOException(ApiRateLimitHandler.getBriefRateLimitMessage(), e)
             } else {
-                throw IOException(createNetworkErrorMessage("delete temporary guest from Google Sheets", e), e)
+                throw networkFailure("delete temporary guest from Google Sheets", e)
             }
         }
     }

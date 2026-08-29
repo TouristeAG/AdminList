@@ -14,6 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.eventmanager.app.data.security.LocalAdminAccessResult
 import com.eventmanager.app.platform.PlatformContext
 import com.eventmanager.app.resources.Res
 import com.eventmanager.app.resources.*
@@ -64,46 +65,22 @@ fun BiometricAdminVerificationDialog(
             .groupBy { it.nfcCardUid.trim().replace(" ", "").replace(":", "").uppercase() }
     }
 
-    fun applyVerifiedAdminFromCandidates(candidates: List<ScannerMatch>) {
-        if (candidates.isEmpty()) {
-            verificationMessage = notFoundMessage
-            return
+    fun applyAccessResult(result: LocalAdminAccessResult) {
+        when (result) {
+            is LocalAdminAccessResult.Granted -> verifiedMatch = result.match
+            is LocalAdminAccessResult.Denied -> {
+                verifyScope.launch {
+                    verificationMessage = getString(Res.string.admin_auth_denied, result.displayName)
+                }
+            }
+            LocalAdminAccessResult.NotFound -> verificationMessage = notFoundMessage
         }
+    }
+
+    fun applyVerifiedAdminFromCandidates(candidates: List<ScannerMatch>) {
         verifyScope.launch {
-            var grantedMatch: ScannerMatch? = null
-            var deniedName: String? = null
-            for (m in candidates) {
-                val fresh = try {
-                    viewModel.resolveFreshAdminScanMatch(m)
-                } catch (_: Exception) {
-                    m
-                }
-                when (fresh) {
-                    is ScannerMatch.VolunteerMatch -> if (fresh.volunteer.isAdmin) {
-                        grantedMatch = fresh
-                        break
-                    } else {
-                        deniedName = fresh.volunteer.name
-                    }
-                    is ScannerMatch.GuestMatch -> if (fresh.guest.isAdmin) {
-                        grantedMatch = fresh
-                        break
-                    } else {
-                        deniedName = fresh.guest.name
-                    }
-                }
-            }
-            withContext(Dispatchers.Main) {
-                if (grantedMatch != null) {
-                    verifiedMatch = grantedMatch
-                } else {
-                    val name = deniedName ?: when (val m = candidates.first()) {
-                        is ScannerMatch.VolunteerMatch -> m.volunteer.name
-                        is ScannerMatch.GuestMatch -> m.guest.name
-                    }
-                    verificationMessage = getString(Res.string.admin_auth_denied, name)
-                }
-            }
+            val result = viewModel.verifyLocalAdminAccess(candidates)
+            withContext(Dispatchers.Main) { applyAccessResult(result) }
         }
     }
 

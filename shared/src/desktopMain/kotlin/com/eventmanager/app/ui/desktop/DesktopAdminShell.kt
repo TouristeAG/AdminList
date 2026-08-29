@@ -16,7 +16,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.eventmanager.app.resources.Res
 import com.eventmanager.app.resources.*
+import com.eventmanager.app.ui.components.FirebaseOrgSwitcher
+import com.eventmanager.app.ui.components.FirebaseOrgSwitcherPlacement
 import com.eventmanager.app.ui.navigation.AdminTab
+import com.eventmanager.app.ui.viewmodel.EventManagerViewModel
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,6 +35,7 @@ fun DesktopAdminShell(
     isSyncing: Boolean,
     onTouchSession: () -> Unit,
     onClearOverlays: () -> Unit,
+    viewModel: EventManagerViewModel? = null,
     modifier: Modifier = Modifier,
     content: @Composable (PaddingValues) -> Unit,
 ) {
@@ -83,6 +87,7 @@ fun DesktopAdminShell(
                 onTabSelected(tab)
             },
             alignEnd = !onStart,
+            viewModel = viewModel,
             modifier = Modifier.fillMaxHeight()
         )
     }
@@ -145,6 +150,7 @@ private fun DesktopAdminSideNav(
     onExpandedChange: (Boolean) -> Unit,
     onTabSelected: (AdminTab) -> Unit,
     alignEnd: Boolean,
+    viewModel: EventManagerViewModel? = null,
     modifier: Modifier = Modifier,
 ) {
     val railWidth = if (expanded) 220.dp else 72.dp
@@ -190,6 +196,24 @@ private fun DesktopAdminSideNav(
                     icon = adminTabIcon(tab),
                     label = adminTabLabel(tab),
                     onClick = { onTabSelected(tab) }
+                )
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            if (viewModel != null) {
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 4.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                )
+                FirebaseOrgSwitcher(
+                    viewModel = viewModel,
+                    placement = if (expanded) {
+                        FirebaseOrgSwitcherPlacement.AdminSideNavHorizontal
+                    } else {
+                        FirebaseOrgSwitcherPlacement.AdminSideNavVertical
+                    },
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         }

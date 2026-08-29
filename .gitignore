@@ -24,3 +24,6 @@ desktopApp/build/
 
 # Logs
 *.log
+__pycache__/
+*.pyc
+app/google-services.json

@@ -23,7 +23,8 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun DashboardClockCard(
     settingsManager: SettingsManager,
-    isPhone: Boolean
+    isPhone: Boolean,
+    trailingContent: @Composable (() -> Unit)? = null,
 ) {
     val zone = GuestListDefaultZoneId
     val offsetHours = remember { settingsManager.getDateChangeOffsetHours() }
@@ -78,22 +79,31 @@ fun DashboardClockCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(if (isPhone) 16.dp else 20.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.Top,
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Icon(
                 Icons.Default.Schedule,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.size(if (isPhone) 32.dp else 40.dp)
+                modifier = Modifier
+                    .size(if (isPhone) 32.dp else 40.dp)
+                    .padding(top = 2.dp),
             )
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = now.format(timeFormatter),
-                    style = if (isPhone) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.displaySmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        text = now.format(timeFormatter),
+                        style = if (isPhone) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.displaySmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                    trailingContent?.invoke()
+                }
                 Text(
                     text = effectiveToday.format(dateFormatter),
                     style = MaterialTheme.typography.bodyMedium,

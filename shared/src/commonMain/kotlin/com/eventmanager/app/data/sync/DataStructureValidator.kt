@@ -43,7 +43,8 @@ class DataStructureValidator(
             "Announcement Message",
             "Announcement Sent At",
             "Announcement Sender Device ID"
-        )
+        ),
+        "settings" to listOf("Key", "Value", "Last Modified")
     )
     
     /**
@@ -67,6 +68,7 @@ class DataStructureValidator(
             results["sales_items"] = validateSheet("sales_items", settingsManager.getSalesItemsSheet())
             results["transfers"] = validateSheet("transfers", settingsManager.getTransfersSheet())
             results["venues"] = validateSheet("venues", settingsManager.getVenuesSheet())
+            results["settings"] = validateSheet("settings", settingsManager.getSettingsSheet())
             
             val allValid = results.values.all { it.isValid }
             
@@ -199,6 +201,7 @@ class DataStructureValidator(
             results["sales_items"] = createOrFixSheet("sales_items", settingsManager.getSalesItemsSheet())
             results["transfers"] = createOrFixSheet("transfers", settingsManager.getTransfersSheet())
             results["venues"] = createOrFixSheet("venues", settingsManager.getVenuesSheet())
+            results["settings"] = createOrFixSheet("settings", settingsManager.getSettingsSheet())
             
             val allValid = results.values.all { it.isValid }
             
