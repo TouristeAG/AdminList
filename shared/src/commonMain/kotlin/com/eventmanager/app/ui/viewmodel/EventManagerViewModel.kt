@@ -33,6 +33,10 @@ import com.eventmanager.app.data.utils.PosCartLine
 import com.eventmanager.app.data.utils.PosSaleResult
 import com.eventmanager.app.data.remote.BackendType
 import com.eventmanager.app.data.remote.FirebaseOrgBootstrap
+import com.eventmanager.app.data.remote.FirebaseOrgViewMode
+import com.eventmanager.app.data.remote.MultiOrgMerge
+import com.eventmanager.app.data.remote.PersistIdentityDedupe
+import com.eventmanager.app.data.remote.VolunteerBenefitGuestMerge
 import com.eventmanager.app.data.remote.FirebaseSyncStatus
 import com.eventmanager.app.data.remote.InstitutionBackendAnnouncement
 import com.eventmanager.app.data.remote.RemoteBackendFactory
@@ -53,8 +57,19 @@ import com.eventmanager.app.data.update.UpdateDownloader
 import com.eventmanager.app.data.update.DownloadState
 import com.eventmanager.app.platform.PlatformFileManager
 import com.eventmanager.app.data.security.LocalAdminAccessResult
+import com.eventmanager.app.data.security.LocalAdminGrantResult
+import com.eventmanager.app.data.security.LocalAdminTargetKind
 import com.eventmanager.app.data.security.displayName
+import com.eventmanager.app.data.security.firebaseRoleIsOrgAdmin
+import com.eventmanager.app.data.security.guestEligibleForLocalAdminRights
+import com.eventmanager.app.data.security.institutionHasLocalAdminInOrg
 import com.eventmanager.app.data.security.isAdminFlag
+import com.eventmanager.app.data.security.isFirebaseStrictMultiOrg
+import com.eventmanager.app.data.security.profileBelongsToAdminOrg
+import com.eventmanager.app.data.security.volunteerEligibleForLocalAdminRights
+import com.eventmanager.app.data.security.wouldRemoveLastLocalAdmin
+import com.eventmanager.app.data.security.firebaseOrgId
+import com.eventmanager.app.ui.components.PeopleCounterUiHint
 import com.eventmanager.app.ui.components.ScannerMatch
 import com.eventmanager.app.ui.components.shouldShowSyncError
 import java.io.File
@@ -62,7 +77,9 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import com.eventmanager.app.platform.PlatformContext
@@ -121,13 +138,7 @@ class EventManagerViewModel(
             },
             pendingRemoteWriteDao = pendingRemoteWriteDao,
             onFirebaseRemoteRepositoryChanged = {
-                viewModelScope.launch {
-                    withContext(Dispatchers.Main) { refreshAllData() }
-                    refreshFirebaseSyncStatus()
-                    if (settingsManagerCached?.getBackendType() == BackendType.FIREBASE) {
-                        restartSheetsMirrorSchedule()
-                    }
-                }
+                scheduleCoalescedRemoteRepositoryRefresh()
             },
             onFirebaseSyncStatusChanged = {
                 viewModelScope.launch { refreshFirebaseSyncStatus() }
@@ -196,6 +207,86 @@ class EventManagerViewModel(
     fun isFirebaseAllOrgsMode(): Boolean =
         getFirebaseOrgViewMode() == com.eventmanager.app.data.remote.FirebaseOrgViewMode.ALL
 
+    fun getFirebaseLastSingleOrgId(): String =
+        settingsManagerCached?.getFirebaseLastSingleOrgId()?.trim().orEmpty()
+
+    private val _adminPanelActive = MutableStateFlow(false)
+
+    fun setAdminPanelActive(active: Boolean) {
+        _adminPanelActive.value = active
+        if (!active) {
+            clearAdminAuthSession()
+        }
+    }
+
+    private val _adminAuthenticatedOrgId = MutableStateFlow<String?>(null)
+    val adminAuthenticatedOrgId: StateFlow<String?> = _adminAuthenticatedOrgId.asStateFlow()
+
+    private val _adminReauthPreviousOrgId = MutableStateFlow<String?>(null)
+    val adminReauthPreviousOrgId: StateFlow<String?> = _adminReauthPreviousOrgId.asStateFlow()
+
+    fun shouldScopeAdminByOrg(): Boolean =
+        getActiveBackendType() == BackendType.FIREBASE
+
+    fun isFirebaseStrictMultiOrgMode(): Boolean =
+        shouldScopeAdminByOrg() && isFirebaseStrictMultiOrg(getFirebaseConfiguredOrgs().size)
+
+    fun resolveAdminAuthTargetOrgId(): String {
+        val active = getActiveFirebaseOrgId().trim()
+        if (active.isNotBlank() && !com.eventmanager.app.data.remote.isFirebaseOrgAllSentinel(active)) {
+            return active
+        }
+        return getFirebaseLastSingleOrgId()
+    }
+
+    fun onAdminAuthSuccess() {
+        _adminAuthenticatedOrgId.value = resolveAdminAuthTargetOrgId().trim().takeIf { it.isNotBlank() }
+        _adminReauthPreviousOrgId.value = null
+    }
+
+    fun clearAdminAuthSession() {
+        _adminAuthenticatedOrgId.value = null
+        _adminReauthPreviousOrgId.value = null
+    }
+
+    fun isAdminOrgReauthPending(): Boolean = _adminReauthPreviousOrgId.value != null
+
+    fun switchFirebaseOrgFromAdmin(orgId: String, onRequireReauth: () -> Unit) {
+        val trimmed = orgId.trim()
+        if (!_adminPanelActive.value || !shouldScopeAdminByOrg()) {
+            switchFirebaseOrgAsync(trimmed)
+            return
+        }
+        val authOrg = _adminAuthenticatedOrgId.value?.trim().orEmpty()
+        if (authOrg.isNotBlank() && authOrg == trimmed) {
+            switchFirebaseOrgAsync(trimmed)
+            return
+        }
+        _adminReauthPreviousOrgId.value = authOrg.takeIf { it.isNotBlank() }
+        viewModelScope.launch {
+            val result = switchFirebaseOrg(trimmed)
+            if (result is SyncResult.Error) {
+                _adminReauthPreviousOrgId.value = null
+                showSyncErrorIfNotSuppressed(result.message)
+                return@launch
+            }
+            onRequireReauth()
+        }
+    }
+
+    fun cancelAdminOrgSwitchReauth(onReverted: () -> Unit = {}) {
+        val previousOrg = _adminReauthPreviousOrgId.value?.trim().orEmpty()
+        _adminReauthPreviousOrgId.value = null
+        if (previousOrg.isBlank()) {
+            onReverted()
+            return
+        }
+        viewModelScope.launch {
+            switchFirebaseOrg(previousOrg)
+            onReverted()
+        }
+    }
+
     private fun resolveActiveFirebaseOrgIdForWrites(): String {
         val settings = settingsManagerCached ?: return ""
         val active = settings.getFirebaseOrgId().trim()
@@ -215,6 +306,31 @@ class EventManagerViewModel(
         if (volunteer.firebaseOrgId.isNotBlank()) return volunteer
         val orgId = resolveActiveFirebaseOrgIdForWrites()
         return if (orgId.isNotBlank()) volunteer.copy(firebaseOrgId = orgId) else volunteer
+    }
+
+    private fun resolveHolderOrgId(holderType: AccountHolderType, holderId: String): String {
+        val fromHolder = when (holderType) {
+            AccountHolderType.VOLUNTEER -> _volunteers.value.find { it.id == holderId }?.firebaseOrgId
+            AccountHolderType.GUEST -> _guests.value.find { it.nanoId == holderId }?.firebaseOrgId
+        }?.trim().orEmpty()
+        return fromHolder.ifBlank { resolveActiveFirebaseOrgIdForWrites() }
+    }
+
+    private fun tagEntityOrgId(existing: String): String {
+        if (existing.isNotBlank()) return existing
+        return resolveActiveFirebaseOrgIdForWrites()
+    }
+
+    private fun <T> filterForVisibleOrg(items: List<T>, orgIdOf: (T) -> String): List<T> {
+        val settings = settingsManagerCached ?: return items
+        if (settings.getBackendType() != BackendType.FIREBASE) return items
+        val configured = settings.getFirebaseConfiguredOrgs()
+            .map { it.orgId.trim() }
+            .filter { it.isNotBlank() }
+            .toSet()
+        val allMode = settings.getFirebaseOrgViewMode() == FirebaseOrgViewMode.ALL
+        val active = settings.getFirebaseOrgId().trim()
+        return MultiOrgMerge.filterForVisibleOrg(items, orgIdOf, allMode, active, configured)
     }
 
     fun enterAllOrgsModeAsync() {
@@ -238,6 +354,9 @@ class EventManagerViewModel(
     suspend fun enterAllOrgsMode(): SyncResult {
         val settings = settingsManagerCached
             ?: return SyncResult.Error("Settings unavailable")
+        if (_adminPanelActive.value) {
+            return SyncResult.Error("All organizations mode is not available in admin")
+        }
         if (settings.getBackendType() != BackendType.FIREBASE) {
             return SyncResult.Error("Firebase mode required")
         }
@@ -257,21 +376,25 @@ class EventManagerViewModel(
             if (currentOrg.isNotBlank() && !com.eventmanager.app.data.remote.isFirebaseOrgAllSentinel(currentOrg)) {
                 settings.setFirebaseLastSingleOrgId(currentOrg)
             }
+            restoreFirebaseSessionIfNeeded()
+            configured.forEach { org ->
+                runCatching { syncCoordinator?.ensureFirebaseOrgReady(org.orgId) }
+            }
+            syncCoordinator?.stopBackgroundRemoteSync()
             settings.setFirebaseOrgViewMode(com.eventmanager.app.data.remote.FirebaseOrgViewMode.ALL)
             settings.setFirebaseOrgId(com.eventmanager.app.data.remote.FIREBASE_ORG_ALL_SENTINEL)
             val backfillOrg = settings.getFirebaseLastSingleOrgId().ifBlank { currentOrg }
             if (backfillOrg.isNotBlank()) {
                 repository.backfillEmptyOrgIds(backfillOrg)
             }
-            platformContext?.let {
-                com.eventmanager.app.data.remote.createFirebaseAuthService(it).restoreSession()
+            withContext(Dispatchers.Main) { refreshAllData(dbSettleDelayMs = 0) }
+            val needsRemoteHydrate = !hasLocalDataForVisibleOrg()
+            val syncResult = if (needsRemoteHydrate) {
+                syncCoordinator?.pullAllConfiguredFirebaseOrgs()
+                    ?: SyncResult.Error("Sync coordinator unavailable")
+            } else {
+                SyncResult.Success("Viewing all organizations")
             }
-            configured.forEach { org ->
-                runCatching { syncCoordinator?.ensureFirebaseOrgReady(org.orgId) }
-            }
-            syncCoordinator?.stopBackgroundRemoteSync()
-            val syncResult = syncCoordinator?.pullAllConfiguredFirebaseOrgs()
-                ?: SyncResult.Error("Sync coordinator unavailable")
             if (syncResult is SyncResult.Error) {
                 settings.setFirebaseOrgViewMode(com.eventmanager.app.data.remote.FirebaseOrgViewMode.SINGLE)
                 if (currentOrg.isNotBlank() && !com.eventmanager.app.data.remote.isFirebaseOrgAllSentinel(currentOrg)) {
@@ -280,10 +403,13 @@ class EventManagerViewModel(
                     val fallback = settings.getFirebaseLastSingleOrgId().ifBlank { configured.first().orgId }
                     settings.setFirebaseOrgId(fallback)
                 }
+                withContext(Dispatchers.Main) { refreshAllData(dbSettleDelayMs = 0) }
                 return syncResult
             }
+            if (needsRemoteHydrate) {
+                withContext(Dispatchers.Main) { refreshAllData(dbSettleDelayMs = 0) }
+            }
             syncCoordinator?.startBackgroundRemoteSync(viewModelScope)
-            withContext(Dispatchers.Main) { refreshAllData() }
             refreshFirebaseSyncStatus()
             syncResult
         } catch (e: Exception) {
@@ -308,27 +434,60 @@ class EventManagerViewModel(
             return SyncResult.Error("Org switch already in progress")
         }
         _firebaseOrgSwitching.value = true
+        val previousOrg = settings.getFirebaseOrgId().trim()
+        val leavingAllMode = settings.getFirebaseOrgViewMode() == FirebaseOrgViewMode.ALL ||
+            com.eventmanager.app.data.remote.isFirebaseOrgAllSentinel(previousOrg)
         return try {
-            platformContext?.let {
-                com.eventmanager.app.data.remote.createFirebaseAuthService(it).restoreSession()
-            }
+            restoreFirebaseSessionIfNeeded()
             syncCoordinator?.ensureFirebaseOrgReady(trimmed)
                 ?: return SyncResult.Error("Sync coordinator unavailable")
             syncCoordinator?.stopBackgroundRemoteSync()
-            settings.setFirebaseOrgViewMode(com.eventmanager.app.data.remote.FirebaseOrgViewMode.SINGLE)
+            if (leavingAllMode) {
+                settings.getFirebaseConfiguredOrgs().map { it.orgId }.forEach { orgId ->
+                    syncCoordinator?.flushFirebasePendingWritesForOrg(orgId)
+                }
+            } else if (previousOrg.isNotBlank()) {
+                syncCoordinator?.flushFirebasePendingWritesForOrg(previousOrg)
+            }
+            settings.setFirebaseOrgViewMode(FirebaseOrgViewMode.SINGLE)
             settings.setFirebaseOrgId(trimmed)
             settings.setFirebaseLastSingleOrgId(trimmed)
             if (purgeOtherOrgs) {
                 repository.deleteAllDataNotInOrgs(listOf(trimmed))
             }
-            val syncResult = syncCoordinator?.performStartupSync()
-                ?: SyncResult.Error("Sync coordinator unavailable")
+            withContext(Dispatchers.Main) { refreshAllData(dbSettleDelayMs = 0) }
+            val needsRemoteHydrate = !hasLocalDataForVisibleOrg()
+            val syncResult = if (needsRemoteHydrate) {
+                syncCoordinator?.performStartupSync()
+                    ?: SyncResult.Error("Sync coordinator unavailable")
+            } else {
+                SyncResult.Success("Switched organization")
+            }
+            if (syncResult is SyncResult.Error) {
+                if (leavingAllMode) {
+                    settings.setFirebaseOrgViewMode(FirebaseOrgViewMode.ALL)
+                    settings.setFirebaseOrgId(
+                        previousOrg.ifBlank { com.eventmanager.app.data.remote.FIREBASE_ORG_ALL_SENTINEL },
+                    )
+                } else if (previousOrg.isNotBlank() &&
+                    !com.eventmanager.app.data.remote.isFirebaseOrgAllSentinel(previousOrg)
+                ) {
+                    settings.setFirebaseOrgId(previousOrg)
+                    settings.setFirebaseLastSingleOrgId(previousOrg)
+                }
+                syncCoordinator?.startBackgroundRemoteSync(viewModelScope)
+                withContext(Dispatchers.Main) { refreshAllData(dbSettleDelayMs = 0) }
+                refreshFirebaseSyncStatus()
+                return syncResult
+            }
+            if (needsRemoteHydrate) {
+                withContext(Dispatchers.Main) { refreshAllData(dbSettleDelayMs = 0) }
+            }
             syncCoordinator?.startBackgroundRemoteSync(viewModelScope)
-            runCatching { syncCoordinator?.replicateFirebaseConfiguredOrgs() }
-            withContext(Dispatchers.Main) { refreshAllData() }
             refreshFirebaseSyncStatus()
             syncResult
         } catch (e: Exception) {
+            runCatching { syncCoordinator?.startBackgroundRemoteSync(viewModelScope) }
             SyncResult.Error(e.message ?: "Failed to enter single-org mode")
         } finally {
             _firebaseOrgSwitching.value = false
@@ -395,74 +554,15 @@ class EventManagerViewModel(
         }
         val trimmed = orgId.trim()
         if (trimmed.isBlank()) return SyncResult.Error("Org ID required")
-        val configured = settings.getFirebaseConfiguredOrgs()
-        if (configured.none { it.orgId == trimmed }) {
+        if (settings.getFirebaseConfiguredOrgs().none { it.orgId == trimmed }) {
             return SyncResult.Error("Org not configured")
         }
-        if (settings.getFirebaseOrgId().trim() == trimmed) {
+        val alreadySingle = settings.getFirebaseOrgViewMode() == FirebaseOrgViewMode.SINGLE &&
+            settings.getFirebaseOrgId().trim() == trimmed
+        if (alreadySingle) {
             return SyncResult.Success("Already on this organization")
         }
-        if (_firebaseOrgSwitching.value) {
-            return SyncResult.Error("Org switch already in progress")
-        }
-        _firebaseOrgSwitching.value = true
-        val previousOrg = settings.getFirebaseOrgId().trim()
-        val leavingAllMode = com.eventmanager.app.data.remote.isFirebaseOrgAllSentinel(previousOrg)
-        return try {
-            platformContext?.let {
-                com.eventmanager.app.data.remote.createFirebaseAuthService(it).restoreSession()
-            }
-            syncCoordinator?.ensureFirebaseOrgReady(trimmed)
-                ?: return SyncResult.Error("Sync coordinator unavailable")
-            syncCoordinator?.stopBackgroundRemoteSync()
-            if (leavingAllMode) {
-                configured.map { it.orgId }.forEach { orgId ->
-                    syncCoordinator?.flushFirebasePendingWritesForOrg(orgId)
-                }
-            } else {
-                syncCoordinator?.flushFirebasePendingWritesForOrg(previousOrg)
-            }
-            pendingRemoteWriteDao?.clearAll()
-            repository.clearAllData()
-            settings.setFirebaseOrgViewMode(com.eventmanager.app.data.remote.FirebaseOrgViewMode.SINGLE)
-            settings.setFirebaseOrgId(trimmed)
-            settings.setFirebaseLastSingleOrgId(trimmed)
-            val syncResult = syncCoordinator?.performStartupSync()
-                ?: return SyncResult.Error("Sync coordinator unavailable")
-            if (syncResult is SyncResult.Error) {
-                settings.setFirebaseOrgId(previousOrg)
-                repository.clearAllData()
-                pendingRemoteWriteDao?.clearAll()
-                syncCoordinator?.performStartupSync()
-                syncCoordinator?.startBackgroundRemoteSync(viewModelScope)
-                withContext(Dispatchers.Main) { refreshAllData() }
-                return SyncResult.Error(
-                    "Could not switch to \"$trimmed\": ${syncResult.message}",
-                )
-            }
-            syncCoordinator?.startBackgroundRemoteSync(viewModelScope)
-            runCatching { syncCoordinator?.replicateFirebaseConfiguredOrgs() }
-            withContext(Dispatchers.Main) { refreshAllData() }
-            refreshFirebaseSyncStatus()
-            if (settings.getBackendType() == BackendType.FIREBASE) {
-                restartSheetsMirrorSchedule()
-            }
-            syncResult
-        } catch (e: Exception) {
-            if (settings.getFirebaseOrgId().trim() == trimmed && previousOrg.isNotBlank()) {
-                settings.setFirebaseOrgId(previousOrg)
-                runCatching {
-                    repository.clearAllData()
-                    pendingRemoteWriteDao?.clearAll()
-                    syncCoordinator?.performStartupSync()
-                    syncCoordinator?.startBackgroundRemoteSync(viewModelScope)
-                    withContext(Dispatchers.Main) { refreshAllData() }
-                }
-            }
-            SyncResult.Error("Failed to switch org: ${e.message}")
-        } finally {
-            _firebaseOrgSwitching.value = false
-        }
+        return enterSingleOrgMode(trimmed, purgeOtherOrgs = false)
     }
 
     suspend fun migrateBackendToFirebase(orgId: String, migratedBy: String = "admin"): SyncResult {
@@ -596,8 +696,8 @@ class EventManagerViewModel(
     private val _peopleCounterPriority = MutableStateFlow(false)
     val peopleCounterPriority: StateFlow<Boolean> = _peopleCounterPriority.asStateFlow()
 
-    private val _peopleCounterUiHint = MutableStateFlow<String?>(null)
-    val peopleCounterUiHint: StateFlow<String?> = _peopleCounterUiHint.asStateFlow()
+    private val _peopleCounterUiHint = MutableStateFlow<PeopleCounterUiHint?>(null)
+    val peopleCounterUiHint: StateFlow<PeopleCounterUiHint?> = _peopleCounterUiHint.asStateFlow()
 
     private val peopleCounterUploadMutex = Mutex()
     private val peopleCounterQuietRefreshMutex = Mutex()
@@ -669,11 +769,26 @@ class EventManagerViewModel(
     // Background sync job
     private var backgroundSyncJob: kotlinx.coroutines.Job? = null
     private var sheetsMirrorJob: kotlinx.coroutines.Job? = null
+    private var remoteRepositoryRefreshJob: kotlinx.coroutines.Job? = null
 
     fun restartSheetsMirrorSchedule() {
         sheetsMirrorJob?.cancel()
         sheetsMirrorJob = null
         sheetsMirrorJob = sheetsMirrorExporterOrNull()?.startScheduled(viewModelScope)
+    }
+
+    /**
+     * Coalesce live Firestore document bursts into a single UI refresh.
+     * Room Flows already update lists; this is a safety net after Rapid snapshot storms.
+     * Does not restart the Sheets mirror (that belongs to org switch / migration / manual sync).
+     */
+    private fun scheduleCoalescedRemoteRepositoryRefresh() {
+        remoteRepositoryRefreshJob?.cancel()
+        remoteRepositoryRefreshJob = viewModelScope.launch {
+            delay(350)
+            withContext(Dispatchers.Main) { refreshAllData() }
+            refreshFirebaseSyncStatus()
+        }
     }
 
     // Update check state
@@ -872,8 +987,9 @@ class EventManagerViewModel(
     
     private fun loadData() {
         viewModelScope.launch {
-            try {
-                repository.getAllGuests().collect { guestList ->
+            while (isActive) {
+                try {
+                    repository.getAllGuests().collect { guestList ->
                     // Validate and fix any guests with invalid NanoIDs
                     val validatedGuests = mutableListOf<Guest>()
                     val guestsToFix = mutableListOf<Guest>()
@@ -918,9 +1034,13 @@ class EventManagerViewModel(
 
                     _guests.value = removeDuplicateGuests(validatedGuests)
                 }
-            } catch (e: Exception) {
-                println("Failed to load guests: ${e.message}")
-                _guests.value = emptyList()
+                    break
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    println("Failed to load guests: ${e.message}")
+                    delay(1_000)
+                }
             }
         }
         viewModelScope.launch {
@@ -981,7 +1101,6 @@ class EventManagerViewModel(
                 }
             } catch (e: Exception) {
                 println("Failed to load volunteers: ${e.message}")
-                _volunteers.value = emptyList()
             }
         }
         viewModelScope.launch {
@@ -993,7 +1112,6 @@ class EventManagerViewModel(
                 }
             } catch (e: Exception) {
                 println("Failed to load jobs: ${e.message}")
-                _jobs.value = emptyList()
             }
         }
         viewModelScope.launch {
@@ -1003,7 +1121,6 @@ class EventManagerViewModel(
                 }
             } catch (e: Exception) {
                 println("Failed to load job type configs: ${e.message}")
-                _jobTypeConfigs.value = emptyList()
             }
         }
         viewModelScope.launch {
@@ -1013,29 +1130,32 @@ class EventManagerViewModel(
                 }
             } catch (e: Exception) {
                 println("Failed to load venues: ${e.message}")
-                _venues.value = emptyList()
             }
         }
         viewModelScope.launch {
             try {
                 repository.getAllSalesSheetItems().collect {
-                    _salesSheetItems.value = it
+                    _salesSheetItems.value = filterForVisibleOrg(it) { item -> item.firebaseOrgId }
                 }
             } catch (e: Exception) {
                 println("Failed to load sales sheet items: ${e.message}")
-                _salesSheetItems.value = emptyList()
             }
         }
         viewModelScope.launch {
-            try {
-                repository.getAllAccountTransfers().collect { transfers ->
-                    _accountTransfers.value = transfers
-                    _accountBalances.value = AccountBalanceService.computeAllBalances(transfers)
+            while (isActive) {
+                try {
+                    repository.getAllAccountTransfers().collect { transfers ->
+                        val visible = filterForVisibleOrg(transfers) { it.firebaseOrgId }
+                        _accountTransfers.value = visible
+                        _accountBalances.value = AccountBalanceService.computeAllBalances(visible)
+                    }
+                    break
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    println("Failed to load account transfers: ${e.message}")
+                    delay(1_000)
                 }
-            } catch (e: Exception) {
-                println("Failed to load account transfers: ${e.message}")
-                _accountTransfers.value = emptyList()
-                _accountBalances.value = emptyMap()
             }
         }
     }
@@ -1047,7 +1167,7 @@ class EventManagerViewModel(
         _accountBalances.value[AccountHolderKey(AccountHolderType.GUEST, guestNanoId)] ?: 0.0
 
     private suspend fun refreshAccountBalancesFromDb() {
-        val transfers = repository.getAllAccountTransfersOnce()
+        val transfers = filterForVisibleOrg(repository.getAllAccountTransfersOnce()) { it.firebaseOrgId }
         _accountTransfers.value = transfers
         _accountBalances.value = AccountBalanceService.computeAllBalances(transfers)
     }
@@ -1081,7 +1201,8 @@ class EventManagerViewModel(
         viewModelScope.launch {
             try {
                 if (rejectIfCrudSoftLocked("adding guests")) return@launch
-                val saved = repository.insertGuest(guest)
+                val tagged = tagGuestWithActiveOrg(guest)
+                val saved = repository.insertGuest(tagged)
                 syncCoordinator?.afterGuestSaved(saved)
                     ?: twoWaySyncService?.backupGuestsToSheets()?.also {
                         recalcAndUploadVolunteerGuestList()
@@ -1129,7 +1250,11 @@ class EventManagerViewModel(
             try {
                 if (rejectIfCrudSoftLocked("updating guests")) return@launch
                 // Update lastModified timestamp
-                val updatedGuest = guest.copy(lastModified = System.currentTimeMillis())
+                val existing = repository.getGuestByNanoId(guest.nanoId)
+                val withoutAdminFlip = existing?.let { guest.copy(isAdmin = it.isAdmin) } ?: guest
+                val updatedGuest = tagGuestWithActiveOrg(
+                    withoutAdminFlip.copy(lastModified = System.currentTimeMillis())
+                )
                 if (updatedGuest.isTemporaryGuest) {
                     repository.updateGuest(updatedGuest)
                     syncCoordinator?.afterGuestSaved(updatedGuest)
@@ -1199,9 +1324,10 @@ class EventManagerViewModel(
         viewModelScope.launch {
             try {
                 if (rejectIfCrudSoftLocked("adding volunteers")) return@launch
-                repository.insertVolunteer(volunteer)
+                val tagged = tagVolunteerWithActiveOrg(volunteer)
+                repository.insertVolunteer(tagged)
                 // BACKUP MODE: Upload entire volunteer dataset to Google Sheets
-                syncCoordinator?.afterVolunteerSaved(volunteer) ?: twoWaySyncService?.backupVolunteersToSheets()
+                syncCoordinator?.afterVolunteerSaved(tagged) ?: twoWaySyncService?.backupVolunteersToSheets()
                 recalcAndUploadVolunteerGuestList()
             } catch (e: Exception) {
             println("Failed to add volunteer: ${e.message}")
@@ -1214,9 +1340,12 @@ class EventManagerViewModel(
         viewModelScope.launch {
         try {
             if (rejectIfCrudSoftLocked("updating volunteers")) return@launch
-            repository.updateVolunteer(volunteer)
+            val existing = repository.getVolunteerById(volunteer.id)
+            val withoutAdminFlip = existing?.let { volunteer.copy(isAdmin = it.isAdmin) } ?: volunteer
+            val tagged = tagVolunteerWithActiveOrg(withoutAdminFlip)
+            repository.updateVolunteer(tagged)
                 // BACKUP MODE: Upload entire volunteer dataset to Google Sheets
-                syncCoordinator?.afterVolunteerSaved(volunteer) ?: twoWaySyncService?.backupVolunteersToSheets()
+                syncCoordinator?.afterVolunteerSaved(tagged) ?: twoWaySyncService?.backupVolunteersToSheets()
                 recalcAndUploadVolunteerGuestList()
             } catch (e: Exception) {
             println("Failed to update volunteer: ${e.message}")
@@ -1412,40 +1541,211 @@ class EventManagerViewModel(
      * Revokes biometric enrollment when the linked profile is no longer admin.
      */
     suspend fun verifyLocalAdminAccess(candidates: List<ScannerMatch>): LocalAdminAccessResult =
-        withContext(Dispatchers.IO) {
-            if (candidates.isEmpty()) return@withContext LocalAdminAccessResult.NotFound
-            var deniedName: String? = null
-            for (candidate in candidates) {
-                val fresh = try {
-                    resolveFreshAdminScanMatch(candidate)
-                } catch (_: Exception) {
-                    candidate
-                }
-                if (fresh.isAdminFlag()) {
-                    return@withContext LocalAdminAccessResult.Granted(fresh, fresh.displayName())
-                }
-                deniedName = fresh.displayName()
-                revokeBiometricAdminIfMatches(fresh)
+        verifyLocalAdminAccess(candidates, resolveAdminAuthTargetOrgId())
+
+    suspend fun verifyLocalAdminAccess(
+        candidates: List<ScannerMatch>,
+        targetOrgId: String,
+    ): LocalAdminAccessResult = withContext(Dispatchers.IO) {
+        if (candidates.isEmpty()) return@withContext LocalAdminAccessResult.NotFound
+        val strictMultiOrg = isFirebaseStrictMultiOrgMode()
+        val scopedOrg = if (shouldScopeAdminByOrg()) targetOrgId.trim() else ""
+        var deniedName: String? = null
+        for (candidate in candidates) {
+            val fresh = try {
+                resolveFreshAdminScanMatch(candidate)
+            } catch (_: Exception) {
+                candidate
             }
-            LocalAdminAccessResult.Denied(deniedName.orEmpty())
+            if (scopedOrg.isNotBlank() &&
+                !profileBelongsToAdminOrg(fresh.firebaseOrgId(), scopedOrg, strictMultiOrg)
+            ) {
+                deniedName = fresh.displayName()
+                continue
+            }
+            if (fresh.isAdminFlag()) {
+                return@withContext LocalAdminAccessResult.Granted(fresh, fresh.displayName())
+            }
+            deniedName = fresh.displayName()
+            revokeBiometricAdminIfMatches(fresh)
         }
+        LocalAdminAccessResult.Denied(deniedName.orEmpty())
+    }
 
     suspend fun verifyLocalAdminAccess(match: ScannerMatch): LocalAdminAccessResult =
         verifyLocalAdminAccess(listOf(match))
 
+    suspend fun verifyLocalAdminAccess(match: ScannerMatch, targetOrgId: String): LocalAdminAccessResult =
+        verifyLocalAdminAccess(listOf(match), targetOrgId)
+
+    /**
+     * Grant or revoke local `isAdmin` on a guest/volunteer. Firebase only.
+     * Requires a freshly scanned local admin (NFC/QR) plus the signed-in Google account
+     * having Firestore role `admin` (read from the server).
+     */
+    fun setLocalAdminRights(
+        kind: LocalAdminTargetKind,
+        targetId: String,
+        makeAdmin: Boolean,
+        grantorMatch: ScannerMatch,
+        onResult: (LocalAdminGrantResult) -> Unit,
+    ) {
+        viewModelScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    performSetLocalAdminRights(kind, targetId, makeAdmin, grantorMatch)
+                }.getOrElse { e ->
+                    LocalAdminGrantResult.Error(e.message ?: e.toString())
+                }
+            }
+            withContext(Dispatchers.Main) { onResult(result) }
+        }
+    }
+
+    private suspend fun performSetLocalAdminRights(
+        kind: LocalAdminTargetKind,
+        targetId: String,
+        makeAdmin: Boolean,
+        grantorMatch: ScannerMatch,
+    ): LocalAdminGrantResult {
+        if (getActiveBackendType() != BackendType.FIREBASE) {
+            return LocalAdminGrantResult.NotFirebase
+        }
+        if (isCrudSoftLocked()) return LocalAdminGrantResult.SoftLocked
+
+        val grantorAccess = verifyLocalAdminAccess(grantorMatch)
+        if (grantorAccess !is LocalAdminAccessResult.Granted) {
+            return LocalAdminGrantResult.GrantorNotLocalAdmin
+        }
+
+        val ctx = platformContext ?: return LocalAdminGrantResult.Error("Missing platform context")
+        val settings = settingsManagerCached ?: return LocalAdminGrantResult.Error("Missing settings")
+        val auth = createFirebaseAuthService(ctx)
+        val uid = auth.currentUserId()?.trim().orEmpty()
+        if (uid.isBlank() || !auth.isSignedIn()) {
+            return LocalAdminGrantResult.FirebaseNotSignedIn
+        }
+
+        val guests = repository.getAllGuests().first()
+        val volunteers = repository.getAllVolunteers().first()
+        val targetGuest = if (kind == LocalAdminTargetKind.GUEST) {
+            guests.find { it.nanoId == targetId }
+        } else {
+            null
+        }
+        val targetVolunteer = if (kind == LocalAdminTargetKind.VOLUNTEER) {
+            volunteers.find { it.id == targetId }
+        } else {
+            null
+        }
+        if (kind == LocalAdminTargetKind.GUEST && targetGuest == null) {
+            return LocalAdminGrantResult.TargetNotFound
+        }
+        if (kind == LocalAdminTargetKind.VOLUNTEER && targetVolunteer == null) {
+            return LocalAdminGrantResult.TargetNotFound
+        }
+        if (targetGuest != null && !guestEligibleForLocalAdminRights(targetGuest)) {
+            return LocalAdminGrantResult.TargetNotEligible
+        }
+        if (targetVolunteer != null && !volunteerEligibleForLocalAdminRights(targetVolunteer)) {
+            return LocalAdminGrantResult.TargetNotEligible
+        }
+
+        val orgId = when {
+            targetGuest != null && targetGuest.firebaseOrgId.isNotBlank() -> targetGuest.firebaseOrgId.trim()
+            targetVolunteer != null && targetVolunteer.firebaseOrgId.isNotBlank() ->
+                targetVolunteer.firebaseOrgId.trim()
+            else -> resolveActiveFirebaseOrgIdForWrites()
+        }
+        if (orgId.isBlank()) {
+            return LocalAdminGrantResult.Error("Missing organization ID")
+        }
+
+        val currentlyAdmin = targetGuest?.isAdmin == true || targetVolunteer?.isAdmin == true
+        if (wouldRemoveLastLocalAdmin(makeAdmin, currentlyAdmin, guests, volunteers, orgId)) {
+            return LocalAdminGrantResult.LastLocalAdmin
+        }
+
+        val gateway = createFirestoreGateway(ctx, settings)
+        val role = gateway.readMemberRoleFromServer(orgId, uid)
+        if (!firebaseRoleIsOrgAdmin(role)) {
+            return LocalAdminGrantResult.FirebaseNotAdmin
+        }
+
+        when (kind) {
+            LocalAdminTargetKind.GUEST -> {
+                val guest = targetGuest ?: return LocalAdminGrantResult.TargetNotFound
+                if (guest.isAdmin == makeAdmin) return LocalAdminGrantResult.Success
+                val updated = tagGuestWithActiveOrg(
+                    guest.copy(isAdmin = makeAdmin, lastModified = System.currentTimeMillis())
+                )
+                repository.updateGuest(updated)
+                syncCoordinator?.afterGuestSaved(updated)
+                    ?: twoWaySyncService?.backupGuestsToSheets()
+            }
+            LocalAdminTargetKind.VOLUNTEER -> {
+                val volunteer = targetVolunteer ?: return LocalAdminGrantResult.TargetNotFound
+                if (volunteer.isAdmin == makeAdmin) return LocalAdminGrantResult.Success
+                val updated = tagVolunteerWithActiveOrg(
+                    volunteer.copy(isAdmin = makeAdmin, lastModified = System.currentTimeMillis())
+                )
+                repository.updateVolunteer(updated)
+                syncCoordinator?.afterVolunteerSaved(updated)
+                    ?: twoWaySyncService?.backupVolunteersToSheets()
+                recalcAndUploadVolunteerGuestList()
+            }
+        }
+        withContext(Dispatchers.Main) {
+            refreshGuestData()
+            refreshVolunteerData()
+        }
+        return LocalAdminGrantResult.Success
+    }
+
     fun revokeBiometricAdminIfMatches(match: ScannerMatch) {
         val ctx = platformContext ?: return
         val settings = SettingsManager(ctx)
-        val link = settings.getBiometricAdminProfileLink() ?: return
+        if (settings.getBackendType() != BackendType.FIREBASE) {
+            val link = settings.getBiometricAdminProfileLink() ?: return
+            val matches = when (match) {
+                is ScannerMatch.VolunteerMatch ->
+                    link.type == BiometricAdminProfileType.VOLUNTEER && link.profileId == match.volunteer.id
+                is ScannerMatch.GuestMatch ->
+                    link.type == BiometricAdminProfileType.GUEST && link.profileId == match.guest.nanoId
+            }
+            if (matches) {
+                settings.setBiometricAdminLoginEnabled(false)
+            }
+            return
+        }
+        val profileOrgId = match.firebaseOrgId().trim()
+        val orgId = profileOrgId.ifBlank { resolveAdminAuthTargetOrgId().trim() }
+        if (orgId.isBlank()) return
+        val enrollment = settings.getBiometricEnrollmentForOrg(orgId) ?: return
         val matches = when (match) {
             is ScannerMatch.VolunteerMatch ->
-                link.type == BiometricAdminProfileType.VOLUNTEER && link.profileId == match.volunteer.id
+                enrollment.type == BiometricAdminProfileType.VOLUNTEER && enrollment.profileId == match.volunteer.id
             is ScannerMatch.GuestMatch ->
-                link.type == BiometricAdminProfileType.GUEST && link.profileId == match.guest.nanoId
+                enrollment.type == BiometricAdminProfileType.GUEST && enrollment.profileId == match.guest.nanoId
         }
         if (matches) {
-            settings.setBiometricAdminLoginEnabled(false)
+            settings.removeBiometricEnrollment(orgId)
         }
+    }
+
+    fun institutionHasLocalAdminForActiveOrg(
+        guests: List<Guest>,
+        volunteers: List<Volunteer>,
+    ): Boolean {
+        if (!shouldScopeAdminByOrg()) {
+            return guests.any { it.isAdmin } || volunteers.any { it.isAdmin }
+        }
+        return institutionHasLocalAdminInOrg(
+            guests = guests,
+            volunteers = volunteers,
+            orgId = resolveAdminAuthTargetOrgId(),
+            strictMultiOrg = isFirebaseStrictMultiOrgMode(),
+        )
     }
 
     private fun applyInitialBenefitFutureEntries(
@@ -1515,7 +1815,9 @@ class EventManagerViewModel(
                     volunteerJobsSame, _jobTypeConfigs.value
                 )
                 val jobWithBenefit = applyInitialBenefitFutureEntries(
-                    job, _jobTypeConfigs.value, meetingNovaExcluded
+                    job.copy(firebaseOrgId = tagEntityOrgId(job.firebaseOrgId)),
+                    _jobTypeConfigs.value,
+                    meetingNovaExcluded
                 )
                 
                 // Insert job into local database first
@@ -1723,11 +2025,11 @@ class EventManagerViewModel(
         viewModelScope.launch {
             try {
                 if (rejectIfCrudSoftLocked("adding shift types")) return@launch
-                // Insert job type config into local database
-                repository.insertJobTypeConfig(config)
-                syncCoordinator?.afterJobTypeSaved(config) ?: twoWaySyncService?.backupJobTypesToSheets()
+                val tagged = config.copy(firebaseOrgId = tagEntityOrgId(config.firebaseOrgId))
+                repository.insertJobTypeConfig(tagged)
+                syncCoordinator?.afterJobTypeSaved(tagged) ?: twoWaySyncService?.backupJobTypesToSheets()
                 
-                println("Successfully added job type: ${config.name}")
+                println("Successfully added job type: ${tagged.name}")
             } catch (e: Exception) {
                 println("Failed to add job type config: ${e.message}")
                 _syncError.value = "Failed to add job type config: ${e.message}"
@@ -1739,11 +2041,11 @@ class EventManagerViewModel(
         viewModelScope.launch {
             try {
                 if (rejectIfCrudSoftLocked("updating shift types")) return@launch
-                // Update job type config in local database
-                repository.updateJobTypeConfig(config)
-                syncCoordinator?.afterJobTypeSaved(config) ?: twoWaySyncService?.backupJobTypesToSheets()
+                val tagged = config.copy(firebaseOrgId = tagEntityOrgId(config.firebaseOrgId))
+                repository.updateJobTypeConfig(tagged)
+                syncCoordinator?.afterJobTypeSaved(tagged) ?: twoWaySyncService?.backupJobTypesToSheets()
                 
-                println("Successfully updated job type: ${config.name}")
+                println("Successfully updated job type: ${tagged.name}")
             } catch (e: Exception) {
                 println("Failed to update job type config: ${e.message}")
                 _syncError.value = "Failed to update job type config: ${e.message}"
@@ -1776,14 +2078,14 @@ class EventManagerViewModel(
         viewModelScope.launch {
             try {
                 if (rejectIfCrudSoftLocked("adding venues")) return@launch
-                // Insert venue into local database
-                repository.insertVenue(venue)
+                val tagged = venue.copy(firebaseOrgId = tagEntityOrgId(venue.firebaseOrgId))
+                repository.insertVenue(tagged)
                 
                 // BACKUP MODE: Upload entire venue dataset to Google Sheets
                 // This ensures Google Sheets has the complete, up-to-date dataset
-                syncCoordinator?.afterVenueSaved(venue) ?: twoWaySyncService?.backupVenuesToSheets()
+                syncCoordinator?.afterVenueSaved(tagged) ?: twoWaySyncService?.backupVenuesToSheets()
                 
-                println("Successfully added venue: ${venue.name}")
+                println("Successfully added venue: ${tagged.name}")
             } catch (e: Exception) {
                 println("Failed to add venue: ${e.message}")
                 _syncError.value = "Failed to add venue: ${e.message}"
@@ -1795,14 +2097,14 @@ class EventManagerViewModel(
         viewModelScope.launch {
             try {
                 if (rejectIfCrudSoftLocked("updating venues")) return@launch
-                // Update venue in local database
-                repository.updateVenue(venue)
+                val tagged = venue.copy(firebaseOrgId = tagEntityOrgId(venue.firebaseOrgId))
+                repository.updateVenue(tagged)
                 
                 // BACKUP MODE: Upload entire venue dataset to Google Sheets
                 // This ensures Google Sheets has the complete, up-to-date dataset
-                syncCoordinator?.afterVenueSaved(venue) ?: twoWaySyncService?.backupVenuesToSheets()
+                syncCoordinator?.afterVenueSaved(tagged) ?: twoWaySyncService?.backupVenuesToSheets()
                 
-                println("Successfully updated venue: ${venue.name}")
+                println("Successfully updated venue: ${tagged.name}")
             } catch (e: Exception) {
                 println("Failed to update venue: ${e.message}")
                 _syncError.value = "Failed to update venue: ${e.message}"
@@ -1857,9 +2159,10 @@ class EventManagerViewModel(
         viewModelScope.launch {
             try {
                 if (rejectIfCrudSoftLocked("adding sales items")) return@launch
-                repository.insertSalesSheetItem(item)
-                syncCoordinator?.afterSalesItemSaved(item) ?: twoWaySyncService?.backupSalesSheetItemsToSheets()
-                println("Successfully added sales sheet item: ${item.name}")
+                val tagged = item.copy(firebaseOrgId = tagEntityOrgId(item.firebaseOrgId))
+                repository.insertSalesSheetItem(tagged)
+                syncCoordinator?.afterSalesItemSaved(tagged) ?: twoWaySyncService?.backupSalesSheetItemsToSheets()
+                println("Successfully added sales sheet item: ${tagged.name}")
             } catch (e: Exception) {
                 println("Failed to add sales sheet item: ${e.message}")
                 _syncError.value = "Failed to add sales sheet item: ${e.message}"
@@ -1871,9 +2174,10 @@ class EventManagerViewModel(
         viewModelScope.launch {
             try {
                 if (rejectIfCrudSoftLocked("updating sales items")) return@launch
-                repository.updateSalesSheetItem(item)
-                syncCoordinator?.afterSalesItemSaved(item) ?: twoWaySyncService?.backupSalesSheetItemsToSheets()
-                println("Successfully updated sales sheet item: ${item.name}")
+                val tagged = item.copy(firebaseOrgId = tagEntityOrgId(item.firebaseOrgId))
+                repository.updateSalesSheetItem(tagged)
+                syncCoordinator?.afterSalesItemSaved(tagged) ?: twoWaySyncService?.backupSalesSheetItemsToSheets()
+                println("Successfully updated sales sheet item: ${tagged.name}")
             } catch (e: Exception) {
                 println("Failed to update sales sheet item: ${e.message}")
                 _syncError.value = "Failed to update sales sheet item: ${e.message}"
@@ -2661,6 +2965,7 @@ class EventManagerViewModel(
                                 id = localVenue.id,
                                 peopleCounterCount = localVenue.peopleCounterCount,
                                 peopleCounterWriterDeviceId = localVenue.peopleCounterWriterDeviceId,
+                                peopleCounterWriterAccountEmail = localVenue.peopleCounterWriterAccountEmail,
                                 peopleCounterLastModified = localVenue.peopleCounterLastModified
                             )
                         } else {
@@ -2678,6 +2983,7 @@ class EventManagerViewModel(
                             localVenue.copy(
                                 peopleCounterCount = remoteVenue.peopleCounterCount,
                                 peopleCounterWriterDeviceId = remoteVenue.peopleCounterWriterDeviceId,
+                                peopleCounterWriterAccountEmail = remoteVenue.peopleCounterWriterAccountEmail,
                                 peopleCounterLastModified = remoteVenue.peopleCounterLastModified
                             )
                         )
@@ -3453,7 +3759,7 @@ class EventManagerViewModel(
     }
 
     private suspend fun refreshSalesSheetItemData() {
-        val updatedItems = repository.getAllSalesSheetItems().first()
+        val updatedItems = filterForVisibleOrg(repository.getAllSalesSheetItems().first()) { it.firebaseOrgId }
         _salesSheetItems.value = updatedItems
     }
     
@@ -3692,7 +3998,8 @@ class EventManagerViewModel(
                         notes = "Volunteer benefit - ${getRankDisplayName(status.rank)}",
                         isVolunteerBenefit = true,
                         volunteerId = volunteer.id,
-                        nfcCardUid = volunteer.nfcCardUid
+                        nfcCardUid = volunteer.nfcCardUid,
+                        firebaseOrgId = volunteer.firebaseOrgId.ifBlank { resolveActiveFirebaseOrgIdForWrites() },
                     )
                 )
             }
@@ -3737,15 +4044,18 @@ class EventManagerViewModel(
             for ((volunteerId, newGuest) in newByVolunteerId) {
                 val existingGuest = existingByVolunteerId[volunteerId]
                 if (existingGuest == null) {
-                    toInsert.add(newGuest)
+                    toInsert.add(
+                        VolunteerBenefitGuestMerge.prepareForInsert(
+                            newGuest,
+                            resolveActiveFirebaseOrgIdForWrites(),
+                        ),
+                    )
                 } else if (existingGuest.name != newGuest.name ||
                            existingGuest.invitations != newGuest.invitations ||
                            existingGuest.notes != newGuest.notes ||
                            existingGuest.nfcCardUid != newGuest.nfcCardUid) {
-                    // Modified - update with existing ID
-                    toUpdate.add(newGuest.copy(id = existingGuest.id))
+                    toUpdate.add(VolunteerBenefitGuestMerge.prepareForUpdate(existingGuest, newGuest))
                 }
-                // If unchanged, do nothing
             }
 
             println("Volunteer benefit changes: ${toInsert.size} new, ${toUpdate.size} modified, ${toDelete.size} deleted")
@@ -4203,16 +4513,32 @@ class EventManagerViewModel(
         }
     }
     
-    private suspend fun refreshAllData() {
+    private fun hasLocalDataForVisibleOrg(): Boolean =
+        _guests.value.isNotEmpty() ||
+            _volunteers.value.isNotEmpty() ||
+            _jobs.value.isNotEmpty() ||
+            _venues.value.isNotEmpty() ||
+            _salesSheetItems.value.isNotEmpty() ||
+            _accountTransfers.value.isNotEmpty()
+
+    private suspend fun restoreFirebaseSessionIfNeeded() {
+        val ctx = platformContext ?: return
+        val auth = createFirebaseAuthService(ctx)
+        if (auth.isSignedIn()) return
+        auth.restoreSession()
+    }
+
+    private suspend fun refreshAllData(dbSettleDelayMs: Long = 100) {
         try {
             println("🔄 Starting refreshAllData...")
             
-            // CRITICAL: Small delay to ensure database changes have propagated
-            // Room's Flow emissions can be delayed after batch operations
-            delay(100)
+            // Room Flow emissions can lag after batch writes; org switch only changes the filter.
+            if (dbSettleDelayMs > 0) {
+                delay(dbSettleDelayMs)
+            }
             
             // Get data from repository on IO dispatcher
-            val (guests, volunteers, jobs, jobTypeConfigs, venues, salesSheetItems) = withContext(Dispatchers.IO) {
+            val (guests, volunteers, jobs, jobTypeConfigs, venues, salesSheetItems, transfers) = withContext(Dispatchers.IO) {
                 println("📊 Reading fresh data from database...")
                 val guestsData = repository.getAllGuests().first()
                 val volunteersData = repository.getAllVolunteers().first()
@@ -4220,11 +4546,11 @@ class EventManagerViewModel(
                 val jobTypeConfigsData = repository.getAllJobTypeConfigs().first()
                 val venuesData = repository.getAllVenues().first()
                 val salesSheetItemsData = repository.getAllSalesSheetItems().first()
+                val transfersData = repository.getAllAccountTransfersOnce()
                 
-                println("📊 Database read complete: ${guestsData.size} guests, ${volunteersData.size} volunteers, ${jobsData.size} jobs, ${jobTypeConfigsData.size} job types, ${venuesData.size} venues, ${salesSheetItemsData.size} sales items")
+                println("📊 Database read complete: ${guestsData.size} guests, ${volunteersData.size} volunteers, ${jobsData.size} jobs, ${jobTypeConfigsData.size} job types, ${venuesData.size} venues, ${salesSheetItemsData.size} sales items, ${transfersData.size} transfers")
                 
-                // Return all data as a tuple
-                Sext(guestsData, volunteersData, jobsData, jobTypeConfigsData, venuesData, salesSheetItemsData)
+                Sept(guestsData, volunteersData, jobsData, jobTypeConfigsData, venuesData, salesSheetItemsData, transfersData)
             }
             
             // Update StateFlows on Main dispatcher to ensure Compose recomposition
@@ -4232,19 +4558,29 @@ class EventManagerViewModel(
                 println("🔄 Updating StateFlows on Main dispatcher...")
                 val oldGuestCount = _guests.value.size
                 val oldVolunteerCount = _volunteers.value.size
-                
-                // CRITICAL FIX: Force StateFlow emission by creating new list instances
-                // StateFlow only emits if value changes, so we ensure new references
-                _guests.value = removeDuplicateGuests(guests).toList()
-                _volunteers.value = removeDuplicateVolunteers(volunteers).toList()
-                _jobs.value = removeDuplicateJobs(jobs).toList()
-                _jobTypeConfigs.value = removeDuplicateJobTypes(jobTypeConfigs).toList()
-                _venues.value = removeDuplicateVenues(venues).toList()
-                _salesSheetItems.value = salesSheetItems.sortedBy { it.name }
-                
+
+                val nextGuests = removeDuplicateGuests(guests)
+                val nextVolunteers = removeDuplicateVolunteers(volunteers)
+                val nextJobs = removeDuplicateJobs(jobs)
+                val nextJobTypes = removeDuplicateJobTypes(jobTypeConfigs)
+                val nextVenues = removeDuplicateVenues(venues)
+                val nextSales = filterForVisibleOrg(salesSheetItems) { it.firebaseOrgId }.sortedBy { it.name }
+                val nextTransfers = filterForVisibleOrg(transfers) { it.firebaseOrgId }
+
+                if (_guests.value != nextGuests) _guests.value = nextGuests
+                if (_volunteers.value != nextVolunteers) _volunteers.value = nextVolunteers
+                if (_jobs.value != nextJobs) _jobs.value = nextJobs
+                if (_jobTypeConfigs.value != nextJobTypes) _jobTypeConfigs.value = nextJobTypes
+                if (_venues.value != nextVenues) _venues.value = nextVenues
+                if (_salesSheetItems.value != nextSales) _salesSheetItems.value = nextSales
+                if (_accountTransfers.value != nextTransfers) {
+                    _accountTransfers.value = nextTransfers
+                    _accountBalances.value = AccountBalanceService.computeAllBalances(nextTransfers)
+                }
+
                 println("✅ StateFlows updated - Guests: $oldGuestCount → ${_guests.value.size}, Volunteers: $oldVolunteerCount → ${_volunteers.value.size}, Jobs: ${_jobs.value.size}, Job Types: ${_jobTypeConfigs.value.size}, Venues: ${_venues.value.size}, Sales Items: ${_salesSheetItems.value.size}")
-                println("✅ UI should now recompose with new data")
             }
+            reconcilePeopleCounterAfterVenuesChangedInternal()
         } catch (e: Exception) {
             println("❌ Failed to refresh data: ${e.message}")
             e.printStackTrace()
@@ -4254,6 +4590,15 @@ class EventManagerViewModel(
     // Helper classes for returning values from suspend function
     private data class Quint<A, B, C, D, E>(val first: A, val second: B, val third: C, val fourth: D, val fifth: E)
     private data class Sext<A, B, C, D, E, F>(val first: A, val second: B, val third: C, val fourth: D, val fifth: E, val sixth: F)
+    private data class Sept<A, B, C, D, E, F, G>(
+        val first: A,
+        val second: B,
+        val third: C,
+        val fourth: D,
+        val fifth: E,
+        val sixth: F,
+        val seventh: G,
+    )
     
     /**
      * Updates volunteer activity based on current jobs
@@ -4302,7 +4647,7 @@ class EventManagerViewModel(
                 
                 // Clean up duplicate guests
                 val allGuests = repository.getAllGuests().first()
-                val uniqueGuests = removeDuplicateGuests(allGuests)
+                val uniqueGuests = PersistIdentityDedupe.guests(allGuests)
                 if (allGuests.size != uniqueGuests.size) {
                     println("Found ${allGuests.size - uniqueGuests.size} duplicate guests, cleaning up...")
                     repository.clearAllGuests()
@@ -4311,7 +4656,7 @@ class EventManagerViewModel(
                 
                 // Clean up duplicate volunteers
                 val allVolunteers = repository.getAllVolunteers().first()
-                val uniqueVolunteers = removeDuplicateVolunteers(allVolunteers)
+                val uniqueVolunteers = PersistIdentityDedupe.volunteers(allVolunteers)
                 if (allVolunteers.size != uniqueVolunteers.size) {
                     println("Found ${allVolunteers.size - uniqueVolunteers.size} duplicate volunteers, cleaning up...")
                     repository.clearAllVolunteers()
@@ -4320,7 +4665,7 @@ class EventManagerViewModel(
                 
                 // Clean up duplicate jobs
                 val allJobs = repository.getAllJobs().first()
-                val uniqueJobs = removeDuplicateJobs(allJobs)
+                val uniqueJobs = PersistIdentityDedupe.jobs(allJobs)
                 if (allJobs.size != uniqueJobs.size) {
                     println("Found ${allJobs.size - uniqueJobs.size} duplicate jobs, cleaning up...")
                     repository.clearAllJobs()
@@ -4329,7 +4674,7 @@ class EventManagerViewModel(
                 
                 // Clean up duplicate job types
                 val allJobTypes = repository.getAllJobTypeConfigs().first()
-                val uniqueJobTypes = removeDuplicateJobTypes(allJobTypes)
+                val uniqueJobTypes = PersistIdentityDedupe.jobTypes(allJobTypes)
                 if (allJobTypes.size != uniqueJobTypes.size) {
                     println("Found ${allJobTypes.size - uniqueJobTypes.size} duplicate job types, cleaning up...")
                     repository.clearAllJobTypeConfigs()
@@ -4385,9 +4730,11 @@ class EventManagerViewModel(
      * otherwise fall back to DB row id so rows are not merged by name/content alone.
      */
     private fun removeDuplicateGuests(guests: List<Guest>): List<Guest> {
-        fun dedupeKey(g: Guest): String =
-            if (NanoIdGenerator.isValidNanoId(g.nanoId)) g.nanoId else "row:${g.id}"
-        val byKey = guests.groupBy { dedupeKey(it) }
+        val scoped = filterForVisibleOrg(guests) { it.firebaseOrgId }
+        fun dedupeKey(g: Guest): String {
+            return if (NanoIdGenerator.isValidNanoId(g.nanoId)) g.nanoId else "row:${g.id}"
+        }
+        val byKey = scoped.groupBy { dedupeKey(it) }
         return byKey.values.map { group ->
             // Keep the newest entry for each identity to avoid reverting recent changes.
             group.maxByOrNull { it.lastModified } ?: group.first()
@@ -4401,8 +4748,9 @@ class EventManagerViewModel(
      * 3. Everything else should NOT be filtered
      */
     private fun removeDuplicateVolunteers(volunteers: List<Volunteer>): List<Volunteer> {
+        val scoped = filterForVisibleOrg(volunteers) { it.firebaseOrgId }
         // Group by NanoID first to handle same-ID duplicates
-        val byNanoId = volunteers.groupBy { it.id }
+        val byNanoId = scoped.groupBy { "${it.firebaseOrgId}:${it.id}" }
         
         // For each NanoID group, keep only the oldest (lowest lastModified)
         val uniqueByNanoId = byNanoId.values.map { group ->
@@ -4411,7 +4759,7 @@ class EventManagerViewModel(
         
         // Now check for content duplicates (different NanoID but same info)
         // Content key = all identifying fields except NanoID and timestamps
-        fun contentKey(v: Volunteer) = "${v.name}_${v.lastNameAbbreviation}_${v.email}_${v.phoneNumber}_${v.dateOfBirth}_${v.gender}_${v.currentRank}_${v.isActive}_${v.nfcCardUid}"
+        fun contentKey(v: Volunteer) = "${v.firebaseOrgId}_${v.name}_${v.lastNameAbbreviation}_${v.email}_${v.phoneNumber}_${v.dateOfBirth}_${v.gender}_${v.currentRank}_${v.isActive}_${v.nfcCardUid}"
         
         val byContent = uniqueByNanoId.groupBy { contentKey(it) }
         
@@ -4428,6 +4776,7 @@ class EventManagerViewModel(
      * 3. Everything else should NOT be filtered
      */
     private fun removeDuplicateJobs(jobs: List<Job>): List<Job> {
+        val scoped = filterForVisibleOrg(jobs) { it.firebaseOrgId }
         // Only remove true duplicates: same database row appearing more than
         // once (identical primary key). A volunteer can legitimately have
         // multiple shifts with the same type/venue/date, so content-based
@@ -4435,16 +4784,16 @@ class EventManagerViewModel(
         //
         // Fast path: when no duplicates exist (common case) return the
         // original list to avoid an unnecessary allocation.
-        val seen = HashSet<Long>(jobs.size)
+        val seen = HashSet<Long>(scoped.size)
         var hasDuplicates = false
-        for (job in jobs) {
+        for (job in scoped) {
             if (!seen.add(job.id)) { hasDuplicates = true; break }
         }
         return if (hasDuplicates) {
             seen.clear()
-            jobs.filter { seen.add(it.id) }
+            scoped.filter { seen.add(it.id) }
         } else {
-            jobs
+            scoped
         }
     }
     
@@ -4455,8 +4804,9 @@ class EventManagerViewModel(
      * 3. Everything else should NOT be filtered
      */
     private fun removeDuplicateJobTypes(jobTypes: List<JobTypeConfig>): List<JobTypeConfig> {
+        val scoped = filterForVisibleOrg(jobTypes) { it.firebaseOrgId }
         // Group by ID first to handle same-ID duplicates
-        val byId = jobTypes.groupBy { it.id }
+        val byId = scoped.groupBy { it.id }
         
         // For each ID group, keep only the oldest (lowest lastModified)
         val uniqueById = byId.values.map { group ->
@@ -4464,7 +4814,7 @@ class EventManagerViewModel(
         }
         
         // Now check for content duplicates (different ID but same info)
-        fun contentKey(j: JobTypeConfig) = "${j.name}_${j.isActive}_${j.isShiftJob}_${j.isOrionJob}_${j.requiresShiftTime}_${j.description}"
+        fun contentKey(j: JobTypeConfig) = "${j.firebaseOrgId}_${j.name}_${j.isActive}_${j.isShiftJob}_${j.isOrionJob}_${j.requiresShiftTime}_${j.description}"
         
         val byContent = uniqueById.groupBy { contentKey(it) }
         
@@ -4481,8 +4831,9 @@ class EventManagerViewModel(
      * 3. Everything else should NOT be filtered
      */
     private fun removeDuplicateVenues(venues: List<VenueEntity>): List<VenueEntity> {
+        val scoped = filterForVisibleOrg(venues) { it.firebaseOrgId }
         // Group by ID first to handle same-ID duplicates
-        val byId = venues.groupBy { it.id }
+        val byId = scoped.groupBy { it.id }
         
         // For each ID group, keep only the oldest (lowest lastModified)
         val uniqueById = byId.values.map { group ->
@@ -4490,7 +4841,7 @@ class EventManagerViewModel(
         }
         
         // Now check for content duplicates (different ID but same info)
-        fun contentKey(v: VenueEntity) = "${v.name}_${v.description}_${v.isActive}"
+        fun contentKey(v: VenueEntity) = "${v.firebaseOrgId}_${v.name}_${v.description}_${v.isActive}"
         
         val byContent = uniqueById.groupBy { contentKey(it) }
         
@@ -4936,7 +5287,7 @@ class EventManagerViewModel(
             // Apply job type config changes
             if (changes.jobTypeConfigs.hasChanges) {
                 // Helper to get matching key (same as DifferentialSyncService)
-                fun jobTypeKey(c: JobTypeConfig) = c.name
+                fun jobTypeKey(c: JobTypeConfig) = "${c.firebaseOrgId}\u0000${c.name}"
                 
                 // Remove deleted job type configs by matching key
                 changes.jobTypeConfigs.deleted.forEach { deletedConfig ->
@@ -4963,7 +5314,7 @@ class EventManagerViewModel(
             // Apply venue changes
             if (changes.venues.hasChanges) {
                 // Helper to get matching key (same as DifferentialSyncService)
-                fun venueKey(v: VenueEntity) = v.name
+                fun venueKey(v: VenueEntity) = "${v.firebaseOrgId}\u0000${v.name}"
                 
                 // Remove deleted venues by matching key
                 changes.venues.deleted.forEach { deletedVenue ->
@@ -5599,7 +5950,8 @@ class EventManagerViewModel(
             try {
                 if (rejectIfCrudSoftLocked("adjusting accounts")) return@launch
                 val transfer = accountCreditService.applyManualAdjustment(
-                    holderType, holderId, holderName, amount, note
+                    holderType, holderId, holderName, amount, note,
+                    firebaseOrgId = resolveHolderOrgId(holderType, holderId),
                 )
                 if (settingsManagerCached?.getBackendType() == BackendType.FIREBASE) {
                     when (val ledger = syncCoordinator?.commitTransfer(transfer)) {
@@ -5785,7 +6137,7 @@ class EventManagerViewModel(
     private suspend fun applySalesSheetItemUIUpdates(changes: DifferentialSyncService.SyncChanges<SalesSheetItem>) {
         try {
             val currentItems = _salesSheetItems.value.toMutableList()
-            fun key(item: SalesSheetItem) = item.name
+            fun key(item: SalesSheetItem) = "${item.firebaseOrgId}\u0000${item.name}"
 
             changes.deleted.forEach { deleted ->
                 currentItems.removeAll { key(it) == key(deleted) }
@@ -5802,7 +6154,7 @@ class EventManagerViewModel(
                 }
             }
 
-            _salesSheetItems.value = currentItems.sortedBy { it.name }
+            _salesSheetItems.value = filterForVisibleOrg(currentItems) { it.firebaseOrgId }.sortedBy { it.name }
             println("✅ Applied ${changes.totalChanges} targeted sales sheet item UI updates")
         } catch (e: Exception) {
             println("❌ Failed to apply targeted sales sheet item UI updates: ${e.message}")
@@ -5820,7 +6172,7 @@ class EventManagerViewModel(
             val currentVenues = _venues.value.toMutableList()
 
             // Helper to get matching key (same as DifferentialSyncService)
-            fun venueKey(v: VenueEntity) = v.name
+            fun venueKey(v: VenueEntity) = "${v.firebaseOrgId}\u0000${v.name}"
 
             // Remove deleted venues by matching key
             changes.deleted.forEach { deletedVenue ->
@@ -5900,20 +6252,22 @@ class EventManagerViewModel(
                 } ?: false
             }
             
-            println("📋 Changes: ${addedBenefits.size} new, ${modifiedBenefits.size} modified, ${deletedBenefits.size} deleted")
+            val orgId = resolveActiveFirebaseOrgIdForWrites()
+            val addedToSave = addedBenefits.map { VolunteerBenefitGuestMerge.prepareForInsert(it, orgId) }
+            val modifiedToSave = modifiedBenefits.map { computed ->
+                val existing = benefitMap["${computed.volunteerId}_${computed.name}"]
+                if (existing != null) VolunteerBenefitGuestMerge.prepareForUpdate(existing, computed) else computed
+            }
+            
+            println("📋 Changes: ${addedToSave.size} new, ${modifiedToSave.size} modified, ${deletedBenefits.size} deleted")
             
             // STEP 4: Apply changes to MAIN_DB (don't clear everything)
-            if (deletedBenefits.isNotEmpty() || addedBenefits.isNotEmpty() || modifiedBenefits.isNotEmpty()) {
-                // Delete removed benefits
+            if (deletedBenefits.isNotEmpty() || addedToSave.isNotEmpty() || modifiedToSave.isNotEmpty()) {
                 deletedBenefits.forEach { repository.deleteGuest(it) }
+                addedToSave.forEach { repository.insertGuest(it) }
+                modifiedToSave.forEach { repository.updateGuest(it) }
                 
-                // Insert new benefits
-                addedBenefits.forEach { repository.insertGuest(it) }
-                
-                // Update modified benefits
-                modifiedBenefits.forEach { repository.updateGuest(it) }
-                
-                println("✅ Applied ${deletedBenefits.size + addedBenefits.size + modifiedBenefits.size} changes to MAIN_DB")
+                println("✅ Applied ${deletedBenefits.size + addedToSave.size + modifiedToSave.size} changes to MAIN_DB")
             } else {
                 println("ℹ️ No volunteer benefit changes detected - MAIN_DB already in sync")
             }
@@ -5921,16 +6275,13 @@ class EventManagerViewModel(
             // STEP 5: Update UI with differential changes
             val currentGuests = _guests.value.toMutableList()
             
-            // Remove deleted benefits from UI
             deletedBenefits.forEach { deleted ->
                 currentGuests.removeAll { it.id == deleted.id }
             }
             
-            // Add new benefits to UI
-            currentGuests.addAll(addedBenefits)
+            currentGuests.addAll(addedToSave)
             
-            // Update modified benefits in UI
-            modifiedBenefits.forEach { modified ->
+            modifiedToSave.forEach { modified ->
                 val index = currentGuests.indexOfFirst { 
                     it.volunteerId == modified.volunteerId && 
                     it.isVolunteerBenefit && 
@@ -5944,7 +6295,7 @@ class EventManagerViewModel(
             _guests.value = removeDuplicateGuests(currentGuests)
             
             // STEP 6: Upload to Google Sheets only if there were changes
-            if (isGoogleSheetsConfigured() && (deletedBenefits.isNotEmpty() || addedBenefits.isNotEmpty() || modifiedBenefits.isNotEmpty())) {
+            if (isGoogleSheetsConfigured() && (deletedBenefits.isNotEmpty() || addedToSave.isNotEmpty() || modifiedToSave.isNotEmpty())) {
                 try {
                     println("📤 Uploading changed volunteer benefits to Google Sheets...")
                     googleSheetsService.initializeSheetsService()
@@ -5965,6 +6316,24 @@ class EventManagerViewModel(
 
     fun clearPeopleCounterUiHint() {
         _peopleCounterUiHint.value = null
+    }
+
+    private fun patchPeopleCounterWriter(
+        venue: VenueEntity,
+        writerDeviceId: String,
+        lastModified: Long,
+        backendFirebase: Boolean,
+    ): VenueEntity {
+        val writerEmail = if (backendFirebase && writerDeviceId.isNotBlank()) {
+            com.eventmanager.app.data.remote.FirebaseAuthBridge.currentUserEmail().orEmpty().trim()
+        } else {
+            ""
+        }
+        return venue.copy(
+            peopleCounterWriterDeviceId = writerDeviceId,
+            peopleCounterWriterAccountEmail = writerEmail,
+            peopleCounterLastModified = lastModified,
+        )
     }
 
     fun refreshVenuesForPeopleCounterQuietly() {
@@ -6012,7 +6381,7 @@ class EventManagerViewModel(
                         }
                         val fresh = repository.getVenueById(vid) ?: return@withLock
                         repository.updateVenue(
-                            fresh.copy(peopleCounterWriterDeviceId = myId, peopleCounterLastModified = now)
+                            patchPeopleCounterWriter(fresh, myId, now, backendFirebase = true)
                         )
                         val t = peopleCounterThrottleByVenue.getOrPut(vid) { PeopleCounterThrottle() }
                         t.lastUploadAtMs = now
@@ -6085,7 +6454,7 @@ class EventManagerViewModel(
         val sm = SettingsManager(ctx)
         val backendFirebase = sm.getBackendType() == BackendType.FIREBASE
         if (!backendFirebase && !isGoogleSheetsConfigured()) {
-            _peopleCounterUiHint.value = "Configure Google Sheets first."
+            _peopleCounterUiHint.value = PeopleCounterUiHint.NeedSheets
             return
         }
         if (!backendFirebase) {
@@ -6094,20 +6463,20 @@ class EventManagerViewModel(
         val vid = _peopleCounterSelectedVenueId.value
         val venue = repository.getVenueById(vid)
         if (venue == null) {
-            _peopleCounterUiHint.value = "Select a venue."
+            _peopleCounterUiHint.value = PeopleCounterUiHint.SelectVenue
             return
         }
         val myId = sm.getOrCreatePersistentDeviceId()
         val w = venue.peopleCounterWriterDeviceId.trim()
         if (!forceStealFromOtherDevice && w.isNotEmpty() && w != myId) {
-            _peopleCounterUiHint.value = "Another device controls the counter."
+            _peopleCounterUiHint.value = PeopleCounterUiHint.AnotherDeviceBlocked
             return
         }
         val now = System.currentTimeMillis()
         val countForSheetAndDb = if (!backendFirebase) {
             val row = venue.sheetsId?.toIntOrNull()
             if (row == null) {
-                _peopleCounterUiHint.value = "Venue has no sheet row."
+                _peopleCounterUiHint.value = PeopleCounterUiHint.NoSheetRow
                 return
             }
             val count = if (forceStealFromOtherDevice) {
@@ -6119,16 +6488,19 @@ class EventManagerViewModel(
             count
         } else {
             val count = venue.peopleCounterCount
-            syncCoordinator?.updatePeopleCounter(
-                venue.copy(peopleCounterWriterDeviceId = myId, peopleCounterLastModified = now),
-                count,
-            )
+            val writerVenue = patchPeopleCounterWriter(venue, myId, now, backendFirebase = true)
+            syncCoordinator?.updatePeopleCounter(writerVenue, count)
             count
         }
         repository.updateVenue(
             venue.copy(
                 peopleCounterCount = countForSheetAndDb,
                 peopleCounterWriterDeviceId = myId,
+                peopleCounterWriterAccountEmail = if (backendFirebase) {
+                    com.eventmanager.app.data.remote.FirebaseAuthBridge.currentUserEmail().orEmpty().trim()
+                } else {
+                    ""
+                },
                 peopleCounterLastModified = now
             )
         )
@@ -6194,7 +6566,7 @@ class EventManagerViewModel(
             if (v.id == _peopleCounterSelectedVenueId.value) {
                 _peopleCounterPriority.value = false
             }
-            _peopleCounterUiHint.value = "Priority lost — another device is writing."
+            _peopleCounterUiHint.value = PeopleCounterUiHint.PriorityLost
         }
     }
 
@@ -6233,7 +6605,7 @@ class EventManagerViewModel(
         val now = System.currentTimeMillis()
         if (sm.getBackendType() == BackendType.FIREBASE) {
             syncCoordinator?.updatePeopleCounter(
-                venue.copy(peopleCounterWriterDeviceId = "", peopleCounterLastModified = now),
+                patchPeopleCounterWriter(venue, "", now, backendFirebase = true),
                 venue.peopleCounterCount,
             )
         } else {
@@ -6246,7 +6618,7 @@ class EventManagerViewModel(
             )
         }
         repository.updateVenue(
-            venue.copy(peopleCounterWriterDeviceId = "", peopleCounterLastModified = now)
+            patchPeopleCounterWriter(venue, "", now, backendFirebase = sm.getBackendType() == BackendType.FIREBASE)
         )
     }
 
@@ -6325,7 +6697,7 @@ class EventManagerViewModel(
 
             if (backendFirebase) {
                 syncCoordinator?.updatePeopleCounter(
-                    fresh.copy(peopleCounterWriterDeviceId = myId, peopleCounterLastModified = now),
+                    patchPeopleCounterWriter(fresh, myId, now, backendFirebase = true),
                     count,
                     fresh.firebaseOrgId,
                 )
@@ -6334,7 +6706,7 @@ class EventManagerViewModel(
                 twoWaySyncService?.updateVenuePeopleCounterOnSheets(row, count, myId, now)
             }
             repository.updateVenue(
-                fresh.copy(peopleCounterWriterDeviceId = myId, peopleCounterLastModified = now)
+                patchPeopleCounterWriter(fresh, myId, now, backendFirebase = backendFirebase)
             )
             t.lastUploadAtMs = now
             t.countAtLastUpload = count

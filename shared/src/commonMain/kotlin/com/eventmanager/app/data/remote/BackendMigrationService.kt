@@ -262,9 +262,7 @@ class BackendMigrationService(
                 sheetsSpreadsheetIdHint = settingsManager.getSpreadsheetId(),
                 firebaseProjectId = settingsManager.getFirebaseProjectId().takeIf { it.isNotBlank() },
                 firebaseApplicationId = settingsManager.getFirebaseApplicationId().takeIf { it.isNotBlank() },
-                firebaseApiKey = settingsManager.getFirebaseApiKey().takeIf { it.isNotBlank() },
                 firebaseWebClientId = settingsManager.getFirebaseWebClientId().takeIf { it.isNotBlank() },
-                firebaseWebClientSecret = settingsManager.getFirebaseWebClientSecret().takeIf { it.isNotBlank() },
             )
             sheetsBackend.announceInstitutionBackendMigration(announcement)
             firebaseBackend.announceInstitutionBackendMigration(announcement)

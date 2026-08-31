@@ -81,6 +81,10 @@ fun AdminSetupFlow(
     showIntroWarning: Boolean = true,
     skipIntro: Boolean = false,
     useInlineNfcCapture: Boolean = false,
+    onRequestDismiss: () -> Unit = {},
+    onUpdateAdminGuest: (Guest, (Boolean, Guest?, String?) -> Unit) -> Unit = { _, cb -> cb(false, null, null) },
+    onUpdateAdminVolunteer: (Volunteer, (Boolean, Volunteer?, String?) -> Unit) -> Unit = { _, cb -> cb(false, null, null) },
+    autoCompleteOnNfc: Boolean = false,
 ) {
     var step by remember(skipIntro, showIntroWarning) {
         mutableStateOf(
@@ -97,15 +101,13 @@ fun AdminSetupFlow(
     var nfcManualUid by remember { mutableStateOf("") }
     var nfcStatusMessage by remember { mutableStateOf<String?>(null) }
     var showNfcDialog by remember { mutableStateOf(false) }
-    var accessConfigured by remember { mutableStateOf(false) }
 
     val adminName = createdProfile?.displayName.orEmpty()
-    val canFinish = accessConfigured && createdProfile != null
+    val canFinish = createdProfile != null
 
     fun onProfileCreated(profile: CreatedAdminProfile) {
         createdProfile = profile
-        accessConfigured = false
-        nfcManualUid = ""
+        nfcManualUid = profile.nfcUid
         nfcStatusMessage = null
         step = AdminSetupStep.QR_DISPLAY
     }
@@ -115,10 +117,37 @@ fun AdminSetupFlow(
         if (profile.entityId.isBlank()) return
         onAssignNfcUid(profile.type, profile.entityId, uid)
         createdProfile = profile.withNfc(uid)
-        accessConfigured = true
         nfcStatusMessage = null
         if (step == AdminSetupStep.NFC_CAPTURE) {
             step = AdminSetupStep.QR_DISPLAY
+        }
+        if (autoCompleteOnNfc) {
+            onComplete()
+        }
+    }
+
+    fun navigateBack() {
+        step = when (step) {
+            AdminSetupStep.TYPE_SELECTION -> {
+                if (skipIntro) {
+                    onRequestDismiss()
+                    step
+                } else {
+                    AdminSetupStep.INTRO
+                }
+            }
+            AdminSetupStep.CREATE_FORM -> {
+                if (createdProfile != null) {
+                    createError = null
+                    AdminSetupStep.QR_DISPLAY
+                } else {
+                    createError = null
+                    AdminSetupStep.TYPE_SELECTION
+                }
+            }
+            AdminSetupStep.QR_DISPLAY -> AdminSetupStep.CREATE_FORM
+            AdminSetupStep.NFC_CAPTURE -> AdminSetupStep.QR_DISPLAY
+            else -> step
         }
     }
 
@@ -147,15 +176,38 @@ fun AdminSetupFlow(
                             venues = venues,
                             creating = creating,
                             error = createError,
+                            initialGuest = createdProfile?.guest,
                             onSubmit = { guest ->
                                 creating = true
                                 createError = null
-                                onCreateAdminGuest(guest) { success, saved, err ->
-                                    creating = false
-                                    if (success && saved != null) {
-                                        onProfileCreated(CreatedAdminProfile(AdminType.GUEST, guest = saved))
-                                    } else {
-                                        createError = err
+                                val existing = createdProfile?.guest
+                                if (existing != null) {
+                                    val updated = existing.copy(
+                                        name = guest.name,
+                                        lastNameAbbreviation = guest.lastNameAbbreviation,
+                                        email = guest.email,
+                                        phoneNumber = guest.phoneNumber,
+                                        invitations = guest.invitations,
+                                        venueName = guest.venueName,
+                                        notes = guest.notes,
+                                        isAdmin = true,
+                                    )
+                                    onUpdateAdminGuest(updated) { success, saved, err ->
+                                        creating = false
+                                        if (success && saved != null) {
+                                            onProfileCreated(CreatedAdminProfile(AdminType.GUEST, guest = saved))
+                                        } else {
+                                            createError = err
+                                        }
+                                    }
+                                } else {
+                                    onCreateAdminGuest(guest) { success, saved, err ->
+                                        creating = false
+                                        if (success && saved != null) {
+                                            onProfileCreated(CreatedAdminProfile(AdminType.GUEST, guest = saved))
+                                        } else {
+                                            createError = err
+                                        }
                                     }
                                 }
                             },
@@ -163,15 +215,37 @@ fun AdminSetupFlow(
                         AdminType.VOLUNTEER -> AdminVolunteerFormPage(
                             creating = creating,
                             error = createError,
+                            initialVolunteer = createdProfile?.volunteer,
                             onSubmit = { volunteer ->
                                 creating = true
                                 createError = null
-                                onCreateAdminVolunteer(volunteer) { success, saved, err ->
-                                    creating = false
-                                    if (success && saved != null) {
-                                        onProfileCreated(CreatedAdminProfile(AdminType.VOLUNTEER, volunteer = saved))
-                                    } else {
-                                        createError = err
+                                val existing = createdProfile?.volunteer
+                                if (existing != null) {
+                                    val updated = existing.copy(
+                                        name = volunteer.name,
+                                        lastNameAbbreviation = volunteer.lastNameAbbreviation,
+                                        email = volunteer.email,
+                                        phoneNumber = volunteer.phoneNumber,
+                                        dateOfBirth = volunteer.dateOfBirth,
+                                        gender = volunteer.gender,
+                                        isAdmin = true,
+                                    )
+                                    onUpdateAdminVolunteer(updated) { success, saved, err ->
+                                        creating = false
+                                        if (success && saved != null) {
+                                            onProfileCreated(CreatedAdminProfile(AdminType.VOLUNTEER, volunteer = saved))
+                                        } else {
+                                            createError = err
+                                        }
+                                    }
+                                } else {
+                                    onCreateAdminVolunteer(volunteer) { success, saved, err ->
+                                        creating = false
+                                        if (success && saved != null) {
+                                            onProfileCreated(CreatedAdminProfile(AdminType.VOLUNTEER, volunteer = saved))
+                                        } else {
+                                            createError = err
+                                        }
                                     }
                                 }
                             },
@@ -191,9 +265,13 @@ fun AdminSetupFlow(
                                         showNfcDialog = true
                                     }
                                 },
-                                onQrAcknowledged = { accessConfigured = true },
                                 onContinue = {
-                                    if (canFinish) step = AdminSetupStep.DONE
+                                    if (!canFinish) return@QrDisplayPage
+                                    if (skipIntro) {
+                                        onComplete()
+                                    } else {
+                                        step = AdminSetupStep.DONE
+                                    }
                                 },
                                 canContinue = canFinish,
                             )
@@ -232,15 +310,9 @@ fun AdminSetupFlow(
 
         Row(Modifier.fillMaxWidth().padding(vertical = 16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
             if (step != AdminSetupStep.INTRO && step != AdminSetupStep.DONE) {
-                OutlinedButton(onClick = {
-                    step = when (step) {
-                        AdminSetupStep.TYPE_SELECTION -> AdminSetupStep.INTRO
-                        AdminSetupStep.CREATE_FORM -> AdminSetupStep.TYPE_SELECTION
-                        AdminSetupStep.QR_DISPLAY -> AdminSetupStep.CREATE_FORM
-                        AdminSetupStep.NFC_CAPTURE -> AdminSetupStep.QR_DISPLAY
-                        else -> step
-                    }
-                }) { Text(stringResource(Res.string.setup_back)) }
+                OutlinedButton(onClick = { navigateBack() }) {
+                    Text(stringResource(Res.string.setup_back))
+                }
             } else Spacer(Modifier.width(8.dp))
 
             when (step) {
@@ -318,6 +390,8 @@ fun NoAdminRecoveryDialog(
     venues: List<VenueEntity>,
     onCreateAdminGuest: (Guest, (Boolean, Guest?, String?) -> Unit) -> Unit,
     onCreateAdminVolunteer: (Volunteer, (Boolean, Volunteer?, String?) -> Unit) -> Unit,
+    onUpdateAdminGuest: (Guest, (Boolean, Guest?, String?) -> Unit) -> Unit,
+    onUpdateAdminVolunteer: (Volunteer, (Boolean, Volunteer?, String?) -> Unit) -> Unit,
     onAssignNfcUid: (AdminType, String, String) -> Unit,
     onComplete: () -> Unit,
     onDismiss: () -> Unit,
@@ -359,7 +433,7 @@ fun NoAdminRecoveryDialog(
                         )
                     }
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.setup_back))
+                        Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.close))
                     }
                 }
                 HorizontalDivider(Modifier.padding(vertical = 8.dp))
@@ -374,6 +448,10 @@ fun NoAdminRecoveryDialog(
                     showIntroWarning = false,
                     skipIntro = true,
                     useInlineNfcCapture = true,
+                    onRequestDismiss = onDismiss,
+                    onUpdateAdminGuest = onUpdateAdminGuest,
+                    onUpdateAdminVolunteer = onUpdateAdminVolunteer,
+                    autoCompleteOnNfc = true,
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth(),
@@ -423,15 +501,18 @@ private fun AdminGuestFormPage(
     venues: List<VenueEntity>,
     creating: Boolean,
     error: String?,
+    initialGuest: Guest? = null,
     onSubmit: (Guest) -> Unit,
 ) {
-    var name by remember { mutableStateOf("") }
-    var lastNameAbbreviation by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var phone by remember { mutableStateOf("") }
-    var invitations by remember { mutableStateOf("0") }
-    var selectedVenueName by remember { mutableStateOf<String?>(venues.firstOrNull()?.name ?: "BOTH") }
-    var notes by remember { mutableStateOf("") }
+    var name by remember(initialGuest) { mutableStateOf(initialGuest?.name.orEmpty()) }
+    var lastNameAbbreviation by remember(initialGuest) { mutableStateOf(initialGuest?.lastNameAbbreviation.orEmpty()) }
+    var email by remember(initialGuest) { mutableStateOf(initialGuest?.email.orEmpty()) }
+    var phone by remember(initialGuest) { mutableStateOf(initialGuest?.phoneNumber.orEmpty()) }
+    var invitations by remember(initialGuest) { mutableStateOf((initialGuest?.invitations ?: 0).toString()) }
+    var selectedVenueName by remember(initialGuest, venues) {
+        mutableStateOf(initialGuest?.venueName?.takeIf { it.isNotBlank() } ?: venues.firstOrNull()?.name ?: "BOTH")
+    }
+    var notes by remember(initialGuest) { mutableStateOf(initialGuest?.notes.orEmpty()) }
     var emailError by remember { mutableStateOf<String?>(null) }
 
     Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -495,7 +576,7 @@ private fun AdminGuestFormPage(
             onClick = {
                 val defaultVenue = venues.firstOrNull { it.isActive }?.name ?: "BOTH"
                 onSubmit(
-                    Guest(
+                    (initialGuest ?: Guest(name = "", invitations = 0, venueName = "BOTH")).copy(
                         name = name.trim(),
                         lastNameAbbreviation = lastNameAbbreviation.trim(),
                         email = email.trim(),
@@ -503,6 +584,7 @@ private fun AdminGuestFormPage(
                         invitations = invitations.toIntOrNull() ?: 0,
                         venueName = selectedVenueName?.ifBlank { defaultVenue } ?: defaultVenue,
                         notes = notes.trim(),
+                        isAdmin = true,
                     ),
                 )
             },
@@ -517,13 +599,22 @@ private fun AdminGuestFormPage(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AdminVolunteerFormPage(creating: Boolean, error: String?, onSubmit: (Volunteer) -> Unit) {
-    var name by remember { mutableStateOf("") }
-    var abbreviation by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var phone by remember { mutableStateOf("") }
-    var dateOfBirth by remember { mutableStateOf("") }
-    var selectedGender by remember { mutableStateOf<Gender?>(Gender.PREFER_NOT_TO_DISCLOSE) }
+private fun AdminVolunteerFormPage(
+    creating: Boolean,
+    error: String?,
+    initialVolunteer: Volunteer? = null,
+    onSubmit: (Volunteer) -> Unit,
+) {
+    var name by remember(initialVolunteer) { mutableStateOf(initialVolunteer?.name.orEmpty()) }
+    var abbreviation by remember(initialVolunteer) { mutableStateOf(initialVolunteer?.lastNameAbbreviation.orEmpty()) }
+    var email by remember(initialVolunteer) { mutableStateOf(initialVolunteer?.email.orEmpty()) }
+    var phone by remember(initialVolunteer) { mutableStateOf(initialVolunteer?.phoneNumber.orEmpty()) }
+    var dateOfBirth by remember(initialVolunteer) {
+        mutableStateOf(
+            initialVolunteer?.dateOfBirth?.let { ValidationUtils.convertDateToDisplayFormat(it) }.orEmpty(),
+        )
+    }
+    var selectedGender by remember(initialVolunteer) { mutableStateOf(initialVolunteer?.gender ?: Gender.PREFER_NOT_TO_DISCLOSE) }
     var expandedGender by remember { mutableStateOf(false) }
     var emailError by remember { mutableStateOf<String?>(null) }
     var dateError by remember { mutableStateOf<String?>(null) }
@@ -607,14 +698,15 @@ private fun AdminVolunteerFormPage(creating: Boolean, error: String?, onSubmit: 
             onClick = {
                 val storageDate = ValidationUtils.convertDateToStorageFormat(dateOfBirth) ?: dateOfBirth
                 onSubmit(
-                    Volunteer(
+                    (initialVolunteer ?: Volunteer(name = "", lastNameAbbreviation = "", email = "", phoneNumber = "")).copy(
                         name = name.trim(),
                         lastNameAbbreviation = abbreviation.trim(),
                         email = email.trim(),
                         phoneNumber = phone.trim(),
                         dateOfBirth = storageDate,
                         gender = selectedGender,
-                        currentRank = VolunteerRank.NOVA,
+                        currentRank = initialVolunteer?.currentRank ?: VolunteerRank.NOVA,
+                        isAdmin = true,
                     ),
                 )
             },
@@ -638,7 +730,6 @@ private fun AdminVolunteerFormPage(creating: Boolean, error: String?, onSubmit: 
     platformContext: PlatformContext,
     profile: CreatedAdminProfile,
     onAssignNfc: () -> Unit,
-    onQrAcknowledged: () -> Unit,
     onContinue: () -> Unit,
     canContinue: Boolean,
 ) {
@@ -676,18 +767,12 @@ private fun AdminVolunteerFormPage(creating: Boolean, error: String?, onSubmit: 
                         fileName = "admin_qr_${payload.take(12)}.png",
                         title = shareTitle,
                     )
-                    onQrAcknowledged()
                 },
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Icon(Icons.Default.Share, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
                 Text(stringResource(Res.string.share_qr_code))
-            }
-            OutlinedButton(onClick = onQrAcknowledged, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Default.Check, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(Res.string.admin_setup_qr_saved))
             }
         }
         if (profile.nfcUid.isNotBlank()) {
@@ -699,14 +784,12 @@ private fun AdminVolunteerFormPage(creating: Boolean, error: String?, onSubmit: 
                 Text(stringResource(Res.string.admin_setup_use_nfc))
             }
         }
-        if (!canContinue) {
-            Text(
-                stringResource(Res.string.admin_setup_access_required),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-        }
+        Text(
+            stringResource(Res.string.admin_setup_qr_next_step_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
         Button(onClick = onContinue, enabled = canContinue, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(Res.string.admin_setup_done))
         }

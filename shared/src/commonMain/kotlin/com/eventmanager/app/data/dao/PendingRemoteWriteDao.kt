@@ -32,6 +32,9 @@ interface PendingRemoteWriteDao {
     @Query("SELECT COUNT(*) FROM pending_remote_writes")
     suspend fun count(): Int
 
+    @Query("SELECT COUNT(*) FROM pending_remote_writes WHERE attempts > 0")
+    suspend fun countWithFailedAttempts(): Int
+
     @Query("SELECT * FROM pending_remote_writes WHERE orgId = :orgId ORDER BY createdAt ASC")
     suspend fun getAllForOrgOnce(orgId: String): List<PendingRemoteWrite>
 

@@ -51,6 +51,10 @@ import com.eventmanager.app.platform.hardware.WindowsAcsPcscSetup
 import com.eventmanager.app.platform.openUrl
 import com.eventmanager.app.ui.components.BleReaderPickerDialog
 import com.eventmanager.app.ui.components.BiometricAdminVerificationDialog
+import com.eventmanager.app.ui.components.BiometricOrgEnrollmentWizard
+import com.eventmanager.app.data.sync.BiometricAdminOrgEnrollment
+import com.eventmanager.app.data.remote.BackendType
+import com.eventmanager.app.data.remote.FirebaseOrgAbbreviation
 import com.eventmanager.app.ui.components.ScannerMatch
 import com.eventmanager.app.resources.Res
 import com.eventmanager.app.resources.*
@@ -369,8 +373,6 @@ actual fun SettingsScreen(
                 settingsManager.getBackendType() == com.eventmanager.app.data.remote.BackendType.FIREBASE
             ) {
                 var firebaseConfiguredOrgs by remember { mutableStateOf(settingsManager.getFirebaseConfiguredOrgs()) }
-                var memberUid by remember { mutableStateOf("") }
-                var memberEmail by remember { mutableStateOf("") }
                 var firebaseProjectId by remember { mutableStateOf(settingsManager.getFirebaseProjectId()) }
                 var firebaseApiKey by remember { mutableStateOf(settingsManager.getFirebaseApiKey()) }
                 var firebaseApplicationId by remember { mutableStateOf(settingsManager.getFirebaseApplicationId()) }
@@ -427,10 +429,6 @@ actual fun SettingsScreen(
                     platformContext = platformContext,
                     onMirrorSettingsChanged = { viewModel.onSheetsMirrorSettingsChanged() },
                     settingsManager = settingsManager,
-                    memberUid = memberUid,
-                    memberEmail = memberEmail,
-                    onMemberUidChange = { memberUid = it },
-                    onMemberEmailChange = { memberEmail = it },
                     projectId = firebaseProjectId,
                     apiKey = firebaseApiKey,
                     applicationId = firebaseApplicationId,
@@ -455,7 +453,7 @@ actual fun SettingsScreen(
                         allowedEmailDomains = domains
                         settingsManager.setAllowedEmailDomains(domains)
                         scope.launch {
-                            val org = settingsManager.getFirebaseOrgId().trim()
+                            val org = settingsManager.resolveWritableFirebaseOrgId()
                             if (org.isBlank()) return@launch
                             val gateway = com.eventmanager.app.data.remote.createFirestoreGateway(
                                 platformContext,
@@ -468,22 +466,6 @@ actual fun SettingsScreen(
                                     domains = domains,
                                 )
                             }.onFailure { uploadStatus = it.message }
-                        }
-                    },
-                    onAssignMemberRole = { role ->
-                        scope.launch {
-                            val gateway = com.eventmanager.app.data.remote.createFirestoreGateway(
-                                platformContext,
-                                settingsManager,
-                            )
-                            com.eventmanager.app.data.remote.MemberRoleAdmin.upsertMember(
-                                gateway = gateway,
-                                orgId = settingsManager.getFirebaseOrgId(),
-                                uid = memberUid.trim(),
-                                role = role,
-                                email = memberEmail.trim().ifBlank { null },
-                                allowedEmailDomains = settingsManager.getAllowedEmailDomains(),
-                            )
                         }
                     },
                 )
@@ -2568,7 +2550,16 @@ private fun DesktopDeveloperSettings(
     var biometricEnabled by remember { mutableStateOf(settingsManager.isBiometricAdminLoginEnabled()) }
     var showBiometricWarningDialog by remember { mutableStateOf(false) }
     var showBiometricAdminVerifyDialog by remember { mutableStateOf(false) }
+    var showBiometricOrgWizard by remember { mutableStateOf(false) }
     var pendingBiometricEnrollmentMatch by remember { mutableStateOf<ScannerMatch?>(null) }
+    var pendingBiometricEnrollments by remember { mutableStateOf<List<BiometricAdminOrgEnrollment>?>(null) }
+
+    val configuredOrgs = viewModel.getFirebaseConfiguredOrgs()
+    val useMultiOrgBiometricWizard =
+        settingsManager.getBackendType() == BackendType.FIREBASE && configuredOrgs.size > 1
+    val biometricEnrollments = remember(biometricEnabled) {
+        settingsManager.getBiometricEnrollments()
+    }
 
     val noneEnrolled = biometricAuth.isNoneEnrolled
     val biometricAvailable = biometricAuth.isAvailable
@@ -2613,6 +2604,20 @@ private fun DesktopDeveloperSettings(
         )
     }
 
+    if (biometricEnabled && useMultiOrgBiometricWizard && biometricEnrollments.isNotEmpty()) {
+        biometricEnrollments.forEach { enrollment ->
+            Text(
+                text = stringResource(
+                    Res.string.biometric_enrollment_org_enrolled,
+                    FirebaseOrgAbbreviation.abbreviate(enrollment.orgId),
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 4.dp, top = 4.dp),
+            )
+        }
+    }
+
     if (showBiometricWarningDialog) {
         AlertDialog(
             onDismissRequest = { showBiometricWarningDialog = false },
@@ -2623,7 +2628,11 @@ private fun DesktopDeveloperSettings(
                 Button(
                     onClick = {
                         showBiometricWarningDialog = false
-                        showBiometricAdminVerifyDialog = true
+                        if (useMultiOrgBiometricWizard) {
+                            showBiometricOrgWizard = true
+                        } else {
+                            showBiometricAdminVerifyDialog = true
+                        }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
@@ -2635,6 +2644,19 @@ private fun DesktopDeveloperSettings(
                     Text(stringResource(Res.string.biometric_warning_cancel))
                 }
             }
+        )
+    }
+
+    if (showBiometricOrgWizard) {
+        BiometricOrgEnrollmentWizard(
+            platformContext = platformContext,
+            viewModel = viewModel,
+            configuredOrgs = configuredOrgs,
+            onCompleted = { enrollments ->
+                showBiometricOrgWizard = false
+                pendingBiometricEnrollments = enrollments
+            },
+            onDismiss = { showBiometricOrgWizard = false },
         )
     }
 
@@ -2656,6 +2678,17 @@ private fun DesktopDeveloperSettings(
         val ok = biometricAuth.authenticate(enrollmentTitle, enrollmentSubtitle)
         if (ok) {
             settingsManager.setBiometricAdminProfileLink(match.toBiometricAdminProfileLink())
+            biometricEnabled = true
+            showPlatformToast(platformContext, enrollmentSuccessMsg)
+        }
+    }
+
+    LaunchedEffect(pendingBiometricEnrollments) {
+        val enrollments = pendingBiometricEnrollments ?: return@LaunchedEffect
+        pendingBiometricEnrollments = null
+        val ok = biometricAuth.authenticate(enrollmentTitle, enrollmentSubtitle)
+        if (ok) {
+            settingsManager.setBiometricEnrollments(enrollments)
             biometricEnabled = true
             showPlatformToast(platformContext, enrollmentSuccessMsg)
         }

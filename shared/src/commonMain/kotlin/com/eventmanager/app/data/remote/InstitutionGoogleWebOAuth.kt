@@ -35,6 +35,7 @@ object InstitutionGoogleWebOAuth {
         webClientId: String,
         redirectUri: String,
         promptConsent: Boolean = true,
+        forceAccountPicker: Boolean = false,
     ): String {
         val scope = OAUTH_SCOPES.joinToString(" ")
         val params = linkedMapOf(
@@ -44,8 +45,9 @@ object InstitutionGoogleWebOAuth {
             "scope" to scope,
             "access_type" to "offline",
         )
-        if (promptConsent) {
-            params["prompt"] = "consent"
+        when {
+            forceAccountPicker -> params["prompt"] = "select_account consent"
+            promptConsent -> params["prompt"] = "consent"
         }
         val query = params.entries.joinToString("&") { (key, value) ->
             "${encode(key)}=${encode(value)}"

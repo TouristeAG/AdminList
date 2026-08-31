@@ -79,11 +79,28 @@ enum class FirebaseOrgSwitcherPlacement {
     BilleterieContent,
 }
 
+private fun FirebaseOrgSwitcherPlacement.allowsAllOrgsOptionByDefault(): Boolean = when (this) {
+    FirebaseOrgSwitcherPlacement.WelcomeTopEnd,
+    FirebaseOrgSwitcherPlacement.TopBarBeforeSync,
+    FirebaseOrgSwitcherPlacement.TopBarTitleEnd,
+    FirebaseOrgSwitcherPlacement.PosVenueStyle,
+    FirebaseOrgSwitcherPlacement.ScannerDarkTopEnd,
+    FirebaseOrgSwitcherPlacement.BilleterieContent,
+    -> true
+    FirebaseOrgSwitcherPlacement.DashboardClockRow,
+    FirebaseOrgSwitcherPlacement.AdminSideNavVertical,
+    FirebaseOrgSwitcherPlacement.AdminSideNavHorizontal,
+    FirebaseOrgSwitcherPlacement.PosHeader,
+    -> false
+}
+
 @Composable
 fun FirebaseOrgSwitcher(
     viewModel: EventManagerViewModel,
     placement: FirebaseOrgSwitcherPlacement,
     modifier: Modifier = Modifier,
+    allowAllOrgsOption: Boolean? = null,
+    onAdminRequireReauth: (() -> Unit)? = null,
 ) {
     if (viewModel.getActiveBackendType() != BackendType.FIREBASE) return
     val configuredOrgs = viewModel.getFirebaseConfiguredOrgs()
@@ -92,26 +109,39 @@ fun FirebaseOrgSwitcher(
     val activeOrgId = viewModel.getActiveFirebaseOrgId()
     val switching by viewModel.firebaseOrgSwitching.collectAsState()
     val isAdminPlacement = placement == FirebaseOrgSwitcherPlacement.AdminSideNavVertical ||
-        placement == FirebaseOrgSwitcherPlacement.AdminSideNavHorizontal
-    val showAllOption = !isAdminPlacement
-    val onSelectSingleOrg = viewModel::switchFirebaseOrgAsync
+        placement == FirebaseOrgSwitcherPlacement.AdminSideNavHorizontal ||
+        (placement == FirebaseOrgSwitcherPlacement.DashboardClockRow &&
+            allowAllOrgsOption != true)
+    val showAllOption = allowAllOrgsOption ?: placement.allowsAllOrgsOptionByDefault()
+    val effectiveActiveOrgId = if (isAdminPlacement && isFirebaseOrgAllSentinel(activeOrgId)) {
+        viewModel.getFirebaseLastSingleOrgId().trim().takeIf { lastOrg ->
+            configuredOrgs.any { it.orgId == lastOrg }
+        } ?: configuredOrgs.first().orgId
+    } else {
+        activeOrgId
+    }
+    val onSelectSingleOrg = if (isAdminPlacement && onAdminRequireReauth != null) {
+        { orgId: String -> viewModel.switchFirebaseOrgFromAdmin(orgId, onAdminRequireReauth) }
+    } else {
+        viewModel::switchFirebaseOrgAsync
+    }
     val onEnterAllOrgs = viewModel::enterAllOrgsModeAsync
 
     when (placement) {
         FirebaseOrgSwitcherPlacement.AdminSideNavVertical -> AdminSideNavOrgSwitcher(
             configuredOrgs = configuredOrgs,
-            activeOrgId = activeOrgId,
+            activeOrgId = effectiveActiveOrgId,
             expanded = false,
             switching = switching,
-            onOrgSelected = viewModel::switchFirebaseOrgAsync,
+            onOrgSelected = onSelectSingleOrg,
             modifier = modifier,
         )
         FirebaseOrgSwitcherPlacement.AdminSideNavHorizontal -> AdminSideNavOrgSwitcher(
             configuredOrgs = configuredOrgs,
-            activeOrgId = activeOrgId,
+            activeOrgId = effectiveActiveOrgId,
             expanded = true,
             switching = switching,
-            onOrgSelected = viewModel::switchFirebaseOrgAsync,
+            onOrgSelected = onSelectSingleOrg,
             modifier = modifier,
         )
         FirebaseOrgSwitcherPlacement.PosVenueStyle -> PosStyleOrgSwitcher(
@@ -144,7 +174,7 @@ fun FirebaseOrgSwitcher(
         )
         FirebaseOrgSwitcherPlacement.DashboardClockRow -> CompactOrgSwitcherChip(
             configuredOrgs = configuredOrgs,
-            activeOrgId = activeOrgId,
+            activeOrgId = if (showAllOption) activeOrgId else effectiveActiveOrgId,
             switching = switching,
             showAllOption = showAllOption,
             onOrgSelected = onSelectSingleOrg,

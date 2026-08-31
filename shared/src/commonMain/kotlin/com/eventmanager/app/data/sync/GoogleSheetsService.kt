@@ -1245,6 +1245,38 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
 
                 values.forEachIndexed { index, row ->
                     val rowNumber = index + 2 // +2 because we start from row 2 (after header)
+                    if (row.size >= 3 && EncryptedSheetsCodec.isEncryptedRow(row)) {
+                        try {
+                            val orgId = settingsManager.getFirebaseOrgId()
+                            val payload = EncryptedSheetsCodec.decodeGuestPayload(row[2].toString(), orgId)
+                                ?: return@forEachIndexed
+                            guests.add(
+                                Guest(
+                                    sheetsId = rowNumber.toString(),
+                                    nanoId = payload.nanoId.ifBlank { row[0].toString() },
+                                    name = payload.name,
+                                    email = payload.email,
+                                    phoneNumber = payload.phoneNumber,
+                                    invitations = payload.invitations,
+                                    venueName = payload.venueName,
+                                    notes = payload.notes,
+                                    isVolunteerBenefit = payload.isVolunteerBenefit,
+                                    lastModified = parseLastModified(row[1].toString()),
+                                    nfcCardUid = payload.nfcCardUid,
+                                    isAdmin = payload.isAdmin,
+                                    isTemporaryGuest = payload.isTemporaryGuest,
+                                    temporaryArtistName = payload.temporaryArtistName,
+                                    temporaryEventDate = payload.temporaryEventDate,
+                                    temporaryContactPhone = payload.temporaryContactPhone,
+                                    volunteerId = payload.volunteerId,
+                                    firebaseOrgId = orgId,
+                                ),
+                            )
+                        } catch (e: Exception) {
+                            println("Failed to parse encrypted guest row $rowNumber: ${e.message}")
+                        }
+                        return@forEachIndexed
+                    }
                     if (row.size >= 10) {
                         try {
                             val rawNanoId = row[9].toString()

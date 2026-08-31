@@ -17,6 +17,20 @@ data class FirestoreRemoteChange(
     val deleted: Boolean,
 )
 
+data class FirebaseTeamMemberListing(
+    val email: String?,
+    val role: String?,
+)
+
+/**
+ * Internal member row including Firestore document id. Never expose [uid] to UI or local settings.
+ */
+internal data class FirestoreMemberRecord(
+    val uid: String,
+    val email: String?,
+    val role: String?,
+)
+
 /**
  * Abstraction over GitLive Firestore so Desktop spike / missing config can no-op safely.
  */
@@ -27,14 +41,27 @@ interface FirestoreGateway {
     suspend fun flushPendingWrites()
     suspend fun upsertDocument(orgId: String, collection: String, docId: String, data: Map<String, Any?>)
     suspend fun deleteDocument(orgId: String, collection: String, docId: String)
-    suspend fun pullAllIntoRepository(orgId: String, repository: EventManagerRepository)
+    suspend fun pullAllIntoRepository(
+        orgId: String,
+        repository: EventManagerRepository,
+        collections: Collection<String>? = null,
+    )
     suspend fun applyChangeToRepository(change: FirestoreRemoteChange, repository: EventManagerRepository)
     suspend fun readBackendAnnouncement(orgId: String): InstitutionBackendAnnouncement?
     suspend fun readMemberRole(orgId: String, uid: String): String?
+    /** Member role from the Firestore server (not the local cache). */
+    suspend fun readMemberRoleFromServer(orgId: String, uid: String): String? = readMemberRole(orgId, uid)
     /** Confirms membership against the Firestore server (avoids optimistic offline cache). */
     suspend fun isOrgAccessibleOnServer(orgId: String, uid: String): Boolean
+    suspend fun listMembers(orgId: String): List<FirebaseTeamMemberListing> = emptyList()
     suspend fun writeBackendAnnouncement(orgId: String, announcement: InstitutionBackendAnnouncement)
-    suspend fun runPeopleCounterTransaction(orgId: String, venueName: String, count: Int, deviceId: String)
+    suspend fun runPeopleCounterTransaction(
+        orgId: String,
+        venueName: String,
+        count: Int,
+        deviceId: String,
+        writerAccountEmail: String = "",
+    )
     suspend fun runLedgerTransaction(
         orgId: String,
         transfer: AccountTransfer,
@@ -60,13 +87,23 @@ class NoOpFirestoreGateway : FirestoreGateway {
     override suspend fun flushPendingWrites() {}
     override suspend fun upsertDocument(orgId: String, collection: String, docId: String, data: Map<String, Any?>) {}
     override suspend fun deleteDocument(orgId: String, collection: String, docId: String) {}
-    override suspend fun pullAllIntoRepository(orgId: String, repository: EventManagerRepository) {}
+    override suspend fun pullAllIntoRepository(
+        orgId: String,
+        repository: EventManagerRepository,
+        collections: Collection<String>?,
+    ) {}
     override suspend fun applyChangeToRepository(change: FirestoreRemoteChange, repository: EventManagerRepository) {}
     override suspend fun readBackendAnnouncement(orgId: String): InstitutionBackendAnnouncement? = null
     override suspend fun readMemberRole(orgId: String, uid: String): String? = null
     override suspend fun isOrgAccessibleOnServer(orgId: String, uid: String): Boolean = false
     override suspend fun writeBackendAnnouncement(orgId: String, announcement: InstitutionBackendAnnouncement) {}
-    override suspend fun runPeopleCounterTransaction(orgId: String, venueName: String, count: Int, deviceId: String) {}
+    override suspend fun runPeopleCounterTransaction(
+        orgId: String,
+        venueName: String,
+        count: Int,
+        deviceId: String,
+        writerAccountEmail: String,
+    ) {}
     override suspend fun runLedgerTransaction(
         orgId: String,
         transfer: AccountTransfer,

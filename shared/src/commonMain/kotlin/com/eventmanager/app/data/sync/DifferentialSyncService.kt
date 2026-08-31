@@ -314,6 +314,7 @@ class DifferentialSyncService(
         old.isActive != new.isActive ||
         old.peopleCounterCount != new.peopleCounterCount ||
         old.peopleCounterWriterDeviceId != new.peopleCounterWriterDeviceId ||
+        old.peopleCounterWriterAccountEmail != new.peopleCounterWriterAccountEmail ||
         old.peopleCounterLastModified != new.peopleCounterLastModified ||
         old.announcementTitle != new.announcementTitle ||
         old.announcementMessage != new.announcementMessage ||

@@ -80,9 +80,7 @@ object InstitutionSettingsKeys {
         SHEETS_SPREADSHEET_ID_HINT,
         FIREBASE_PROJECT_ID,
         FIREBASE_APPLICATION_ID,
-        FIREBASE_API_KEY,
         FIREBASE_WEB_CLIENT_ID,
-        FIREBASE_WEB_CLIENT_SECRET,
     )
 
     val ALL: List<String> = listOf(

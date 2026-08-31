@@ -168,6 +168,17 @@ actual fun VolunteerDetailPanel(
 
             DesktopShiftHistorySection(sortedJobs, venues, jobTypeConfigs, platformContext)
 
+            if (viewModel != null) {
+                LocalAdminRightsSection(
+                    viewModel = viewModel,
+                    isAdmin = volunteer.isAdmin,
+                    displayName = volunteer.name,
+                    kind = com.eventmanager.app.data.security.LocalAdminTargetKind.VOLUNTEER,
+                    targetId = volunteer.id,
+                    volunteer = volunteer,
+                )
+            }
+
             DesktopSectionCard(stringResource(Res.string.actions), Icons.Default.Settings) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = { showQrDialog = true }, modifier = Modifier.fillMaxWidth()) {

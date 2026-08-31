@@ -329,7 +329,20 @@ actual fun VolunteerDetailPanel(
                             jobTypeConfigs = jobTypeConfigs
                         )
                     }
-                    
+
+                    if (viewModel != null) {
+                        item {
+                            LocalAdminRightsSection(
+                                viewModel = viewModel,
+                                isAdmin = volunteer.isAdmin,
+                                displayName = volunteer.name,
+                                kind = com.eventmanager.app.data.security.LocalAdminTargetKind.VOLUNTEER,
+                                targetId = volunteer.id,
+                                volunteer = volunteer,
+                            )
+                        }
+                    }
+
                     // Action Buttons Section
                     item {
                         ActionButtonsSection(

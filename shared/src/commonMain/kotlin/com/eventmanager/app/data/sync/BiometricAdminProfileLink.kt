@@ -22,3 +22,39 @@ data class BiometricAdminProfileLink(
         }
     }
 }
+
+/** Per-org biometric enrollment (Firebase multi-org). */
+data class BiometricAdminOrgEnrollment(
+    val orgId: String,
+    val link: BiometricAdminProfileLink,
+) {
+    fun encodeEntry(): String = "${orgId.trim()}:${link.encode()}"
+
+    companion object {
+        private const val ENTRY_SEPARATOR = "|"
+
+        fun decodeList(raw: String?): List<BiometricAdminOrgEnrollment> {
+            if (raw.isNullOrBlank()) return emptyList()
+            return raw.split(ENTRY_SEPARATOR)
+                .mapNotNull { entry -> decodeEntry(entry) }
+        }
+
+        fun encodeList(enrollments: List<BiometricAdminOrgEnrollment>): String =
+            enrollments
+                .filter { it.orgId.isNotBlank() }
+                .distinctBy { it.orgId.trim() }
+                .joinToString(ENTRY_SEPARATOR) { it.encodeEntry() }
+
+        private fun decodeEntry(raw: String): BiometricAdminOrgEnrollment? {
+            val trimmed = raw.trim()
+            if (trimmed.isBlank()) return null
+            val firstColon = trimmed.indexOf(':')
+            if (firstColon <= 0) return null
+            val orgId = trimmed.substring(0, firstColon).trim()
+            val linkRaw = trimmed.substring(firstColon + 1)
+            val link = BiometricAdminProfileLink.decode(linkRaw) ?: return null
+            if (orgId.isBlank()) return null
+            return BiometricAdminOrgEnrollment(orgId, link)
+        }
+    }
+}

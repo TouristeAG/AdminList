@@ -171,12 +171,10 @@ actual fun SetupLayoutScalePage(
     onUseRecommended: () -> Unit,
     modifier: Modifier
 ) {
-    var pendingScale by remember(resolutionScale) { mutableStateOf(resolutionScale) }
-    val hasUnsavedChanges = pendingScale != resolutionScale
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         ResolutionScaleSlider(
-            value = pendingScale,
-            onValueChange = { pendingScale = it },
+            value = resolutionScale,
+            onValueChange = onSave,
             modifier = Modifier.fillMaxWidth()
         )
         if (isNvidiaShieldTablet()) {
@@ -187,11 +185,6 @@ actual fun SetupLayoutScalePage(
             )
             OutlinedButton(onClick = onUseRecommended, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(Res.string.setup_layout_use_recommended))
-            }
-        }
-        if (hasUnsavedChanges) {
-            Button(onClick = { onSave(pendingScale) }, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(Res.string.save_resolution_scale))
             }
         }
     }

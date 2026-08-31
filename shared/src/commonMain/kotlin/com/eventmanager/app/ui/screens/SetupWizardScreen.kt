@@ -3,7 +3,6 @@ package com.eventmanager.app.ui.screens
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
@@ -20,33 +19,46 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import com.eventmanager.app.data.remote.BackendType
+import com.eventmanager.app.data.security.firebaseOAuthCredentialsReady
+import com.eventmanager.app.data.remote.FirebaseOrgBootstrap
 import com.eventmanager.app.data.repository.EventManagerRepository
 import com.eventmanager.app.data.sync.GoogleSheetsService
 import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.data.sync.SyncResult
 import com.eventmanager.app.data.sync.settingsManagerFor
 import com.eventmanager.app.platform.PlatformContext
+import com.eventmanager.app.platform.PlatformFileManager
 import com.eventmanager.app.platform.createDatabase
+import com.eventmanager.app.platform.isDesktop
+import com.eventmanager.app.platform.openExternalUrl
 import com.eventmanager.app.resources.Res
 import com.eventmanager.app.resources.*
-import com.eventmanager.app.platform.isDesktop
-import com.eventmanager.app.ui.components.BackgroundAnimationSettingsSection
+import com.eventmanager.app.ui.components.ColorThemePicker
+import com.eventmanager.app.ui.components.FirebaseAdminProjectConfigCard
+import com.eventmanager.app.ui.components.FirebaseConfigReceivedBanner
+import com.eventmanager.app.ui.components.FirebaseJoinImportSection
+import com.eventmanager.app.ui.components.FirebaseSetupTutorialDialog
+import com.eventmanager.app.ui.components.FirebaseSignInStep
+import com.eventmanager.app.ui.components.ThemeModePicker
 import com.eventmanager.app.ui.platform.ServiceAccountKeyUploadButton
 import com.eventmanager.app.ui.platform.SetupLayoutScalePage
 import com.eventmanager.app.ui.platform.applyLocaleChange
 import com.eventmanager.app.ui.platform.applyLocaleOrThemeChange
 import com.eventmanager.app.ui.platform.applyThemeAppearanceChange
 import com.eventmanager.app.ui.platform.supportsResolutionScaleStep
-import com.eventmanager.app.ui.components.ColorThemePicker
-import com.eventmanager.app.ui.components.ThemeModePicker
 import com.eventmanager.app.ui.theme.ThemeMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
+
+private enum class SetupPath { JOIN, FIREBASE, SHEETS }
 
 private enum class SetupStep {
     WELCOME,
@@ -54,10 +66,16 @@ private enum class SetupStep {
     THEME,
     COLOR_PROFILE,
     LAYOUT,
-    CHOOSE_BACKEND,
-    GOOGLE_SHEETS,
-    SHEETS,
-    FIREBASE_SETUP,
+    CHOOSE_PATH,
+    JOIN_ORG,
+    SHEETS_CLOUD,
+    SHEETS_KEY,
+    SHEETS_SPREADSHEET,
+    SHEETS_SHARE,
+    SHEETS_NAMES,
+    FIREBASE_ORG,
+    FIREBASE_PROJECT,
+    FIREBASE_SIGN_IN,
     FIRST_SYNC,
 }
 
@@ -68,23 +86,13 @@ private enum class SetupPhase {
     FINISH,
 }
 
-private val allSetupSteps: List<SetupStep> = buildList {
-    add(SetupStep.WELCOME)
-    add(SetupStep.LANGUAGE)
-    add(SetupStep.THEME)
-    add(SetupStep.COLOR_PROFILE)
-    if (supportsResolutionScaleStep()) add(SetupStep.LAYOUT)
-    add(SetupStep.CHOOSE_BACKEND)
-    add(SetupStep.GOOGLE_SHEETS)
-    add(SetupStep.SHEETS)
-    add(SetupStep.FIREBASE_SETUP)
-    add(SetupStep.FIRST_SYNC)
-}
-
 private fun SetupStep.phase(): SetupPhase = when (this) {
     SetupStep.WELCOME -> SetupPhase.WELCOME
     SetupStep.LANGUAGE, SetupStep.THEME, SetupStep.COLOR_PROFILE, SetupStep.LAYOUT -> SetupPhase.PERSONALIZE
-    SetupStep.CHOOSE_BACKEND, SetupStep.GOOGLE_SHEETS, SetupStep.SHEETS, SetupStep.FIREBASE_SETUP -> SetupPhase.CONNECT
+    SetupStep.CHOOSE_PATH, SetupStep.JOIN_ORG,
+    SetupStep.SHEETS_CLOUD, SetupStep.SHEETS_KEY, SetupStep.SHEETS_SPREADSHEET,
+    SetupStep.SHEETS_SHARE, SetupStep.SHEETS_NAMES,
+    SetupStep.FIREBASE_ORG, SetupStep.FIREBASE_PROJECT, SetupStep.FIREBASE_SIGN_IN -> SetupPhase.CONNECT
     SetupStep.FIRST_SYNC -> SetupPhase.FINISH
 }
 
@@ -95,24 +103,36 @@ private fun SetupStep.title(): String = when (this) {
     SetupStep.THEME -> stringResource(Res.string.setup_theme_title)
     SetupStep.COLOR_PROFILE -> stringResource(Res.string.setup_color_profile_title)
     SetupStep.LAYOUT -> stringResource(Res.string.setup_layout_size_title)
-    SetupStep.CHOOSE_BACKEND -> stringResource(Res.string.setup_choose_backend_title)
-    SetupStep.GOOGLE_SHEETS -> stringResource(Res.string.setup_google_sheets_title)
-    SetupStep.SHEETS -> stringResource(Res.string.setup_sheets_title)
-    SetupStep.FIREBASE_SETUP -> stringResource(Res.string.setup_firebase_title)
+    SetupStep.CHOOSE_PATH -> stringResource(Res.string.setup_path_title)
+    SetupStep.JOIN_ORG -> stringResource(Res.string.setup_join_title)
+    SetupStep.SHEETS_CLOUD -> stringResource(Res.string.setup_sheets_cloud_title)
+    SetupStep.SHEETS_KEY -> stringResource(Res.string.setup_sheets_key_title)
+    SetupStep.SHEETS_SPREADSHEET -> stringResource(Res.string.setup_sheets_spreadsheet_title)
+    SetupStep.SHEETS_SHARE -> stringResource(Res.string.setup_sheets_share_title)
+    SetupStep.SHEETS_NAMES -> stringResource(Res.string.setup_sheets_title)
+    SetupStep.FIREBASE_ORG -> stringResource(Res.string.setup_firebase_org_title)
+    SetupStep.FIREBASE_PROJECT -> stringResource(Res.string.setup_firebase_project_title)
+    SetupStep.FIREBASE_SIGN_IN -> stringResource(Res.string.setup_firebase_signin_title)
     SetupStep.FIRST_SYNC -> stringResource(Res.string.setup_wizard_first_sync_title)
 }
 
 @Composable
 private fun SetupStep.description(): String = when (this) {
-    SetupStep.WELCOME -> stringResource(Res.string.setup_welcome_description)
+    SetupStep.WELCOME -> ""
     SetupStep.LANGUAGE -> stringResource(Res.string.setup_language_description)
     SetupStep.THEME -> stringResource(Res.string.setup_theme_description)
     SetupStep.COLOR_PROFILE -> stringResource(Res.string.setup_color_profile_description)
     SetupStep.LAYOUT -> stringResource(Res.string.setup_layout_size_description)
-    SetupStep.CHOOSE_BACKEND -> stringResource(Res.string.setup_choose_backend_description)
-    SetupStep.GOOGLE_SHEETS -> stringResource(Res.string.setup_google_sheets_description)
-    SetupStep.SHEETS -> stringResource(Res.string.setup_sheets_description)
-    SetupStep.FIREBASE_SETUP -> stringResource(Res.string.setup_firebase_description)
+    SetupStep.CHOOSE_PATH -> stringResource(Res.string.setup_path_description)
+    SetupStep.JOIN_ORG -> stringResource(Res.string.setup_join_description)
+    SetupStep.SHEETS_CLOUD -> stringResource(Res.string.setup_sheets_cloud_body)
+    SetupStep.SHEETS_KEY -> stringResource(Res.string.setup_sheets_key_body)
+    SetupStep.SHEETS_SPREADSHEET -> stringResource(Res.string.setup_sheets_spreadsheet_body)
+    SetupStep.SHEETS_SHARE -> stringResource(Res.string.setup_sheets_share_body)
+    SetupStep.SHEETS_NAMES -> stringResource(Res.string.setup_sheets_defaults_hint)
+    SetupStep.FIREBASE_ORG -> stringResource(Res.string.setup_firebase_org_body)
+    SetupStep.FIREBASE_PROJECT -> stringResource(Res.string.setup_firebase_project_body)
+    SetupStep.FIREBASE_SIGN_IN -> stringResource(Res.string.setup_firebase_signin_body)
     SetupStep.FIRST_SYNC -> stringResource(Res.string.setup_first_sync_ready)
 }
 
@@ -122,10 +142,16 @@ private fun SetupStep.icon(): ImageVector = when (this) {
     SetupStep.THEME -> Icons.Default.DarkMode
     SetupStep.COLOR_PROFILE -> Icons.Default.Palette
     SetupStep.LAYOUT -> Icons.Default.AspectRatio
-    SetupStep.CHOOSE_BACKEND -> Icons.Default.Storage
-    SetupStep.GOOGLE_SHEETS -> Icons.Default.CloudSync
-    SetupStep.SHEETS -> Icons.Default.TableChart
-    SetupStep.FIREBASE_SETUP -> Icons.Default.Cloud
+    SetupStep.CHOOSE_PATH -> Icons.Default.Hub
+    SetupStep.JOIN_ORG -> Icons.Default.QrCodeScanner
+    SetupStep.SHEETS_CLOUD -> Icons.Default.Cloud
+    SetupStep.SHEETS_KEY -> Icons.Default.VpnKey
+    SetupStep.SHEETS_SPREADSHEET -> Icons.Default.TableChart
+    SetupStep.SHEETS_SHARE -> Icons.Default.Share
+    SetupStep.SHEETS_NAMES -> Icons.Default.List
+    SetupStep.FIREBASE_ORG -> Icons.Default.Business
+    SetupStep.FIREBASE_PROJECT -> Icons.Default.Cloud
+    SetupStep.FIREBASE_SIGN_IN -> Icons.Default.Login
     SetupStep.FIRST_SYNC -> Icons.Default.Sync
 }
 
@@ -137,6 +163,11 @@ private fun SetupPhase.label(): String = when (this) {
     SetupPhase.FINISH -> stringResource(Res.string.setup_phase_finish)
 }
 
+private fun serviceAccountEmailFromJson(json: String?): String? {
+    if (json.isNullOrBlank()) return null
+    return Regex(""""client_email"\s*:\s*"([^"]+)"""").find(json)?.groupValues?.get(1)
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SetupWizardScreen(
@@ -145,30 +176,45 @@ fun SetupWizardScreen(
     onThemeModeChanged: (String) -> Unit = {},
     onRequestFirebaseSignIn: (() -> Unit)? = null,
     firebaseAuthEmail: String? = null,
+    firebaseSignInFeedback: String? = null,
 ) {
     val settingsManager = remember(platformContext) { settingsManagerFor(platformContext) }
+    val fileManager = remember(platformContext) { PlatformFileManager(platformContext) }
     val scope = rememberCoroutineScope()
-    var selectedBackend by remember {
-        mutableStateOf(settingsManager.getBackendType())
+    var selectedPath by remember { mutableStateOf<SetupPath?>(null) }
+    val selectedBackend = when (selectedPath) {
+        SetupPath.SHEETS -> BackendType.SHEETS
+        SetupPath.JOIN, SetupPath.FIREBASE -> BackendType.FIREBASE
+        null -> settingsManager.getBackendType()
     }
-    val steps = remember(selectedBackend) {
+    val steps = remember(selectedPath) {
         buildList {
             add(SetupStep.WELCOME)
             add(SetupStep.LANGUAGE)
             add(SetupStep.THEME)
             add(SetupStep.COLOR_PROFILE)
             if (supportsResolutionScaleStep()) add(SetupStep.LAYOUT)
-            add(SetupStep.CHOOSE_BACKEND)
-            when (selectedBackend) {
-                com.eventmanager.app.data.remote.BackendType.SHEETS -> {
-                    add(SetupStep.GOOGLE_SHEETS)
-                    add(SetupStep.SHEETS)
+            add(SetupStep.CHOOSE_PATH)
+            when (selectedPath) {
+                SetupPath.JOIN -> {
+                    add(SetupStep.JOIN_ORG)
+                    add(SetupStep.FIREBASE_SIGN_IN)
                 }
-                com.eventmanager.app.data.remote.BackendType.FIREBASE -> {
-                    add(SetupStep.FIREBASE_SETUP)
+                SetupPath.FIREBASE -> {
+                    add(SetupStep.FIREBASE_ORG)
+                    add(SetupStep.FIREBASE_PROJECT)
+                    add(SetupStep.FIREBASE_SIGN_IN)
                 }
+                SetupPath.SHEETS -> {
+                    add(SetupStep.SHEETS_CLOUD)
+                    add(SetupStep.SHEETS_KEY)
+                    add(SetupStep.SHEETS_SPREADSHEET)
+                    add(SetupStep.SHEETS_SHARE)
+                    add(SetupStep.SHEETS_NAMES)
+                }
+                null -> Unit
             }
-            add(SetupStep.FIRST_SYNC)
+            if (selectedPath != null) add(SetupStep.FIRST_SYNC)
         }
     }
 
@@ -177,6 +223,7 @@ fun SetupWizardScreen(
     var selectedTheme by remember { mutableStateOf(ThemeMode.fromString(settingsManager.getThemeMode())) }
     var selectedColorTheme by remember { mutableStateOf(settingsManager.getColorTheme()) }
     var resolutionScale by remember { mutableStateOf(settingsManager.getResolutionScale()) }
+    val baselineScale = remember { settingsManager.getResolutionScale().coerceIn(0.8f, 1.2f) }
 
     var spreadsheetId by remember { mutableStateOf(settingsManager.getSpreadsheetId()) }
     var guestListSheet by remember { mutableStateOf(settingsManager.getGuestListSheet()) }
@@ -190,6 +237,10 @@ fun SetupWizardScreen(
     var settingsSheet by remember { mutableStateOf(settingsManager.getSettingsSheet()) }
 
     var jsonKeyStatus by remember { mutableStateOf<String?>(null) }
+    var jsonKeyPresent by remember { mutableStateOf(fileManager.getServiceAccountFile() != null) }
+    var serviceAccountEmail by remember {
+        mutableStateOf(serviceAccountEmailFromJson(fileManager.readServiceAccountJson()))
+    }
     var firebaseConfiguredOrgs by remember {
         mutableStateOf(
             settingsManager.getFirebaseConfiguredOrgs().ifEmpty {
@@ -220,6 +271,8 @@ fun SetupWizardScreen(
     var firstSyncRunning by remember { mutableStateOf(false) }
     var firstSyncError by remember { mutableStateOf<String?>(null) }
     var firstSyncDone by remember { mutableStateOf(false) }
+    var showFirebaseTutorial by remember { mutableStateOf(false) }
+    var showJoinScan by remember { mutableStateOf(false) }
 
     fun persistFirebaseFields() {
         settingsManager.setFirebaseConfiguredOrgs(firebaseConfiguredOrgs)
@@ -230,15 +283,25 @@ fun SetupWizardScreen(
         settingsManager.setFirebaseWebClientSecret(firebaseWebClientSecret.trim())
     }
 
-    fun firebaseStepReady(): Boolean =
-        com.eventmanager.app.ui.components.firebaseConnectionReady(
-            configuredOrgs = firebaseConfiguredOrgs,
-            projectId = firebaseProjectId,
-            applicationId = firebaseApplicationId,
-            apiKey = firebaseApiKey,
-            authEmail = authEmail,
-            requireAuth = true,
-        )
+    fun reloadFirebaseFromSettings() {
+        firebaseConfiguredOrgs = settingsManager.getFirebaseConfiguredOrgs()
+        firebaseProjectId = settingsManager.getFirebaseProjectId()
+        firebaseApplicationId = settingsManager.getFirebaseApplicationId()
+        firebaseApiKey = settingsManager.getFirebaseApiKey()
+        firebaseWebClientId = settingsManager.getFirebaseWebClientId()
+        firebaseWebClientSecret = settingsManager.getFirebaseWebClientSecret()
+    }
+
+    fun firebaseProjectReady(): Boolean =
+        firebaseProjectId.isNotBlank() && firebaseApplicationId.isNotBlank() && firebaseApiKey.isNotBlank()
+
+    fun firebaseOAuthReady(): Boolean =
+        firebaseOAuthCredentialsReady(firebaseWebClientId, firebaseWebClientSecret)
+
+    fun firebaseOrgReady(): Boolean =
+        firebaseConfiguredOrgs.any { FirebaseOrgBootstrap.isValidOrgId(it.orgId) }
+
+    fun firebaseAuthReady(): Boolean = !authEmail.isNullOrBlank()
 
     fun sheetsStepReady(): Boolean =
         spreadsheetId.isNotBlank() && spreadsheetId != "YOUR_SPREADSHEET_ID_HERE"
@@ -256,10 +319,11 @@ fun SetupWizardScreen(
             val result = withContext(Dispatchers.IO) {
                 try {
                     when (selectedBackend) {
-                        com.eventmanager.app.data.remote.BackendType.FIREBASE -> {
+                        BackendType.FIREBASE -> {
                             persistFirebaseFields()
-                            if (!firebaseStepReady()) {
-                                SyncResult.Error("Complete Firebase org ID, project options, and Google Sign-In first")
+                            val projectOk = firebaseProjectReady() && firebaseOrgReady()
+                            if (!projectOk || !firebaseAuthReady()) {
+                                SyncResult.Error("Complete Firebase setup and Google Sign-In first")
                             } else {
                                 val auth = com.eventmanager.app.data.remote.createFirebaseAuthService(platformContext)
                                 val authResult = when {
@@ -280,18 +344,32 @@ fun SetupWizardScreen(
                                             settingsManager,
                                         )
                                         val activeOrgId = settingsManager.getFirebaseOrgId().trim()
-                                        val bootstrapCode = com.eventmanager.app.data.remote.MemberRoleAdmin
-                                            .bootstrapOrgAdmin(
-                                                gateway = gateway,
-                                                orgId = activeOrgId,
-                                                uid = authResult.uid,
-                                                email = authResult.email,
-                                                allowedEmailDomains = settingsManager.getAllowedEmailDomains(),
-                                            )
-                                        settingsManager.setFirebaseBootstrapCode(bootstrapCode)
+                                        if (selectedPath == SetupPath.JOIN) {
+                                            val invite = settingsManager.getFirebaseBootstrapCode()
+                                            if (invite.isNotBlank()) {
+                                                com.eventmanager.app.data.remote.MemberRoleAdmin.joinOrgAsMember(
+                                                    gateway = gateway,
+                                                    orgId = activeOrgId,
+                                                    uid = authResult.uid,
+                                                    email = authResult.email,
+                                                    bootstrapCode = invite,
+                                                    allowedEmailDomains = settingsManager.getAllowedEmailDomains(),
+                                                )
+                                            }
+                                        } else {
+                                            val bootstrapCode = com.eventmanager.app.data.remote.MemberRoleAdmin
+                                                .bootstrapOrgAdmin(
+                                                    gateway = gateway,
+                                                    orgId = activeOrgId,
+                                                    uid = authResult.uid,
+                                                    email = authResult.email,
+                                                    allowedEmailDomains = settingsManager.getAllowedEmailDomains(),
+                                                )
+                                            settingsManager.setFirebaseBootstrapCode(bootstrapCode)
+                                        }
                                         settingsManager.applyLocalInstitutionBackendAnnouncement(
                                             com.eventmanager.app.data.remote.InstitutionBackendAnnouncement(
-                                                backendType = com.eventmanager.app.data.remote.BackendType.FIREBASE,
+                                                backendType = BackendType.FIREBASE,
                                                 migrationId = "",
                                                 migratedAt = System.currentTimeMillis(),
                                                 firebaseOrgId = activeOrgId,
@@ -318,7 +396,7 @@ fun SetupWizardScreen(
                                 }
                             }
                         }
-                        com.eventmanager.app.data.remote.BackendType.SHEETS -> {
+                        BackendType.SHEETS -> {
                             settingsManager.saveSpreadsheetId(spreadsheetId)
                             settingsManager.saveGuestListSheet(guestListSheet)
                             settingsManager.saveVolunteerSheet(volunteerSheet)
@@ -354,235 +432,301 @@ fun SetupWizardScreen(
         }
     }
 
-    val currentStep = steps[pagerState.currentPage]
-    val progress = (pagerState.currentPage + 1).toFloat() / steps.size
+    val currentStep = steps.getOrElse(pagerState.currentPage) { SetupStep.WELCOME }
+    val progress = (pagerState.currentPage + 1).toFloat() / steps.size.coerceAtLeast(1)
+    val density = LocalDensity.current
+    val previewScale = resolutionScale.coerceIn(0.8f, 1.2f)
+    val previewDensity = remember(density, baselineScale, previewScale) {
+        Density(
+            density.density * baselineScale / previewScale,
+            density.fontScale * baselineScale / previewScale,
+        )
+    }
 
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.surface,
-        bottomBar = {
-            Surface(tonalElevation = 4.dp, shadowElevation = 8.dp) {
-                Column(Modifier.fillMaxWidth()) {
-                    LinearProgressIndicator(
-                        progress = { progress },
-                        modifier = Modifier.fillMaxWidth().height(4.dp),
-                        trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if (pagerState.currentPage > 0) {
-                            OutlinedButton(
-                                onClick = { scope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) } }
-                            ) {
-                                Icon(Icons.Default.ArrowBack, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(6.dp))
-                                Text(stringResource(Res.string.setup_back))
-                            }
-                        } else {
-                            Spacer(Modifier.width(8.dp))
-                        }
-                        val isLast = pagerState.currentPage == steps.lastIndex
-                        Button(
-                            onClick = {
-                                if (isLast) {
-                                    if (firstSyncDone) finishSetup()
-                                    else if (!firstSyncRunning) runFirstSync()
-                                } else {
-                                    scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
-                                }
-                            },
-                            enabled = when (currentStep) {
-                                SetupStep.FIREBASE_SETUP -> firebaseStepReady()
-                                SetupStep.GOOGLE_SHEETS -> sheetsStepReady()
-                                SetupStep.FIRST_SYNC -> firstSyncDone || !firstSyncRunning
-                                else -> true
-                            }
+    CompositionLocalProvider(LocalDensity provides previewDensity) {
+        Scaffold(
+            containerColor = MaterialTheme.colorScheme.surface,
+            bottomBar = {
+                Surface(tonalElevation = 4.dp, shadowElevation = 8.dp) {
+                    Column(Modifier.fillMaxWidth()) {
+                        LinearProgressIndicator(
+                            progress = { progress },
+                            modifier = Modifier.fillMaxWidth().height(4.dp),
+                            trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                when {
-                                    currentStep == SetupStep.WELCOME -> stringResource(Res.string.setup_get_started)
-                                    isLast && firstSyncDone -> stringResource(Res.string.setup_finish)
-                                    isLast -> stringResource(Res.string.setup_start_sync)
-                                    else -> stringResource(Res.string.setup_continue)
+                            if (pagerState.currentPage > 0) {
+                                OutlinedButton(
+                                    onClick = { scope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) } }
+                                ) {
+                                    Icon(Icons.Default.ArrowBack, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(stringResource(Res.string.setup_back))
                                 }
-                            )
-                            if (!isLast || !firstSyncDone) {
-                                Spacer(Modifier.width(6.dp))
-                                Icon(Icons.Default.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
+                            } else {
+                                Spacer(Modifier.width(8.dp))
+                            }
+                            val isLast = pagerState.currentPage == steps.lastIndex
+                            Button(
+                                onClick = {
+                                    if (currentStep == SetupStep.FIREBASE_ORG ||
+                                        currentStep == SetupStep.FIREBASE_PROJECT ||
+                                        currentStep == SetupStep.JOIN_ORG
+                                    ) {
+                                        persistFirebaseFields()
+                                    }
+                                    if (isLast) {
+                                        if (firstSyncDone) finishSetup()
+                                        else if (!firstSyncRunning) runFirstSync()
+                                    } else {
+                                        scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
+                                    }
+                                },
+                                enabled = when (currentStep) {
+                                    SetupStep.CHOOSE_PATH -> selectedPath != null
+                                    SetupStep.JOIN_ORG -> firebaseProjectReady() && firebaseOrgReady() && firebaseOAuthReady()
+                                    SetupStep.FIREBASE_ORG -> firebaseOrgReady()
+                                    SetupStep.FIREBASE_PROJECT -> firebaseProjectReady() && firebaseOAuthReady()
+                                    SetupStep.FIREBASE_SIGN_IN -> firebaseAuthReady()
+                                    SetupStep.SHEETS_KEY -> jsonKeyPresent
+                                    SetupStep.SHEETS_SPREADSHEET -> sheetsStepReady()
+                                    SetupStep.FIRST_SYNC -> firstSyncDone || !firstSyncRunning
+                                    else -> true
+                                }
+                            ) {
+                                Text(
+                                    when {
+                                        currentStep == SetupStep.WELCOME -> stringResource(Res.string.setup_get_started)
+                                        isLast && firstSyncDone -> stringResource(Res.string.setup_finish)
+                                        isLast -> stringResource(Res.string.setup_start_sync)
+                                        else -> stringResource(Res.string.setup_continue)
+                                    }
+                                )
+                                if (!isLast || !firstSyncDone) {
+                                    Spacer(Modifier.width(6.dp))
+                                    Icon(Icons.Default.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
+                                }
                             }
                         }
                     }
                 }
             }
-        }
-    ) { padding ->
-        Box(
-            modifier = Modifier.fillMaxSize().padding(padding),
-            contentAlignment = Alignment.TopCenter
-        ) {
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier.fillMaxSize().widthIn(max = 640.dp),
-                userScrollEnabled = false
-            ) { page ->
-                val step = steps[page]
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 24.dp, vertical = 20.dp),
-                    verticalArrangement = Arrangement.spacedBy(20.dp)
-                ) {
-                    SetupWizardHeader(
-                        step = step,
-                        stepIndex = page,
-                        totalSteps = steps.size,
-                        onSkip = { finishSetup() },
-                        showSkip = step != SetupStep.WELCOME && step != SetupStep.FIRST_SYNC
-                    )
-
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-                        ),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        ) { padding ->
+            Box(
+                modifier = Modifier.fillMaxSize().padding(padding),
+                contentAlignment = Alignment.TopCenter
+            ) {
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxSize().widthIn(max = 640.dp),
+                    userScrollEnabled = false
+                ) { page ->
+                    val step = steps.getOrElse(page) { SetupStep.WELCOME }
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 24.dp, vertical = 20.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        Column(
-                            modifier = Modifier.padding(20.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        SetupWizardHeader(
+                            step = step,
+                            stepIndex = page,
+                            totalSteps = steps.size,
+                            onSkip = { finishSetup() },
+                            showSkip = step != SetupStep.WELCOME && step != SetupStep.FIRST_SYNC
+                        )
+
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(20.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                            ),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                         ) {
-                            when (step) {
-                                SetupStep.WELCOME -> WelcomePage(
-                                    settingsManager = settingsManager,
-                                    isDesktop = platformContext.isDesktop,
-                                )
-                                SetupStep.LANGUAGE -> LanguagePage(selectedLanguage) { code ->
-                                    selectedLanguage = code
-                                    settingsManager.saveLanguage(code)
-                                    settingsManager.markSkipNextStartupSync()
-                                    applyLocaleChange(platformContext)
-                                }
-                                SetupStep.THEME -> ThemeModePicker(
-                                    selectedMode = selectedTheme,
-                                    onSelect = { mode ->
-                                        selectedTheme = mode
-                                        settingsManager.saveThemeMode(mode.value)
-                                        onThemeModeChanged(mode.value)
+                            Column(
+                                modifier = Modifier.padding(20.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                when (step) {
+                                    SetupStep.WELCOME -> WelcomePage()
+                                    SetupStep.LANGUAGE -> LanguagePage(selectedLanguage) { code ->
+                                        selectedLanguage = code
+                                        settingsManager.saveLanguage(code)
                                         settingsManager.markSkipNextStartupSync()
-                                        applyThemeAppearanceChange(platformContext)
-                                    },
-                                    showHeader = false,
-                                )
-                                SetupStep.COLOR_PROFILE -> ColorThemePicker(
-                                    selectedThemeKey = selectedColorTheme,
-                                    previewDark = when (selectedTheme) {
-                                        ThemeMode.LIGHT -> false
-                                        ThemeMode.DARK -> true
-                                        ThemeMode.DEFAULT -> isSystemInDarkTheme()
-                                    },
-                                    onSelect = { key ->
-                                        selectedColorTheme = key
-                                        settingsManager.saveColorTheme(key)
-                                        settingsManager.markSkipNextStartupSync()
-                                        applyThemeAppearanceChange(platformContext)
-                                    },
-                                    showHeader = false,
-                                )
-                                SetupStep.LAYOUT -> SetupLayoutScalePage(
-                                    resolutionScale = resolutionScale,
-                                    onSave = { scale ->
-                                        resolutionScale = scale
-                                        settingsManager.saveResolutionScale(scale)
-                                        applyLocaleOrThemeChange(platformContext)
-                                    },
-                                    onUseRecommended = {
-                                        resolutionScale = 1.07f
-                                        settingsManager.saveResolutionScale(1.07f)
-                                        applyLocaleOrThemeChange(platformContext)
+                                        applyLocaleChange(platformContext)
                                     }
-                                )
-                                SetupStep.CHOOSE_BACKEND -> ChooseBackendPage(
-                                    selected = selectedBackend,
-                                    onSelect = {
-                                        selectedBackend = it
-                                        settingsManager.setBackendType(it)
-                                    }
-                                )
-                                SetupStep.GOOGLE_SHEETS -> GoogleSheetsPage(
-                                    spreadsheetId = spreadsheetId,
-                                    onSpreadsheetIdChange = { spreadsheetId = it },
-                                    platformContext = platformContext,
-                                    jsonKeyStatus = jsonKeyStatus,
-                                    onJsonKeyStatus = { jsonKeyStatus = it }
-                                )
-                                SetupStep.SHEETS -> SheetsPage(
-                                    guestListSheet, { guestListSheet = it },
-                                    volunteerSheet, { volunteerSheet = it },
-                                    jobsSheet, { jobsSheet = it },
-                                    volunteerGuestListSheet, { volunteerGuestListSheet = it },
-                                    jobTypesSheet, { jobTypesSheet = it },
-                                    venuesSheet, { venuesSheet = it },
-                                    salesItemsSheet, { salesItemsSheet = it },
-                                    tempGuestListSheet, { tempGuestListSheet = it },
-                                    settingsSheet, { settingsSheet = it }
-                                )
-                                SetupStep.FIREBASE_SETUP -> FirebaseSetupPage(
-                                    settingsManager = settingsManager,
-                                    platformContext = platformContext,
-                                    configuredOrgs = firebaseConfiguredOrgs,
-                                    onConfiguredOrgsChange = { firebaseConfiguredOrgs = it },
-                                    projectId = firebaseProjectId,
-                                    onProjectIdChange = { firebaseProjectId = it },
-                                    applicationId = firebaseApplicationId,
-                                    onApplicationIdChange = { firebaseApplicationId = it },
-                                    apiKey = firebaseApiKey,
-                                    onApiKeyChange = { firebaseApiKey = it },
-                                    webClientId = firebaseWebClientId,
-                                    onWebClientIdChange = { firebaseWebClientId = it },
-                                    webClientSecret = firebaseWebClientSecret,
-                                    onWebClientSecretChange = { firebaseWebClientSecret = it },
-                                    authEmail = authEmail,
-                                    onSignIn = {
-                                        persistFirebaseFields()
-                                        if (onRequestFirebaseSignIn != null) {
-                                            onRequestFirebaseSignIn()
-                                        } else {
-                                            scope.launch {
-                                                when (val result = com.eventmanager.app.data.remote
-                                                    .createFirebaseAuthService(platformContext)
-                                                    .signInWithGoogle()
-                                                ) {
-                                                    is com.eventmanager.app.data.remote.FirebaseAuthResult.Success -> {
-                                                        authEmail = result.email
-                                                        settingsManager.setFirebaseAuthEmail(result.email.orEmpty())
-                                                    }
-                                                    is com.eventmanager.app.data.remote.FirebaseAuthResult.Error -> {
-                                                        firstSyncError = result.message
+                                    SetupStep.THEME -> ThemeModePicker(
+                                        selectedMode = selectedTheme,
+                                        onSelect = { mode ->
+                                            selectedTheme = mode
+                                            settingsManager.saveThemeMode(mode.value)
+                                            onThemeModeChanged(mode.value)
+                                            settingsManager.markSkipNextStartupSync()
+                                            applyThemeAppearanceChange(platformContext)
+                                        },
+                                        showHeader = false,
+                                    )
+                                    SetupStep.COLOR_PROFILE -> ColorThemePicker(
+                                        selectedThemeKey = selectedColorTheme,
+                                        previewDark = when (selectedTheme) {
+                                            ThemeMode.LIGHT -> false
+                                            ThemeMode.DARK -> true
+                                            ThemeMode.DEFAULT -> isSystemInDarkTheme()
+                                        },
+                                        onSelect = { key ->
+                                            selectedColorTheme = key
+                                            settingsManager.saveColorTheme(key)
+                                            settingsManager.markSkipNextStartupSync()
+                                            applyThemeAppearanceChange(platformContext)
+                                        },
+                                        showHeader = false,
+                                    )
+                                    SetupStep.LAYOUT -> SetupLayoutScalePage(
+                                        resolutionScale = resolutionScale,
+                                        onSave = { scale ->
+                                            resolutionScale = scale
+                                            settingsManager.saveResolutionScale(scale)
+                                            applyLocaleOrThemeChange(platformContext)
+                                        },
+                                        onUseRecommended = {
+                                            resolutionScale = 1.07f
+                                            settingsManager.saveResolutionScale(1.07f)
+                                            applyLocaleOrThemeChange(platformContext)
+                                        }
+                                    )
+                                    SetupStep.CHOOSE_PATH -> ChoosePathPage(
+                                        selected = selectedPath,
+                                        onSelect = { path ->
+                                            selectedPath = path
+                                            settingsManager.setBackendType(
+                                                if (path == SetupPath.SHEETS) BackendType.SHEETS else BackendType.FIREBASE,
+                                            )
+                                        },
+                                    )
+                                    SetupStep.JOIN_ORG -> JoinOrgPage(
+                                        settingsManager = settingsManager,
+                                        orgId = settingsManager.getFirebaseOrgId().ifBlank {
+                                            firebaseConfiguredOrgs.firstOrNull { it.orgId.isNotBlank() }?.orgId.orEmpty()
+                                        },
+                                        projectReady = firebaseProjectReady(),
+                                        onRequestScan = { showJoinScan = true },
+                                        onJoined = { reloadFirebaseFromSettings() },
+                                    )
+                                    SetupStep.SHEETS_CLOUD -> SheetsCloudPage(platformContext)
+                                    SetupStep.SHEETS_KEY -> SheetsKeyPage(
+                                        platformContext = platformContext,
+                                        jsonKeyStatus = jsonKeyStatus,
+                                        onJsonKeyStatus = { status ->
+                                            jsonKeyStatus = status
+                                            jsonKeyPresent = fileManager.getServiceAccountFile() != null
+                                            serviceAccountEmail =
+                                                serviceAccountEmailFromJson(fileManager.readServiceAccountJson())
+                                        },
+                                    )
+                                    SetupStep.SHEETS_SPREADSHEET -> SheetsSpreadsheetPage(
+                                        spreadsheetId = spreadsheetId,
+                                        onSpreadsheetIdChange = { spreadsheetId = it },
+                                        platformContext = platformContext,
+                                    )
+                                    SetupStep.SHEETS_SHARE -> SheetsSharePage(
+                                        platformContext = platformContext,
+                                        serviceAccountEmail = serviceAccountEmail,
+                                    )
+                                    SetupStep.SHEETS_NAMES -> SheetsPage(
+                                        guestListSheet, { guestListSheet = it },
+                                        volunteerSheet, { volunteerSheet = it },
+                                        jobsSheet, { jobsSheet = it },
+                                        volunteerGuestListSheet, { volunteerGuestListSheet = it },
+                                        jobTypesSheet, { jobTypesSheet = it },
+                                        venuesSheet, { venuesSheet = it },
+                                        salesItemsSheet, { salesItemsSheet = it },
+                                        tempGuestListSheet, { tempGuestListSheet = it },
+                                        settingsSheet, { settingsSheet = it }
+                                    )
+                                    SetupStep.FIREBASE_ORG -> FirebaseOrgPage(
+                                        orgId = firebaseConfiguredOrgs.firstOrNull()?.orgId.orEmpty(),
+                                        onOrgIdChange = { newId ->
+                                            val color = firebaseConfiguredOrgs.firstOrNull()?.colorArgb
+                                                ?: com.eventmanager.app.data.remote.FirebaseConfiguredOrgCodec.defaultColorForIndex(0)
+                                            firebaseConfiguredOrgs = listOf(
+                                                com.eventmanager.app.data.remote.FirebaseConfiguredOrg(
+                                                    orgId = newId,
+                                                    colorArgb = color,
+                                                ),
+                                            )
+                                        },
+                                    )
+                                    SetupStep.FIREBASE_PROJECT -> FirebaseProjectPage(
+                                        settingsManager = settingsManager,
+                                        projectId = firebaseProjectId,
+                                        onProjectIdChange = { firebaseProjectId = it },
+                                        applicationId = firebaseApplicationId,
+                                        onApplicationIdChange = { firebaseApplicationId = it },
+                                        apiKey = firebaseApiKey,
+                                        onApiKeyChange = { firebaseApiKey = it },
+                                        webClientId = firebaseWebClientId,
+                                        onWebClientIdChange = { firebaseWebClientId = it },
+                                        webClientSecret = firebaseWebClientSecret,
+                                        onWebClientSecretChange = { firebaseWebClientSecret = it },
+                                        onOpenTutorial = { showFirebaseTutorial = true },
+                                        platformContext = platformContext,
+                                    )
+                                    SetupStep.FIREBASE_SIGN_IN -> FirebaseSignInStep(
+                                        authEmail = authEmail,
+                                        onSignIn = {
+                                            persistFirebaseFields()
+                                            if (onRequestFirebaseSignIn != null) {
+                                                onRequestFirebaseSignIn()
+                                            } else {
+                                                scope.launch {
+                                                    when (val result = com.eventmanager.app.data.remote
+                                                        .createFirebaseAuthService(platformContext)
+                                                        .signInWithGoogle()
+                                                    ) {
+                                                        is com.eventmanager.app.data.remote.FirebaseAuthResult.Success -> {
+                                                            authEmail = result.email
+                                                            settingsManager.setFirebaseAuthEmail(result.email.orEmpty())
+                                                        }
+                                                        is com.eventmanager.app.data.remote.FirebaseAuthResult.Error -> {
+                                                            firstSyncError = result.message
+                                                        }
                                                     }
                                                 }
                                             }
-                                        }
-                                    },
-                                    onJoinedFromQr = {
-                                        firebaseConfiguredOrgs = settingsManager.getFirebaseConfiguredOrgs()
-                                        firebaseProjectId = settingsManager.getFirebaseProjectId()
-                                        firebaseApplicationId = settingsManager.getFirebaseApplicationId()
-                                        firebaseApiKey = settingsManager.getFirebaseApiKey()
-                                        firebaseWebClientId = settingsManager.getFirebaseWebClientId()
-                                        firebaseWebClientSecret = settingsManager.getFirebaseWebClientSecret()
-                                    },
-                                )
-                                SetupStep.FIRST_SYNC -> FirstSyncPage(firstSyncRunning, firstSyncDone, firstSyncError)
+                                        },
+                                        signInFeedback = firebaseSignInFeedback ?: firstSyncError,
+                                    )
+                                    SetupStep.FIRST_SYNC -> FirstSyncPage(firstSyncRunning, firstSyncDone, firstSyncError)
+                                }
                             }
                         }
                     }
                 }
             }
         }
+    }
+
+    if (showFirebaseTutorial) {
+        FirebaseSetupTutorialDialog(onDismiss = { showFirebaseTutorial = false })
+    }
+    if (showJoinScan) {
+        com.eventmanager.app.ui.components.RawPayloadQrScannerDialog(
+            platformContext = platformContext,
+            onDismiss = { showJoinScan = false },
+            onPayload = { raw ->
+                com.eventmanager.app.data.remote.FirebaseJoinCodec.decode(raw).onSuccess { payload ->
+                    settingsManager.applyFirebaseJoinPayload(payload)
+                    reloadFirebaseFromSettings()
+                }
+                showJoinScan = false
+            },
+        )
     }
 }
 
@@ -595,8 +739,9 @@ private fun SetupWizardHeader(
     showSkip: Boolean
 ) {
     val phaseLabel = step.phase().label()
+    val description = step.description()
     Column(
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -620,6 +765,7 @@ private fun SetupWizardHeader(
                 }
             }
         }
+        if (step == SetupStep.WELCOME) return
         if (phaseLabel.isNotBlank()) {
             AssistChip(
                 onClick = {},
@@ -646,7 +792,7 @@ private fun SetupWizardHeader(
         }
         Box(
             modifier = Modifier
-                .size(72.dp)
+                .size(56.dp)
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center
@@ -654,7 +800,7 @@ private fun SetupWizardHeader(
             Icon(
                 step.icon(),
                 contentDescription = null,
-                modifier = Modifier.size(36.dp),
+                modifier = Modifier.size(28.dp),
                 tint = MaterialTheme.colorScheme.primary
             )
         }
@@ -664,94 +810,214 @@ private fun SetupWizardHeader(
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
         )
-        Text(
-            text = step.description(),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
-    }
-}
-
-@Composable
-private fun WelcomePage(
-    settingsManager: SettingsManager,
-    isDesktop: Boolean,
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            SetupFeatureChip(Icons.Default.Language, stringResource(Res.string.setup_phase_personalize))
-            SetupFeatureChip(Icons.Default.CloudSync, stringResource(Res.string.setup_phase_connect))
-            SetupFeatureChip(Icons.Default.Sync, stringResource(Res.string.setup_phase_finish))
-        }
-
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
-        BackgroundAnimationSettingsSection(
-            settingsManager = settingsManager,
-            isDesktop = isDesktop,
-        )
-    }
-}
-
-@Composable
-private fun RowScope.SetupFeatureChip(icon: ImageVector, label: String) {
-    Card(
-        modifier = Modifier.weight(1f),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-    ) {
-        Column(
-            modifier = Modifier.padding(12.dp).fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+        if (description.isNotBlank()) {
             Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                text = description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
             )
         }
     }
 }
 
 @Composable
-private fun GoogleSheetsPage(
-    spreadsheetId: String,
-    onSpreadsheetIdChange: (String) -> Unit,
+private fun WelcomePage() {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(20.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(72.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Default.RocketLaunch,
+                contentDescription = null,
+                modifier = Modifier.size(36.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+        }
+        Text(
+            stringResource(Res.string.setup_welcome_title),
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            stringResource(Res.string.setup_welcome_description),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+            WelcomeOverviewRow(1, Icons.Default.Tune, stringResource(Res.string.setup_overview_1_title), stringResource(Res.string.setup_overview_1_body))
+            WelcomeOverviewRow(2, Icons.Default.Link, stringResource(Res.string.setup_overview_2_title), stringResource(Res.string.setup_overview_2_body))
+            WelcomeOverviewRow(3, Icons.Default.Sync, stringResource(Res.string.setup_overview_3_title), stringResource(Res.string.setup_overview_3_body))
+        }
+    }
+}
+
+@Composable
+private fun WelcomeOverviewRow(number: Int, icon: ImageVector, title: String, body: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.secondaryContainer),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                number.toString(),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+        }
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            }
+            Text(
+                body,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ChoosePathPage(
+    selected: SetupPath?,
+    onSelect: (SetupPath) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+        SetupChoiceCard(
+            selected = selected == SetupPath.JOIN,
+            title = stringResource(Res.string.setup_path_join),
+            body = stringResource(Res.string.setup_path_join_body),
+            icon = Icons.Default.QrCodeScanner,
+            onClick = { onSelect(SetupPath.JOIN) },
+        )
+        SetupChoiceCard(
+            selected = selected == SetupPath.FIREBASE,
+            title = stringResource(Res.string.setup_path_firebase),
+            body = stringResource(Res.string.setup_path_firebase_body),
+            icon = Icons.Default.Cloud,
+            onClick = { onSelect(SetupPath.FIREBASE) },
+        )
+        SetupChoiceCard(
+            selected = selected == SetupPath.SHEETS,
+            title = stringResource(Res.string.setup_path_sheets),
+            body = stringResource(Res.string.setup_path_sheets_body),
+            icon = Icons.Default.TableChart,
+            onClick = { onSelect(SetupPath.SHEETS) },
+        )
+    }
+}
+
+@Composable
+private fun SetupChoiceCard(
+    selected: Boolean,
+    title: String,
+    body: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(
+            containerColor = if (selected) {
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
+            } else {
+                MaterialTheme.colorScheme.surface
+            }
+        ),
+        border = BorderStroke(
+            if (selected) 2.dp else 1.dp,
+            if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+        ),
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(title, fontWeight = FontWeight.SemiBold)
+                Text(
+                    body,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (selected) {
+                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            }
+        }
+    }
+}
+
+@Composable
+private fun JoinOrgPage(
+    settingsManager: SettingsManager,
+    orgId: String,
+    projectReady: Boolean,
+    onRequestScan: () -> Unit,
+    onJoined: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+        FirebaseJoinImportSection(
+            settingsManager = settingsManager,
+            onJoined = { onJoined() },
+            onRequestScan = onRequestScan,
+        )
+        if (projectReady) {
+            FirebaseConfigReceivedBanner(orgId = orgId)
+        }
+    }
+}
+
+@Composable
+private fun SheetsCloudPage(platformContext: PlatformContext) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SetupGuideStep(1, stringResource(Res.string.step_1_title), stringResource(Res.string.step_1_description))
+        SetupGuideStep(2, stringResource(Res.string.step_2_title), stringResource(Res.string.step_2_description))
+        OutlinedButton(
+            onClick = { openExternalUrl(platformContext, "https://console.cloud.google.com/") },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Icon(Icons.Default.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(stringResource(Res.string.open_google_cloud_console))
+        }
+    }
+}
+
+@Composable
+private fun SheetsKeyPage(
     platformContext: PlatformContext,
     jsonKeyStatus: String?,
-    onJsonKeyStatus: (String) -> Unit
+    onJsonKeyStatus: (String) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        OutlinedTextField(
-            value = spreadsheetId,
-            onValueChange = onSpreadsheetIdChange,
-            label = { Text(stringResource(Res.string.spreadsheet_id_label)) },
-            modifier = Modifier.fillMaxWidth(),
-            leadingIcon = { Icon(Icons.Default.TableChart, contentDescription = null) },
-            supportingText = { Text(stringResource(Res.string.setup_spreadsheet_hint)) },
-            minLines = 2
-        )
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-        Text(
-            text = stringResource(Res.string.setup_json_key_description),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SetupGuideStep(3, stringResource(Res.string.step_3_title), stringResource(Res.string.step_3_description))
         ServiceAccountKeyUploadButton(
             platformContext = platformContext,
             onStatusUpdate = onJsonKeyStatus,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         )
         jsonKeyStatus?.let {
             Surface(
@@ -766,6 +1032,161 @@ private fun GoogleSheetsPage(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun SheetsSpreadsheetPage(
+    spreadsheetId: String,
+    onSpreadsheetIdChange: (String) -> Unit,
+    platformContext: PlatformContext,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SetupGuideStep(4, stringResource(Res.string.step_5_title), stringResource(Res.string.step_5_description))
+        OutlinedButton(
+            onClick = { openExternalUrl(platformContext, "https://sheets.google.com/") },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Icon(Icons.Default.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(stringResource(Res.string.setup_open_google_sheets))
+        }
+        OutlinedTextField(
+            value = spreadsheetId,
+            onValueChange = onSpreadsheetIdChange,
+            label = { Text(stringResource(Res.string.spreadsheet_id_label)) },
+            modifier = Modifier.fillMaxWidth(),
+            leadingIcon = { Icon(Icons.Default.TableChart, contentDescription = null) },
+            supportingText = { Text(stringResource(Res.string.setup_spreadsheet_hint)) },
+            minLines = 2
+        )
+    }
+}
+
+@Composable
+private fun SheetsSharePage(
+    platformContext: PlatformContext,
+    serviceAccountEmail: String?,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SetupGuideStep(5, stringResource(Res.string.step_8_title), stringResource(Res.string.step_8_description))
+        if (!serviceAccountEmail.isNullOrBlank()) {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+            ) {
+                Text(
+                    stringResource(Res.string.setup_sheets_share_email, serviceAccountEmail),
+                    modifier = Modifier.padding(12.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
+        OutlinedButton(
+            onClick = { openExternalUrl(platformContext, "https://sheets.google.com/") },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Icon(Icons.Default.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(stringResource(Res.string.setup_open_google_sheets))
+        }
+    }
+}
+
+@Composable
+private fun SetupGuideStep(number: Int, title: String, body: String) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.Top,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(28.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                number.toString(),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            Text(
+                body,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun FirebaseOrgPage(
+    orgId: String,
+    onOrgIdChange: (String) -> Unit,
+) {
+    OutlinedTextField(
+        value = orgId,
+        onValueChange = onOrgIdChange,
+        label = { Text(stringResource(Res.string.firebase_org_id_label)) },
+        supportingText = { Text(stringResource(Res.string.firebase_org_id_hint)) },
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true,
+        leadingIcon = { Icon(Icons.Default.Business, contentDescription = null) },
+    )
+}
+
+@Composable
+private fun FirebaseProjectPage(
+    settingsManager: SettingsManager,
+    projectId: String,
+    onProjectIdChange: (String) -> Unit,
+    applicationId: String,
+    onApplicationIdChange: (String) -> Unit,
+    apiKey: String,
+    onApiKeyChange: (String) -> Unit,
+    webClientId: String,
+    onWebClientIdChange: (String) -> Unit,
+    webClientSecret: String,
+    onWebClientSecretChange: (String) -> Unit,
+    onOpenTutorial: () -> Unit,
+    platformContext: PlatformContext,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(
+                onClick = { openExternalUrl(platformContext, "https://console.firebase.google.com/") },
+                modifier = Modifier.weight(1f),
+            ) {
+                Icon(Icons.Default.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(stringResource(Res.string.setup_open_firebase_console))
+            }
+            OutlinedButton(onClick = onOpenTutorial, modifier = Modifier.weight(1f)) {
+                Icon(Icons.Default.HelpOutline, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(stringResource(Res.string.firebase_tutorial_title))
+            }
+        }
+        FirebaseAdminProjectConfigCard(
+            settingsManager = settingsManager,
+            projectId = projectId,
+            applicationId = applicationId,
+            apiKey = apiKey,
+            webClientId = webClientId,
+            webClientSecret = webClientSecret,
+            onProjectIdChange = onProjectIdChange,
+            onApplicationIdChange = onApplicationIdChange,
+            onApiKeyChange = onApiKeyChange,
+            onWebClientIdChange = onWebClientIdChange,
+            onWebClientSecretChange = onWebClientSecretChange,
+        )
     }
 }
 
@@ -840,28 +1261,6 @@ private fun SheetsPage(
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Surface(
-            shape = RoundedCornerShape(12.dp),
-            color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f)
-        ) {
-            Row(
-                modifier = Modifier.padding(14.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.Top
-            ) {
-                Icon(
-                    Icons.Default.Info,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                    modifier = Modifier.size(20.dp)
-                )
-                Text(
-                    text = stringResource(Res.string.setup_sheets_defaults_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                )
-            }
-        }
         if (!showAdvanced) {
             OutlinedButton(onClick = { showAdvanced = true }, modifier = Modifier.fillMaxWidth()) {
                 Icon(Icons.Default.ExpandMore, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -879,216 +1278,6 @@ private fun SheetsPage(
             sheetField(tempGuestListSheet, onTempGuestListSheet, Res.string.temp_guest_list_sheet_label)
             sheetField(settingsSheet, onSettingsSheet, Res.string.settings_sheet_label)
         }
-    }
-}
-
-@Composable
-private fun ChooseBackendPage(
-    selected: com.eventmanager.app.data.remote.BackendType,
-    onSelect: (com.eventmanager.app.data.remote.BackendType) -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-        Text(stringResource(Res.string.setup_choose_backend_description))
-        listOf(
-            com.eventmanager.app.data.remote.BackendType.SHEETS to Res.string.setup_backend_sheets,
-            com.eventmanager.app.data.remote.BackendType.FIREBASE to Res.string.setup_backend_firebase,
-        ).forEach { (type, label) ->
-            val selectedBorder = if (selected == type) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
-            OutlinedCard(
-                onClick = { onSelect(type) },
-                border = BorderStroke(if (selected == type) 2.dp else 1.dp, selectedBorder),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(
-                    stringResource(label),
-                    modifier = Modifier.padding(16.dp),
-                    fontWeight = if (selected == type) FontWeight.Bold else FontWeight.Normal,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun FirebaseSetupPage(
-    settingsManager: SettingsManager,
-    platformContext: PlatformContext,
-    configuredOrgs: List<com.eventmanager.app.data.remote.FirebaseConfiguredOrg>,
-    onConfiguredOrgsChange: (List<com.eventmanager.app.data.remote.FirebaseConfiguredOrg>) -> Unit,
-    projectId: String,
-    onProjectIdChange: (String) -> Unit,
-    applicationId: String,
-    onApplicationIdChange: (String) -> Unit,
-    apiKey: String,
-    onApiKeyChange: (String) -> Unit,
-    webClientId: String,
-    onWebClientIdChange: (String) -> Unit,
-    webClientSecret: String,
-    onWebClientSecretChange: (String) -> Unit,
-    authEmail: String?,
-    onSignIn: () -> Unit,
-    onJoinedFromQr: () -> Unit,
-) {
-    var mode by remember {
-        mutableStateOf(
-            if (projectId.isNotBlank() && applicationId.isNotBlank() && apiKey.isNotBlank()) {
-                "joined"
-            } else {
-                "choose"
-            },
-        )
-    }
-    var showScan by remember { mutableStateOf(false) }
-    val activeOrgId = settingsManager.getFirebaseOrgId().ifBlank {
-        configuredOrgs.firstOrNull { it.orgId.isNotBlank() }?.orgId.orEmpty()
-    }
-
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-        Text(stringResource(Res.string.setup_firebase_description))
-
-        when (mode) {
-            "choose" -> {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { mode = "join" },
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                ) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(
-                            stringResource(Res.string.firebase_join_wizard_option),
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                        Text(
-                            stringResource(Res.string.firebase_join_wizard_option_body),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { mode = "admin" },
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                ) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(
-                            stringResource(Res.string.firebase_create_new_option),
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                    }
-                }
-            }
-            "join" -> {
-                com.eventmanager.app.ui.components.FirebaseJoinImportSection(
-                    settingsManager = settingsManager,
-                    onJoined = {
-                        onJoinedFromQr()
-                        mode = "joined"
-                    },
-                    onRequestScan = { showScan = true },
-                )
-                TextButton(onClick = { mode = "choose" }) {
-                    Text(stringResource(Res.string.back))
-                }
-            }
-            "joined" -> {
-                com.eventmanager.app.ui.components.FirebaseConfigReceivedBanner(orgId = activeOrgId)
-                com.eventmanager.app.ui.components.FirebaseConnectionFields(
-                    configuredOrgs = configuredOrgs,
-                    onConfiguredOrgsChange = onConfiguredOrgsChange,
-                    projectId = projectId,
-                    onProjectIdChange = onProjectIdChange,
-                    applicationId = applicationId,
-                    onApplicationIdChange = onApplicationIdChange,
-                    apiKey = apiKey,
-                    onApiKeyChange = onApiKeyChange,
-                    webClientId = webClientId,
-                    onWebClientIdChange = onWebClientIdChange,
-                    webClientSecret = webClientSecret,
-                    onWebClientSecretChange = onWebClientSecretChange,
-                    authEmail = authEmail,
-                    onSignIn = onSignIn,
-                    hideProjectSecrets = true,
-                    orgIdReadOnly = activeOrgId.isNotBlank(),
-                )
-            }
-            else -> {
-                com.eventmanager.app.ui.components.FirebaseAdminConfigAndJoinQrSection(
-                    settingsManager = settingsManager,
-                    orgId = activeOrgId,
-                    projectId = projectId,
-                    applicationId = applicationId,
-                    apiKey = apiKey,
-                    webClientId = webClientId,
-                    webClientSecret = webClientSecret,
-                    onOrgIdChange = { newId ->
-                        val updated = configuredOrgs.toMutableList()
-                        if (updated.isEmpty()) {
-                            onConfiguredOrgsChange(
-                                listOf(
-                                    com.eventmanager.app.data.remote.FirebaseConfiguredOrg(
-                                        orgId = newId,
-                                        colorArgb = com.eventmanager.app.data.remote.FirebaseConfiguredOrgCodec.defaultColorForIndex(0),
-                                    ),
-                                ),
-                            )
-                        } else {
-                            updated[0] = updated[0].copy(orgId = newId)
-                            onConfiguredOrgsChange(updated)
-                        }
-                    },
-                    onProjectIdChange = onProjectIdChange,
-                    onApplicationIdChange = onApplicationIdChange,
-                    onApiKeyChange = onApiKeyChange,
-                    onWebClientIdChange = onWebClientIdChange,
-                    onWebClientSecretChange = onWebClientSecretChange,
-                )
-                com.eventmanager.app.ui.components.FirebaseConnectionFields(
-                    configuredOrgs = configuredOrgs,
-                    onConfiguredOrgsChange = onConfiguredOrgsChange,
-                    projectId = projectId,
-                    onProjectIdChange = onProjectIdChange,
-                    applicationId = applicationId,
-                    onApplicationIdChange = onApplicationIdChange,
-                    apiKey = apiKey,
-                    onApiKeyChange = onApiKeyChange,
-                    webClientId = webClientId,
-                    onWebClientIdChange = onWebClientIdChange,
-                    webClientSecret = webClientSecret,
-                    onWebClientSecretChange = onWebClientSecretChange,
-                    authEmail = authEmail,
-                    onSignIn = onSignIn,
-                    hideProjectSecrets = true,
-                )
-                TextButton(onClick = { mode = "choose" }) {
-                    Text(stringResource(Res.string.back))
-                }
-            }
-        }
-
-        if (mode != "choose") {
-            Text(
-                stringResource(Res.string.setup_firebase_auth_hint),
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
-    }
-
-    if (showScan) {
-        com.eventmanager.app.ui.components.RawPayloadQrScannerDialog(
-            platformContext = platformContext,
-            onDismiss = { showScan = false },
-            onPayload = { raw ->
-                com.eventmanager.app.data.remote.FirebaseJoinCodec.decode(raw).onSuccess { payload ->
-                    settingsManager.applyFirebaseJoinPayload(payload)
-                    onJoinedFromQr()
-                    mode = "joined"
-                }
-                showScan = false
-            },
-        )
     }
 }
 
@@ -1120,11 +1309,6 @@ private fun FirstSyncPage(running: Boolean, done: Boolean, error: String?) {
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
-                )
-                Text(
-                    stringResource(Res.string.setup_wizard_first_sync_message),
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             error != null -> {

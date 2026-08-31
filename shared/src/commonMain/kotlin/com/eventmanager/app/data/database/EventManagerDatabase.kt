@@ -50,7 +50,7 @@ private fun SQLiteConnection.query(sql: String): MigrationCursor =
         AccountTransfer::class,
         PendingRemoteWrite::class,
     ],
-    version = 39,
+    version = 41,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -1407,6 +1407,41 @@ abstract class EventManagerDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_39_40 = object : Migration(39, 40) {
+            override fun migrate(connection: SQLiteConnection) {
+                try {
+                    println("Starting migration 39→40: nfcCardUidHash + local crypto prep")
+                    connection.execSQL(
+                        "ALTER TABLE guests ADD COLUMN nfcCardUidHash TEXT NOT NULL DEFAULT ''",
+                    )
+                    connection.execSQL(
+                        "ALTER TABLE volunteers ADD COLUMN nfcCardUidHash TEXT NOT NULL DEFAULT ''",
+                    )
+                    println("Migration 39→40 completed successfully")
+                } catch (e: Exception) {
+                    println("Migration 39→40 failed: ${e.message}")
+                    e.printStackTrace()
+                    throw e
+                }
+            }
+        }
+
+        private val MIGRATION_40_41 = object : Migration(40, 41) {
+            override fun migrate(connection: SQLiteConnection) {
+                try {
+                    println("Starting migration 40→41: Firebase people counter writer account email")
+                    connection.execSQL(
+                        "ALTER TABLE venues ADD COLUMN peopleCounterWriterAccountEmail TEXT NOT NULL DEFAULT ''",
+                    )
+                    println("Migration 40→41 completed successfully")
+                } catch (e: Exception) {
+                    println("Migration 40→41 failed: ${e.message}")
+                    e.printStackTrace()
+                    throw e
+                }
+            }
+        }
+
         val ALL_MIGRATIONS: Array<Migration> = arrayOf(
             MIGRATION_1_2,
             MIGRATION_2_3,
@@ -1445,7 +1480,9 @@ abstract class EventManagerDatabase : RoomDatabase() {
             MIGRATION_35_36,
             MIGRATION_36_37,
             MIGRATION_37_38,
-            MIGRATION_38_39
+            MIGRATION_38_39,
+            MIGRATION_39_40,
+            MIGRATION_40_41
         )
     }
 }

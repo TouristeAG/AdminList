@@ -11,6 +11,7 @@ import com.eventmanager.app.data.models.Volunteer
 import com.eventmanager.app.data.repository.EventManagerRepository
 import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.data.sync.SyncResult
+import com.eventmanager.app.data.security.crypto.SensitiveFieldCodec
 import com.eventmanager.app.platform.PlatformContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job as CoroutineJob
@@ -37,6 +38,8 @@ class FirebaseRemoteBackend(
     private var listenersActive = false
 
     private var listenerJob: CoroutineJob? = null
+
+    private val posBootstrapCollections = listOf("salesItems", "transfers")
 
     override val backendType: BackendType = BackendType.FIREBASE
 
@@ -113,6 +116,10 @@ class FirebaseRemoteBackend(
             if (FirestoreRealtimeCapability.alsoRunPullFallback() ||
                 !FirestoreRealtimeCapability.preferSnapshotListeners()
             ) {
+                if (listenersActive) {
+                    // Listeners already hydrating; keep pull as a safety net, not a second full download.
+                    kotlinx.coroutines.delay(30_000)
+                }
                 while (true) {
                     flushQueue()
                     pullAll()
@@ -135,6 +142,7 @@ class FirebaseRemoteBackend(
         val available = firestoreGateway.isAvailable()
         val orgConfigured = orgIds.isNotEmpty()
         val pending = pendingWrites.count()
+        val failedPending = pendingWrites.countWithFailedAttempts()
         val mode = when {
             !orgConfigured || !available -> FirebaseSyncTransport.OFFLINE
             listenersActive -> FirebaseSyncTransport.LIVE
@@ -145,6 +153,7 @@ class FirebaseRemoteBackend(
             mode = mode,
             lastActivityAt = lastActivityAt,
             pendingWriteCount = pending,
+            failedPendingWriteCount = failedPending,
             firestoreAvailable = available,
             orgConfigured = orgConfigured,
         )
@@ -180,7 +189,7 @@ class FirebaseRemoteBackend(
 
     override suspend fun bootstrapPosSessionSync(): SyncResult {
         flushQueue()
-        return pullAll()
+        return pullAll(posBootstrapCollections)
     }
 
     override suspend fun repairRemoteStructureThenFullDownload(): SyncResult = performStartupSync()
@@ -216,9 +225,7 @@ class FirebaseRemoteBackend(
                             "sheetsSpreadsheetIdHint" to announcement.sheetsSpreadsheetIdHint,
                             "firebaseProjectId" to announcement.firebaseProjectId,
                             "firebaseApplicationId" to announcement.firebaseApplicationId,
-                            "firebaseApiKey" to announcement.firebaseApiKey,
                             "firebaseWebClientId" to announcement.firebaseWebClientId,
-                            "firebaseWebClientSecret" to announcement.firebaseWebClientSecret,
                         )
                     ),
                 )
@@ -248,6 +255,7 @@ class FirebaseRemoteBackend(
                 temporaryEventDate = batch.eventDateMillis,
                 temporaryContactPhone = batch.emergencyContactPhone,
                 lastModified = System.currentTimeMillis(),
+                firebaseOrgId = resolveWriteOrgId(),
             )
             val saved = repository.insertGuest(guest)
             afterGuestSaved(saved)
@@ -333,13 +341,16 @@ class FirebaseRemoteBackend(
     override suspend fun afterInstitutionSettingsChanged() {
         val orgId = resolveWriteOrgId()
         if (orgId.isBlank()) return
-        settingsManager.getInstitutionSettingRows().forEach { row ->
+        val rows = settingsManager.getInstitutionSettingRowsPendingRemotePush()
+        if (rows.isEmpty()) return
+        rows.forEach { row ->
             upsert(
                 "institutionSettings",
                 row.key,
                 mapOf("value" to row.value, "lastModified" to row.lastModified),
                 orgId,
             )
+            settingsManager.markInstitutionSettingRowPushed(row)
         }
     }
 
@@ -352,7 +363,13 @@ class FirebaseRemoteBackend(
         if (targetOrg.isBlank()) return
         val writerId = venue.peopleCounterWriterDeviceId
         if (firestoreGateway.isAvailable()) {
-            firestoreGateway.runPeopleCounterTransaction(targetOrg, venue.name, count, writerId)
+            firestoreGateway.runPeopleCounterTransaction(
+                targetOrg,
+                venue.name,
+                count,
+                writerId,
+                venue.peopleCounterWriterAccountEmail,
+            )
             return
         }
         upsert(
@@ -361,6 +378,7 @@ class FirebaseRemoteBackend(
             firestoreGateway.venueToMap(venue).toMutableMap().apply {
                 put("peopleCounterCount", count)
                 put("peopleCounterWriterDeviceId", writerId)
+                put("peopleCounterWriterAccountEmail", venue.peopleCounterWriterAccountEmail)
                 put("peopleCounterLastModified", System.currentTimeMillis())
             },
             targetOrg,
@@ -406,6 +424,7 @@ class FirebaseRemoteBackend(
                     upsert("transfers", transfer.sourceReference, firestoreGateway.transferToMap(transfer))
                 }
             seedAccountBalancesFromLocalLedger()
+            settingsManager.markAllInstitutionSettingsPendingRemotePush()
             afterInstitutionSettingsChanged()
             flushQueue()
             SyncResult.Success("Pushed local entities to Firebase")
@@ -414,19 +433,19 @@ class FirebaseRemoteBackend(
         }
     }
 
-    private suspend fun pullAll(): SyncResult {
+    private suspend fun pullAll(collections: Collection<String>? = null): SyncResult {
         if (!firestoreGateway.isAvailable()) {
             return SyncResult.Success("Firebase SDK not initialized — local Room remains source of truth")
         }
         return if (settingsManager.getFirebaseOrgViewMode() == FirebaseOrgViewMode.ALL) {
-            pullAllConfiguredOrgs()
+            pullAllConfiguredOrgs(collections)
         } else {
             val orgId = resolveWriteOrgId()
             if (orgId.isBlank()) return SyncResult.Error("Firebase org ID not configured")
             try {
-                firestoreGateway.pullAllIntoRepository(orgId, repository)
+                firestoreGateway.pullAllIntoRepository(orgId, repository, collections)
                 recordRemoteActivity()
-                onRemoteRepositoryChanged?.invoke()
+                notifyRemoteRepositoryChangedIfListenersInactive()
                 SyncResult.Success("Firebase pull completed")
             } catch (e: Exception) {
                 SyncResult.Error(e.message ?: "Firebase pull failed")
@@ -434,7 +453,7 @@ class FirebaseRemoteBackend(
         }
     }
 
-    suspend fun pullAllConfiguredOrgs(): SyncResult {
+    suspend fun pullAllConfiguredOrgs(collections: Collection<String>? = null): SyncResult {
         val orgIds = settingsManager.getFirebaseConfiguredOrgs()
             .map { it.orgId.trim() }
             .filter { it.isNotBlank() }
@@ -447,16 +466,18 @@ class FirebaseRemoteBackend(
         orgIds.forEach { orgId ->
             runCatching {
                 ensureOrgBootstrappedIfNeeded(orgId)
-                firestoreGateway.pullAllIntoRepository(orgId, repository)
+                firestoreGateway.pullAllIntoRepository(orgId, repository, collections)
             }.onSuccess { successCount++ }
                 .onFailure { errors += "$orgId: ${it.message ?: "pull failed"}" }
         }
         if (successCount == 0) {
             return SyncResult.Error(errors.joinToString("; "))
         }
-        repository.deleteAllDataNotInOrgs(orgIds)
+        if (collections == null) {
+            repository.deleteAllDataNotInOrgs(orgIds)
+        }
         recordRemoteActivity()
-        onRemoteRepositoryChanged?.invoke()
+        notifyRemoteRepositoryChangedIfListenersInactive()
         return if (errors.isEmpty()) {
             SyncResult.Success("Firebase pull completed for ${successCount} org(s)")
         } else {
@@ -482,7 +503,11 @@ class FirebaseRemoteBackend(
                 firestoreGateway.upsertDocument(targetOrg, collection, docId, stamped)
                 return
             } catch (e: Exception) {
-                if (FirestoreErrors.isPermissionDenied(e)) return
+                if (FirestoreErrors.isPermissionDenied(e)) {
+                    pendingWrites.enqueueUpsert(collection, docId, encodeMap(stamped), targetOrg)
+                    notifySyncStatusChanged()
+                    return
+                }
             }
         }
         pendingWrites.enqueueUpsert(collection, docId, encodeMap(stamped), targetOrg)
@@ -496,7 +521,11 @@ class FirebaseRemoteBackend(
                 firestoreGateway.deleteDocument(targetOrg, collection, docId)
                 return
             } catch (e: Exception) {
-                if (FirestoreErrors.isPermissionDenied(e)) return
+                if (FirestoreErrors.isPermissionDenied(e)) {
+                    pendingWrites.enqueueDelete(collection, docId, targetOrg)
+                    notifySyncStatusChanged()
+                    return
+                }
             }
         }
         pendingWrites.enqueueDelete(collection, docId, targetOrg)
@@ -521,17 +550,19 @@ class FirebaseRemoteBackend(
                 when (row.operation) {
                     "DELETE" -> firestoreGateway.deleteDocument(trimmed, row.collection, row.documentId)
                     else -> {
-                        val data = decodeMap(row.payloadJson)
+                        val data = decodeMap(row.payloadJson, trimmed)
+                        if (data.isEmpty()) {
+                            pendingWrites.recordFailedAttempt(row.id)
+                            notifySyncStatusChanged()
+                            continue
+                        }
                         firestoreGateway.upsertDocument(trimmed, row.collection, row.documentId, data)
                     }
                 }
                 pendingWrites.acknowledge(row.id)
             } catch (e: Exception) {
-                if (FirestoreErrors.isPermissionDenied(e)) {
-                    pendingWrites.acknowledge(row.id)
-                } else {
-                    pendingWrites.recordFailedAttempt(row.id)
-                }
+                pendingWrites.recordFailedAttempt(row.id)
+                notifySyncStatusChanged()
             }
         }
         pendingWrites.dropExceededMaxAttempts()
@@ -574,12 +605,17 @@ class FirebaseRemoteBackend(
     private fun encodeMap(data: Map<String, Any?>): String =
         FirestoreJsonCodec.toEnvelope(data).json
 
-    private fun decodeMap(payloadJson: String): Map<String, Any?> {
+    private fun decodeMap(payloadJson: String, orgId: String): Map<String, Any?> {
         if (payloadJson.isBlank() || payloadJson == "{}") return emptyMap()
-        return FirestoreJsonCodec.fromEnvelope(FirestoreJsonEnvelope(payloadJson))
+        val plain = SensitiveFieldCodec.decryptPayloadJson(payloadJson, orgId)
+        return FirestoreJsonCodec.fromEnvelope(FirestoreJsonEnvelope(plain))
     }
 
     private suspend fun applyRemoteChange(change: FirestoreRemoteChange) {
+        val allowedOrgs = configuredOrgIdsForSync().toSet()
+        if (change.orgId.isNotBlank() && allowedOrgs.isNotEmpty() && change.orgId !in allowedOrgs) {
+            return
+        }
         val echoDevice = change.data?.get("sourceDeviceId") as? String
         if (!echoDevice.isNullOrBlank() &&
             echoDevice == settingsManager.getOrCreatePersistentDeviceId()
@@ -610,6 +646,12 @@ class FirebaseRemoteBackend(
         firestoreGateway.applyChangeToRepository(change, repository)
         recordRemoteActivity()
         onRemoteRepositoryChanged?.invoke()
+    }
+
+    private fun notifyRemoteRepositoryChangedIfListenersInactive() {
+        if (!listenersActive) {
+            onRemoteRepositoryChanged?.invoke()
+        }
     }
 
     private fun recordRemoteActivity() {

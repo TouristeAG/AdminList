@@ -573,6 +573,11 @@
     <string name="biometric_enrollment_success">Fingerprint login has been enabled for admin access</string>
     <string name="biometric_enrollment_prompt_title">Register Biometrics</string>
     <string name="biometric_enrollment_prompt_subtitle">Confirm your fingerprint to enable admin login</string>
+    <string name="biometric_enrollment_org_select_title">Select institutions</string>
+    <string name="biometric_enrollment_org_select_description">Choose which institutions should accept fingerprint admin login on this device. You will verify admin access separately for each one.</string>
+    <string name="biometric_enrollment_org_select_continue">Continue</string>
+    <string name="biometric_enrollment_org_verify_step">Verify admin access for %1$s (%2$d of %3$d)</string>
+    <string name="biometric_enrollment_org_enrolled">Enrolled: %1$s</string>
 
     <!-- Ticketing (Billeterie) hub -->
     <string name="ticket_check_title">Ticketing</string>

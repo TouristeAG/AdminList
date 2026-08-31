@@ -1,5 +1,7 @@
 package com.eventmanager.app.data.remote
 
+import com.eventmanager.app.data.security.crypto.BootstrapCodeHash
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.random.Random
 
 /**
@@ -27,17 +29,69 @@ object MemberRoleAdmin {
             "email" to email,
             "updatedAt" to System.currentTimeMillis(),
         )
-        bootstrapCode?.takeIf { it.isNotBlank() }?.let { memberData["bootstrapCode"] = it }
+        bootstrapCode?.takeIf { it.isNotBlank() }?.let {
+            memberData["bootstrapCode"] = BootstrapCodeHash.hash(it)
+        }
         gateway.upsertDocument(orgId, "members", uid, memberData)
-        if (role == MemberRole.ADMIN) {
-            val code = bootstrapCode?.takeIf { it.isNotBlank() } ?: generateBootstrapCode()
+        if (role == MemberRole.ADMIN && bootstrapCode != null) {
             gateway.upsertDocument(
                 orgId,
                 "metadata",
                 "config",
-                buildMetadataConfig(orgId, allowedEmailDomains, code),
+                buildMetadataConfig(orgId, allowedEmailDomains, bootstrapCode),
             )
         }
+    }
+
+    /**
+     * Promote or invite a colleague. Does not rewrite org metadata / join codes.
+     */
+    suspend fun assignTeamMember(
+        gateway: FirestoreGateway,
+        orgId: String,
+        uid: String,
+        role: MemberRole,
+        email: String?,
+        allowedEmailDomains: List<String> = emptyList(),
+    ) {
+        val org = orgId.trim()
+        val memberUid = uid.trim()
+        if (org.isBlank() || isFirebaseOrgAllSentinel(org)) {
+            error("NO_ORG")
+        }
+        if (memberUid.isBlank()) {
+            error("BLANK_UID")
+        }
+        val mail = email?.trim()?.ifBlank { null }
+        if (allowedEmailDomains.isNotEmpty() && mail == null) {
+            error("EMAIL_REQUIRED")
+        }
+        if (!FirebaseEmailDomainPolicy.isEmailAllowed(mail, allowedEmailDomains)) {
+            throw IllegalArgumentException(
+                FirebaseEmailDomainPolicy.denialMessage(mail, allowedEmailDomains),
+            )
+        }
+        val memberData = mutableMapOf<String, Any?>(
+            "role" to role.storageValue(),
+            "updatedAt" to System.currentTimeMillis(),
+        )
+        mail?.let { memberData["email"] = it }
+        println("Firebase team: assigning ${role.storageValue()} to $memberUid in org $org")
+        try {
+            gateway.upsertDocument(org, "members", memberUid, memberData)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            val raw = e.message.orEmpty()
+            println("Firebase team: assign failed: $raw")
+            if (raw.contains("PERMISSION", ignoreCase = true) ||
+                raw.contains("permission-denied", ignoreCase = true)
+            ) {
+                error("PERMISSION")
+            }
+            throw e
+        }
+        println("Firebase team: assign succeeded for $memberUid")
     }
 
     /** First org setup (wizard / migration): admin + metadata with join bootstrap code. */
@@ -56,7 +110,7 @@ object MemberRoleAdmin {
             role = MemberRole.ADMIN,
             email = email,
             allowedEmailDomains = allowedEmailDomains,
-            bootstrapCode = code,
+            bootstrapCode = BootstrapCodeHash.hash(code),
         )
         return code
     }
@@ -83,7 +137,7 @@ object MemberRoleAdmin {
             role = MemberRole.MEMBER,
             email = email,
             allowedEmailDomains = allowedEmailDomains,
-            bootstrapCode = bootstrapCode.trim(),
+            bootstrapCode = BootstrapCodeHash.hash(bootstrapCode.trim()),
         )
     }
 
@@ -121,7 +175,7 @@ object MemberRoleAdmin {
         )
         if (bootstrapCode != null) {
             map["createdAt"] = System.currentTimeMillis()
-            map["bootstrapCode"] = bootstrapCode
+            map["bootstrapCodeHash"] = BootstrapCodeHash.hash(bootstrapCode)
         }
         return map
     }

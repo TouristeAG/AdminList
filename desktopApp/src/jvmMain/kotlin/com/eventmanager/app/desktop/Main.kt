@@ -24,7 +24,10 @@ fun main() {
     DesktopWebcamSupport.ensureInitialized()
     application {
         val platformContext = createPlatformContext()
-        val settingsManager = SettingsManager(createAppStorage(platformContext))
+        com.eventmanager.app.data.security.SecureCredentialStoreHolder.init(
+            com.eventmanager.app.data.security.createSecureCredentialStore(platformContext),
+        )
+        val settingsManager = SettingsManager(platformContext)
         FileAppLogger.init(platformContext, settingsManager)
         bootstrapAppLocale(settingsManager.getLanguage())
         runCatching {

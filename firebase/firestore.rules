@@ -20,8 +20,6 @@ service cloud.firestore {
         : '';
     }
 
-    // Empty / missing allowedEmailDomains map = unrestricted.
-    // Non-empty map: Google token email domain must be a key with true.
     function emailDomainAllowed(orgId) {
       return !exists(configPath(orgId))
         || !('allowedEmailDomains' in get(configPath(orgId)).data)
@@ -55,10 +53,20 @@ service cloud.firestore {
       return role in ['member', 'door', 'pos'];
     }
 
-    function configBootstrapCode(orgId) {
+    function configBootstrapSecret(orgId) {
       return exists(configPath(orgId))
-        && ('bootstrapCode' in get(configPath(orgId)).data)
-        ? get(configPath(orgId)).data.bootstrapCode
+        && (
+          ('bootstrapCodeHash' in get(configPath(orgId)).data
+            && get(configPath(orgId)).data.bootstrapCodeHash.size() > 0)
+          || ('bootstrapCode' in get(configPath(orgId)).data
+            && get(configPath(orgId)).data.bootstrapCode.size() > 0)
+        )
+        ? (
+          ('bootstrapCodeHash' in get(configPath(orgId)).data
+            && get(configPath(orgId)).data.bootstrapCodeHash.size() > 0)
+            ? get(configPath(orgId)).data.bootstrapCodeHash
+            : get(configPath(orgId)).data.bootstrapCode
+        )
         : '';
     }
 
@@ -68,7 +76,10 @@ service cloud.firestore {
         (doc.data.value is string ? float(doc.data.value) : 0.0);
     }
 
-    // Bootstrap: first admin creates org metadata + self as member
+    function isAdminFieldUnchanged() {
+      return !('isAdmin' in request.resource.data.diff(resource.data).affectedKeys());
+    }
+
     match /orgs/{orgId}/metadata/{docId} {
       allow read: if isMember(orgId);
       allow create: if isSignedIn()
@@ -82,16 +93,13 @@ service cloud.firestore {
         && emailDomainAllowed(orgId)
         && isValidMemberRole(request.resource.data.role)
         && (
-          // First admin bootstrap: self-create when this uid has no member doc yet
           (request.auth.uid == uid
             && request.resource.data.role == 'admin'
             && !exists(memberPath(orgId)))
-          // Join with org bootstrap code (team device, not admin)
           || (request.auth.uid == uid
             && legacyMemberRole(request.resource.data.role)
-            && configBootstrapCode(orgId).size() > 0
-            && request.resource.data.bootstrapCode == configBootstrapCode(orgId))
-          // Admin invite (self or other uid)
+            && configBootstrapSecret(orgId).size() > 0
+            && request.resource.data.bootstrapCode == configBootstrapSecret(orgId))
           || isOrgAdmin(orgId)
         );
       allow update: if isOrgAdmin(orgId)
@@ -102,7 +110,7 @@ service cloud.firestore {
     match /orgs/{orgId}/transfers/{transferId} {
       allow read: if isMember(orgId);
       allow create: if isMember(orgId);
-      allow update, delete: if false; // append-only ledger
+      allow update, delete: if false;
     }
 
     match /orgs/{orgId}/accounts/{holderKey} {
@@ -113,7 +121,11 @@ service cloud.firestore {
 
     match /orgs/{orgId}/guests/{docId} {
       allow read: if isMember(orgId);
-      allow write: if isMember(orgId);
+      allow create: if isMember(orgId)
+        && (isOrgAdmin(orgId) || request.resource.data.isAdmin != true);
+      allow update: if isMember(orgId)
+        && (isOrgAdmin(orgId) || isAdminFieldUnchanged());
+      allow delete: if isMember(orgId);
     }
 
     match /orgs/{orgId}/jobs/{docId} {
@@ -128,7 +140,11 @@ service cloud.firestore {
 
     match /orgs/{orgId}/volunteers/{docId} {
       allow read: if isMember(orgId);
-      allow write: if isMember(orgId);
+      allow create: if isMember(orgId)
+        && (isOrgAdmin(orgId) || request.resource.data.isAdmin != true);
+      allow update: if isMember(orgId)
+        && (isOrgAdmin(orgId) || isAdminFieldUnchanged());
+      allow delete: if isMember(orgId);
     }
 
     match /orgs/{orgId}/jobTypeConfigs/{docId} {
@@ -146,7 +162,6 @@ service cloud.firestore {
       allow write: if isMember(orgId);
     }
 
-    // Admin fallback for unspecified collections.
     match /orgs/{orgId}/{document=**} {
       allow read: if isMember(orgId);
       allow write: if isMember(orgId)

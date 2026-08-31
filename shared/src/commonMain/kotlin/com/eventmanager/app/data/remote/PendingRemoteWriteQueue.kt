@@ -2,6 +2,7 @@ package com.eventmanager.app.data.remote
 
 import com.eventmanager.app.data.dao.PendingRemoteWriteDao
 import com.eventmanager.app.data.models.PendingRemoteWrite
+import com.eventmanager.app.data.security.crypto.SensitiveFieldCodec
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -35,6 +36,14 @@ class PendingRemoteWriteQueue(
         }
     }
 
+    suspend fun countWithFailedAttempts(): Int = mutex.withLock {
+        if (dao != null) {
+            dao.countWithFailedAttempts()
+        } else {
+            memory.count { it.attempts > 0 }
+        }
+    }
+
     private suspend fun notifyPendingChanged() {
         onPendingCountChanged?.invoke(count())
     }
@@ -55,12 +64,17 @@ class PendingRemoteWriteQueue(
                 memory.removeAll { it.collection == collection && it.documentId == documentId }
             }
             val orgId = orgIdOverride?.trim()?.takeIf { it.isNotBlank() } ?: activeOrgId().trim()
+            val storedPayload = if (operation == "DELETE") {
+                payloadJson
+            } else {
+                SensitiveFieldCodec.encryptPayloadJson(payloadJson, orgId)
+            }
             val row = if (dao != null) {
                 PendingRemoteWrite(
                     orgId = orgId,
                     collection = collection,
                     documentId = documentId,
-                    payloadJson = payloadJson,
+                    payloadJson = storedPayload,
                     operation = operation,
                 )
             } else {
@@ -69,7 +83,7 @@ class PendingRemoteWriteQueue(
                     orgId = orgId,
                     collection = collection,
                     documentId = documentId,
-                    payloadJson = payloadJson,
+                    payloadJson = storedPayload,
                     operation = operation,
                 )
             }

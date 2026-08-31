@@ -4,12 +4,12 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.whenResumed
 import com.eventmanager.app.data.sync.SettingsManager
-import com.eventmanager.app.platform.createAppStorage
 import com.eventmanager.app.platform.createPlatformContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -26,19 +26,43 @@ class FirebaseGoogleSignInActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (savedInstanceState != null) return
-        launchWebOAuth()
+        when {
+            savedInstanceState != null && PendingAndroidOAuthSession.isActive() -> {
+                resumePendingOAuth()
+            }
+            savedInstanceState != null -> {
+                // Recreated without an active session — do not start a second OAuth tab.
+                return
+            }
+            else -> launchWebOAuth()
+        }
     }
 
     override fun onDestroy() {
-        loopbackReceiver?.cancel()
-        loopbackReceiver = null
+        if (isFinishing) {
+            PendingAndroidOAuthSession.clear()
+            loopbackReceiver?.cancel()
+            loopbackReceiver = null
+        }
         super.onDestroy()
+    }
+
+    private fun resumePendingOAuth() {
+        loopbackReceiver = PendingAndroidOAuthSession.receiver
+        val platformContext = PendingAndroidOAuthSession.platformContext ?: createPlatformContext(this)
+        lifecycleScope.launch {
+            awaitLoopbackAndComplete(
+                receiver = loopbackReceiver ?: return@launch,
+                webClientId = PendingAndroidOAuthSession.webClientId,
+                webClientSecret = PendingAndroidOAuthSession.webClientSecret,
+                platformContext = platformContext,
+            )
+        }
     }
 
     private fun launchWebOAuth() {
         val platformContext = createPlatformContext(this)
-        val settings = SettingsManager(createAppStorage(platformContext))
+        val settings = SettingsManager(platformContext)
         val webClientId = settings.getFirebaseWebClientId().trim()
         val webClientSecret = settings.getFirebaseWebClientSecret().trim()
         if (webClientId.isBlank()) {
@@ -50,9 +74,8 @@ class FirebaseGoogleSignInActivity : ComponentActivity() {
         }
         if (webClientSecret.isBlank()) {
             finishWithError(
-                "Web client secret is required on Android. Copy it from Cloud Console → " +
-                    "APIs & Services → Credentials → your Web OAuth client (same as Desktop). " +
-                    "Authorized redirect URIs must include the localhost Callback URLs from the ? guide.",
+                "Web client secret missing. Rescan or paste the full join code from your admin " +
+                    "(the QR includes OAuth credentials). During setup you do not open Settings.",
             )
             return
         }
@@ -69,26 +92,50 @@ class FirebaseGoogleSignInActivity : ComponentActivity() {
                 finishWithError("Firebase failed to initialize. Check project settings.")
                 return@launch
             }
+            withContext(Dispatchers.IO) {
+                FirebaseAuthBridge.signOut()
+            }
             val receiver = AndroidOAuthLoopbackReceiver()
             loopbackReceiver = receiver
+            PendingAndroidOAuthSession.receiver = receiver
+            PendingAndroidOAuthSession.webClientId = webClientId
+            PendingAndroidOAuthSession.webClientSecret = webClientSecret
+            PendingAndroidOAuthSession.platformContext = platformContext
             val redirectUri = try {
                 withContext(Dispatchers.IO) { receiver.start() }
             } catch (e: Exception) {
+                PendingAndroidOAuthSession.clear()
                 finishWithError(e.message ?: "Could not start OAuth callback server")
                 return@launch
             }
             val authUrl = InstitutionGoogleWebOAuth.buildAuthorizationUrl(
                 webClientId = webClientId,
                 redirectUri = redirectUri,
+                forceAccountPicker = true,
             )
             CustomTabsIntent.Builder()
                 .setShowTitle(true)
                 .build()
                 .launchUrl(this@FirebaseGoogleSignInActivity, Uri.parse(authUrl))
 
-            when (val loopback = receiver.awaitResult()) {
-                is LoopbackOAuthResult.Success -> lifecycle.whenResumed {
-                    // Token exchange needs foreground network — loopback may complete while Chrome is still open.
+            awaitLoopbackAndComplete(
+                receiver = receiver,
+                webClientId = webClientId,
+                webClientSecret = webClientSecret,
+                platformContext = platformContext,
+            )
+        }
+    }
+
+    private suspend fun awaitLoopbackAndComplete(
+        receiver: AndroidOAuthLoopbackReceiver,
+        webClientId: String,
+        webClientSecret: String,
+        platformContext: com.eventmanager.app.platform.PlatformContext,
+    ) {
+        when (val loopback = receiver.awaitResult()) {
+            is LoopbackOAuthResult.Success -> lifecycle.whenResumed {
+                lifecycleScope.launch {
                     completeOAuthCodeExchange(
                         code = loopback.code,
                         redirectUri = loopback.redirectUri,
@@ -97,15 +144,15 @@ class FirebaseGoogleSignInActivity : ComponentActivity() {
                         platformContext = platformContext,
                     )
                 }
-                is LoopbackOAuthResult.OAuthError -> {
-                    val detail = loopback.description?.takeIf { it.isNotBlank() } ?: loopback.error
-                    finishWithError("Google Sign-In failed: $detail")
-                }
-                LoopbackOAuthResult.TimedOut -> finishWithError(
-                    "Google Sign-In timed out. Complete sign-in in the browser tab, or try again.",
-                )
-                LoopbackOAuthResult.Cancelled -> finishWithError("Google Sign-In cancelled.")
             }
+            is LoopbackOAuthResult.OAuthError -> {
+                val detail = loopback.description?.takeIf { it.isNotBlank() } ?: loopback.error
+                finishWithError("Google Sign-In failed: $detail")
+            }
+            LoopbackOAuthResult.TimedOut -> finishWithError(
+                "Google Sign-In timed out. Complete sign-in in the browser tab, or try again.",
+            )
+            LoopbackOAuthResult.Cancelled -> finishWithError("Google Sign-In cancelled.")
         }
     }
 
@@ -155,6 +202,7 @@ class FirebaseGoogleSignInActivity : ComponentActivity() {
         ) {
             is FirebaseAuthResult.Success -> {
                 handled = true
+                PendingAndroidOAuthSession.clear()
                 setResult(RESULT_OK)
                 finish()
             }
@@ -165,7 +213,10 @@ class FirebaseGoogleSignInActivity : ComponentActivity() {
     private fun finishWithError(message: String) {
         if (isFinishing || handled) return
         handled = true
+        Log.w(TAG, message)
+        PendingAndroidOAuthSession.clear()
         loopbackReceiver?.cancel()
+        loopbackReceiver = null
         setResult(
             RESULT_CANCELED,
             Intent().putExtra(EXTRA_ERROR_MESSAGE, message),
@@ -174,6 +225,7 @@ class FirebaseGoogleSignInActivity : ComponentActivity() {
     }
 
     companion object {
+        private const val TAG = "FirebaseGoogleSignIn"
         const val EXTRA_ERROR_MESSAGE = "firebase_google_sign_in_error"
 
         fun createLaunchIntent(context: Context): Intent =

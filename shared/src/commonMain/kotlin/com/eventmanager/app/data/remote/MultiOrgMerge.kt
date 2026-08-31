@@ -99,4 +99,45 @@ object MultiOrgMerge {
         configuredOrgIds: List<String>,
         dataOrgIds: List<String>,
     ): List<String> = dataOrgIds.filter { it in configuredOrgIds }
+
+    /**
+     * Whether a Room row should be visible for the current Firebase org view.
+     * Blank [entityOrgId] is treated as legacy untagged data and stays visible.
+     */
+    fun belongsToVisibleOrg(
+        entityOrgId: String,
+        allOrgsMode: Boolean,
+        activeOrgId: String,
+        configuredOrgIds: Set<String>,
+    ): Boolean {
+        val org = entityOrgId.trim()
+        if (allOrgsMode) {
+            if (configuredOrgIds.isEmpty()) return true
+            return org.isBlank() || org in configuredOrgIds
+        }
+        val active = activeOrgId.trim()
+        if (active.isBlank() || isFirebaseOrgAllSentinel(active)) return true
+        return org.isBlank() || org == active
+    }
+
+    fun <T> filterForVisibleOrg(
+        items: List<T>,
+        orgIdOf: (T) -> String,
+        allOrgsMode: Boolean,
+        activeOrgId: String,
+        configuredOrgIds: Set<String>,
+    ): List<T> {
+        if (allOrgsMode) {
+            return items.filter {
+                belongsToVisibleOrg(orgIdOf(it), true, activeOrgId, configuredOrgIds)
+            }
+        }
+        val active = activeOrgId.trim()
+        if (active.isBlank() || isFirebaseOrgAllSentinel(active)) {
+            return items
+        }
+        return items.filter { item ->
+            belongsToVisibleOrg(orgIdOf(item), false, active, configuredOrgIds)
+        }
+    }
 }

@@ -18,3 +18,8 @@ fun ScannerMatch.isAdminFlag(): Boolean = when (this) {
     is ScannerMatch.VolunteerMatch -> volunteer.isAdmin
     is ScannerMatch.GuestMatch -> guest.isAdmin
 }
+
+fun ScannerMatch.firebaseOrgId(): String = when (this) {
+    is ScannerMatch.VolunteerMatch -> volunteer.firebaseOrgId
+    is ScannerMatch.GuestMatch -> guest.firebaseOrgId
+}

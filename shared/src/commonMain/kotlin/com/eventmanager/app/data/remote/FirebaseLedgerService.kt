@@ -22,52 +22,56 @@ class FirebaseLedgerService(
     private val firestoreGateway: FirestoreGateway,
 ) {
     suspend fun commitTransfer(transfer: AccountTransfer, orgId: String? = null): FirebaseLedgerResult {
-        val pending = transfer.copy(syncState = AccountTransferSyncState.PENDING)
-        val existing = repository.getAllAccountTransfersOnce()
-            .firstOrNull { it.sourceReference == transfer.sourceReference }
-        if (existing == null) {
-            repository.insertAccountTransfer(pending)
-        } else {
-            repository.updateAccountTransfer(pending.copy(id = existing.id))
-        }
-
         val targetOrg = orgId?.trim()?.takeIf { it.isNotBlank() }
             ?: transfer.firebaseOrgId.trim().takeIf { it.isNotBlank() }
             ?: settingsManager.getFirebaseOrgId().trim().takeIf { !isFirebaseOrgAllSentinel(it) }
             ?: settingsManager.getFirebaseLastSingleOrgId().trim()
+        val pending = stampLedgerTransfer(transfer, targetOrg, AccountTransferSyncState.PENDING)
+        val existing = repository.getAccountTransferBySourceReference(transfer.sourceReference)
+        val persisted = if (existing == null) {
+            val rowId = repository.insertAccountTransfer(pending)
+            pending.copy(id = rowId)
+        } else {
+            val withId = pending.copy(id = existing.id)
+            repository.updateAccountTransfer(withId)
+            withId
+        }
+
         if (targetOrg.isBlank() || !firestoreGateway.isAvailable()) {
-            return FirebaseLedgerResult.Pending(pending)
+            return FirebaseLedgerResult.Pending(persisted)
         }
 
         val holderKey = AccountHolderKey(transfer.holderType, transfer.holderId).storageKey()
-        val all = repository.getAllAccountTransfersOnce()
+        val holderTransfers = repository.getTransfersForHolder(transfer.holderType, transfer.holderId)
             .filter { it.firebaseOrgId.isBlank() || it.firebaseOrgId == targetOrg }
-        val balanceBefore = AccountBalanceService.computeBalance(transfer.holderType, transfer.holderId, all.filter {
-            it.sourceReference != transfer.sourceReference
-        })
+        val balanceBefore = AccountBalanceService.computeBalance(
+            transfer.holderType,
+            transfer.holderId,
+            holderTransfers.filter { it.sourceReference != transfer.sourceReference },
+        )
         val newBalance = balanceBefore + transfer.amount
         val buffer = settingsManager.getPurchaseCreditBuffer()
 
         val ok = try {
             firestoreGateway.runLedgerTransaction(
                 orgId = targetOrg,
-                transfer = pending.copy(firebaseOrgId = targetOrg),
+                transfer = persisted,
                 holderKey = holderKey,
                 newBalance = newBalance,
                 buffer = buffer,
             )
         } catch (e: Exception) {
-            val rejected = pending.copy(syncState = AccountTransferSyncState.REJECTED)
+            val rejected = stampLedgerTransfer(persisted, targetOrg, AccountTransferSyncState.REJECTED)
             repository.updateAccountTransfer(rejected)
             return FirebaseLedgerResult.Rejected(e.message ?: "Ledger transaction failed", rejected)
         }
 
         return if (ok) {
-            val confirmed = pending.copy(syncState = AccountTransferSyncState.CONFIRMED)
+            val confirmed = stampLedgerTransfer(persisted, targetOrg, AccountTransferSyncState.CONFIRMED)
             repository.updateAccountTransfer(confirmed)
             FirebaseLedgerResult.Confirmed(confirmed)
         } else {
-            val rejected = pending.copy(syncState = AccountTransferSyncState.REJECTED)
+            val rejected = stampLedgerTransfer(persisted, targetOrg, AccountTransferSyncState.REJECTED)
             repository.updateAccountTransfer(rejected)
             FirebaseLedgerResult.Rejected("Insufficient balance after peer updates (buffer=$buffer)", rejected)
         }

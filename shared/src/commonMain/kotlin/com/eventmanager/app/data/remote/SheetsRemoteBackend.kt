@@ -131,14 +131,8 @@ class SheetsRemoteBackend(
         announcement.firebaseApplicationId?.takeIf { it.isNotBlank() }?.let {
             write(InstitutionSettingsKeys.FIREBASE_APPLICATION_ID, it)
         }
-        announcement.firebaseApiKey?.takeIf { it.isNotBlank() }?.let {
-            write(InstitutionSettingsKeys.FIREBASE_API_KEY, it)
-        }
         announcement.firebaseWebClientId?.takeIf { it.isNotBlank() }?.let {
             write(InstitutionSettingsKeys.FIREBASE_WEB_CLIENT_ID, it)
-        }
-        announcement.firebaseWebClientSecret?.takeIf { it.isNotBlank() }?.let {
-            write(InstitutionSettingsKeys.FIREBASE_WEB_CLIENT_SECRET, it)
         }
         twoWaySyncService.backupInstitutionSettingsToSheets()
         // Verify peers will see FIREBASE / SHEETS on the Settings sheet.
@@ -330,9 +324,7 @@ class SheetsRemoteBackend(
                 ?.takeIf { it.isNotBlank() },
             firebaseProjectId = map[InstitutionSettingsKeys.FIREBASE_PROJECT_ID]?.takeIf { it.isNotBlank() },
             firebaseApplicationId = map[InstitutionSettingsKeys.FIREBASE_APPLICATION_ID]?.takeIf { it.isNotBlank() },
-            firebaseApiKey = map[InstitutionSettingsKeys.FIREBASE_API_KEY]?.takeIf { it.isNotBlank() },
             firebaseWebClientId = map[InstitutionSettingsKeys.FIREBASE_WEB_CLIENT_ID]?.takeIf { it.isNotBlank() },
-            firebaseWebClientSecret = map[InstitutionSettingsKeys.FIREBASE_WEB_CLIENT_SECRET]?.takeIf { it.isNotBlank() },
         )
     }
 }

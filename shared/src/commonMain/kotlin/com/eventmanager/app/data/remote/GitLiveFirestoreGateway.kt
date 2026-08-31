@@ -8,6 +8,7 @@ import com.eventmanager.app.data.models.SalesSheetItem
 import com.eventmanager.app.data.models.VenueEntity
 import com.eventmanager.app.data.models.Volunteer
 import com.eventmanager.app.data.repository.EventManagerRepository
+import com.eventmanager.app.data.security.crypto.SensitiveFieldCodec
 import com.eventmanager.app.data.sync.InstitutionSettingsKeys
 import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.platform.PlatformContext
@@ -24,6 +25,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * GitLive-backed Firestore gateway with real set/get/listen when Firebase is initialized.
@@ -88,17 +90,26 @@ class GitLiveFirestoreGateway(
                                     val data = if (deleted) {
                                         null
                                     } else {
-                                        decodeSnapshot(change.document).ifEmpty { null }
+                                        decodeSnapshot(change.document)
                                     }
-                                    onChange(
-                                        FirestoreRemoteChange(
-                                            orgId = orgId,
-                                            collection = collection,
-                                            documentId = docId,
-                                            data = data,
-                                            deleted = deleted,
-                                        ),
-                                    )
+                                    if (FirestoreApplyPolicy.shouldSkipIncompleteSnapshot(deleted, data)) {
+                                        return@forEach
+                                    }
+                                    try {
+                                        onChange(
+                                            FirestoreRemoteChange(
+                                                orgId = orgId,
+                                                collection = collection,
+                                                documentId = docId,
+                                                data = data,
+                                                deleted = deleted,
+                                            ),
+                                        )
+                                    } catch (e: CancellationException) {
+                                        throw e
+                                    } catch (e: Exception) {
+                                        println("Firestore listener apply failed for $collection/$docId: ${e.message}")
+                                    }
                                 }
                             }
                     }
@@ -122,26 +133,29 @@ class GitLiveFirestoreGateway(
         if (orgId.isBlank() || docId.isBlank()) return
         val ref = firestore.collection("orgs").document(orgId).collection(collection).document(docId)
         val fields = ruleCompatibleFirestoreMap(data)
-        when (collection) {
-            // Append-only ledger: create once, never update (firestore.rules).
-            "transfers" -> {
-                val exists = runCatching { ref.get().exists }.getOrDefault(false)
-                if (!exists) {
-                    ref.set(toFirestoreFieldMap(fields), merge = false)
+        try {
+            when (collection) {
+                // Append-only ledger: create once, never update (firestore.rules).
+                "transfers" -> {
+                    val exists = runCatching { ref.get().exists }.getOrDefault(false)
+                    if (!exists) {
+                        ref.set(toFirestoreFieldMap(fields), merge = false)
+                    }
                 }
-            }
-            // First member must be a single create with role set (update requires admin).
-            "members" -> {
-                val exists = runCatching { ref.get().exists }.getOrDefault(false)
-                if (exists) {
+                // Merge: missing docs are still creates (first-admin / invite); existing docs update.
+                // Skip a prior get() — it can hang or fail and made role assignment look like a no-op.
+                "members" -> {
                     ref.set(toFirestoreFieldMap(fields), merge = true)
-                } else {
-                    ref.set(toFirestoreFieldMap(fields), merge = false)
+                }
+                else -> {
+                    ref.set(toFirestoreFieldMap(fields), merge = true)
                 }
             }
-            else -> {
-                ref.set(toFirestoreFieldMap(fields), merge = true)
-            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            println("Firebase write failed for $collection/$docId in $orgId: ${e.message}")
+            throw e
         }
     }
 
@@ -167,10 +181,23 @@ class GitLiveFirestoreGateway(
         firestore.collection("orgs").document(orgId).collection(collection).document(docId).delete()
     }
 
-    override suspend fun pullAllIntoRepository(orgId: String, repository: EventManagerRepository) {
+    override suspend fun pullAllIntoRepository(
+        orgId: String,
+        repository: EventManagerRepository,
+        collections: Collection<String>?,
+    ) {
         val firestore = db() ?: return
         if (orgId.isBlank()) return
-        for (collection in watchedCollections) {
+        val requested = collections
+            ?.map { it.trim() }
+            ?.filter { it.isNotBlank() }
+            ?.toSet()
+        val toPull = if (requested.isNullOrEmpty()) {
+            watchedCollections
+        } else {
+            watchedCollections.filter { it in requested }
+        }
+        for (collection in toPull) {
             val snap = firestore.collection("orgs").document(orgId).collection(collection).get()
             for (doc in snap.documents) {
                 val data = decodeSnapshot(doc)
@@ -225,9 +252,7 @@ class GitLiveFirestoreGateway(
                     ?.takeIf { it.isNotBlank() },
                 firebaseProjectId = (data["firebaseProjectId"] as? String)?.takeIf { it.isNotBlank() },
                 firebaseApplicationId = (data["firebaseApplicationId"] as? String)?.takeIf { it.isNotBlank() },
-                firebaseApiKey = (data["firebaseApiKey"] as? String)?.takeIf { it.isNotBlank() },
                 firebaseWebClientId = (data["firebaseWebClientId"] as? String)?.takeIf { it.isNotBlank() },
-                firebaseWebClientSecret = (data["firebaseWebClientSecret"] as? String)?.takeIf { it.isNotBlank() },
             )
         }.getOrNull()
     }
@@ -236,8 +261,51 @@ class GitLiveFirestoreGateway(
         return readMemberRole(orgId, uid, fromServer = false)
     }
 
+    override suspend fun readMemberRoleFromServer(orgId: String, uid: String): String? {
+        return readMemberRole(orgId, uid, fromServer = true)
+    }
+
     override suspend fun isOrgAccessibleOnServer(orgId: String, uid: String): Boolean =
         readMemberRole(orgId, uid, fromServer = true) != null
+
+    override suspend fun listMembers(orgId: String): List<FirebaseTeamMemberListing> {
+        val firestore = db() ?: error("Firestore is not initialized")
+        if (orgId.isBlank() || isFirebaseOrgAllSentinel(orgId)) return emptyList()
+        return runCatching {
+            val query = firestore.collection("orgs").document(orgId).collection("members")
+            val snap = runCatching { query.get(source = Source.SERVER) }.getOrElse { query.get() }
+            snap.documents.map { doc -> memberListingFromSnapshot(doc) }.sortedWith(
+                compareBy<FirebaseTeamMemberListing> { MemberRole.fromStorage(it.role) != MemberRole.ADMIN }
+                    .thenBy { it.email.orEmpty().lowercase() }
+            )
+        }.getOrElse { e ->
+            if (e is CancellationException) throw e
+            println("Firebase team: listMembers failed: ${e.message}")
+            throw e
+        }
+    }
+
+    private fun memberListingFromSnapshot(
+        doc: dev.gitlive.firebase.firestore.DocumentSnapshot,
+    ): FirebaseTeamMemberListing {
+        val record = memberRecordFromSnapshot(doc)
+        return FirebaseTeamMemberListing(email = record.email, role = record.role)
+    }
+
+    private fun memberRecordFromSnapshot(
+        doc: dev.gitlive.firebase.firestore.DocumentSnapshot,
+    ): FirestoreMemberRecord {
+        val data = decodeSnapshot(doc)
+        val role = data["role"]?.toString()?.trim()?.ifBlank { null }
+            ?: runCatching {
+                if (doc.contains("role")) doc.get<String?>("role") else null
+            }.getOrNull()?.trim()?.ifBlank { null }
+        val email = data["email"]?.toString()?.trim()?.ifBlank { null }
+            ?: runCatching {
+                if (doc.contains("email")) doc.get<String?>("email") else null
+            }.getOrNull()?.trim()?.ifBlank { null }
+        return FirestoreMemberRecord(uid = doc.id, email = email, role = role)
+    }
 
     private suspend fun readMemberRole(orgId: String, uid: String, fromServer: Boolean): String? {
         val firestore = db() ?: return null
@@ -251,7 +319,7 @@ class GitLiveFirestoreGateway(
                     .collection("members").document(uid).get()
             }
             if (!snap.exists) return null
-            decodeSnapshot(snap)["role"] as? String
+            memberRecordFromSnapshot(snap).role
         }.getOrNull()
     }
 
@@ -278,9 +346,7 @@ class GitLiveFirestoreGateway(
                 "sheetsSpreadsheetIdHint" to announcement.sheetsSpreadsheetIdHint,
                 "firebaseProjectId" to announcement.firebaseProjectId,
                 "firebaseApplicationId" to announcement.firebaseApplicationId,
-                "firebaseApiKey" to announcement.firebaseApiKey,
                 "firebaseWebClientId" to announcement.firebaseWebClientId,
-                "firebaseWebClientSecret" to announcement.firebaseWebClientSecret,
             ),
         )
     }
@@ -290,6 +356,7 @@ class GitLiveFirestoreGateway(
         venueName: String,
         count: Int,
         deviceId: String,
+        writerAccountEmail: String,
     ) {
         val firestore = db() ?: return
         if (orgId.isBlank() || venueName.isBlank()) return
@@ -305,6 +372,7 @@ class GitLiveFirestoreGateway(
             val merged = existing.toMutableMap().apply {
                 put("peopleCounterCount", count)
                 put("peopleCounterWriterDeviceId", deviceId)
+                put("peopleCounterWriterAccountEmail", writerAccountEmail.trim())
                 put("peopleCounterLastModified", System.currentTimeMillis())
                 put("name", venueName)
                 put("lastModified", maxOf(
@@ -357,7 +425,10 @@ class GitLiveFirestoreGateway(
                 }
 
                 // Flat fields so rules can read balance; transfers are create-only (append-only rules).
-                val transferFields = ruleCompatibleFirestoreMap(transferToMap(transfer))
+                val transferFields = ruleCompatibleFirestoreMap(transferToMap(transfer)).toMutableMap()
+                settingsManager?.getOrCreatePersistentDeviceId()?.trim()?.takeIf { it.isNotBlank() }?.let {
+                    transferFields["sourceDeviceId"] = it
+                }
                 val accountFields = ruleCompatibleFirestoreMap(
                     mapOf(
                         "balance" to nextBalance,
@@ -374,7 +445,8 @@ class GitLiveFirestoreGateway(
         }
     }
 
-    override fun guestToMap(guest: Guest) = mapOf(
+    override fun guestToMap(guest: Guest) = SensitiveFieldCodec.encryptGuestMap(
+        mapOf(
         "nanoId" to guest.nanoId,
         "name" to guest.name,
         "lastNameAbbreviation" to guest.lastNameAbbreviation,
@@ -391,10 +463,16 @@ class GitLiveFirestoreGateway(
         "temporaryEventDate" to guest.temporaryEventDate,
         "temporaryContactPhone" to guest.temporaryContactPhone,
         "nfcCardUid" to guest.nfcCardUid,
+        "nfcCardUidHash" to guest.nfcCardUidHash.ifBlank {
+            SensitiveFieldCodec.nfcLookupHash(guest.nfcCardUid, guest.firebaseOrgId)
+        },
         "isAdmin" to guest.isAdmin,
+        ),
+        guest.firebaseOrgId,
     )
 
-    override fun volunteerToMap(volunteer: Volunteer) = mapOf(
+    override fun volunteerToMap(volunteer: Volunteer) = SensitiveFieldCodec.encryptVolunteerMap(
+        mapOf(
         "id" to volunteer.id,
         "name" to volunteer.name,
         "lastNameAbbreviation" to volunteer.lastNameAbbreviation,
@@ -407,7 +485,12 @@ class GitLiveFirestoreGateway(
         "lastShiftDate" to volunteer.lastShiftDate,
         "lastModified" to volunteer.lastModified,
         "nfcCardUid" to volunteer.nfcCardUid,
+        "nfcCardUidHash" to volunteer.nfcCardUidHash.ifBlank {
+            SensitiveFieldCodec.nfcLookupHash(volunteer.nfcCardUid, volunteer.firebaseOrgId)
+        },
         "isAdmin" to volunteer.isAdmin,
+        ),
+        volunteer.firebaseOrgId,
     )
 
     override fun jobToMap(job: Job) = mapOf(
@@ -442,6 +525,7 @@ class GitLiveFirestoreGateway(
         "isActive" to venue.isActive,
         "peopleCounterCount" to venue.peopleCounterCount,
         "peopleCounterWriterDeviceId" to venue.peopleCounterWriterDeviceId,
+        "peopleCounterWriterAccountEmail" to venue.peopleCounterWriterAccountEmail,
         "peopleCounterLastModified" to venue.peopleCounterLastModified,
         "announcementTitle" to venue.announcementTitle,
         "announcementMessage" to venue.announcementMessage,
@@ -462,26 +546,35 @@ class GitLiveFirestoreGateway(
         "lastModified" to item.lastModified,
     )
 
-    override fun transferToMap(transfer: AccountTransfer) = mapOf(
-        "transferId" to transfer.transferId,
-        "sourceReference" to transfer.sourceReference,
-        "holderType" to transfer.holderType.name,
-        "holderId" to transfer.holderId,
-        "holderName" to transfer.holderName,
-        "amount" to transfer.amount,
-        "type" to transfer.type.name,
-        "currencyCode" to transfer.currencyCode,
-        "description" to transfer.description,
-        "jobReferenceKey" to transfer.jobReferenceKey,
-        "jobTypeName" to transfer.jobTypeName,
-        "jobDate" to transfer.jobDate,
-        "creditAmountPaid" to transfer.creditAmountPaid,
-        "cashAmountPaid" to transfer.cashAmountPaid,
-        "posBarDiscountPercent" to transfer.posBarDiscountPercent,
-        "posItemsJson" to transfer.posItemsJson,
-        "posVenueName" to transfer.posVenueName,
-        "createdAt" to transfer.createdAt,
-        "lastModified" to transfer.lastModified,
-        "syncState" to transfer.syncState.name,
-    )
+    override fun transferToMap(transfer: AccountTransfer): Map<String, Any?> {
+        val mapped = SensitiveFieldCodec.encryptTransferMap(
+            mapOf(
+                "transferId" to transfer.transferId,
+                "sourceReference" to transfer.sourceReference,
+                "holderType" to transfer.holderType.name,
+                "holderId" to transfer.holderId,
+                "holderName" to transfer.holderName,
+                "amount" to transfer.amount,
+                "type" to transfer.type.name,
+                "currencyCode" to transfer.currencyCode,
+                "description" to transfer.description,
+                "jobReferenceKey" to transfer.jobReferenceKey,
+                "jobTypeName" to transfer.jobTypeName,
+                "jobDate" to transfer.jobDate,
+                "creditAmountPaid" to transfer.creditAmountPaid,
+                "cashAmountPaid" to transfer.cashAmountPaid,
+                "posBarDiscountPercent" to transfer.posBarDiscountPercent,
+                "posItemsJson" to transfer.posItemsJson,
+                "posVenueName" to transfer.posVenueName,
+                "createdAt" to transfer.createdAt,
+                "lastModified" to transfer.lastModified,
+                "syncState" to transfer.syncState.name,
+            ),
+            transfer.firebaseOrgId,
+        ).toMutableMap()
+        settingsManager?.getOrCreatePersistentDeviceId()?.trim()?.takeIf { it.isNotBlank() }?.let {
+            mapped["sourceDeviceId"] = it
+        }
+        return mapped
+    }
 }

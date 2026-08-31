@@ -4,17 +4,27 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.eventmanager.app.data.remote.FirebaseOrgAdminAccess
+import com.eventmanager.app.data.remote.FirebaseTeamActions
+import com.eventmanager.app.data.remote.FirebaseTeamMemberListing
 import com.eventmanager.app.data.remote.MemberRole
+import com.eventmanager.app.data.security.canRevealFirebaseProjectSecrets
+import com.eventmanager.app.data.security.firebaseOAuthCredentialsReady
 import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.platform.PlatformContext
 import com.eventmanager.app.resources.Res
+import kotlinx.coroutines.launch
 import com.eventmanager.app.resources.firebase_checklist_auth
 import com.eventmanager.app.resources.firebase_checklist_org
 import com.eventmanager.app.resources.firebase_checklist_project
@@ -26,12 +36,9 @@ import com.eventmanager.app.resources.firebase_member_email_hint
 import com.eventmanager.app.resources.firebase_member_email_label
 import com.eventmanager.app.resources.firebase_member_uid_hint
 import com.eventmanager.app.resources.firebase_member_uid_label
-import com.eventmanager.app.resources.firebase_org_id_hint
-import com.eventmanager.app.resources.firebase_org_id_label
+import com.eventmanager.app.resources.firebase_member_unknown_email
 import com.eventmanager.app.resources.firebase_role_admin
-import com.eventmanager.app.resources.firebase_role_door
-import com.eventmanager.app.resources.firebase_role_pos
-import com.eventmanager.app.resources.firebase_section_hide
+import com.eventmanager.app.resources.firebase_role_member
 import com.eventmanager.app.resources.firebase_settings_intro
 import com.eventmanager.app.resources.firebase_settings_section_access
 import com.eventmanager.app.resources.firebase_settings_section_devices
@@ -40,17 +47,27 @@ import com.eventmanager.app.resources.firebase_status_need_config
 import com.eventmanager.app.resources.firebase_status_need_sign_in
 import com.eventmanager.app.resources.firebase_status_ready
 import com.eventmanager.app.resources.firebase_status_signed_in_as
-import com.eventmanager.app.resources.firebase_step_org_body
-import com.eventmanager.app.resources.firebase_step_org_title
+import com.eventmanager.app.resources.firebase_team_admins_empty
+import com.eventmanager.app.resources.firebase_team_admins_heading
+import com.eventmanager.app.resources.firebase_team_assign_busy
+import com.eventmanager.app.resources.firebase_team_assign_success_admin
+import com.eventmanager.app.resources.firebase_team_assign_success_member
 import com.eventmanager.app.resources.firebase_team_body
+import com.eventmanager.app.resources.firebase_team_error_blank_uid
+import com.eventmanager.app.resources.firebase_team_error_email_required
+import com.eventmanager.app.resources.firebase_team_error_no_org
+import com.eventmanager.app.resources.firebase_team_error_not_ready
+import com.eventmanager.app.resources.firebase_team_error_permission
+import com.eventmanager.app.resources.firebase_team_load_error
+import com.eventmanager.app.resources.firebase_team_members_heading
 import com.eventmanager.app.resources.firebase_team_not_domains
+import com.eventmanager.app.resources.firebase_team_refresh
 import com.eventmanager.app.resources.firebase_team_role_admin_desc
-import com.eventmanager.app.resources.firebase_team_role_door_desc
-import com.eventmanager.app.resources.firebase_team_role_pos_desc
+import com.eventmanager.app.resources.firebase_team_role_member_desc
 import com.eventmanager.app.resources.firebase_team_roles_heading
-import com.eventmanager.app.resources.firebase_team_show
 import com.eventmanager.app.resources.firebase_team_steps
 import com.eventmanager.app.resources.firebase_team_title
+import com.eventmanager.app.resources.firebase_team_working_org
 import com.eventmanager.app.resources.sheets_migrate_card_body
 import com.eventmanager.app.resources.sheets_migrate_card_title
 import com.eventmanager.app.resources.sheets_migrate_to_firebase
@@ -82,11 +99,6 @@ fun FirebaseSyncSettingsSection(
     platformContext: PlatformContext? = null,
     onMirrorSettingsChanged: () -> Unit = {},
     settingsManager: com.eventmanager.app.data.sync.SettingsManager? = null,
-    memberUid: String = "",
-    memberEmail: String = "",
-    onMemberUidChange: (String) -> Unit = {},
-    onMemberEmailChange: (String) -> Unit = {},
-    onAssignMemberRole: (MemberRole) -> Unit = {},
     projectId: String = "",
     apiKey: String = "",
     applicationId: String = "",
@@ -99,12 +111,26 @@ fun FirebaseSyncSettingsSection(
     onWebClientSecretChange: (String) -> Unit = {},
     allowedEmailDomains: List<String> = emptyList(),
     onAllowedEmailDomainsChange: (List<String>) -> Unit = {},
+    signInFeedback: String? = null,
 ) {
     val ready = firebaseConnectionReady(configuredOrgs, projectId, applicationId, apiKey, authEmail)
     val projectReady = projectId.isNotBlank() && applicationId.isNotBlank() && apiKey.isNotBlank()
     val orgReady = firebaseConfiguredOrgsReady(configuredOrgs)
     val authReady = !authEmail.isNullOrBlank()
-    var showTeam by remember { mutableStateOf(false) }
+    var isFirebaseOrgAdmin by remember { mutableStateOf(false) }
+    val writableOrgId = settingsManager?.resolveWritableFirebaseOrgId().orEmpty()
+    LaunchedEffect(authEmail, writableOrgId, settingsManager) {
+        isFirebaseOrgAdmin = if (settingsManager == null) {
+            false
+        } else {
+            FirebaseOrgAdminAccess.currentUserIsOrgAdmin(platformContext, settingsManager)
+        }
+    }
+    val allowProjectSecrets = canRevealFirebaseProjectSecrets(
+        isFirebaseOrgAdmin = isFirebaseOrgAdmin,
+        projectConfigured = projectReady,
+        oauthCredentialsReady = firebaseOAuthCredentialsReady(webClientId, webClientSecret),
+    )
 
     val statusTitle = when {
         ready -> stringResource(Res.string.firebase_status_ready)
@@ -150,6 +176,7 @@ fun FirebaseSyncSettingsSection(
                 onApiKeyChange = onApiKeyChange,
                 onWebClientIdChange = onWebClientIdChange,
                 onWebClientSecretChange = onWebClientSecretChange,
+                allowProjectSecrets = allowProjectSecrets,
             )
         }
 
@@ -157,6 +184,7 @@ fun FirebaseSyncSettingsSection(
             authEmail = authEmail,
             onSignIn = onSignIn,
             onSignOut = onSignOut,
+            signInFeedback = signInFeedback,
         )
 
         GuidedStepCard(title = stringResource(Res.string.firebase_checklist_title)) {
@@ -184,6 +212,7 @@ fun FirebaseSyncSettingsSection(
                 webClientId = webClientId,
                 webClientSecret = webClientSecret,
                 bootstrapCode = settingsManager.getFirebaseBootstrapCode(),
+                allowProjectSecrets = isFirebaseOrgAdmin,
             )
         }
 
@@ -193,71 +222,11 @@ fun FirebaseSyncSettingsSection(
             onDomainsChange = onAllowedEmailDomainsChange,
         )
 
-        GuidedStepCard(
-            title = stringResource(Res.string.firebase_team_title),
-            body = stringResource(Res.string.firebase_team_body),
-        ) {
-            Text(
-                stringResource(Res.string.firebase_team_not_domains),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+        if (settingsManager != null) {
+            FirebaseTeamAccessCard(
+                platformContext = platformContext,
+                settingsManager = settingsManager,
             )
-            TextButton(onClick = { showTeam = !showTeam }) {
-                Text(
-                    if (showTeam) stringResource(Res.string.firebase_section_hide)
-                    else stringResource(Res.string.firebase_team_show),
-                )
-            }
-            if (showTeam) {
-                Text(
-                    stringResource(Res.string.firebase_team_steps),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                OutlinedTextField(
-                    value = memberUid,
-                    onValueChange = onMemberUidChange,
-                    label = { Text(stringResource(Res.string.firebase_member_uid_label)) },
-                    supportingText = { Text(stringResource(Res.string.firebase_member_uid_hint)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                )
-                OutlinedTextField(
-                    value = memberEmail,
-                    onValueChange = onMemberEmailChange,
-                    label = { Text(stringResource(Res.string.firebase_member_email_label)) },
-                    supportingText = { Text(stringResource(Res.string.firebase_member_email_hint)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                )
-                Text(
-                    stringResource(Res.string.firebase_team_roles_heading),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Text(
-                    stringResource(Res.string.firebase_team_role_admin_desc),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    "Member — sync access for team devices (Admin UI still requires local admin card).",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    OutlinedButton(
-                        onClick = { onAssignMemberRole(MemberRole.ADMIN) },
-                        enabled = memberUid.isNotBlank(),
-                        modifier = Modifier.weight(1f),
-                    ) { Text(stringResource(Res.string.firebase_role_admin)) }
-                    OutlinedButton(
-                        onClick = { onAssignMemberRole(MemberRole.MEMBER) },
-                        enabled = memberUid.isNotBlank(),
-                        modifier = Modifier.weight(1f),
-                    ) { Text("Member") }
-                }
-            }
         }
 
         FirebaseSettingsSectionHeader(stringResource(Res.string.firebase_settings_section_optional))
@@ -308,6 +277,255 @@ fun SheetsMigrateToFirebaseButton(onClick: () -> Unit) {
     }
     if (showTutorial) {
         FirebaseSetupTutorialDialog(onDismiss = { showTutorial = false })
+    }
+}
+
+@Composable
+private fun FirebaseTeamAccessCard(
+    platformContext: PlatformContext?,
+    settingsManager: SettingsManager,
+) {
+    val scope = rememberCoroutineScope()
+    var memberUid by remember { mutableStateOf("") }
+    var memberEmail by remember { mutableStateOf("") }
+    var members by remember { mutableStateOf<List<FirebaseTeamMemberListing>>(emptyList()) }
+    var loadingMembers by remember { mutableStateOf(true) }
+    var assigning by remember { mutableStateOf(false) }
+    var status by remember { mutableStateOf<String?>(null) }
+    var statusIsError by remember { mutableStateOf(false) }
+    var membersError by remember { mutableStateOf<String?>(null) }
+    val writableOrgId = settingsManager.resolveWritableFirebaseOrgId()
+
+    val noOrg = stringResource(Res.string.firebase_team_error_no_org)
+    val blankUid = stringResource(Res.string.firebase_team_error_blank_uid)
+    val emailRequired = stringResource(Res.string.firebase_team_error_email_required)
+    val permissionDenied = stringResource(Res.string.firebase_team_error_permission)
+    val notReady = stringResource(Res.string.firebase_team_error_not_ready)
+    val loadError = stringResource(Res.string.firebase_team_load_error)
+    val successAdmin = stringResource(Res.string.firebase_team_assign_success_admin)
+    val successMember = stringResource(Res.string.firebase_team_assign_success_member)
+
+    fun mapError(throwable: Throwable): String {
+        val raw = throwable.message.orEmpty()
+        return when {
+            raw.contains("NO_ORG") -> noOrg
+            raw.contains("BLANK_UID") -> blankUid
+            raw.contains("EMAIL_REQUIRED") -> emailRequired
+            raw.contains("NOT_READY") || raw.contains("not initialized", ignoreCase = true) -> notReady
+            raw.contains("PERMISSION") || raw.contains("permission-denied", ignoreCase = true) ->
+                permissionDenied
+            else -> raw.ifBlank { throwable::class.simpleName.orEmpty() }
+        }
+    }
+
+    suspend fun reloadMembers() {
+        loadingMembers = true
+        membersError = null
+        FirebaseTeamActions.loadMembers(platformContext, settingsManager).fold(
+            onSuccess = { members = it },
+            onFailure = {
+                members = emptyList()
+                membersError = mapError(it).ifBlank { loadError }
+            },
+        )
+        loadingMembers = false
+    }
+
+    suspend fun assign(role: MemberRole) {
+        assigning = true
+        status = null
+        try {
+            val result = FirebaseTeamActions.assignRole(
+                platformContext = platformContext,
+                settings = settingsManager,
+                uid = memberUid.trim(),
+                email = memberEmail.trim().ifBlank { null },
+                role = role,
+            )
+            result.fold(
+                onSuccess = {
+                    statusIsError = false
+                    status = if (role == MemberRole.ADMIN) successAdmin else successMember
+                    reloadMembers()
+                },
+                onFailure = {
+                    statusIsError = true
+                    status = mapError(it)
+                },
+            )
+        } finally {
+            assigning = false
+        }
+    }
+
+    LaunchedEffect(writableOrgId) {
+        reloadMembers()
+    }
+
+    GuidedStepCard(
+        title = stringResource(Res.string.firebase_team_title),
+        body = stringResource(Res.string.firebase_team_body),
+    ) {
+        Text(
+            stringResource(Res.string.firebase_team_not_domains),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (writableOrgId.isNotBlank()) {
+            Text(
+                stringResource(Res.string.firebase_team_working_org, writableOrgId),
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Medium,
+            )
+        }
+
+        Text(
+            stringResource(Res.string.firebase_team_admins_heading),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+        )
+        when {
+            loadingMembers -> {
+                CircularProgressIndicator(modifier = Modifier.size(22.dp))
+            }
+            membersError != null -> {
+                Text(
+                    membersError!!,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+            else -> {
+                val admins = members.filter { MemberRole.fromStorage(it.role) == MemberRole.ADMIN }
+                val others = members.filter { MemberRole.fromStorage(it.role) != MemberRole.ADMIN }
+                if (admins.isEmpty()) {
+                    Text(
+                        stringResource(Res.string.firebase_team_admins_empty),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    admins.forEach { member ->
+                        FirebaseMemberRow(member, admin = true)
+                    }
+                }
+                if (others.isNotEmpty()) {
+                    Text(
+                        stringResource(Res.string.firebase_team_members_heading),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    others.forEach { member ->
+                        FirebaseMemberRow(member, admin = false)
+                    }
+                }
+            }
+        }
+        TextButton(
+            onClick = {
+                scope.launch { reloadMembers() }
+            },
+            enabled = !loadingMembers && !assigning,
+        ) {
+            Text(stringResource(Res.string.firebase_team_refresh))
+        }
+
+        Text(
+            stringResource(Res.string.firebase_team_steps),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        OutlinedTextField(
+            value = memberUid,
+            onValueChange = { memberUid = it },
+            label = { Text(stringResource(Res.string.firebase_member_uid_label)) },
+            supportingText = { Text(stringResource(Res.string.firebase_member_uid_hint)) },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            enabled = !assigning,
+        )
+        OutlinedTextField(
+            value = memberEmail,
+            onValueChange = { memberEmail = it },
+            label = { Text(stringResource(Res.string.firebase_member_email_label)) },
+            supportingText = { Text(stringResource(Res.string.firebase_member_email_hint)) },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            enabled = !assigning,
+        )
+        Text(
+            stringResource(Res.string.firebase_team_roles_heading),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Text(
+            stringResource(Res.string.firebase_team_role_admin_desc),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            stringResource(Res.string.firebase_team_role_member_desc),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            Button(
+                onClick = { scope.launch { assign(MemberRole.ADMIN) } },
+                enabled = memberUid.trim().isNotBlank() && !assigning,
+                modifier = Modifier.weight(1f),
+            ) { Text(stringResource(Res.string.firebase_role_admin)) }
+            OutlinedButton(
+                onClick = { scope.launch { assign(MemberRole.MEMBER) } },
+                enabled = memberUid.trim().isNotBlank() && !assigning,
+                modifier = Modifier.weight(1f),
+            ) { Text(stringResource(Res.string.firebase_role_member)) }
+        }
+        if (assigning) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                Text(
+                    stringResource(Res.string.firebase_team_assign_busy),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
+        status?.let {
+            Text(
+                it,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.SemiBold,
+                color = if (statusIsError) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.primary
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun FirebaseMemberRow(member: FirebaseTeamMemberListing, admin: Boolean) {
+    val title = member.email?.takeIf { it.isNotBlank() }
+        ?: stringResource(Res.string.firebase_member_unknown_email)
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+        Text(
+            title,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = if (admin) FontWeight.SemiBold else FontWeight.Normal,
+        )
+        Text(
+            if (admin) {
+                stringResource(Res.string.firebase_role_admin)
+            } else {
+                stringResource(Res.string.firebase_role_member)
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

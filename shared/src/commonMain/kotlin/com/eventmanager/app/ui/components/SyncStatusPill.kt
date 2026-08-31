@@ -39,6 +39,7 @@ import com.eventmanager.app.data.remote.FirebaseSyncTransport
 import com.eventmanager.app.data.sync.DateFormatUtils
 import com.eventmanager.app.platform.LocalPlatformContext
 import com.eventmanager.app.resources.Res
+import com.eventmanager.app.resources.firebase_pill_failed_pending
 import com.eventmanager.app.resources.firebase_pill_line
 import com.eventmanager.app.resources.firebase_pill_live
 import com.eventmanager.app.resources.firebase_pill_not_setup
@@ -171,24 +172,29 @@ private fun FirebaseSyncStatusPill(
 
     val label = firebasePillLabel(firebaseStatus, timeAgoLabel)
     val hasPending = firebaseStatus.pendingWriteCount > 0
+    val hasFailedPending = firebaseStatus.failedPendingWriteCount > 0
     val isLiveHealthy = firebaseStatus.mode == FirebaseSyncTransport.LIVE &&
         !hasPending &&
+        !hasFailedPending &&
         (firebaseStatus.lastActivityAt <= 0L ||
             System.currentTimeMillis() - firebaseStatus.lastActivityAt <= FIREBASE_LIVE_RECENT_MS)
 
     val iconVector = when {
+        hasFailedPending -> Icons.Default.SyncProblem
         hasPending -> Icons.Default.SyncProblem
         firebaseStatus.mode == FirebaseSyncTransport.LIVE -> Icons.Default.CloudDone
         firebaseStatus.mode == FirebaseSyncTransport.PULL -> Icons.Default.CloudQueue
         else -> Icons.Default.CloudOff
     }
     val iconTint = when {
+        hasFailedPending -> MaterialTheme.colorScheme.error
         hasPending -> MaterialTheme.colorScheme.error
         isLiveHealthy -> MaterialTheme.colorScheme.primary
         firebaseStatus.mode == FirebaseSyncTransport.OFFLINE -> MaterialTheme.colorScheme.onSurfaceVariant
         else -> MaterialTheme.colorScheme.onPrimaryContainer
     }
     val labelColor = when {
+        hasFailedPending -> MaterialTheme.colorScheme.error
         hasPending -> MaterialTheme.colorScheme.error
         isLiveHealthy || firebaseStatus.mode != FirebaseSyncTransport.OFFLINE ->
             MaterialTheme.colorScheme.onPrimaryContainer
@@ -223,6 +229,9 @@ private fun firebasePillLabel(
     status: FirebaseSyncStatus,
     timeAgoLabel: String?,
 ): String {
+    if (status.failedPendingWriteCount > 0) {
+        return stringResource(Res.string.firebase_pill_failed_pending, status.failedPendingWriteCount)
+    }
     if (status.pendingWriteCount > 0) {
         return stringResource(Res.string.firebase_pill_pending, status.pendingWriteCount)
     }

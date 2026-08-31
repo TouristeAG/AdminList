@@ -294,6 +294,21 @@ actual fun AppRootContent(
                 }
 
                 LaunchedEffect(adminSurfaceActive) {
+                    viewModel.setAdminPanelActive(adminSurfaceActive)
+                    if (!adminSurfaceActive || !viewModel.isFirebaseAllOrgsMode()) return@LaunchedEffect
+                    val configured = viewModel.getFirebaseConfiguredOrgs()
+                    val lastOrg = viewModel.getFirebaseLastSingleOrgId()
+                    when {
+                        lastOrg.isNotBlank() && configured.any { it.orgId == lastOrg } ->
+                            viewModel.enterSingleOrgMode(lastOrg)
+                        configured.size == 1 ->
+                            viewModel.enterSingleOrgMode(configured.first().orgId)
+                        configured.size >= 2 ->
+                            showAdminOrgPicker = true
+                    }
+                }
+
+                LaunchedEffect(adminSurfaceActive) {
                     if (!adminSurfaceActive) return@LaunchedEffect
                     while (adminSurfaceActive) {
                         delay(15_000)
@@ -380,10 +395,19 @@ actual fun AppRootContent(
                         volunteers = volunteers,
                         guests = guests,
                         isSyncing = isSyncing,
-                        onAuthSuccess = { showAdminAuth = false },
-                        onBack = {
+                        onAuthSuccess = {
+                            viewModel.onAdminAuthSuccess()
                             showAdminAuth = false
-                            showWelcome = true
+                        },
+                        onBack = {
+                            if (viewModel.isAdminOrgReauthPending()) {
+                                viewModel.cancelAdminOrgSwitchReauth {
+                                    showAdminAuth = false
+                                }
+                            } else {
+                                showAdminAuth = false
+                                showWelcome = true
+                            }
                         }
                     )
                 } else if (showPos) {
@@ -455,6 +479,7 @@ actual fun AppRootContent(
                             showPosAccountingReport = false
                         },
                         viewModel = viewModel,
+                        onAdminRequireReauth = { showAdminAuth = true },
                         modifier = Modifier.fillMaxSize()
                     ) { padding ->
                         Box(

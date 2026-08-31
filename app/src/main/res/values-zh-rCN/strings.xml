@@ -29,9 +29,15 @@
     <string name="sheet_epoch_calc_hint_ms">在此输入毫秒（如 1776711088094）</string>
     <string name="sheet_epoch_calc_hint_datetime">选择或输入日期/时间</string>
     <string name="temp_guest_list_sheet_label">临时来宾名单工作表</string>
+    <string name="settings_sheet_label">设置工作表</string>
     <string name="shift_types_sheet_label">班次类型工作表</string>
     <string name="venues_sheet_label">场地工作表</string>
     <string name="sales_items_sheet_label">销售项目工作表</string>
+    <string name="purchase_credit_buffer_label">购买信用缓冲</string>
+    <string name="purchase_credit_buffer_description">可计入信用的最大短缺（例如 5）。账户可降至 −缓冲。0 = 不可透支。会在设备间同步。</string>
+    <string name="pos_negative_balance_title">账户现为负数</string>
+    <string name="pos_negative_balance_message">已使用购买信用缓冲。账户余额现为 %1$s。</string>
+    <string name="amount_label">金额</string>
     <string name="admin_label">管理员</string>
     <string name="admin_yes">是</string>
     <string name="admin_no">否</string>
@@ -182,6 +188,8 @@
     <string name="system_is_in_light_mode">系统处于浅色模式</string>
     <string name="people_counter_visibility_title">显示人数计数器</string>
     <string name="people_counter_visibility_description">在首页上显示或隐藏人数计数器</string>
+    <string name="billeterie_clock_visibility_title">显示时钟小组件</string>
+    <string name="billeterie_clock_visibility_description">在售票首页显示日期与时间卡片（与管理员仪表板相同）</string>
     <string name="statistics_visibility_title">显示统计图表</string>
     <string name="statistics_visibility_description">在首页上显示或隐藏统计图表区段</string>
     <string name="scroll_behavior_title">管理页面的滚动行为</string>

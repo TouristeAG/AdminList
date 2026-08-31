@@ -70,6 +70,7 @@ kotlin {
                 compileOnly(files("${rootProject.projectDir}/app/libs/smartcardio-0.1.7.aar"))
                 compileOnly(files("${rootProject.projectDir}/app/libs/acssmcio-0.6.2.aar"))
                 implementation(libs.google.api.client.android)
+        implementation("androidx.security:security-crypto:1.1.0-alpha06")
                 implementation("androidx.biometric:biometric:1.1.0")
                 implementation("androidx.activity:activity-compose:1.9.3")
                 implementation("androidx.fragment:fragment-ktx:1.8.5")

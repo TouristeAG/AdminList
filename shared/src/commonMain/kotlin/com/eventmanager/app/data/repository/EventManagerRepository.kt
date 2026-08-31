@@ -8,9 +8,13 @@ import com.eventmanager.app.data.dao.SalesSheetItemDao
 import com.eventmanager.app.data.dao.VenueDao
 import com.eventmanager.app.data.dao.VolunteerDao
 import com.eventmanager.app.data.models.*
+import com.eventmanager.app.data.security.crypto.SensitiveFieldCodec
 import com.eventmanager.app.data.utils.NanoIdGenerator
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 
 fun getRankDisplayName(rank: VolunteerRank?): String {
     return when (rank) {
@@ -29,7 +33,12 @@ class EventManagerRepository(
     private val accountTransferDao: AccountTransferDao
 ) {
     // Guest operations
-    fun getAllGuests(): Flow<List<Guest>> = guestDao.getAllGuests()
+    fun getAllGuests(): Flow<List<Guest>> =
+        guestDao.getAllGuests()
+            .map { guests -> decryptGuestsIfNeeded(guests) }
+            .flowOn(Dispatchers.Default)
+
+    suspend fun getAllGuestsOnce(): List<Guest> = getAllGuests().first()
     suspend fun insertGuest(guest: Guest): Guest {
         // Ensure guest has a valid NanoID before insertion
         val validatedGuest = if (NanoIdGenerator.needsRegeneration(guest.nanoId)) {
@@ -44,8 +53,8 @@ class EventManagerRepository(
         if (existingByNanoId != null) {
             throw IllegalArgumentException("A guest with NanoID '${validatedGuest.nanoId}' already exists")
         }
-        val rowId = guestDao.insertGuest(validatedGuest)
-        return validatedGuest.copy(id = rowId)
+        val rowId = guestDao.insertGuest(SensitiveFieldCodec.encryptGuestFields(validatedGuest))
+        return SensitiveFieldCodec.decryptGuestFields(validatedGuest.copy(id = rowId))
     }
     
     suspend fun updateGuest(guest: Guest) {
@@ -61,30 +70,34 @@ class EventManagerRepository(
         if (existingByNanoId != null && existingByNanoId.id != validatedGuest.id) {
             throw IllegalArgumentException("A guest with NanoID '${validatedGuest.nanoId}' already exists")
         }
-        guestDao.updateGuest(validatedGuest)
+        guestDao.updateGuest(SensitiveFieldCodec.encryptGuestFields(validatedGuest))
     }
     
     suspend fun deleteGuest(guest: Guest) = guestDao.deleteGuest(guest)
 
     // Batch guest operations for optimized sync
-    suspend fun insertGuestsAll(guests: List<Guest>): List<Long> = guestDao.insertGuestsAll(guests)
-    suspend fun updateGuestsAll(guests: List<Guest>) = guestDao.updateGuestsAll(guests)
+    suspend fun insertGuestsAll(guests: List<Guest>): List<Long> =
+        guestDao.insertGuestsAll(guests.map { SensitiveFieldCodec.encryptGuestFields(it) })
+    suspend fun updateGuestsAll(guests: List<Guest>) =
+        guestDao.updateGuestsAll(guests.map { SensitiveFieldCodec.encryptGuestFields(it) })
     suspend fun deleteGuestsAll(guests: List<Guest>) = guestDao.deleteGuestsAll(guests)
 
     suspend fun replaceTemporaryGuests(guests: List<Guest>) {
         guestDao.deleteTemporaryGuests()
         if (guests.isNotEmpty()) {
-            guestDao.insertGuestsAll(guests)
+            guestDao.insertGuestsAll(guests.map { SensitiveFieldCodec.encryptGuestFields(it) })
         }
     }
 
     // Volunteer-benefit guest helpers
-    suspend fun getVolunteerBenefitGuests(): List<Guest> = guestDao.getVolunteerBenefitGuests()
+    suspend fun getVolunteerBenefitGuests(): List<Guest> =
+        decryptGuestsIfNeeded(guestDao.getVolunteerBenefitGuests())
 
-    suspend fun getGuestByNanoId(nanoId: String): Guest? = guestDao.getGuestByNanoId(nanoId)
+    suspend fun getGuestByNanoId(nanoId: String): Guest? =
+        guestDao.getGuestByNanoId(nanoId)?.let { SensitiveFieldCodec.decryptGuestFields(it) }
 
     suspend fun getGuestByNanoIdAndOrg(nanoId: String, orgId: String): Guest? =
-        guestDao.getGuestByNanoIdAndOrg(nanoId, orgId)
+        guestDao.getGuestByNanoIdAndOrg(nanoId, orgId)?.let { SensitiveFieldCodec.decryptGuestFields(it) }
 
     suspend fun getVenueByNameAndOrg(name: String, orgId: String): VenueEntity? =
         venueDao.getVenueByNameAndOrg(name, orgId)
@@ -143,10 +156,21 @@ class EventManagerRepository(
     }
 
     // Volunteer operations
-    fun getAllActiveVolunteers(): Flow<List<Volunteer>> = volunteerDao.getAllActiveVolunteers()
-    fun getAllVolunteers(): Flow<List<Volunteer>> = volunteerDao.getAllVolunteers()
-    suspend fun getVolunteerById(id: String): Volunteer? = volunteerDao.getVolunteerById(id)
-    fun getVolunteersByRank(rank: VolunteerRank): Flow<List<Volunteer>> = volunteerDao.getVolunteersByRank(rank)
+    fun getAllActiveVolunteers(): Flow<List<Volunteer>> =
+        volunteerDao.getAllActiveVolunteers()
+            .map { list -> decryptVolunteersIfNeeded(list) }
+            .flowOn(Dispatchers.Default)
+    fun getAllVolunteers(): Flow<List<Volunteer>> =
+        volunteerDao.getAllVolunteers()
+            .map { list -> decryptVolunteersIfNeeded(list) }
+            .flowOn(Dispatchers.Default)
+    suspend fun getAllVolunteersOnce(): List<Volunteer> = getAllVolunteers().first()
+    suspend fun getVolunteerById(id: String): Volunteer? =
+        volunteerDao.getVolunteerById(id)?.let { SensitiveFieldCodec.decryptVolunteerFields(it) }
+    fun getVolunteersByRank(rank: VolunteerRank): Flow<List<Volunteer>> =
+        volunteerDao.getVolunteersByRank(rank)
+            .map { list -> decryptVolunteersIfNeeded(list) }
+            .flowOn(Dispatchers.Default)
     suspend fun insertVolunteer(volunteer: Volunteer): Volunteer {
         // Validate and fix invalid NanoID before insertion
         // This is the data access boundary - validation is essential here
@@ -185,20 +209,20 @@ class EventManagerRepository(
                 val updated = validatedVolunteer.copy(
                     sheetsId = validatedVolunteer.sheetsId ?: existingVolunteer.sheetsId
                 )
-                volunteerDao.insertVolunteer(updated)
+                volunteerDao.insertVolunteer(SensitiveFieldCodec.encryptVolunteerFields(updated))
                 println("   ✅ Volunteer record updated with Google Sheets NanoID")
-                return updated
+                return SensitiveFieldCodec.decryptVolunteerFields(updated)
             } else {
                 // Same NanoID - just update the data
                 val updated = validatedVolunteer.copy(
                     sheetsId = validatedVolunteer.sheetsId ?: existingVolunteer.sheetsId
                 )
-                volunteerDao.updateVolunteer(updated)
-                return updated
+                volunteerDao.updateVolunteer(SensitiveFieldCodec.encryptVolunteerFields(updated))
+                return SensitiveFieldCodec.decryptVolunteerFields(updated)
             }
         } else {
-            volunteerDao.insertVolunteer(validatedVolunteer)
-            return validatedVolunteer
+            volunteerDao.insertVolunteer(SensitiveFieldCodec.encryptVolunteerFields(validatedVolunteer))
+            return SensitiveFieldCodec.decryptVolunteerFields(validatedVolunteer)
         }
     }
     
@@ -234,10 +258,10 @@ class EventManagerRepository(
             volunteerDao.deleteVolunteer(existingVolunteer)
             
             // Insert the new volunteer with the correct NanoID from Sheets
-            volunteerDao.insertVolunteer(validatedVolunteer)
+            volunteerDao.insertVolunteer(SensitiveFieldCodec.encryptVolunteerFields(validatedVolunteer))
             println("   ✅ Volunteer record updated with Google Sheets NanoID")
         } else {
-            volunteerDao.updateVolunteer(validatedVolunteer)
+            volunteerDao.updateVolunteer(SensitiveFieldCodec.encryptVolunteerFields(validatedVolunteer))
         }
     }
     
@@ -255,7 +279,7 @@ class EventManagerRepository(
                 volunteer
             }
         }
-        volunteerDao.insertVolunteersAll(validatedVolunteers)
+        volunteerDao.insertVolunteersAll(validatedVolunteers.map { SensitiveFieldCodec.encryptVolunteerFields(it) })
     }
     
     suspend fun updateVolunteersAll(volunteers: List<Volunteer>) {
@@ -284,9 +308,9 @@ class EventManagerRepository(
                 println("🔄 Repository (batch): Volunteer '${validatedVolunteer.name} ${validatedVolunteer.lastNameAbbreviation}' NanoID changed: '${existingVolunteer.id}' → '${validatedVolunteer.id}'")
                 jobDao.updateJobsVolunteerId(existingVolunteer.id, validatedVolunteer.id)
                 volunteerDao.deleteVolunteer(existingVolunteer)
-                volunteerDao.insertVolunteer(validatedVolunteer)
+                volunteerDao.insertVolunteer(SensitiveFieldCodec.encryptVolunteerFields(validatedVolunteer))
             } else {
-                volunteerDao.updateVolunteer(validatedVolunteer)
+                volunteerDao.updateVolunteer(SensitiveFieldCodec.encryptVolunteerFields(validatedVolunteer))
             }
         }
     }
@@ -355,23 +379,30 @@ class EventManagerRepository(
     suspend fun deleteSalesSheetItemsAll(items: List<SalesSheetItem>) = salesSheetItemDao.deleteSalesSheetItemsAll(items)
 
     // Account transfer operations
-    fun getAllAccountTransfers(): Flow<List<AccountTransfer>> = accountTransferDao.getAllAccountTransfers()
-    suspend fun getAllAccountTransfersOnce(): List<AccountTransfer> = accountTransferDao.getAllAccountTransfersOnce()
+    fun getAllAccountTransfers(): Flow<List<AccountTransfer>> =
+        accountTransferDao.getAllAccountTransfers()
+            .map { list -> decryptTransfersIfNeeded(list) }
+            .flowOn(Dispatchers.Default)
+    suspend fun getAllAccountTransfersOnce(): List<AccountTransfer> =
+        getAllAccountTransfers().first()
     suspend fun getTransfersForHolder(holderType: AccountHolderType, holderId: String): List<AccountTransfer> =
-        accountTransferDao.getTransfersForHolder(holderType, holderId)
+        decryptTransfersIfNeeded(accountTransferDao.getTransfersForHolder(holderType, holderId))
     suspend fun getRecentTransfersForHolder(holderType: AccountHolderType, holderId: String, limit: Int): List<AccountTransfer> =
-        accountTransferDao.getRecentTransfersForHolder(holderType, holderId, limit)
+        decryptTransfersIfNeeded(accountTransferDao.getRecentTransfersForHolder(holderType, holderId, limit))
     suspend fun getAccountTransferBySourceReference(sourceReference: String): AccountTransfer? =
         accountTransferDao.getBySourceReference(sourceReference)
+            ?.let { SensitiveFieldCodec.decryptTransferFields(it) }
     suspend fun getTransfersBetween(startMs: Long, endMs: Long): List<AccountTransfer> =
-        accountTransferDao.getTransfersBetween(startMs, endMs)
-    suspend fun insertAccountTransfer(transfer: AccountTransfer): Long = accountTransferDao.insertAccountTransfer(transfer)
-    suspend fun updateAccountTransfer(transfer: AccountTransfer) = accountTransferDao.updateAccountTransfer(transfer)
+        decryptTransfersIfNeeded(accountTransferDao.getTransfersBetween(startMs, endMs))
+    suspend fun insertAccountTransfer(transfer: AccountTransfer): Long =
+        accountTransferDao.insertAccountTransfer(SensitiveFieldCodec.encryptTransferFields(transfer))
+    suspend fun updateAccountTransfer(transfer: AccountTransfer) =
+        accountTransferDao.updateAccountTransfer(SensitiveFieldCodec.encryptTransferFields(transfer))
     suspend fun deleteAccountTransfer(transfer: AccountTransfer) = accountTransferDao.deleteAccountTransfer(transfer)
     suspend fun insertAccountTransfersAll(transfers: List<AccountTransfer>): List<Long> =
-        accountTransferDao.insertAccountTransfersAll(transfers)
+        accountTransferDao.insertAccountTransfersAll(transfers.map { SensitiveFieldCodec.encryptTransferFields(it) })
     suspend fun updateAccountTransfersAll(transfers: List<AccountTransfer>) =
-        accountTransferDao.updateAccountTransfersAll(transfers)
+        accountTransferDao.updateAccountTransfersAll(transfers.map { SensitiveFieldCodec.encryptTransferFields(it) })
     suspend fun deleteAccountTransfersAll(transfers: List<AccountTransfer>) =
         accountTransferDao.deleteAccountTransfersAll(transfers)
     suspend fun clearAllAccountTransfers() = accountTransferDao.deleteAllAccountTransfers()
@@ -437,6 +468,30 @@ class EventManagerRepository(
     
     suspend fun clearAllJobTypeConfigs() {
         jobTypeConfigDao.deleteAllJobTypeConfigs()
+    }
+
+    private fun decryptGuestsIfNeeded(guests: List<Guest>): List<Guest> {
+        if (guests.isEmpty()) return guests
+        if (!SensitiveFieldCodec.anyOrgConfigured(guests.map { it.firebaseOrgId })) return guests
+        return guests.map { guest ->
+            runCatching { SensitiveFieldCodec.decryptGuestFields(guest) }.getOrDefault(guest)
+        }
+    }
+
+    private fun decryptVolunteersIfNeeded(volunteers: List<Volunteer>): List<Volunteer> {
+        if (volunteers.isEmpty()) return volunteers
+        if (!SensitiveFieldCodec.anyOrgConfigured(volunteers.map { it.firebaseOrgId })) return volunteers
+        return volunteers.map { volunteer ->
+            runCatching { SensitiveFieldCodec.decryptVolunteerFields(volunteer) }.getOrDefault(volunteer)
+        }
+    }
+
+    private fun decryptTransfersIfNeeded(transfers: List<AccountTransfer>): List<AccountTransfer> {
+        if (transfers.isEmpty()) return transfers
+        if (!SensitiveFieldCodec.anyOrgConfigured(transfers.map { it.firebaseOrgId })) return transfers
+        return transfers.map { transfer ->
+            runCatching { SensitiveFieldCodec.decryptTransferFields(transfer) }.getOrDefault(transfer)
+        }
     }
 
 }

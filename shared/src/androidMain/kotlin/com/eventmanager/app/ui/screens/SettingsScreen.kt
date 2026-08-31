@@ -116,6 +116,10 @@ import androidx.fragment.app.FragmentActivity
 import com.eventmanager.app.ui.components.ScannerMatch
 import com.eventmanager.app.ui.components.QRScannerDialog
 import com.eventmanager.app.ui.components.BiometricAdminVerificationDialog
+import com.eventmanager.app.ui.components.BiometricOrgEnrollmentWizard
+import com.eventmanager.app.data.sync.BiometricAdminOrgEnrollment
+import com.eventmanager.app.data.remote.BackendType
+import com.eventmanager.app.data.remote.FirebaseOrgAbbreviation
 import com.eventmanager.app.ui.components.toBiometricAdminProfileLink
 
 /** Full admin settings vs. Billeterie subset (appearance, localization, animations, app info). */
@@ -1514,9 +1518,8 @@ actual fun SettingsScreen(
     var syncInterval by remember { mutableStateOf(settingsManager.getSyncInterval()) }
     var migrationWizard by remember { mutableStateOf<com.eventmanager.app.data.remote.MigrationDirection?>(null) }
     var firebaseConfiguredOrgs by remember { mutableStateOf(settingsManager.getFirebaseConfiguredOrgs()) }
-    var memberUid by remember { mutableStateOf("") }
-    var memberEmail by remember { mutableStateOf("") }
     var firebaseAuthEmail by remember { mutableStateOf(settingsManager.getFirebaseAuthEmail()) }
+    var firebaseSignInFeedback by remember { mutableStateOf<String?>(null) }
     var allowedEmailDomains by remember { mutableStateOf(settingsManager.getAllowedEmailDomains()) }
     val firebaseAuthService = remember {
         com.eventmanager.app.data.remote.createFirebaseAuthService(platformContext)
@@ -1534,6 +1537,7 @@ actual fun SettingsScreen(
                 val err = com.eventmanager.app.data.remote.FirebaseAuthResult.Error(
                     "Firebase Auth unavailable on this build",
                 )
+                firebaseSignInFeedback = err.message
                 uploadStatus = err.message
                 pendingMigrationSignInResult?.invoke(err)
                 pendingMigrationSignInResult = null
@@ -1543,6 +1547,7 @@ actual fun SettingsScreen(
                 is com.eventmanager.app.data.remote.FirebaseAuthResult.Success -> {
                     firebaseAuthEmail = result.email.orEmpty()
                     settingsManager.setFirebaseAuthEmail(result.email.orEmpty())
+                    firebaseSignInFeedback = null
                     val org = settingsManager.getFirebaseOrgId()
                     if (org.isNotBlank() && result.uid.isNotBlank()) {
                         val gateway = com.eventmanager.app.data.remote.createFirestoreGateway(
@@ -1562,6 +1567,7 @@ actual fun SettingsScreen(
                     pendingMigrationSignInResult = null
                 }
                 is com.eventmanager.app.data.remote.FirebaseAuthResult.Error -> {
+                    firebaseSignInFeedback = result.message
                     uploadStatus = result.message
                     pendingMigrationSignInResult?.invoke(result)
                     pendingMigrationSignInResult = null
@@ -1713,6 +1719,7 @@ actual fun SettingsScreen(
                     },
                     onOrgIdCommitted = viewModel::provisionFirebaseOrg,
                     onSignIn = {
+                        firebaseSignInFeedback = null
                         val auth = firebaseAuthService
                         if (auth != null) {
                             firebaseAuthLauncher.launch(auth.getSignInIntent())
@@ -1722,9 +1729,11 @@ actual fun SettingsScreen(
                                     is com.eventmanager.app.data.remote.FirebaseAuthResult.Success -> {
                                         firebaseAuthEmail = result.email.orEmpty()
                                         settingsManager.setFirebaseAuthEmail(result.email.orEmpty())
+                                        firebaseSignInFeedback = null
                                         uploadStatus = "Firebase signed in as ${result.email ?: result.uid}"
                                     }
                                     is com.eventmanager.app.data.remote.FirebaseAuthResult.Error -> {
+                                        firebaseSignInFeedback = result.message
                                         uploadStatus = result.message
                                     }
                                 }
@@ -1736,6 +1745,7 @@ actual fun SettingsScreen(
                             com.eventmanager.app.data.remote.createFirebaseAuthService(platformContext).signOut()
                             firebaseAuthEmail = ""
                             settingsManager.setFirebaseAuthEmail("")
+                            firebaseSignInFeedback = null
                         }
                     },
                     onMigrateToSheets = {
@@ -1747,10 +1757,6 @@ actual fun SettingsScreen(
                     platformContext = platformContext,
                     onMirrorSettingsChanged = { viewModel.onSheetsMirrorSettingsChanged() },
                     settingsManager = settingsManager,
-                    memberUid = memberUid,
-                    memberEmail = memberEmail,
-                    onMemberUidChange = { memberUid = it },
-                    onMemberEmailChange = { memberEmail = it },
                     projectId = settingsManager.getFirebaseProjectId(),
                     apiKey = settingsManager.getFirebaseApiKey(),
                     applicationId = settingsManager.getFirebaseApplicationId(),
@@ -1766,7 +1772,7 @@ actual fun SettingsScreen(
                         allowedEmailDomains = domains
                         settingsManager.setAllowedEmailDomains(domains)
                         coroutineScope.launch {
-                            val org = settingsManager.getFirebaseOrgId().trim()
+                            val org = settingsManager.resolveWritableFirebaseOrgId()
                             if (org.isBlank()) return@launch
                             val gateway = com.eventmanager.app.data.remote.createFirestoreGateway(
                                 platformContext,
@@ -1781,22 +1787,7 @@ actual fun SettingsScreen(
                             }.onFailure { uploadStatus = it.message }
                         }
                     },
-                    onAssignMemberRole = { role ->
-                        coroutineScope.launch {
-                            val gateway = com.eventmanager.app.data.remote.createFirestoreGateway(
-                                platformContext,
-                                settingsManager,
-                            )
-                            com.eventmanager.app.data.remote.MemberRoleAdmin.upsertMember(
-                                gateway = gateway,
-                                orgId = settingsManager.getFirebaseOrgId(),
-                                uid = memberUid.trim(),
-                                role = role,
-                                email = memberEmail.trim().ifBlank { null },
-                                allowedEmailDomains = settingsManager.getAllowedEmailDomains(),
-                            )
-                        }
-                    },
+                    signInFeedback = firebaseSignInFeedback,
                 )
                 Spacer(modifier = Modifier.height(16.dp))
             }
@@ -3921,7 +3912,16 @@ actual fun SettingsScreen(
             var biometricEnabled by remember { mutableStateOf(settingsManager.isBiometricAdminLoginEnabled()) }
             var showBiometricWarningDialog by remember { mutableStateOf(false) }
             var showBiometricAdminVerifyDialog by remember { mutableStateOf(false) }
+            var showBiometricOrgWizard by remember { mutableStateOf(false) }
             var pendingBiometricEnrollmentMatch by remember { mutableStateOf<ScannerMatch?>(null) }
+            var pendingBiometricEnrollments by remember { mutableStateOf<List<BiometricAdminOrgEnrollment>?>(null) }
+
+            val configuredOrgs = viewModel.getFirebaseConfiguredOrgs()
+            val useMultiOrgBiometricWizard =
+                settingsManager.getBackendType() == BackendType.FIREBASE && configuredOrgs.size > 1
+            val biometricEnrollments = remember(biometricEnabled) {
+                settingsManager.getBiometricEnrollments()
+            }
 
             val biometricAvailable = canAuthenticate == BiometricManager.BIOMETRIC_SUCCESS
             val noneEnrolled = canAuthenticate == BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED
@@ -3962,6 +3962,20 @@ actual fun SettingsScreen(
                 )
             }
 
+            if (biometricEnabled && useMultiOrgBiometricWizard && biometricEnrollments.isNotEmpty()) {
+                biometricEnrollments.forEach { enrollment ->
+                    Text(
+                        text = context.getString(
+                            R.string.biometric_enrollment_org_enrolled,
+                            FirebaseOrgAbbreviation.abbreviate(enrollment.orgId),
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 4.dp, top = 4.dp),
+                    )
+                }
+            }
+
             // Warning dialog
             if (showBiometricWarningDialog) {
                 AlertDialog(
@@ -3973,7 +3987,11 @@ actual fun SettingsScreen(
                         Button(
                             onClick = {
                                 showBiometricWarningDialog = false
-                                showBiometricAdminVerifyDialog = true
+                                if (useMultiOrgBiometricWizard) {
+                                    showBiometricOrgWizard = true
+                                } else {
+                                    showBiometricAdminVerifyDialog = true
+                                }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                         ) {
@@ -3985,6 +4003,19 @@ actual fun SettingsScreen(
                             Text(context.getString(R.string.biometric_warning_cancel))
                         }
                     }
+                )
+            }
+
+            if (showBiometricOrgWizard) {
+                BiometricOrgEnrollmentWizard(
+                    platformContext = remember(context) { com.eventmanager.app.platform.createPlatformContext(context) },
+                    viewModel = viewModel,
+                    configuredOrgs = configuredOrgs,
+                    onCompleted = { enrollments ->
+                        showBiometricOrgWizard = false
+                        pendingBiometricEnrollments = enrollments
+                    },
+                    onDismiss = { showBiometricOrgWizard = false },
                 )
             }
 
@@ -4029,6 +4060,34 @@ actual fun SettingsScreen(
                         }
                     )
                     biometricPrompt.authenticate(promptInfo)
+            }
+
+            LaunchedEffect(pendingBiometricEnrollments) {
+                val enrollments = pendingBiometricEnrollments ?: return@LaunchedEffect
+                pendingBiometricEnrollments = null
+                val fragmentActivity = context as? FragmentActivity ?: return@LaunchedEffect
+                val promptInfo = BiometricPrompt.PromptInfo.Builder()
+                    .setTitle(context.getString(R.string.biometric_enrollment_prompt_title))
+                    .setSubtitle(context.getString(R.string.biometric_enrollment_prompt_subtitle))
+                    .setNegativeButtonText(context.getString(R.string.biometric_warning_cancel))
+                    .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+                    .build()
+                val biometricPrompt = BiometricPrompt(
+                    fragmentActivity,
+                    object : BiometricPrompt.AuthenticationCallback() {
+                        override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                            settingsManager.setBiometricEnrollments(enrollments)
+                            biometricEnabled = true
+                            Toast.makeText(context, context.getString(R.string.biometric_enrollment_success), Toast.LENGTH_LONG).show()
+                        }
+                        override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                            if (errorCode != BiometricPrompt.ERROR_USER_CANCELED && errorCode != BiometricPrompt.ERROR_NEGATIVE_BUTTON) {
+                                Toast.makeText(context, context.getString(R.string.admin_auth_biometric_error, errString), Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                )
+                biometricPrompt.authenticate(promptInfo)
             }
         }
         

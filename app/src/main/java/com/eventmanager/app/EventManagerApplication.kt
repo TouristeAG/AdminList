@@ -4,6 +4,8 @@ import android.app.Application
 import android.util.Log
 import com.eventmanager.app.data.remote.FirebaseBootstrap
 import com.eventmanager.app.data.remote.FirebaseOptionsReader
+import com.eventmanager.app.data.security.SecureCredentialStoreHolder
+import com.eventmanager.app.data.security.createSecureCredentialStore
 import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.platform.createDatabase
 import com.eventmanager.app.platform.createPlatformContext
@@ -14,6 +16,7 @@ class EventManagerApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         val platformContext = createPlatformContext(applicationContext)
+        SecureCredentialStoreHolder.init(createSecureCredentialStore(platformContext))
         runCatching {
             val settings = SettingsManager(platformContext)
             FirebaseBootstrap.ensureInitialized(

@@ -63,6 +63,22 @@ class FirebaseJoinCodecTest {
     }
 
     @Test
+    fun encodeIncludesOAuthSecretForTeamQr() {
+        val payload = FirebaseJoinPayload(
+            orgId = "club-demo",
+            projectId = "my-project",
+            applicationId = "1:123:web:abc",
+            apiKey = "AIzaSyDemoKey",
+            webClientId = "123-abc.apps.googleusercontent.com",
+            webClientSecret = "GOCSPX-demo-secret",
+        )
+        val encoded = FirebaseJoinCodec.encode(payload)
+        assertTrue(encoded.startsWith("noctulist-fb:1:"))
+        val decoded = FirebaseJoinCodec.decode(encoded).getOrThrow()
+        assertEquals("GOCSPX-demo-secret", decoded.webClientSecret)
+    }
+
+    @Test
     fun encodePublicOmitsSecret() {
         val payload = FirebaseJoinPayload(
             orgId = "club-demo",

@@ -15,6 +15,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.eventmanager.app.data.security.LocalAdminAccessResult
+import com.eventmanager.app.data.security.profileBelongsToAdminOrg
 import com.eventmanager.app.platform.PlatformContext
 import com.eventmanager.app.resources.Res
 import com.eventmanager.app.resources.*
@@ -45,7 +46,49 @@ fun BiometricAdminVerificationDialog(
     platformContext: PlatformContext,
     viewModel: EventManagerViewModel,
     onVerified: (ScannerMatch) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    targetOrgId: String? = null,
+    embedded: Boolean = false,
+) {
+    val body: @Composable () -> Unit = {
+        BiometricAdminVerificationBody(
+            platformContext = platformContext,
+            viewModel = viewModel,
+            onVerified = onVerified,
+            onDismiss = onDismiss,
+            targetOrgId = targetOrgId,
+        )
+    }
+    if (embedded) {
+        body()
+    } else {
+        Dialog(
+            onDismissRequest = onDismiss,
+            properties = phoneFractionDialogProperties(),
+        ) {
+            DialogFractionSizer(profile = FractionalDialogProfile.Card) { maxDialogWidth, maxDialogHeight ->
+                Card(
+                    modifier = Modifier
+                        .widthIn(max = maxDialogWidth)
+                        .heightIn(max = maxDialogHeight)
+                        .padding(16.dp),
+                    shape = RoundedCornerShape(24.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                ) {
+                    body()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BiometricAdminVerificationBody(
+    platformContext: PlatformContext,
+    viewModel: EventManagerViewModel,
+    onVerified: (ScannerMatch) -> Unit,
+    onDismiss: () -> Unit,
+    targetOrgId: String? = null,
 ) {
     val verifyScope = rememberCoroutineScope()
     val guests by viewModel.guests.collectAsState()
@@ -54,14 +97,26 @@ fun BiometricAdminVerificationDialog(
     var verificationMessage by remember { mutableStateOf<String?>(null) }
     var verifiedMatch by remember { mutableStateOf<ScannerMatch?>(null) }
 
+    val scopedOrgId = targetOrgId?.trim().orEmpty().ifBlank { viewModel.resolveAdminAuthTargetOrgId() }
+    val strictMultiOrg = viewModel.isFirebaseStrictMultiOrgMode()
+    val scopeByOrg = viewModel.shouldScopeAdminByOrg() && scopedOrgId.isNotBlank()
+
     val notFoundMessage = stringResource(Res.string.admin_auth_not_found)
     val permanentGuests = remember(guests) { guests.filter { !it.isVolunteerBenefit && !it.isTemporaryGuest } }
-    val volunteersByNfcUid = remember(volunteers) {
-        volunteers.filter { it.nfcCardUid.isNotBlank() }
+    val scopedVolunteers = remember(volunteers, scopedOrgId, scopeByOrg, strictMultiOrg) {
+        if (!scopeByOrg) volunteers
+        else volunteers.filter { profileBelongsToAdminOrg(it.firebaseOrgId, scopedOrgId, strictMultiOrg) }
+    }
+    val scopedPermanentGuests = remember(permanentGuests, scopedOrgId, scopeByOrg, strictMultiOrg) {
+        if (!scopeByOrg) permanentGuests
+        else permanentGuests.filter { profileBelongsToAdminOrg(it.firebaseOrgId, scopedOrgId, strictMultiOrg) }
+    }
+    val volunteersByNfcUid = remember(scopedVolunteers) {
+        scopedVolunteers.filter { it.nfcCardUid.isNotBlank() }
             .groupBy { it.nfcCardUid.trim().replace(" ", "").replace(":", "").uppercase() }
     }
-    val guestsByNfcUid = remember(permanentGuests) {
-        permanentGuests.filter { it.nfcCardUid.isNotBlank() }
+    val guestsByNfcUid = remember(scopedPermanentGuests) {
+        scopedPermanentGuests.filter { it.nfcCardUid.isNotBlank() }
             .groupBy { it.nfcCardUid.trim().replace(" ", "").replace(":", "").uppercase() }
     }
 
@@ -79,7 +134,7 @@ fun BiometricAdminVerificationDialog(
 
     fun applyVerifiedAdminFromCandidates(candidates: List<ScannerMatch>) {
         verifyScope.launch {
-            val result = viewModel.verifyLocalAdminAccess(candidates)
+            val result = viewModel.verifyLocalAdminAccess(candidates, scopedOrgId)
             withContext(Dispatchers.Main) { applyAccessResult(result) }
         }
     }
@@ -109,26 +164,13 @@ fun BiometricAdminVerificationDialog(
         onUidRead = ::resolveUidMatch
     )
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = phoneFractionDialogProperties(),
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        DialogFractionSizer(profile = FractionalDialogProfile.Card) { maxDialogWidth, maxDialogHeight ->
-            Card(
-                modifier = Modifier
-                    .widthIn(max = maxDialogWidth)
-                    .heightIn(max = maxDialogHeight)
-                    .padding(16.dp),
-                shape = RoundedCornerShape(24.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-            ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
                 Icon(
                     Icons.Default.Fingerprint,
                     contentDescription = null,
@@ -188,9 +230,6 @@ fun BiometricAdminVerificationDialog(
                 TextButton(onClick = onDismiss) {
                     Text(stringResource(Res.string.biometric_warning_cancel))
                 }
-            }
-        }
-        }
     }
 
     if (showQRScanner) {
@@ -201,8 +240,8 @@ fun BiometricAdminVerificationDialog(
                 showQRScanner = false
                 applyVerifiedAdminFromCandidates(listOf(match))
             },
-            volunteers = volunteers,
-            guests = guests
+            volunteers = scopedVolunteers,
+            guests = scopedPermanentGuests
         )
     }
 }

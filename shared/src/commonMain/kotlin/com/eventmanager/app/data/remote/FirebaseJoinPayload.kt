@@ -34,7 +34,7 @@ data class FirebaseJoinPayload(
             applicationId.isNotBlank() &&
             apiKey.isNotBlank()
 
-    /** Public join QR: project config without OAuth secret. */
+    /** Public join QR: project config without OAuth secret (legacy v2 — cannot sign in on Android). */
     fun toPublicPayload(): FirebaseJoinPublicPayload = FirebaseJoinPublicPayload(
         orgId = orgId,
         projectId = projectId,

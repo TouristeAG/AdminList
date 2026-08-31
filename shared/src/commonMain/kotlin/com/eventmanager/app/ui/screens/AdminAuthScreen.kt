@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import com.eventmanager.app.data.models.Guest
 import com.eventmanager.app.data.models.Volunteer
 import com.eventmanager.app.data.security.LocalAdminAccessResult
+import com.eventmanager.app.data.security.profileBelongsToAdminOrg
 import com.eventmanager.app.data.sync.settingsManagerFor
 import com.eventmanager.app.platform.PlatformContext
 import com.eventmanager.app.platform.PlatformBackHandler
@@ -80,17 +81,32 @@ fun AdminAuthScreen(
     var showNoAdminRecovery by remember { mutableStateOf(false) }
     var userDismissedRecovery by remember { mutableStateOf(false) }
 
-    val hasLocalAdmin = remember(guests, volunteers) {
-        institutionHasLocalAdmin(guests, volunteers)
+    val hasLocalAdmin = remember(guests, volunteers, viewModel) {
+        viewModel.institutionHasLocalAdminForActiveOrg(guests, volunteers)
     }
 
+    val activeOrgId = remember(viewModel) { viewModel.resolveAdminAuthTargetOrgId() }
+    val strictMultiOrg = remember(viewModel) { viewModel.isFirebaseStrictMultiOrgMode() }
+
     val permanentGuests = remember(guests) { guests.filter { !it.isVolunteerBenefit && !it.isTemporaryGuest } }
-    val volunteersByNfcUid = remember(volunteers) {
-        volunteers.filter { it.nfcCardUid.isNotBlank() }
+    val scopedVolunteers = remember(volunteers, activeOrgId, strictMultiOrg, viewModel) {
+        if (!viewModel.shouldScopeAdminByOrg()) volunteers
+        else volunteers.filter {
+            profileBelongsToAdminOrg(it.firebaseOrgId, activeOrgId, strictMultiOrg)
+        }
+    }
+    val scopedPermanentGuests = remember(permanentGuests, activeOrgId, strictMultiOrg, viewModel) {
+        if (!viewModel.shouldScopeAdminByOrg()) permanentGuests
+        else permanentGuests.filter {
+            profileBelongsToAdminOrg(it.firebaseOrgId, activeOrgId, strictMultiOrg)
+        }
+    }
+    val volunteersByNfcUid = remember(scopedVolunteers) {
+        scopedVolunteers.filter { it.nfcCardUid.isNotBlank() }
             .groupBy { it.nfcCardUid.trim().replace(" ", "").replace(":", "").uppercase() }
     }
-    val guestsByNfcUid = remember(permanentGuests) {
-        permanentGuests.filter { it.nfcCardUid.isNotBlank() }
+    val guestsByNfcUid = remember(scopedPermanentGuests) {
+        scopedPermanentGuests.filter { it.nfcCardUid.isNotBlank() }
             .groupBy { it.nfcCardUid.trim().replace(" ", "").replace(":", "").uppercase() }
     }
 
@@ -104,7 +120,7 @@ fun AdminAuthScreen(
 
     fun applyVerifiedAdminFromCandidates(candidates: List<ScannerMatch>) {
         scope.launch {
-            val result = viewModel.verifyLocalAdminAccess(candidates)
+            val result = viewModel.verifyLocalAdminAccess(candidates, activeOrgId)
             withContext(Dispatchers.Main) { applyAccessResult(result) }
         }
     }
@@ -160,7 +176,9 @@ fun AdminAuthScreen(
         }
     }
 
-    val showBiometric = settingsManager.isBiometricAdminLoginEnabled() && biometricAuth.isAvailable
+    val showBiometric = remember(settingsManager, activeOrgId) {
+        settingsManager.isBiometricAdminLoginEnabledForOrg(activeOrgId) && biometricAuth.isAvailable
+    }
     val biometricTitle = stringResource(Res.string.admin_auth_biometric_prompt_title)
     val biometricSubtitle = stringResource(Res.string.admin_auth_biometric_prompt_subtitle)
 
@@ -272,7 +290,7 @@ fun AdminAuthScreen(
                         OutlinedButton(
                             onClick = {
                                 scope.launch {
-                                    val link = settingsManager.getBiometricAdminProfileLink()
+                                    val link = settingsManager.getBiometricEnrollmentForOrg(activeOrgId)
                                     if (link == null) {
                                         authState = AuthState.NotFound()
                                         return@launch
@@ -284,7 +302,7 @@ fun AdminAuthScreen(
                                         authState = AuthState.NotFound()
                                         return@launch
                                     }
-                                    val result = viewModel.verifyLocalAdminAccess(fresh)
+                                    val result = viewModel.verifyLocalAdminAccess(fresh, activeOrgId)
                                     applyAccessResult(result)
                                 }
                             },
@@ -322,6 +340,14 @@ fun AdminAuthScreen(
             venues = venues,
             onCreateAdminGuest = { guest, cb -> viewModel.createAdminGuest(guest, cb) },
             onCreateAdminVolunteer = { volunteer, cb -> viewModel.createAdminVolunteer(volunteer, cb) },
+            onUpdateAdminGuest = { guest, cb ->
+                viewModel.updateGuest(guest)
+                cb(true, guest, null)
+            },
+            onUpdateAdminVolunteer = { volunteer, cb ->
+                viewModel.updateVolunteer(volunteer)
+                cb(true, volunteer, null)
+            },
             onAssignNfcUid = { adminType, entityId, uid ->
                 viewModel.assignNfcUidToAdmin(
                     isGuest = adminType == AdminType.GUEST,

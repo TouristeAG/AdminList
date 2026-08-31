@@ -62,6 +62,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.eventmanager.app.data.remote.BackendType
 import com.eventmanager.app.data.sync.DateFormatUtils
 import com.eventmanager.app.data.sync.settingsManagerFor
 import com.eventmanager.app.platform.LocalPlatformContext
@@ -94,6 +95,7 @@ fun PeopleCounter(
     val priority by viewModel.peopleCounterPriority.collectAsState()
     val hint by viewModel.peopleCounterUiHint.collectAsState()
     val prioritySwitchInteraction = remember { MutableInteractionSource() }
+    val isFirebaseBackend = viewModel.getActiveBackendType() == BackendType.FIREBASE
 
     val peopleCounterTitle = stringResource(Res.string.people_counter_title)
     val peopleCounterHint = stringResource(Res.string.people_counter_hint)
@@ -101,6 +103,9 @@ fun PeopleCounter(
     val peopleCounterNoVenues = stringResource(Res.string.people_counter_no_venues)
     val peopleCounterSheetSynced = stringResource(Res.string.people_counter_sheet_synced)
     val peopleCounterReset = stringResource(Res.string.people_counter_reset)
+    val peopleCounterNoPriorityReadonly = stringResource(Res.string.people_counter_no_priority_readonly)
+    val peopleCounterPriorityFirebaseUnknown =
+        stringResource(Res.string.people_counter_priority_firebase_account_unknown)
 
     LaunchedEffect(hint) {
         if (hint == null) return@LaunchedEffect
@@ -131,6 +136,8 @@ fun PeopleCounter(
     val activeVenues = remember(venues) { venues.filter { it.isActive }.sortedBy { it.name } }
     val selectedVenue = remember(venues, selectedVenueId) { venues.find { it.id == selectedVenueId } }
     val writerId = selectedVenue?.peopleCounterWriterDeviceId?.trim().orEmpty()
+    val writerAccountEmail = selectedVenue?.peopleCounterWriterAccountEmail?.trim().orEmpty()
+    val anotherDeviceHasPriority = writerId.isNotEmpty() && writerId != deviceId
     val canEdit = selectedVenue != null && priority && (writerId.isEmpty() || writerId == deviceId)
 
     LaunchedEffect(venues) {
@@ -388,13 +395,39 @@ fun PeopleCounter(
 
             if (hint != null) {
                 Text(
-                    text = hint!!,
+                    text = peopleCounterHintMessage(hint!!),
                     style = MaterialTheme.typography.bodySmall,
                     color = scheme.error,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 8.dp)
                 )
+            }
+
+            if (anotherDeviceHasPriority) {
+                Text(
+                    text = peopleCounterNoPriorityReadonly,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = scheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = if (isFirebaseBackend && writerAccountEmail.isNotBlank()) 4.dp else 8.dp)
+                )
+                if (isFirebaseBackend) {
+                    Text(
+                        text = if (writerAccountEmail.isNotBlank()) {
+                            stringResource(Res.string.people_counter_priority_firebase_account, writerAccountEmail)
+                        } else {
+                            peopleCounterPriorityFirebaseUnknown
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = scheme.primary,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp)
+                    )
+                }
             }
 
             if (activeVenues.isEmpty()) {
@@ -598,4 +631,13 @@ fun PeopleCounter(
             }
         }
     }
+}
+
+@Composable
+private fun peopleCounterHintMessage(hint: PeopleCounterUiHint): String = when (hint) {
+    PeopleCounterUiHint.NeedSheets -> stringResource(Res.string.people_counter_need_sheets)
+    PeopleCounterUiHint.SelectVenue -> stringResource(Res.string.people_counter_select_venue)
+    PeopleCounterUiHint.AnotherDeviceBlocked -> stringResource(Res.string.people_counter_another_device)
+    PeopleCounterUiHint.NoSheetRow -> stringResource(Res.string.people_counter_no_sheet_row)
+    PeopleCounterUiHint.PriorityLost -> stringResource(Res.string.people_counter_priority_lost)
 }

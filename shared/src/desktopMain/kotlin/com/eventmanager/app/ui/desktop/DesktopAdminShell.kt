@@ -36,6 +36,7 @@ fun DesktopAdminShell(
     onTouchSession: () -> Unit,
     onClearOverlays: () -> Unit,
     viewModel: EventManagerViewModel? = null,
+    onAdminRequireReauth: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     content: @Composable (PaddingValues) -> Unit,
 ) {
@@ -88,6 +89,7 @@ fun DesktopAdminShell(
             },
             alignEnd = !onStart,
             viewModel = viewModel,
+            onAdminRequireReauth = onAdminRequireReauth,
             modifier = Modifier.fillMaxHeight()
         )
     }
@@ -151,6 +153,7 @@ private fun DesktopAdminSideNav(
     onTabSelected: (AdminTab) -> Unit,
     alignEnd: Boolean,
     viewModel: EventManagerViewModel? = null,
+    onAdminRequireReauth: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val railWidth = if (expanded) 220.dp else 72.dp
@@ -214,6 +217,7 @@ private fun DesktopAdminSideNav(
                         FirebaseOrgSwitcherPlacement.AdminSideNavVertical
                     },
                     modifier = Modifier.fillMaxWidth(),
+                    onAdminRequireReauth = onAdminRequireReauth,
                 )
             }
         }

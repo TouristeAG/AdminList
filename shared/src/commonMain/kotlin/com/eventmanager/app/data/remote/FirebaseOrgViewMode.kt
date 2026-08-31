@@ -17,3 +17,16 @@ const val FIREBASE_ORG_ALL_SENTINEL = "__ALL__"
 
 fun isFirebaseOrgAllSentinel(orgId: String): Boolean =
     orgId.trim() == FIREBASE_ORG_ALL_SENTINEL
+
+/** Org id safe for Firestore member/config writes (never the All-orgs sentinel). */
+fun resolveWritableFirebaseOrgId(
+    activeOrgId: String,
+    lastSingleOrgId: String,
+    configuredOrgIds: List<String>,
+): String {
+    val active = activeOrgId.trim()
+    if (active.isNotBlank() && !isFirebaseOrgAllSentinel(active)) return active
+    val last = lastSingleOrgId.trim()
+    if (last.isNotBlank() && !isFirebaseOrgAllSentinel(last)) return last
+    return configuredOrgIds.map { it.trim() }.firstOrNull { it.isNotBlank() && !isFirebaseOrgAllSentinel(it) }.orEmpty()
+}

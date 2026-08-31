@@ -237,6 +237,7 @@ actual fun AppRootContent(
             com.eventmanager.app.data.remote.createFirebaseAuthService(platformContext)
                 as? com.eventmanager.app.data.remote.AndroidFirebaseAuthService
         }
+        var wizardAuthFeedback by remember { mutableStateOf<String?>(null) }
         val wizardAuthLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
             contract = androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
         ) { activityResult ->
@@ -245,10 +246,12 @@ actual fun AppRootContent(
                 when (val result = auth.completeSignInFromIntent(activityResult.data)) {
                     is com.eventmanager.app.data.remote.FirebaseAuthResult.Success -> {
                         wizardAuthEmail = result.email
+                        wizardAuthFeedback = null
                         com.eventmanager.app.data.sync.settingsManagerFor(platformContext)
                             .setFirebaseAuthEmail(result.email.orEmpty())
                     }
-                    is com.eventmanager.app.data.remote.FirebaseAuthResult.Error -> Unit
+                    is com.eventmanager.app.data.remote.FirebaseAuthResult.Error ->
+                        wizardAuthFeedback = result.message
                 }
             }
         }
@@ -261,7 +264,9 @@ actual fun AppRootContent(
             },
             onThemeModeChanged = onThemeModeChanged,
             firebaseAuthEmail = wizardAuthEmail,
+            firebaseSignInFeedback = wizardAuthFeedback,
             onRequestFirebaseSignIn = {
+                wizardAuthFeedback = null
                 wizardFirebaseAuth?.let { wizardAuthLauncher.launch(it.getSignInIntent()) }
             },
         )
@@ -504,6 +509,20 @@ actual fun AppRootContent(
                 host.adminSessionAutoLogout = null
             }
         }
+        LaunchedEffect(adminSurfaceActive) {
+            viewModel.setAdminPanelActive(adminSurfaceActive)
+            if (!adminSurfaceActive || !viewModel.isFirebaseAllOrgsMode()) return@LaunchedEffect
+            val configured = viewModel.getFirebaseConfiguredOrgs()
+            val lastOrg = viewModel.getFirebaseLastSingleOrgId()
+            when {
+                lastOrg.isNotBlank() && configured.any { it.orgId == lastOrg } ->
+                    viewModel.enterSingleOrgMode(lastOrg)
+                configured.size == 1 ->
+                    viewModel.enterSingleOrgMode(configured.first().orgId)
+                configured.size >= 2 ->
+                    showAdminOrgPicker = true
+            }
+        }
         LaunchedEffect(adminSurfaceActive, adminSessionHost) {
             if (!adminSurfaceActive || adminSessionHost == null) return@LaunchedEffect
             val host = adminSessionHost
@@ -608,10 +627,19 @@ actual fun AppRootContent(
                 volunteers = volunteers,
                 guests = guests,
                 isSyncing = isSyncing,
-                onAuthSuccess = { showAdminAuth = false },
-                onBack = {
+                onAuthSuccess = {
+                    viewModel.onAdminAuthSuccess()
                     showAdminAuth = false
-                    showWelcome = true
+                },
+                onBack = {
+                    if (viewModel.isAdminOrgReauthPending()) {
+                        viewModel.cancelAdminOrgSwitchReauth {
+                            showAdminAuth = false
+                        }
+                    } else {
+                        showAdminAuth = false
+                        showWelcome = true
+                    }
                 }
             )
         } else {
@@ -1235,6 +1263,7 @@ if (pageAnimationsEnabled) {
                             screenState == "tab:0" -> key("dashboard") {
                                 DashboardScreenWithViewModel(
                                     viewModel = viewModel,
+                                    onAdminRequireReauth = { showAdminAuth = true },
                                     onLogout = {
                                         showWelcome = true
                                         showAdminAuth = false
@@ -1320,6 +1349,7 @@ if (pageAnimationsEnabled) {
                         selectedTab == 0 -> key("dashboard") {
                             DashboardScreenWithViewModel(
                                 viewModel = viewModel,
+                                onAdminRequireReauth = { showAdminAuth = true },
                                 onLogout = {
                                     showWelcome = true
                                     showAdminAuth = false
@@ -1715,7 +1745,8 @@ if (pageAnimationsEnabled) {
                 }
             }
         }
-            }
+                } // end when else
+            } // end when
 
             if (showAdminOrgPicker) {
                 com.eventmanager.app.ui.components.AdminOrgPickerDialog(
@@ -1732,9 +1763,8 @@ if (pageAnimationsEnabled) {
                     onDismiss = { showAdminOrgPicker = false },
                 )
             }
-        }
-        }
-    }
+        } // end database ready
+    } // end setup wizard else
 }
 
 // Sync Status Widget
@@ -1806,6 +1836,7 @@ fun DashboardScreenWithViewModel(
     viewModel: EventManagerViewModel,
     onLogout: () -> Unit = {},
     onOpenPosReport: () -> Unit = {},
+    onAdminRequireReauth: (() -> Unit)? = null,
 ) {
     val guests by viewModel.guests.collectAsState()
     val volunteers by viewModel.volunteers.collectAsState()
@@ -1833,6 +1864,7 @@ fun DashboardScreenWithViewModel(
         viewModel = viewModel,
         onLogout = onLogout,
         onOpenPosReport = onOpenPosReport,
+        onAdminRequireReauth = onAdminRequireReauth,
     )
 }
 
@@ -1849,6 +1881,7 @@ fun DashboardScreen(
     viewModel: com.eventmanager.app.ui.viewmodel.EventManagerViewModel? = null,
     onLogout: () -> Unit = {},
     onOpenPosReport: () -> Unit = {},
+    onAdminRequireReauth: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val platformContext = remember(context) { createPlatformContext(context) }
@@ -1895,6 +1928,7 @@ fun DashboardScreen(
                     FirebaseOrgSwitcher(
                         viewModel = viewModel,
                         placement = FirebaseOrgSwitcherPlacement.DashboardClockRow,
+                        onAdminRequireReauth = onAdminRequireReauth,
                     )
                 },
             )

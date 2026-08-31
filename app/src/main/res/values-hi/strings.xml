@@ -31,6 +31,7 @@
     <string name="sheet_epoch_calc_hint_ms">यहां epoch ms टाइप करें (उदा. 1776711088094)</string>
     <string name="sheet_epoch_calc_hint_datetime">दिनांक/समय सेल चुनें या टाइप करें</string>
     <string name="temp_guest_list_sheet_label">अस्थायी अतिथि सूची शीट</string>
+    <string name="settings_sheet_label">सेटिंग शीट</string>
     <string name="shift_types_sheet_label">शिफ्ट प्रकार शीट</string>
     <string name="venues_sheet_label">स्थान पत्रक</string>
     <string name="admin_label">व्यवस्थापक</string>
@@ -183,6 +184,8 @@
     <string name="system_is_in_light_mode">सिस्टम लाइट मोड में है</string>
     <string name="people_counter_visibility_title">पीपल काउंटर दिखाएँ</string>
     <string name="people_counter_visibility_description">मुख पृष्ठ पर लोग काउंटर दिखाएँ या छिपाएँ</string>
+    <string name="billeterie_clock_visibility_title">घड़ी विजेट दिखाएँ</string>
+    <string name="billeterie_clock_visibility_description">टिकटिंग होम पर दिनांक और समय कार्ड दिखाएँ (एडमिन डैशबोर्ड जैसा)</string>
     <string name="statistics_visibility_title">सांख्यिकी ग्राफ़ दिखाएँ</string>
     <string name="statistics_visibility_description">मुख पृष्ठ पर सांख्यिकी ग्राफ़ अनुभाग दिखाएँ या छिपाएँ</string>
     <string name="scroll_behavior_title">प्रबंधक पृष्ठों के लिए स्क्रॉल व्यवहार</string>
@@ -320,6 +323,11 @@
     <string name="venues_title">स्थान</string>
     <string name="add_venue">स्थान जोड़ें</string>
     <string name="sales_items_sheet_label">बिक्री आइटम शीट</string>
+    <string name="purchase_credit_buffer_label">खरीद क्रेडिट बफर</string>
+    <string name="purchase_credit_buffer_description">क्रेडिट में समाहित अधिकतम कमी (जैसे 5)। खाता −बफर तक जा सकता है। 0 = कोई ओवरड्राफ्ट नहीं। उपकरणों पर सिंक होता है।</string>
+    <string name="pos_negative_balance_title">खाता अब नकारात्मक है</string>
+    <string name="pos_negative_balance_message">खरीद क्रेडिट बफर उपयोग हुआ। खाते का शेष अब %1$s है।</string>
+    <string name="amount_label">राशि</string>
     <string name="transfers_sheet_label">स्थानांतरण पत्रक</string>
     <string name="account_amount_label">खाता राशि</string>
     <string name="currency_setting_label">मुद्रा</string>

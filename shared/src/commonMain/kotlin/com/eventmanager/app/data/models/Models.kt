@@ -38,6 +38,7 @@ data class Guest(
     val temporaryEventDate: Long? = null,
     val temporaryContactPhone: String = "",
     val nfcCardUid: String = "",
+    val nfcCardUidHash: String = "",
     val isAdmin: Boolean = false,
     val firebaseOrgId: String = "",
 )
@@ -78,6 +79,7 @@ data class Volunteer(
     val lastShiftDate: Long? = null, // Timestamp of last shift
     val lastModified: Long = System.currentTimeMillis(),
     val nfcCardUid: String = "",
+    val nfcCardUidHash: String = "",
     val isAdmin: Boolean = false,
     val firebaseOrgId: String = "",
 )
@@ -256,6 +258,8 @@ data class VenueEntity(
     val peopleCounterCount: Int = 0,
     /** Google Sheets column F — header "Priority Device ID"; device ID that may write counter updates. */
     val peopleCounterWriterDeviceId: String = "",
+    /** Firebase only: Google account email of the device that holds people-counter priority. */
+    val peopleCounterWriterAccountEmail: String = "",
     /** Google Sheets column G — header "Last Modified (counter)"; millis when counter cells were last written. */
     val peopleCounterLastModified: Long = 0L,
     /** Google Sheets column H — header "Announcement Title". */

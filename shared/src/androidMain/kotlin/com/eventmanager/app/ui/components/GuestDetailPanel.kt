@@ -185,6 +185,19 @@ actual fun GuestDetailPanel(
                             )
                         }
                     }
+
+                    if (!readOnly && viewModel != null && !guest.isTemporaryGuest && !guest.isVolunteerBenefit) {
+                        item {
+                            LocalAdminRightsSection(
+                                viewModel = viewModel,
+                                isAdmin = guest.isAdmin,
+                                displayName = guest.name,
+                                kind = com.eventmanager.app.data.security.LocalAdminTargetKind.GUEST,
+                                targetId = guest.nanoId,
+                                guest = guest,
+                            )
+                        }
+                    }
                     
                     // Action Buttons Section
                     if (!readOnly) {

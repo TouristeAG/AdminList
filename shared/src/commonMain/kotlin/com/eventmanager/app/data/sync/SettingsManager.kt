@@ -1,5 +1,9 @@
 package com.eventmanager.app.data.sync
 
+import com.eventmanager.app.data.security.SecureCredentialKeys
+import com.eventmanager.app.data.security.SecureCredentialStoreHolder
+import com.eventmanager.app.data.security.crypto.DefaultOrgCryptoService
+import com.eventmanager.app.data.security.crypto.OrgCryptoRegistry
 import com.eventmanager.app.data.utils.AppIconStyles
 import com.eventmanager.app.data.utils.NanoIdGenerator
 import com.eventmanager.app.platform.AppBuildInfo
@@ -13,7 +17,46 @@ import com.eventmanager.app.ui.components.BackgroundAnimationStyle
  */
 class SettingsManager(private val storage: AppStorage) {
 
-    constructor(platformContext: PlatformContext) : this(createAppStorage(platformContext))
+    constructor(platformContext: PlatformContext) : this(createAppStorage(platformContext)) {
+        ensureSecureCredentialsMigrated()
+        installOrgCryptoFromSecureStore()
+    }
+
+    private fun ensureSecureCredentialsMigrated() {
+        SecureCredentialStoreHolder.migratePlaintextFrom(
+            storage,
+            listOf(
+                KEY_FIREBASE_API_KEY to SecureCredentialKeys.FIREBASE_API_KEY,
+                KEY_FIREBASE_WEB_CLIENT_SECRET to SecureCredentialKeys.FIREBASE_WEB_CLIENT_SECRET,
+                KEY_WALLET_PASS_CERT_PASSWORD to SecureCredentialKeys.WALLET_PASS_CERT_PASSWORD,
+                KEY_EMAIL_GMAIL_AUTH_TOKEN to SecureCredentialKeys.GMAIL_AUTH_TOKEN,
+            ),
+        )
+    }
+
+    private fun installOrgCryptoFromSecureStore() {
+        OrgCryptoRegistry.install(
+            DefaultOrgCryptoService { orgId ->
+                SecureCredentialStoreHolder.get()
+                    ?.getSecret(SecureCredentialKeys.ORG_CRYPTO_PASSPHRASE_PREFIX + orgId.trim())
+            },
+        )
+    }
+
+    fun getOrgCryptoPassphrase(orgId: String): String =
+        SecureCredentialStoreHolder.get()
+            ?.getSecret(SecureCredentialKeys.ORG_CRYPTO_PASSPHRASE_PREFIX + orgId.trim())
+            .orEmpty()
+
+    fun setOrgCryptoPassphrase(orgId: String, passphrase: String) {
+        val trimmed = orgId.trim()
+        if (trimmed.isBlank()) return
+        SecureCredentialStoreHolder.get()?.putSecret(
+            SecureCredentialKeys.ORG_CRYPTO_PASSPHRASE_PREFIX + trimmed,
+            passphrase,
+        )
+        OrgCryptoRegistry.invalidateCachedKey(trimmed)
+    }
     
     companion object {
         private const val KEY_SPREADSHEET_ID = "spreadsheet_id"
@@ -31,6 +74,7 @@ class SettingsManager(private val storage: AppStorage) {
         private const val KEY_CURRENCY_CODE = "currency_code"
         private const val KEY_PURCHASE_CREDIT_BUFFER = "purchase_credit_buffer"
         private const val KEY_INSTITUTION_SETTING_LM_PREFIX = "institution_setting_lm_"
+        private const val KEY_INSTITUTION_SETTING_PUSHED_LM_PREFIX = "institution_setting_pushed_lm_"
         private const val KEY_SYNC_ENABLED = "sync_enabled"
         private const val KEY_AUTO_SYNC = "auto_sync"
         private const val KEY_SYNC_INTERVAL = "sync_interval"
@@ -89,6 +133,7 @@ class SettingsManager(private val storage: AppStorage) {
         private const val KEY_SETUP_WIZARD_COMPLETED = "setup_wizard_completed"
         private const val KEY_BIOMETRIC_ADMIN_LOGIN = "biometric_admin_login"
         private const val KEY_BIOMETRIC_ADMIN_PROFILE_LINK = "biometric_admin_profile_link"
+        private const val KEY_BIOMETRIC_ADMIN_ENROLLMENTS = "biometric_admin_enrollments"
 
         // External Bluetooth NFC reader (ACR1255U-J1) pairing
         private const val KEY_EXTERNAL_BLE_READER_MAC = "external_ble_reader_mac"
@@ -150,6 +195,7 @@ class SettingsManager(private val storage: AppStorage) {
         private const val KEY_SHEETS_MIRROR_SPREADSHEET_ID = "sheets_mirror_spreadsheet_id"
         private const val KEY_SHEETS_MIRROR_LAST_EXPORT_AT = "sheets_mirror_last_export_at"
         private const val KEY_SHEETS_MIRROR_INTERVAL_MINUTES = "sheets_mirror_interval_minutes"
+        private const val KEY_LOCAL_CRYPTO_MIGRATION_PREFIX = "local_crypto_migration_done_"
         
         // Page Scroll Behavior Configuration Constants
         const val HEADER_PINNED = "header_pinned"
@@ -231,7 +277,9 @@ class SettingsManager(private val storage: AppStorage) {
     fun getFirebaseProjectId(): String = storage.getString(KEY_FIREBASE_PROJECT_ID, "") ?: ""
     fun setFirebaseProjectId(id: String) = storage.putString(KEY_FIREBASE_PROJECT_ID, id)
 
-    fun getFirebaseApiKey(): String = storage.getString(KEY_FIREBASE_API_KEY, "") ?: ""
+    fun getFirebaseApiKey(): String =
+        SecureCredentialStoreHolder.get()?.getSecret(SecureCredentialKeys.FIREBASE_API_KEY)
+            ?: storage.getString(KEY_FIREBASE_API_KEY, "") ?: ""
     fun setFirebaseApiKey(value: String) {
         var s = value.trim().replace("\uFEFF", "")
         if (s.contains("apiKey") && (s.contains('{') || s.contains(':'))) {
@@ -240,7 +288,9 @@ class SettingsManager(private val storage: AppStorage) {
         }
         Regex("""AIza[0-9A-Za-z_-]{30,}""").find(s)?.value?.let { s = it }
         s = s.trim().trim('"', '\'', ',', '}', ']', ' ').replace(Regex("\\s+"), "")
-        storage.putString(KEY_FIREBASE_API_KEY, s)
+        SecureCredentialStoreHolder.get()?.putSecret(SecureCredentialKeys.FIREBASE_API_KEY, s)
+            ?: storage.putString(KEY_FIREBASE_API_KEY, s)
+        storage.remove(KEY_FIREBASE_API_KEY)
     }
 
     fun getFirebaseApplicationId(): String = storage.getString(KEY_FIREBASE_APPLICATION_ID, "") ?: ""
@@ -257,8 +307,14 @@ class SettingsManager(private val storage: AppStorage) {
     fun setFirebaseWebClientId(value: String) = storage.putString(KEY_FIREBASE_WEB_CLIENT_ID, value)
 
     /** OAuth client secret for institution Web client (Desktop + Android browser OAuth code exchange). */
-    fun getFirebaseWebClientSecret(): String = storage.getString(KEY_FIREBASE_WEB_CLIENT_SECRET, "") ?: ""
-    fun setFirebaseWebClientSecret(value: String) = storage.putString(KEY_FIREBASE_WEB_CLIENT_SECRET, value)
+    fun getFirebaseWebClientSecret(): String =
+        SecureCredentialStoreHolder.get()?.getSecret(SecureCredentialKeys.FIREBASE_WEB_CLIENT_SECRET)
+            ?: storage.getString(KEY_FIREBASE_WEB_CLIENT_SECRET, "") ?: ""
+    fun setFirebaseWebClientSecret(value: String) {
+        SecureCredentialStoreHolder.get()?.putSecret(SecureCredentialKeys.FIREBASE_WEB_CLIENT_SECRET, value)
+            ?: storage.putString(KEY_FIREBASE_WEB_CLIENT_SECRET, value)
+        storage.remove(KEY_FIREBASE_WEB_CLIENT_SECRET)
+    }
 
     fun getFirebaseOrgId(): String = storage.getString(KEY_FIREBASE_ORG_ID, "") ?: ""
     fun setFirebaseOrgId(id: String) = storage.putString(KEY_FIREBASE_ORG_ID, id)
@@ -277,6 +333,13 @@ class SettingsManager(private val storage: AppStorage) {
 
     fun setFirebaseLastSingleOrgId(id: String) =
         storage.putString(KEY_FIREBASE_LAST_SINGLE_ORG_ID, id.trim())
+
+    fun resolveWritableFirebaseOrgId(): String =
+        com.eventmanager.app.data.remote.resolveWritableFirebaseOrgId(
+            activeOrgId = getFirebaseOrgId(),
+            lastSingleOrgId = getFirebaseLastSingleOrgId(),
+            configuredOrgIds = getFirebaseConfiguredOrgs().map { it.orgId },
+        )
 
     fun getFirebaseConfiguredOrgs(): List<com.eventmanager.app.data.remote.FirebaseConfiguredOrg> {
         val stored = storage.getString(KEY_FIREBASE_CONFIGURED_ORGS, "").orEmpty()
@@ -381,6 +444,13 @@ class SettingsManager(private val storage: AppStorage) {
     }
 
     /** 0 = manual only; otherwise minutes between automatic one-way mirror exports. */
+    fun isLocalCryptoMigrationDone(orgId: String): Boolean =
+        storage.getBoolean(KEY_LOCAL_CRYPTO_MIGRATION_PREFIX + orgId.trim(), false)
+
+    fun markLocalCryptoMigrationDone(orgId: String) {
+        storage.putBoolean(KEY_LOCAL_CRYPTO_MIGRATION_PREFIX + orgId.trim(), true)
+    }
+
     fun getSheetsMirrorIntervalMinutes(): Int = storage.getInt(KEY_SHEETS_MIRROR_INTERVAL_MINUTES, 0)
     fun setSheetsMirrorIntervalMinutes(minutes: Int) {
         storage.putInt(KEY_SHEETS_MIRROR_INTERVAL_MINUTES, minutes.coerceAtLeast(0))
@@ -407,12 +477,8 @@ class SettingsManager(private val storage: AppStorage) {
                 ?: getFirebaseProjectId().takeIf { it.isNotBlank() },
             firebaseApplicationId = rows[InstitutionSettingsKeys.FIREBASE_APPLICATION_ID]?.takeIf { it.isNotBlank() }
                 ?: getFirebaseApplicationId().takeIf { it.isNotBlank() },
-            firebaseApiKey = rows[InstitutionSettingsKeys.FIREBASE_API_KEY]?.takeIf { it.isNotBlank() }
-                ?: getFirebaseApiKey().takeIf { it.isNotBlank() },
             firebaseWebClientId = rows[InstitutionSettingsKeys.FIREBASE_WEB_CLIENT_ID]?.takeIf { it.isNotBlank() }
                 ?: getFirebaseWebClientId().takeIf { it.isNotBlank() },
-            firebaseWebClientSecret = rows[InstitutionSettingsKeys.FIREBASE_WEB_CLIENT_SECRET]?.takeIf { it.isNotBlank() }
-                ?: getFirebaseWebClientSecret().takeIf { it.isNotBlank() },
         )
     }
 
@@ -444,17 +510,9 @@ class SettingsManager(private val storage: AppStorage) {
             applyInstitutionSettingFromRemote(InstitutionSettingsKeys.FIREBASE_APPLICATION_ID, it, now)
             setFirebaseApplicationId(it)
         }
-        announcement.firebaseApiKey?.takeIf { it.isNotBlank() }?.let {
-            applyInstitutionSettingFromRemote(InstitutionSettingsKeys.FIREBASE_API_KEY, it, now)
-            setFirebaseApiKey(it)
-        }
         announcement.firebaseWebClientId?.takeIf { it.isNotBlank() }?.let {
             applyInstitutionSettingFromRemote(InstitutionSettingsKeys.FIREBASE_WEB_CLIENT_ID, it, now)
             setFirebaseWebClientId(it)
-        }
-        announcement.firebaseWebClientSecret?.takeIf { it.isNotBlank() }?.let {
-            applyInstitutionSettingFromRemote(InstitutionSettingsKeys.FIREBASE_WEB_CLIENT_SECRET, it, now)
-            setFirebaseWebClientSecret(it)
         }
         setBackendType(announcement.backendType)
     }
@@ -469,6 +527,9 @@ class SettingsManager(private val storage: AppStorage) {
         if (payload.webClientSecret.isNotBlank()) {
             setFirebaseWebClientSecret(payload.webClientSecret.trim())
         }
+        if (payload.bootstrapCode.isNotBlank()) {
+            setFirebaseBootstrapCode(payload.bootstrapCode.trim())
+        }
     }
 
     /**
@@ -481,9 +542,7 @@ class SettingsManager(private val storage: AppStorage) {
         announcement.firebaseOrgId?.takeIf { it.isNotBlank() }?.let { setFirebaseOrgId(it) }
         announcement.firebaseProjectId?.takeIf { it.isNotBlank() }?.let { setFirebaseProjectId(it) }
         announcement.firebaseApplicationId?.takeIf { it.isNotBlank() }?.let { setFirebaseApplicationId(it) }
-        announcement.firebaseApiKey?.takeIf { it.isNotBlank() }?.let { setFirebaseApiKey(it) }
         announcement.firebaseWebClientId?.takeIf { it.isNotBlank() }?.let { setFirebaseWebClientId(it) }
-        announcement.firebaseWebClientSecret?.takeIf { it.isNotBlank() }?.let { setFirebaseWebClientSecret(it) }
     }
 
     fun buildFirebaseJoinPayloadOrNull(): com.eventmanager.app.data.remote.FirebaseJoinPayload? {
@@ -663,6 +722,26 @@ class SettingsManager(private val storage: AppStorage) {
         }
     }
 
+    fun getInstitutionSettingRowsPendingRemotePush(): List<InstitutionSettingRow> {
+        return getInstitutionSettingRows().filter { row ->
+            row.lastModified != getPushedInstitutionSettingLastModified(row.key)
+        }
+    }
+
+    fun markInstitutionSettingRowPushed(row: InstitutionSettingRow) {
+        storage.putLong(KEY_INSTITUTION_SETTING_PUSHED_LM_PREFIX + row.key, row.lastModified)
+    }
+
+    fun markAllInstitutionSettingsPendingRemotePush() {
+        InstitutionSettingsKeys.ALL.forEach { key ->
+            storage.putLong(KEY_INSTITUTION_SETTING_PUSHED_LM_PREFIX + key, -1L)
+        }
+    }
+
+    private fun getPushedInstitutionSettingLastModified(key: String): Long {
+        return storage.getLong(KEY_INSTITUTION_SETTING_PUSHED_LM_PREFIX + key, 0L)
+    }
+
     /**
      * Apply a remote institution setting and its last-modified timestamp
      * without bumping the local timestamp to "now".
@@ -670,6 +749,7 @@ class SettingsManager(private val storage: AppStorage) {
     fun applyInstitutionSettingFromRemote(key: String, value: String, lastModified: Long) {
         writeInstitutionSettingValue(key, value)
         setInstitutionSettingLastModified(key, lastModified)
+        storage.putLong(KEY_INSTITUTION_SETTING_PUSHED_LM_PREFIX + key, lastModified)
     }
 
     /**
@@ -830,17 +910,14 @@ class SettingsManager(private val storage: AppStorage) {
                 storage.putString("inst_val_$key", value)
                 if (value.isNotBlank()) setFirebaseApplicationId(value)
             }
-            InstitutionSettingsKeys.FIREBASE_API_KEY -> {
-                storage.putString("inst_val_$key", value)
-                if (value.isNotBlank()) setFirebaseApiKey(value)
-            }
             InstitutionSettingsKeys.FIREBASE_WEB_CLIENT_ID -> {
                 storage.putString("inst_val_$key", value)
                 if (value.isNotBlank()) setFirebaseWebClientId(value)
             }
-            InstitutionSettingsKeys.FIREBASE_WEB_CLIENT_SECRET -> {
-                storage.putString("inst_val_$key", value)
-                if (value.isNotBlank()) setFirebaseWebClientSecret(value)
+            InstitutionSettingsKeys.FIREBASE_API_KEY,
+            InstitutionSettingsKeys.FIREBASE_WEB_CLIENT_SECRET,
+            -> {
+                // Secrets are device-local only — never apply from remote institution settings.
             }
             InstitutionSettingsKeys.SHEETS_MIRROR_ENABLED ->
                 storage.putBoolean(KEY_SHEETS_MIRROR_ENABLED, value.trim().equals("true", ignoreCase = true))
@@ -1495,12 +1572,14 @@ class SettingsManager(private val storage: AppStorage) {
         storage.putBoolean(KEY_EMAIL_INCLUDE_DIGITAL_WALLET_PASS, enabled)
     }
 
-    fun getWalletPassCertificatePassword(): String {
-        return storage.getString(KEY_WALLET_PASS_CERT_PASSWORD, "") ?: ""
-    }
+    fun getWalletPassCertificatePassword(): String =
+        SecureCredentialStoreHolder.get()?.getSecret(SecureCredentialKeys.WALLET_PASS_CERT_PASSWORD)
+            ?: storage.getString(KEY_WALLET_PASS_CERT_PASSWORD, "") ?: ""
 
     fun saveWalletPassCertificatePassword(password: String) {
-        storage.putString(KEY_WALLET_PASS_CERT_PASSWORD, password)
+        SecureCredentialStoreHolder.get()?.putSecret(SecureCredentialKeys.WALLET_PASS_CERT_PASSWORD, password)
+            ?: storage.putString(KEY_WALLET_PASS_CERT_PASSWORD, password)
+        storage.remove(KEY_WALLET_PASS_CERT_PASSWORD)
     }
 
     fun getWalletPassTypeIdentifier(): String {
@@ -1544,16 +1623,19 @@ class SettingsManager(private val storage: AppStorage) {
         storage.putString(KEY_EMAIL_GMAIL_ACCOUNT, account)
     }
     
-    fun getGmailAuthToken(): String {
-        return storage.getString(KEY_EMAIL_GMAIL_AUTH_TOKEN, "") ?: ""
-    }
-    
+    fun getGmailAuthToken(): String =
+        SecureCredentialStoreHolder.get()?.getSecret(SecureCredentialKeys.GMAIL_AUTH_TOKEN)
+            ?: storage.getString(KEY_EMAIL_GMAIL_AUTH_TOKEN, "") ?: ""
+
     fun saveGmailAuthToken(token: String) {
-        storage.putString(KEY_EMAIL_GMAIL_AUTH_TOKEN, token)
+        SecureCredentialStoreHolder.get()?.putSecret(SecureCredentialKeys.GMAIL_AUTH_TOKEN, token)
+            ?: storage.putString(KEY_EMAIL_GMAIL_AUTH_TOKEN, token)
+        storage.remove(KEY_EMAIL_GMAIL_AUTH_TOKEN)
     }
     
     fun clearGmailAuth() {
         storage.remove(KEY_EMAIL_GMAIL_ACCOUNT)
+        SecureCredentialStoreHolder.get()?.removeSecret(SecureCredentialKeys.GMAIL_AUTH_TOKEN)
         storage.remove(KEY_EMAIL_GMAIL_AUTH_TOKEN)
     }
 
@@ -1629,7 +1711,40 @@ class SettingsManager(private val storage: AppStorage) {
     // Biometric Admin Login Configuration
     fun isBiometricAdminLoginEnabled(): Boolean {
         if (!storage.getBoolean(KEY_BIOMETRIC_ADMIN_LOGIN, false)) return false
-        return getBiometricAdminProfileLink() != null
+        return if (getBackendType() == com.eventmanager.app.data.remote.BackendType.FIREBASE) {
+            getBiometricEnrollments().isNotEmpty() || getBiometricAdminProfileLink() != null
+        } else {
+            getBiometricAdminProfileLink() != null
+        }
+    }
+
+    fun isBiometricAdminLoginEnabledForOrg(orgId: String): Boolean {
+        if (!storage.getBoolean(KEY_BIOMETRIC_ADMIN_LOGIN, false)) return false
+        return if (getBackendType() == com.eventmanager.app.data.remote.BackendType.FIREBASE) {
+            getBiometricEnrollmentForOrg(orgId) != null
+        } else {
+            getBiometricAdminProfileLink() != null
+        }
+    }
+
+    fun getBiometricEnrollments(): List<BiometricAdminOrgEnrollment> {
+        migrateLegacyBiometricEnrollmentIfNeeded()
+        return BiometricAdminOrgEnrollment.decodeList(
+            storage.getString(KEY_BIOMETRIC_ADMIN_ENROLLMENTS, "")
+        )
+    }
+
+    fun getBiometricEnrollmentForOrg(orgId: String): BiometricAdminProfileLink? {
+        val trimmed = orgId.trim()
+        if (trimmed.isBlank()) return null
+        if (getBackendType() != com.eventmanager.app.data.remote.BackendType.FIREBASE) {
+            return getBiometricAdminProfileLink()
+        }
+        getBiometricEnrollments().firstOrNull { it.orgId == trimmed }?.link?.let { return it }
+        if (getFirebaseConfiguredOrgs().size <= 1) {
+            return getBiometricEnrollments().firstOrNull()?.link ?: getBiometricAdminProfileLink()
+        }
+        return getBiometricAdminProfileLink()
     }
 
     fun getBiometricAdminProfileLink(): BiometricAdminProfileLink? {
@@ -1641,12 +1756,68 @@ class SettingsManager(private val storage: AppStorage) {
         storage.putBoolean(KEY_BIOMETRIC_ADMIN_LOGIN, enabled)
         if (!enabled) {
             storage.remove(KEY_BIOMETRIC_ADMIN_PROFILE_LINK)
+            storage.remove(KEY_BIOMETRIC_ADMIN_ENROLLMENTS)
+        }
+    }
+
+    fun setBiometricEnrollment(orgId: String, link: BiometricAdminProfileLink) {
+        val trimmed = orgId.trim()
+        require(trimmed.isNotBlank()) { "Org ID required for biometric enrollment" }
+        val updated = getBiometricEnrollments()
+            .filter { it.orgId != trimmed } +
+            BiometricAdminOrgEnrollment(trimmed, link)
+        storage.putString(KEY_BIOMETRIC_ADMIN_ENROLLMENTS, BiometricAdminOrgEnrollment.encodeList(updated))
+        storage.putBoolean(KEY_BIOMETRIC_ADMIN_LOGIN, true)
+        storage.remove(KEY_BIOMETRIC_ADMIN_PROFILE_LINK)
+    }
+
+    fun setBiometricEnrollments(enrollments: List<BiometricAdminOrgEnrollment>) {
+        storage.putString(KEY_BIOMETRIC_ADMIN_ENROLLMENTS, BiometricAdminOrgEnrollment.encodeList(enrollments))
+        storage.putBoolean(KEY_BIOMETRIC_ADMIN_LOGIN, enrollments.isNotEmpty())
+        if (enrollments.isNotEmpty()) {
+            storage.remove(KEY_BIOMETRIC_ADMIN_PROFILE_LINK)
+        }
+    }
+
+    fun removeBiometricEnrollment(orgId: String) {
+        val trimmed = orgId.trim()
+        val updated = getBiometricEnrollments().filter { it.orgId != trimmed }
+        if (updated.isEmpty()) {
+            setBiometricAdminLoginEnabled(false)
+        } else {
+            storage.putString(KEY_BIOMETRIC_ADMIN_ENROLLMENTS, BiometricAdminOrgEnrollment.encodeList(updated))
         }
     }
 
     fun setBiometricAdminProfileLink(link: BiometricAdminProfileLink) {
+        if (getBackendType() == com.eventmanager.app.data.remote.BackendType.FIREBASE) {
+            val orgId = getFirebaseOrgId().trim().ifBlank { getFirebaseLastSingleOrgId().trim() }
+            if (orgId.isNotBlank()) {
+                setBiometricEnrollment(orgId, link)
+                return
+            }
+        }
         storage.putString(KEY_BIOMETRIC_ADMIN_PROFILE_LINK, link.encode())
         storage.putBoolean(KEY_BIOMETRIC_ADMIN_LOGIN, true)
+    }
+
+    private fun migrateLegacyBiometricEnrollmentIfNeeded() {
+        val legacyRaw = storage.getString(KEY_BIOMETRIC_ADMIN_PROFILE_LINK, "")?.takeIf { it.isNotBlank() } ?: return
+        val link = BiometricAdminProfileLink.decode(legacyRaw) ?: return
+        val existing = BiometricAdminOrgEnrollment.decodeList(
+            storage.getString(KEY_BIOMETRIC_ADMIN_ENROLLMENTS, "")
+        )
+        if (existing.isNotEmpty()) {
+            storage.remove(KEY_BIOMETRIC_ADMIN_PROFILE_LINK)
+            return
+        }
+        val orgId = getFirebaseOrgId().trim().ifBlank { getFirebaseLastSingleOrgId().trim() }
+        if (orgId.isBlank()) return
+        storage.putString(
+            KEY_BIOMETRIC_ADMIN_ENROLLMENTS,
+            BiometricAdminOrgEnrollment.encodeList(listOf(BiometricAdminOrgEnrollment(orgId, link)))
+        )
+        storage.remove(KEY_BIOMETRIC_ADMIN_PROFILE_LINK)
     }
     
     // Clear all settings

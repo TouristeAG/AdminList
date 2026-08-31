@@ -4,7 +4,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
@@ -39,8 +39,6 @@ fun ResolutionScaleSlider(
     modifier: Modifier = Modifier,
     enabled: Boolean = true
 ) {
-    val sliderWidth = 400.dp
-    val sliderHeight = 120.dp
     val thumbSize = 48.dp
     val trackHeight = 16.dp
     
@@ -96,13 +94,13 @@ fun ResolutionScaleSlider(
     
     BoxWithConstraints(
         modifier = modifier
-            .width(sliderWidth)
+            .fillMaxWidth()
             .padding(vertical = 8.dp)
     ) {
         val density = LocalDensity.current
         
         Column(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Top labels - SMALL, DEFAULT, BIG
@@ -151,7 +149,7 @@ fun ResolutionScaleSlider(
                     .pointerInput(enabled) {
                         if (!enabled) return@pointerInput
                         
-                        detectDragGestures(
+                        detectHorizontalDragGestures(
                             onDragStart = { offset ->
                                 isDragging = true
                                 val relativeX = offset.x / this@BoxWithConstraints.maxWidth.toPx()
@@ -160,8 +158,8 @@ fun ResolutionScaleSlider(
                                 val newValue = minValue + clampedX * (maxValue - minValue)
                                 onValueChange(newValue)
                             },
-                            onDrag = { _, dragAmount ->
-                                val relativeDrag = dragAmount.x / this@BoxWithConstraints.maxWidth.toPx()
+                            onHorizontalDrag = { _, dragAmount ->
+                                val relativeDrag = dragAmount / this@BoxWithConstraints.maxWidth.toPx()
                                 val newPosition = (thumbPosition + relativeDrag).coerceIn(0f, 1f)
                                 thumbPosition = newPosition
                                 val newValue = minValue + newPosition * (maxValue - minValue)
@@ -169,7 +167,6 @@ fun ResolutionScaleSlider(
                             },
                             onDragEnd = {
                                 isDragging = false
-                                // Apply magnetic effect if close to default
                                 if (abs(thumbPosition - 0.5f) < magneticThreshold) {
                                     thumbPosition = 0.5f
                                     onValueChange(defaultValue)

@@ -60,4 +60,53 @@ class MultiOrgMergeTest {
         assertEquals(2, matches.size)
         assertTrue(matches.all { it.orgId.isNotBlank() })
     }
+
+    @Test
+    fun belongsToVisibleOrg_singleModeHidesOtherOrgs() {
+        val configured = setOf("org-a", "org-b")
+        assertTrue(MultiOrgMerge.belongsToVisibleOrg("org-a", false, "org-a", configured))
+        assertTrue(!MultiOrgMerge.belongsToVisibleOrg("org-b", false, "org-a", configured))
+        assertTrue(MultiOrgMerge.belongsToVisibleOrg("", false, "org-a", configured))
+    }
+
+    @Test
+    fun belongsToVisibleOrg_allModeKeepsConfiguredOnly() {
+        val configured = setOf("org-a", "org-b")
+        assertTrue(MultiOrgMerge.belongsToVisibleOrg("org-a", true, FIREBASE_ORG_ALL_SENTINEL, configured))
+        assertTrue(MultiOrgMerge.belongsToVisibleOrg("org-b", true, FIREBASE_ORG_ALL_SENTINEL, configured))
+        assertTrue(!MultiOrgMerge.belongsToVisibleOrg("org-c", true, FIREBASE_ORG_ALL_SENTINEL, configured))
+    }
+
+    @Test
+    fun filterForVisibleOrg_singleModeKeepsOnlyActiveCatalog() {
+        val venues = listOf(
+            VenueEntity(id = 1, name = "Main", firebaseOrgId = "org-a", isActive = true),
+            VenueEntity(id = 2, name = "Bar", firebaseOrgId = "org-b", isActive = true),
+        )
+        val visible = MultiOrgMerge.filterForVisibleOrg(
+            venues,
+            { it.firebaseOrgId },
+            allOrgsMode = false,
+            activeOrgId = "org-a",
+            configuredOrgIds = setOf("org-a", "org-b"),
+        )
+        assertEquals(listOf("Main"), visible.map { it.name })
+    }
+
+    @Test
+    fun filterForVisibleOrg_singleModeKeepsUntaggedAlongsideActiveOrg() {
+        val venues = listOf(
+            VenueEntity(id = 1, name = "Legacy", firebaseOrgId = "", isActive = true),
+            VenueEntity(id = 2, name = "Main", firebaseOrgId = "org-a", isActive = true),
+            VenueEntity(id = 3, name = "Bar", firebaseOrgId = "org-b", isActive = true),
+        )
+        val visible = MultiOrgMerge.filterForVisibleOrg(
+            venues,
+            { it.firebaseOrgId },
+            allOrgsMode = false,
+            activeOrgId = "org-a",
+            configuredOrgIds = setOf("org-a", "org-b"),
+        )
+        assertEquals(listOf(1L, 2L), visible.map { it.id })
+    }
 }

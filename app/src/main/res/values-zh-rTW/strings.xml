@@ -29,9 +29,15 @@
     <string name="sheet_epoch_calc_hint_ms">輸入毫秒（例 1776711088094）</string>
     <string name="sheet_epoch_calc_hint_datetime">選擇或輸入日期/時間</string>
     <string name="temp_guest_list_sheet_label">臨時賓客名單工作表</string>
+    <string name="settings_sheet_label">設定工作表</string>
     <string name="shift_types_sheet_label">班次類型工作表</string>
     <string name="venues_sheet_label">場地工作表</string>
     <string name="sales_items_sheet_label">銷售項目工作表</string>
+    <string name="purchase_credit_buffer_label">購買信用緩衝</string>
+    <string name="purchase_credit_buffer_description">可計入信用的最大短缺（例如 5）。帳戶可降至 −緩衝。0 = 不可透支。會在裝置間同步。</string>
+    <string name="pos_negative_balance_title">帳戶已為負數</string>
+    <string name="pos_negative_balance_message">已使用購買信用緩衝。帳戶餘額現為 %1$s。</string>
+    <string name="amount_label">金額</string>
     <string name="admin_label">管理員</string>
     <string name="admin_yes">是</string>
     <string name="admin_no">否</string>
@@ -182,6 +188,8 @@
     <string name="system_is_in_light_mode">系統處於淺色模式</string>
     <string name="people_counter_visibility_title">顯示人數計數器</string>
     <string name="people_counter_visibility_description">在首頁上顯示或隱藏人數計數器</string>
+    <string name="billeterie_clock_visibility_title">顯示時鐘小工具</string>
+    <string name="billeterie_clock_visibility_description">在售票首頁顯示日期與時間卡片（與管理員儀表板相同）</string>
     <string name="statistics_visibility_title">顯示統計圖表</string>
     <string name="statistics_visibility_description">在首頁上顯示或隱藏統計圖表區段</string>
     <string name="scroll_behavior_title">管理頁面的捲動行為</string>

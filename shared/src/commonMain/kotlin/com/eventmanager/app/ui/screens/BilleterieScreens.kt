@@ -152,6 +152,7 @@ fun BilleterieHomeScreen(
                             FirebaseOrgSwitcher(
                                 viewModel = viewModel,
                                 placement = FirebaseOrgSwitcherPlacement.DashboardClockRow,
+                                allowAllOrgsOption = true,
                             )
                         }
                     } else {

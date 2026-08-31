@@ -44,8 +44,8 @@ class AndroidFirebaseAuthService(
         }
         if (clientSecret.isBlank()) {
             return@withContext FirebaseAuthResult.Error(
-                "Web client secret is required on Android. Copy it from Cloud Console → Credentials → " +
-                    "Web OAuth client. Add localhost Callback redirect URIs from the ? guide.",
+                "Web client secret missing. Rescan or paste the full join code from your admin " +
+                    "(the QR includes OAuth credentials). During setup you do not open Settings.",
             )
         }
         FirebaseAuthResult.Error(

@@ -76,11 +76,7 @@ object FirestoreJsonCodec {
 
     fun fromJsonObject(obj: JsonObject): Map<String, Any?> {
         val nested = obj["json"]?.jsonPrimitive?.contentOrNull
-        if (!nested.isNullOrBlank()) {
-            val fromJson = fromEnvelope(FirestoreJsonEnvelope(nested))
-            if (fromJson.isNotEmpty()) return fromJson
-        }
-        return obj.mapValues { (_, el) ->
+        val flat = obj.mapValues { (_, el) ->
             when {
                 el is JsonNull -> null
                 el.jsonPrimitive.isString -> el.jsonPrimitive.contentOrNull
@@ -96,5 +92,13 @@ object FirestoreJsonCodec {
                 }
             }
         }.filterKeys { it != "json" && it != "_seed" }
+        if (!nested.isNullOrBlank()) {
+            val fromJson = fromEnvelope(FirestoreJsonEnvelope(nested))
+            if (fromJson.isNotEmpty()) {
+                // Prefer envelope payload but keep any flat fields not present in json.
+                return flat + fromJson
+            }
+        }
+        return flat
     }
 }

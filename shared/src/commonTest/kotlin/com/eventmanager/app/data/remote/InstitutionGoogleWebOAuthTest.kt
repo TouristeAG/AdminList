@@ -31,4 +31,18 @@ class InstitutionGoogleWebOAuthTest {
         assertTrue(url.contains("response_type=code"))
         assertTrue(url.contains("scope=openid"))
     }
+
+    @Test
+    fun buildAuthorizationUrl_includesAccountPickerWhenRequested() {
+        val redirect = InstitutionGoogleWebOAuth.loopbackRedirectUri(8889)
+        val url = InstitutionGoogleWebOAuth.buildAuthorizationUrl(
+            webClientId = "client-id.apps.googleusercontent.com",
+            redirectUri = redirect,
+            forceAccountPicker = true,
+        )
+        assertTrue(
+            url.contains("prompt=select_account+consent") ||
+                url.contains("prompt=select_account%20consent"),
+        )
+    }
 }

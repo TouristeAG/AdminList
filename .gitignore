@@ -27,3 +27,6 @@ desktopApp/build/
 __pycache__/
 *.pyc
 app/google-services.json
+__pycache__/
+*.pyc
+app/google-services.json

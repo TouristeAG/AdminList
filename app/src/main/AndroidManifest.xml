@@ -65,6 +65,8 @@
         <activity
             android:name="com.eventmanager.app.data.remote.FirebaseGoogleSignInActivity"
             android:exported="false"
+            android:launchMode="singleTop"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
         <!-- White icon alias (default). Must not use MainActivity.* — tools resolve that as a non-existent inner class. -->

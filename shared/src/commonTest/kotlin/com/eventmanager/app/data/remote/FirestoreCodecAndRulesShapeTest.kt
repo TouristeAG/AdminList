@@ -10,6 +10,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 class FirestoreCodecAndRulesShapeTest {
     @Test
@@ -76,6 +78,25 @@ class FirestoreCodecAndRulesShapeTest {
         assertEquals(12.5, fields["balance"])
         val nested = fields["allowedEmailDomains"] as? Map<*, *>
         assertEquals(true, nested?.get("gmail.com"))
+    }
+
+    @Test
+    fun fromJsonObject_mergesFlatFieldsWithEnvelope() {
+        val envelope = FirestoreJsonCodec.toEnvelope(
+            mapOf("name" to "Ada", "lastModified" to 10L),
+        ).json
+        val obj = JsonObject(
+            mapOf(
+                "json" to JsonPrimitive(envelope),
+                "amount" to JsonPrimitive(10.0),
+                "lastModified" to JsonPrimitive(99L),
+            ),
+        )
+        val decoded = FirestoreJsonCodec.fromJsonObject(obj)
+        assertEquals("Ada", decoded["name"])
+        assertEquals(10.0, decoded["amount"])
+        // Envelope lastModified overwrites the flat duplicate when both exist.
+        assertEquals(10L, decoded["lastModified"])
     }
 
     @Test

@@ -135,7 +135,7 @@ class AccountCreditService(
         if (!ShiftCreditCalculator.isJobDayReached(job, offsetHours)) return emptyList()
         val volunteerJobs = repository.getJobsByVolunteer(job.volunteerId).first()
         val entries = ShiftCreditCalculator.creditsForAddedJob(job, volunteerJobs, jobTypeConfigs, offsetHours)
-        return insertCreditEntries(entries, volunteer)
+        return insertCreditEntries(entries, volunteer, job.firebaseOrgId)
     }
 
     suspend fun evaluatePendingShiftCredits(
@@ -163,7 +163,7 @@ class AccountCreditService(
                 val entries = ShiftCreditCalculator.creditsForJob(
                     job, volJobs, jobTypeConfigs, offsetHours, now
                 )
-                created += insertCreditEntries(entries, volunteer)
+                created += insertCreditEntries(entries, volunteer, job.firebaseOrgId)
             }
         }
         return created
@@ -171,9 +171,11 @@ class AccountCreditService(
 
     private suspend fun insertCreditEntries(
         entries: List<ShiftCreditEntry>,
-        volunteer: Volunteer
+        volunteer: Volunteer,
+        fallbackOrgId: String = "",
     ): List<AccountTransfer> {
         val created = mutableListOf<AccountTransfer>()
+        val orgId = volunteer.firebaseOrgId.trim().ifBlank { fallbackOrgId.trim() }
         for (entry in entries) {
             if (repository.getAccountTransferBySourceReference(entry.sourceReference) != null) continue
             val transfer = AccountTransfer(
@@ -189,6 +191,7 @@ class AccountCreditService(
                 jobDate = entry.jobDate,
                 description = entry.description,
                 posVenueName = PosVenueScope.venueFromJobReferenceKey(entry.jobReferenceKey),
+                firebaseOrgId = orgId,
             )
             repository.insertAccountTransfer(transfer)
             created += transfer
@@ -208,7 +211,7 @@ class AccountCreditService(
         val currentBalance = AccountBalanceService.computeBalance(
             AccountHolderType.VOLUNTEER,
             volunteer.id,
-            repository.getAllAccountTransfersOnce()
+            repository.getTransfersForHolder(AccountHolderType.VOLUNTEER, volunteer.id),
         )
         var remainingBalance = currentBalance
 
@@ -234,6 +237,7 @@ class AccountCreditService(
                 posVenueName = original.posVenueName.ifBlank {
                     PosVenueScope.venueFromJobReferenceKey(original.jobReferenceKey)
                 },
+                firebaseOrgId = original.firebaseOrgId.ifBlank { volunteer.firebaseOrgId },
             )
             repository.insertAccountTransfer(transfer)
             created += transfer
@@ -246,7 +250,8 @@ class AccountCreditService(
         holderId: String,
         holderName: String,
         amount: Double,
-        note: String
+        note: String,
+        firebaseOrgId: String = "",
     ): AccountTransfer {
         val transfer = AccountTransfer(
             holderType = holderType,
@@ -256,7 +261,8 @@ class AccountCreditService(
             currencyCode = currencyProvider(),
             type = AccountTransferType.MANUAL_ADJUSTMENT,
             sourceReference = "manual:${NanoIdGenerator.generateGuestId()}:${holderId}",
-            description = note
+            description = note,
+            firebaseOrgId = firebaseOrgId,
         )
         repository.insertAccountTransfer(transfer)
         return transfer
@@ -272,10 +278,11 @@ class AccountCreditService(
         purchaseCreditBuffer: Double = 0.0,
         firebaseOrgId: String = "",
     ): PosSaleResult {
+        val holderTransfers = repository.getTransfersForHolder(holderType, holderId)
         val balance = AccountBalanceService.computeBalance(
             holderType,
             holderId,
-            repository.getAllAccountTransfersOnce()
+            holderTransfers,
         )
         val payment = computePosPayment(cart, balance, barDiscountPercent, purchaseCreditBuffer)
         val creditPaid = payment.creditPaid
@@ -308,7 +315,7 @@ class AccountCreditService(
             val remainingBalance = AccountBalanceService.computeBalance(
                 holderType,
                 holderId,
-                repository.getAllAccountTransfersOnce()
+                holderTransfers + transfer,
             )
             val wentNegativeViaBuffer = balance > 0.0 && remainingBalance < 0.0 && creditPaid > 0.0
 
@@ -330,11 +337,7 @@ class AccountCreditService(
             )
         }
 
-        val remainingBalance = AccountBalanceService.computeBalance(
-            holderType,
-            holderId,
-            repository.getAllAccountTransfersOnce()
-        )
+        val remainingBalance = balance
         val wentNegativeViaBuffer = balance > 0.0 && remainingBalance < 0.0 && creditPaid > 0.0
 
         return PosSaleResult(

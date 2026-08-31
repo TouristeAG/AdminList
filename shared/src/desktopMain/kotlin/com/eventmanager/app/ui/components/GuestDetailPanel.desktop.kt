@@ -157,6 +157,17 @@ actual fun GuestDetailPanel(
                 )
             }
 
+            if (!readOnly && viewModel != null && !guest.isTemporaryGuest && !guest.isVolunteerBenefit) {
+                LocalAdminRightsSection(
+                    viewModel = viewModel,
+                    isAdmin = guest.isAdmin,
+                    displayName = guest.name,
+                    kind = com.eventmanager.app.data.security.LocalAdminTargetKind.GUEST,
+                    targetId = guest.nanoId,
+                    guest = guest,
+                )
+            }
+
             NfcUidInfoRow(uid = guest.nfcCardUid, isPhone = false)
 
             if (!readOnly) {

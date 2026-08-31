@@ -7,6 +7,8 @@ data class FirebaseSyncStatus(
     val mode: FirebaseSyncTransport,
     val lastActivityAt: Long = 0L,
     val pendingWriteCount: Int = 0,
+    /** Pending rows that failed at least once (permission denied or transient error). */
+    val failedPendingWriteCount: Int = 0,
     val firestoreAvailable: Boolean = false,
     val orgConfigured: Boolean = false,
 ) {
