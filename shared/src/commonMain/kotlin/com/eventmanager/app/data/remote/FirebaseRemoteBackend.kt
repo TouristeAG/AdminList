@@ -94,6 +94,7 @@ class FirebaseRemoteBackend(
         val orgIds = configuredOrgIdsForSync()
         if (orgIds.isEmpty()) return
         listenerJob = scope.launch {
+            firestoreGateway.setServerReachabilityListener { notifySyncStatusChanged() }
             flushQueue()
             val available = firestoreGateway.isAvailable()
             if (!available) {
@@ -133,6 +134,7 @@ class FirebaseRemoteBackend(
         listenerJob?.cancel()
         listenerJob = null
         listenersActive = false
+        firestoreGateway.setServerReachabilityListener(null)
         firestoreGateway.stopOrgListeners()
         notifySyncStatusChanged()
     }
@@ -143,12 +145,13 @@ class FirebaseRemoteBackend(
         val orgConfigured = orgIds.isNotEmpty()
         val pending = pendingWrites.count()
         val failedPending = pendingWrites.countWithFailedAttempts()
-        val mode = when {
-            !orgConfigured || !available -> FirebaseSyncTransport.OFFLINE
-            listenersActive -> FirebaseSyncTransport.LIVE
-            listenerJob?.isActive == true -> FirebaseSyncTransport.PULL
-            else -> FirebaseSyncTransport.OFFLINE
-        }
+        val mode = firebaseSyncTransport(
+            orgConfigured = orgConfigured,
+            sdkAvailable = available,
+            listenersActive = listenersActive,
+            serverReachable = firestoreGateway.isServerReachable(),
+            pullJobActive = listenerJob?.isActive == true,
+        )
         return FirebaseSyncStatus(
             mode = mode,
             lastActivityAt = lastActivityAt,
@@ -369,6 +372,7 @@ class FirebaseRemoteBackend(
                 count,
                 writerId,
                 venue.peopleCounterWriterAccountEmail,
+                venue.peopleCounterLastModified,
             )
             return
         }
@@ -379,7 +383,14 @@ class FirebaseRemoteBackend(
                 put("peopleCounterCount", count)
                 put("peopleCounterWriterDeviceId", writerId)
                 put("peopleCounterWriterAccountEmail", venue.peopleCounterWriterAccountEmail)
-                put("peopleCounterLastModified", System.currentTimeMillis())
+                put(
+                    "peopleCounterLastModified",
+                    if (venue.peopleCounterLastModified > 0L) {
+                        venue.peopleCounterLastModified
+                    } else {
+                        System.currentTimeMillis()
+                    },
+                )
             },
             targetOrg,
         )

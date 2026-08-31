@@ -13,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -249,7 +250,13 @@ fun DesktopQrCodeDialog(
     onRequestSendEmail: () -> Unit,
     staffSafeMode: Boolean = false
 ) {
-    val qrImage = remember(qrPayload) { QRCodeUtils.generateQrImageBitmap(qrPayload, 512) }
+    val qrImage = remember(qrPayload, staffSafeMode) {
+        if (staffSafeMode) {
+            QRCodeUtils.generateStaffObfuscatedQrImageBitmap(qrPayload, 512)
+        } else {
+            QRCodeUtils.generateQrImageBitmap(qrPayload, 512)
+        }
+    }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -265,11 +272,12 @@ fun DesktopQrCodeDialog(
                 if (qrImage != null) {
                     Image(
                         bitmap = qrImage,
-                        contentDescription = title,
+                        contentDescription = if (staffSafeMode) null else title,
                         modifier = Modifier
                             .size(280.dp)
                             .clip(RoundedCornerShape(12.dp))
                             .background(Color.White)
+                            .then(if (staffSafeMode) Modifier.blur(24.dp) else Modifier)
                     )
                     Text(displayName, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     if (!staffSafeMode) {
@@ -341,7 +349,8 @@ fun DesktopEmailConfirmDialog(
     settingsManager: SettingsManager,
     platformContext: PlatformContext,
     onDismiss: () -> Unit,
-    onSent: () -> Unit
+    onSent: () -> Unit,
+    staffSafeMode: Boolean = false,
 ) {
     val gmailAuth = remember(platformContext) { createGmailAuth(platformContext) }
     val emailService = remember(platformContext) { DesktopQrEmailService(platformContext) }
@@ -380,13 +389,14 @@ fun DesktopEmailConfirmDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(stringResource(Res.string.email_confirm_send_message, recipientEmail))
-                HorizontalDivider()
+                    HorizontalDivider()
 
-                OutlinedButton(
-                    onClick = {
-                        scope.launch {
-                            val ok = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                                emailService.sendManually(
+                    if (!staffSafeMode) {
+                    OutlinedButton(
+                        onClick = {
+                            scope.launch {
+                                val ok = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                    emailService.sendManually(
                                     profile = profile,
                                     settingsManager = settingsManager,
                                     recipientEmail = recipientEmail,
@@ -416,6 +426,7 @@ fun DesktopEmailConfirmDialog(
                             textAlign = TextAlign.Center
                         )
                     }
+                }
                 }
 
                 if (isSignedIn) {

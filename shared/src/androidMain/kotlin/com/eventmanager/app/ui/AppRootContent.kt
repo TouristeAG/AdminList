@@ -54,6 +54,7 @@ import com.eventmanager.app.ui.components.ScannerMatch
 import com.eventmanager.app.ui.components.VolunteerBenefitsPanel
 import com.eventmanager.app.ui.components.GuestDetailPanel
 import com.eventmanager.app.ui.components.PeopleCounter
+import com.eventmanager.app.ui.components.PosAccountingReportEntryCard
 import com.eventmanager.app.platform.getAdminSessionHost
 import com.eventmanager.app.ui.ADMIN_SESSION_IDLE_TIMEOUT_MS
 import com.eventmanager.app.ui.components.SendAnnouncementButton
@@ -66,6 +67,8 @@ import com.eventmanager.app.data.models.Volunteer
 import com.eventmanager.app.data.models.Job
 import com.eventmanager.app.data.models.JobTypeConfig
 import com.eventmanager.app.data.models.VenueEntity
+import com.eventmanager.app.data.utils.GuestListOccupancy
+import com.eventmanager.app.data.utils.VolunteerActivityManager
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import kotlinx.coroutines.launch
@@ -125,7 +128,7 @@ import com.eventmanager.app.ui.screens.LogoutCard
 import com.eventmanager.app.ui.screens.JobTypeManagementScreen
 import com.eventmanager.app.ui.screens.SettingsScreen
 import com.eventmanager.app.ui.screens.SetupWizardScreen
-import com.eventmanager.app.ui.screens.AdminAuthScreen
+import com.eventmanager.app.ui.screens.AdminAuthRoute
 import com.eventmanager.app.ui.screens.AdminStartupSyncBanner
 import com.eventmanager.app.ui.screens.AdminSetupScreen
 import com.eventmanager.app.ui.screens.AdminType
@@ -424,6 +427,7 @@ actual fun AppRootContent(
                         if (viewModel.isFirebaseAllOrgsMode()) {
                             showAdminOrgPicker = true
                         } else {
+                            viewModel.prepareForAdminAuthentication()
                             showWelcome = false
                             showAdminAuth = true
                         }
@@ -439,6 +443,26 @@ actual fun AppRootContent(
                     showAdminAccessSyncIndicator = !adminPrecheckComplete,
                     viewModel = viewModel,
                 )
+                }
+                showAdminAuth -> {
+                    AdminAuthRoute(
+                        platformContext = platformContext,
+                        viewModel = viewModel,
+                        onAuthSuccess = {
+                            viewModel.onAdminAuthSuccess()
+                            showAdminAuth = false
+                        },
+                        onBack = {
+                            if (viewModel.isAdminOrgReauthPending()) {
+                                viewModel.cancelAdminOrgSwitchReauth {
+                                    showAdminAuth = false
+                                }
+                            } else {
+                                showAdminAuth = false
+                                showWelcome = true
+                            }
+                        },
+                    )
                 }
                 else -> {
 
@@ -613,36 +637,6 @@ actual fun AppRootContent(
             }
         }
 
-        // Repair sheet headers (e.g. Admin column) and re-sync before NFC/QR admin gate
-        LaunchedEffect(showAdminAuth) {
-            if (showAdminAuth) {
-                viewModel.prepareForAdminAuthentication()
-            }
-        }
-        
-        if (showAdminAuth) {
-            AdminAuthScreen(
-                platformContext = platformContext,
-                viewModel = viewModel,
-                volunteers = volunteers,
-                guests = guests,
-                isSyncing = isSyncing,
-                onAuthSuccess = {
-                    viewModel.onAdminAuthSuccess()
-                    showAdminAuth = false
-                },
-                onBack = {
-                    if (viewModel.isAdminOrgReauthPending()) {
-                        viewModel.cancelAdminOrgSwitchReauth {
-                            showAdminAuth = false
-                        }
-                    } else {
-                        showAdminAuth = false
-                        showWelcome = true
-                    }
-                }
-            )
-        } else {
         if (showPos) {
             val salesItems by viewModel.salesSheetItems.collectAsState()
             PosFlow(
@@ -1622,7 +1616,6 @@ if (pageAnimationsEnabled) {
                 onDismiss = { viewModel.dismissCurrentAnnouncement() }
             )
         }
-        } // end of showAdminAuth else (main app content)
 
         if (!showAdminAuth && showUpdateDialog && updateCheckResult is UpdateCheckResult.UpdateAvailable) {
             val manifest = (updateCheckResult as UpdateCheckResult.UpdateAvailable).manifest
@@ -1756,6 +1749,7 @@ if (pageAnimationsEnabled) {
                         showAdminOrgPicker = false
                         adminOrgPickerScope.launch {
                             viewModel.enterSingleOrgMode(orgId)
+                            viewModel.prepareForAdminAuthentication()
                             showWelcome = false
                             showAdminAuth = true
                         }
@@ -1938,39 +1932,44 @@ fun DashboardScreen(
         
         Spacer(modifier = Modifier.height(if (isPhone) 16.dp else 24.dp))
 
-        // Permanent + temporary rows for the same "today" as the guest list (date-change offset + Zurich zone).
-        // Temporary rows for other event dates are hidden on the list and should not inflate the dashboard.
-        val (permanentGuestCount, temporaryGuestCount) = remember(guests, guestListEffectiveToday) {
-            var permanent = 0
-            var temporary = 0
-            guests.forEach { guest ->
-                when {
-                    guest.isTemporaryGuest -> {
-                        val ts = guest.temporaryEventDate ?: return@forEach
-                        val eventDate = java.time.Instant.ofEpochMilli(ts)
-                            .atZone(guestListZone)
-                            .toLocalDate()
-                        if (eventDate == guestListEffectiveToday) temporary++
-                    }
-                    guest.isVolunteerBenefit -> { /* not part of dashboard headcount */ }
-                    else -> permanent++
-                }
-            }
-            permanent to temporary
+        val occupancy = remember(
+            guests,
+            volunteers,
+            jobs,
+            jobTypeConfigs,
+            dateChangeOffsetHours,
+            guestListEffectiveToday,
+        ) {
+            GuestListOccupancy.snapshot(
+                guests = guests,
+                volunteers = volunteers,
+                jobs = jobs,
+                jobTypeConfigs = jobTypeConfigs,
+                currentTime = System.currentTimeMillis(),
+                offsetHours = dateChangeOffsetHours,
+                zone = guestListZone,
+                isTemporaryOnList = { it == guestListEffectiveToday },
+            )
         }
+        val permanentGuestCount = occupancy.permanentGuests
+        val temporaryGuestCount = occupancy.temporaryGuests
         
         // Volunteer stats: single pass through volunteers list
-        val (totalVolunteers, activeVolunteersCount, inactiveVolunteersCount) = remember(volunteers) {
+        val (totalVolunteers, activeVolunteersCount, inactiveVolunteersCount) = remember(volunteers, jobs) {
             var active = 0
             var inactive = 0
+            val jobsByVolunteer = VolunteerActivityManager.groupJobsByVolunteerId(jobs)
             volunteers.forEach { volunteer ->
-                if (volunteer.isActive) active++ else inactive++
+                if (VolunteerActivityManager.isVolunteerActive(volunteer, jobsByVolunteer[volunteer.id])) {
+                    active++
+                } else {
+                    inactive++
+                }
             }
             Triple(volunteers.size, active, inactive)
         }
         
-        // Total list = permanent guest-list entries + temporary guest-list entries + all volunteers.
-        val totalPeople = permanentGuestCount + temporaryGuestCount + totalVolunteers
+        val totalPeople = occupancy.totalList
         // Move expensive calculation to background if needed
         val totalFreeDrinks = remember(volunteers, jobs, jobTypeConfigs, dateChangeOffsetHours) {
             com.eventmanager.app.data.models.BenefitCalculator.calculateTotalFreeDrinks(
@@ -2196,6 +2195,12 @@ fun DashboardScreen(
                 onClick = { vm.openSendAnnouncementDialog() }
             )
         }
+
+        Spacer(modifier = Modifier.height(if (isPhone) 16.dp else 24.dp))
+        PosAccountingReportEntryCard(
+            onClick = onOpenPosReport,
+            isPhone = isPhone,
+        )
         
         // Stats Graphs Panel - only show if statistics are enabled
         if (isStatisticsVisible) {
@@ -2208,7 +2213,8 @@ fun DashboardScreen(
                 venues = venues,
                 jobTypeConfigs = jobTypeConfigs,
                 isPhone = isPhone,
-                onOpenPosReport = onOpenPosReport,
+                accountTransfers = viewModel?.let { it.accountTransfers.collectAsState().value } ?: emptyList(),
+                salesSheetItems = viewModel?.let { it.salesSheetItems.collectAsState().value } ?: emptyList(),
             )
         }
         

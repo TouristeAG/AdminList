@@ -104,6 +104,7 @@ class SettingsManager(private val storage: AppStorage) {
         private const val KEY_DATE_CHANGE_OFFSET_HOURS = "date_change_offset_hours"
         private const val KEY_SEASONAL_FUN = "seasonal_fun"
         private const val KEY_SELECTED_GRAPH_TIME_PERIOD = "selected_graph_time_period"
+        private const val KEY_DASHBOARD_GRAPH_CATEGORY_EXPANDED = "dashboard_graph_category_expanded_"
         private const val KEY_APP_ICON_STYLE = "app_icon_style"
         private const val KEY_APP_ICON_AUTO_ADAPT = "app_icon_auto_adapt"
         private const val KEY_PEOPLE_COUNTER_VISIBLE = "people_counter_visible"
@@ -1251,6 +1252,14 @@ class SettingsManager(private val storage: AppStorage) {
     
     fun saveSelectedGraphTimePeriod(timePeriod: String) {
         storage.putString(KEY_SELECTED_GRAPH_TIME_PERIOD, timePeriod)
+    }
+
+    fun isDashboardGraphCategoryExpanded(categoryId: String): Boolean {
+        return storage.getBoolean(KEY_DASHBOARD_GRAPH_CATEGORY_EXPANDED + categoryId, false)
+    }
+
+    fun setDashboardGraphCategoryExpanded(categoryId: String, expanded: Boolean) {
+        storage.putBoolean(KEY_DASHBOARD_GRAPH_CATEGORY_EXPANDED + categoryId, expanded)
     }
     
     // App Icon Configuration

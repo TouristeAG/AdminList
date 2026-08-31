@@ -276,7 +276,8 @@ actual fun VolunteerBenefitsPanel(
             displayName = volunteer.name,
             qrPayload = volunteer.id,
             onDismiss = { showQrDialog = false },
-            onRequestSendEmail = { requestSendEmail() }
+            onRequestSendEmail = { requestSendEmail() },
+            staffSafeMode = readOnly,
         )
     }
 
@@ -289,7 +290,8 @@ actual fun VolunteerBenefitsPanel(
             settingsManager = settingsManager,
             platformContext = platformContext,
             onDismiss = { showEmailConfirm = false },
-            onSent = { showEmailConfirm = false }
+            onSent = { showEmailConfirm = false },
+            staffSafeMode = readOnly,
         )
     }
 

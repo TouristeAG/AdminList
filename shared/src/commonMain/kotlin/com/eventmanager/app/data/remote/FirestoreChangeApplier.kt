@@ -17,6 +17,8 @@ import com.eventmanager.app.data.models.VenueEntity
 import com.eventmanager.app.data.models.Volunteer
 import com.eventmanager.app.data.models.VolunteerRank
 import com.eventmanager.app.data.repository.EventManagerRepository
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -24,6 +26,8 @@ import kotlin.coroutines.cancellation.CancellationException
  * Ignores echo is handled by callers via [sourceDeviceId] before invoking this.
  */
 object FirestoreChangeApplier {
+
+    private val venueApplyMutex = Mutex()
 
     suspend fun apply(change: FirestoreRemoteChange, repository: EventManagerRepository) {
         try {
@@ -90,6 +94,20 @@ object FirestoreChangeApplier {
         }
     }
 
+    private suspend fun findExistingVolunteerBenefitGuest(
+        orgId: String,
+        decrypted: Map<String, Any?>,
+        repository: EventManagerRepository,
+    ): Guest? {
+        if (boolOf(decrypted["isVolunteerBenefit"]) != true) return null
+        val volunteerId = stringOf(decrypted["volunteerId"])?.trim().orEmpty()
+        if (volunteerId.isEmpty()) return null
+        val locals = repository.getVolunteerBenefitGuestsForVolunteer(volunteerId).filter { guest ->
+            guest.firebaseOrgId.isBlank() || orgId.isBlank() || guest.firebaseOrgId == orgId
+        }
+        return VolunteerBenefitGuestMerge.pickCanonical(locals)
+    }
+
     private suspend fun applyGuest(
         orgId: String,
         docId: String,
@@ -102,6 +120,7 @@ object FirestoreChangeApplier {
         // live snapshot cannot crash when the local row has a blank or different org id.
         val existing = repository.getGuestByNanoIdAndOrg(docId, orgId)
             ?: repository.getGuestByNanoId(docId)
+            ?: findExistingVolunteerBenefitGuest(orgId, decrypted, repository)
         if (existing != null && FirestoreApplyPolicy.shouldKeepLocal(existing.lastModified, remoteLm)) {
             backfillBlankOrg(existing.firebaseOrgId, orgId) { tagged ->
                 repository.updateGuest(existing.copy(firebaseOrgId = tagged))
@@ -111,7 +130,7 @@ object FirestoreChangeApplier {
         val remote = Guest(
             id = existing?.id ?: 0,
             sheetsId = existing?.sheetsId,
-            nanoId = docId,
+            nanoId = existing?.nanoId ?: docId,
             name = stringOf(decrypted["name"]).orEmpty(),
             lastNameAbbreviation = stringOf(decrypted["lastNameAbbreviation"]).orEmpty(),
             email = stringOf(decrypted["email"]).orEmpty(),
@@ -255,14 +274,54 @@ object FirestoreChangeApplier {
         data: Map<String, Any?>,
         repository: EventManagerRepository,
     ) {
-        val existing = repository.getVenueByNameAndOrg(docId, orgId)
+        venueApplyMutex.withLock {
+            applyVenueLocked(orgId, docId, data, repository)
+        }
+    }
+
+    private suspend fun applyVenueLocked(
+        orgId: String,
+        docId: String,
+        data: Map<String, Any?>,
+        repository: EventManagerRepository,
+    ) {
+        val existing = repository.findVenueForRemoteApply(docId, orgId)
         val remoteLm = longOf(data["lastModified"])
             ?: longOf(data["peopleCounterLastModified"])
             ?: existing?.lastModified
             ?: 1L
-        if (existing != null && existing.lastModified >= remoteLm &&
-            (longOf(data["peopleCounterLastModified"]) ?: 0L) <= existing.peopleCounterLastModified
-        ) {
+        val remotePcm = longOf(data["peopleCounterLastModified"]) ?: 0L
+        val venueRemoteNewer = existing == null || remoteLm > existing.lastModified
+        val counterRemoteNewer = existing == null || remotePcm > existing.peopleCounterLastModified
+        if (existing != null && !venueRemoteNewer && !counterRemoteNewer) {
+            healDuplicateVenues(repository, docId, orgId, existing.id)
+            return
+        }
+        val mergedCounter = FirestoreApplyPolicy.mergePeopleCounter(
+            local = existing?.let {
+                PeopleCounterSnapshot(
+                    count = it.peopleCounterCount,
+                    writerDeviceId = it.peopleCounterWriterDeviceId,
+                    writerAccountEmail = it.peopleCounterWriterAccountEmail,
+                    lastModified = it.peopleCounterLastModified,
+                )
+            },
+            remoteCount = intOf(data["peopleCounterCount"]),
+            remoteWriterDeviceId = stringOf(data["peopleCounterWriterDeviceId"]),
+            remoteWriterAccountEmail = stringOf(data["peopleCounterWriterAccountEmail"]),
+            remoteLastModified = longOf(data["peopleCounterLastModified"]),
+        )
+        if (existing != null && !venueRemoteNewer) {
+            repository.updateVenue(
+                existing.copy(
+                    peopleCounterCount = mergedCounter.count,
+                    peopleCounterWriterDeviceId = mergedCounter.writerDeviceId,
+                    peopleCounterWriterAccountEmail = mergedCounter.writerAccountEmail,
+                    peopleCounterLastModified = mergedCounter.lastModified,
+                    firebaseOrgId = orgId,
+                )
+            )
+            healDuplicateVenues(repository, docId, orgId, existing.id)
             return
         }
         val remote = VenueEntity(
@@ -271,14 +330,10 @@ object FirestoreChangeApplier {
             name = docId,
             description = existing?.description.orEmpty(),
             isActive = boolOf(data["isActive"]) ?: existing?.isActive ?: true,
-            peopleCounterCount = intOf(data["peopleCounterCount"]) ?: existing?.peopleCounterCount ?: 0,
-            peopleCounterWriterDeviceId = stringOf(data["peopleCounterWriterDeviceId"])
-                ?: existing?.peopleCounterWriterDeviceId.orEmpty(),
-            peopleCounterWriterAccountEmail = stringOf(data["peopleCounterWriterAccountEmail"])
-                ?: existing?.peopleCounterWriterAccountEmail.orEmpty(),
-            peopleCounterLastModified = longOf(data["peopleCounterLastModified"])
-                ?: existing?.peopleCounterLastModified
-                ?: 0L,
+            peopleCounterCount = mergedCounter.count,
+            peopleCounterWriterDeviceId = mergedCounter.writerDeviceId,
+            peopleCounterWriterAccountEmail = mergedCounter.writerAccountEmail,
+            peopleCounterLastModified = mergedCounter.lastModified,
             announcementTitle = stringOf(data["announcementTitle"]) ?: existing?.announcementTitle.orEmpty(),
             announcementMessage = stringOf(data["announcementMessage"]) ?: existing?.announcementMessage.orEmpty(),
             announcementSentAt = longOf(data["announcementSentAt"]) ?: existing?.announcementSentAt ?: 0L,
@@ -287,7 +342,30 @@ object FirestoreChangeApplier {
             lastModified = maxOf(remoteLm, existing?.lastModified ?: 0L),
             firebaseOrgId = orgId,
         )
-        if (existing == null) repository.insertVenue(remote) else repository.updateVenue(remote)
+        val keptId = if (existing == null) {
+            repository.insertVenue(remote)
+        } else {
+            repository.updateVenue(remote)
+            existing.id
+        }
+        healDuplicateVenues(repository, docId, orgId, keptId)
+    }
+
+    private suspend fun healDuplicateVenues(
+        repository: EventManagerRepository,
+        name: String,
+        orgId: String,
+        keepId: Long,
+    ) {
+        if (keepId <= 0L) return
+        repository.getVenuesByName(name)
+            .filter { venue ->
+                venue.id != keepId &&
+                    (venue.firebaseOrgId.isBlank() || venue.firebaseOrgId == orgId)
+            }
+            .forEach { duplicate ->
+                runCatching { repository.deleteVenue(duplicate) }
+            }
     }
 
     private suspend fun applySalesItem(

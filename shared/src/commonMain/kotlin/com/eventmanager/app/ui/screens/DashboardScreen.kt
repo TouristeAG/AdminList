@@ -17,6 +17,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.eventmanager.app.data.models.*
+import com.eventmanager.app.data.utils.GuestListOccupancy
+import com.eventmanager.app.data.utils.VolunteerActivityManager
 import com.eventmanager.app.data.sync.settingsManagerFor
 import com.eventmanager.app.platform.LocalPlatformContext
 import com.eventmanager.app.resources.Res
@@ -26,7 +28,6 @@ import com.eventmanager.app.ui.utils.GuestListDefaultZoneId
 import com.eventmanager.app.ui.utils.rememberGuestListEffectiveToday
 import com.eventmanager.app.ui.viewmodel.EventManagerViewModel
 import org.jetbrains.compose.resources.stringResource
-import java.time.Instant
 
 @Composable
 fun DashboardScreen(
@@ -64,31 +65,43 @@ fun DashboardScreen(
         )
         Spacer(Modifier.height(if (isPhone) 16.dp else 24.dp))
 
-        val (permanentGuestCount, temporaryGuestCount) = remember(guests, guestListEffectiveToday) {
-            var permanent = 0
-            var temporary = 0
-            guests.forEach { guest ->
-                when {
-                    guest.isTemporaryGuest -> {
-                        val ts = guest.temporaryEventDate ?: return@forEach
-                        val eventDate = Instant.ofEpochMilli(ts).atZone(guestListZone).toLocalDate()
-                        if (eventDate == guestListEffectiveToday) temporary++
-                    }
-                    guest.isVolunteerBenefit -> Unit
-                    else -> permanent++
-                }
-            }
-            permanent to temporary
+        val occupancy = remember(
+            guests,
+            volunteers,
+            jobs,
+            jobTypeConfigs,
+            dateChangeOffsetHours,
+            guestListEffectiveToday,
+        ) {
+            GuestListOccupancy.snapshot(
+                guests = guests,
+                volunteers = volunteers,
+                jobs = jobs,
+                jobTypeConfigs = jobTypeConfigs,
+                currentTime = System.currentTimeMillis(),
+                offsetHours = dateChangeOffsetHours,
+                zone = guestListZone,
+                isTemporaryOnList = { it == guestListEffectiveToday },
+            )
         }
+        val permanentGuestCount = occupancy.permanentGuests
+        val temporaryGuestCount = occupancy.temporaryGuests
 
-        val (totalVolunteers, activeVolunteersCount, inactiveVolunteersCount) = remember(volunteers) {
+        val (totalVolunteers, activeVolunteersCount, inactiveVolunteersCount) = remember(volunteers, jobs) {
             var active = 0
             var inactive = 0
-            volunteers.forEach { if (it.isActive) active++ else inactive++ }
+            val jobsByVolunteer = VolunteerActivityManager.groupJobsByVolunteerId(jobs)
+            volunteers.forEach { volunteer ->
+                if (VolunteerActivityManager.isVolunteerActive(volunteer, jobsByVolunteer[volunteer.id])) {
+                    active++
+                } else {
+                    inactive++
+                }
+            }
             Triple(volunteers.size, active, inactive)
         }
 
-        val totalPeople = permanentGuestCount + temporaryGuestCount + totalVolunteers
+        val totalPeople = occupancy.totalList
         val totalFreeDrinks = remember(volunteers, jobs, jobTypeConfigs, dateChangeOffsetHours) {
             BenefitCalculator.calculateTotalFreeDrinks(
                 volunteers = volunteers,
@@ -159,8 +172,16 @@ fun DashboardScreen(
             SendAnnouncementButton(isPhone = isPhone, onClick = { vm.openSendAnnouncementDialog() })
         }
 
+        Spacer(Modifier.height(if (isPhone) 16.dp else 24.dp))
+        PosAccountingReportEntryCard(
+            onClick = onOpenPosReport,
+            isPhone = isPhone,
+        )
+
         if (isStatisticsVisible) {
             Spacer(Modifier.height(if (isPhone) 16.dp else 24.dp))
+            val accountTransfers = viewModel?.let { it.accountTransfers.collectAsState().value } ?: emptyList()
+            val salesSheetItems = viewModel?.let { it.salesSheetItems.collectAsState().value } ?: emptyList()
             StatsGraphsPanel(
                 platformContext = platformContext,
                 guests = guests,
@@ -169,7 +190,8 @@ fun DashboardScreen(
                 venues = venues,
                 jobTypeConfigs = jobTypeConfigs,
                 isPhone = isPhone,
-                onOpenPosReport = onOpenPosReport,
+                accountTransfers = accountTransfers,
+                salesSheetItems = salesSheetItems,
             )
         }
 

@@ -246,6 +246,7 @@ actual fun AppRootContent(
                             if (viewModel.isFirebaseAllOrgsMode()) {
                                 showAdminOrgPicker = true
                             } else {
+                                viewModel.prepareForAdminAuthentication()
                                 showWelcome = false
                                 showAdminAuth = true
                             }
@@ -261,6 +262,26 @@ actual fun AppRootContent(
                         showAdminAccessSyncIndicator = !adminPrecheckComplete
                     )
                 }
+            }
+            showAdminAuth -> {
+                AdminAuthRoute(
+                    platformContext = platformContext,
+                    viewModel = viewModel,
+                    onAuthSuccess = {
+                        viewModel.onAdminAuthSuccess()
+                        showAdminAuth = false
+                    },
+                    onBack = {
+                        if (viewModel.isAdminOrgReauthPending()) {
+                            viewModel.cancelAdminOrgSwitchReauth {
+                                showAdminAuth = false
+                            }
+                        } else {
+                            showAdminAuth = false
+                            showWelcome = true
+                        }
+                    },
+                )
             }
             else -> {
                 val guests by viewModel.guests.collectAsState()
@@ -335,9 +356,6 @@ actual fun AppRootContent(
                     if (showAdminAuth) return@LaunchedEffect
                     withContext(Dispatchers.IO) { viewModel.performFullSync() }
                 }
-                LaunchedEffect(showAdminAuth) {
-                    if (showAdminAuth) viewModel.prepareForAdminAuthentication()
-                }
                 LaunchedEffect(syncError) {
                     if (syncError != null && isDeviceTimeError(syncError)) {
                         showDeviceTimeErrorDialog = true
@@ -388,29 +406,7 @@ actual fun AppRootContent(
                     }
                 }
 
-                if (showAdminAuth) {
-                    AdminAuthScreen(
-                        platformContext = platformContext,
-                        viewModel = viewModel,
-                        volunteers = volunteers,
-                        guests = guests,
-                        isSyncing = isSyncing,
-                        onAuthSuccess = {
-                            viewModel.onAdminAuthSuccess()
-                            showAdminAuth = false
-                        },
-                        onBack = {
-                            if (viewModel.isAdminOrgReauthPending()) {
-                                viewModel.cancelAdminOrgSwitchReauth {
-                                    showAdminAuth = false
-                                }
-                            } else {
-                                showAdminAuth = false
-                                showWelcome = true
-                            }
-                        }
-                    )
-                } else if (showPos) {
+                if (showPos) {
                     val salesItems by viewModel.salesSheetItems.collectAsState()
                     PosFlow(
                         viewModel = viewModel,
@@ -747,6 +743,7 @@ actual fun AppRootContent(
                     showAdminOrgPicker = false
                     adminOrgPickerScope.launch {
                         viewModel.enterSingleOrgMode(orgId)
+                        viewModel.prepareForAdminAuthentication()
                         showWelcome = false
                         showAdminAuth = true
                     }

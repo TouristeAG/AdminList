@@ -887,36 +887,29 @@ actual fun VolunteerBenefitsPanel(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         if (readOnly) {
-                            if (qrImage != null) {
-                                StaffObfuscatedQrPreview(
-                                    qrImage = qrImage,
-                                    isPhone = isPhone,
-                                    isTabletDevice = isTabletDevice,
-                                    tabletQrSize = tabletQrSize
-                                )
-                                Spacer(modifier = Modifier.height(if (isPhone) 12.dp else 16.dp))
-                                Button(
-                                    onClick = {
-                                        showQrDialog = false
-                                        if (volunteer.email.isNotBlank()) {
-                                            showEmailConfirmDialog = true
-                                        } else {
-                                            showNoEmailDialog = true
-                                        }
-                                    },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(if (isTabletDevice) 48.dp else 64.dp)
-                                ) {
-                                    Icon(Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(18.dp))
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(qrContext.getString(R.string.email_send_api))
-                                }
-                            } else {
-                                Text(
-                                    text = qrContext.getString(R.string.failed_to_generate_qr_code),
-                                    color = MaterialTheme.colorScheme.error
-                                )
+                            StaffObfuscatedQrPreview(
+                                qrPayload = payload,
+                                isPhone = isPhone,
+                                isTabletDevice = isTabletDevice,
+                                tabletQrSize = tabletQrSize
+                            )
+                            Spacer(modifier = Modifier.height(if (isPhone) 12.dp else 16.dp))
+                            Button(
+                                onClick = {
+                                    showQrDialog = false
+                                    if (volunteer.email.isNotBlank()) {
+                                        showEmailConfirmDialog = true
+                                    } else {
+                                        showNoEmailDialog = true
+                                    }
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(if (isTabletDevice) 48.dp else 64.dp)
+                            ) {
+                                Icon(Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(qrContext.getString(R.string.email_send_api))
                             }
                         } else if (qrImage != null) {
                             Image(

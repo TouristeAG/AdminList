@@ -60,6 +60,31 @@ private enum class SyncStepVisualState { Pending, Active, Done }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+fun AdminAuthRoute(
+    platformContext: PlatformContext,
+    viewModel: EventManagerViewModel,
+    onAuthSuccess: () -> Unit,
+    onBack: () -> Unit,
+) {
+    val guests by viewModel.guests.collectAsState()
+    val volunteers by viewModel.volunteers.collectAsState()
+    val isSyncing by viewModel.isSyncing.collectAsState()
+    LaunchedEffect(Unit) {
+        viewModel.prepareForAdminAuthentication()
+    }
+    AdminAuthScreen(
+        platformContext = platformContext,
+        viewModel = viewModel,
+        volunteers = volunteers,
+        guests = guests,
+        isSyncing = isSyncing,
+        onAuthSuccess = onAuthSuccess,
+        onBack = onBack,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
 fun AdminAuthScreen(
     platformContext: PlatformContext,
     viewModel: EventManagerViewModel,
@@ -75,8 +100,13 @@ fun AdminAuthScreen(
     val adminGateSyncSucceeded by viewModel.adminGateSyncSucceeded.collectAsState()
     val syncError by viewModel.syncError.collectAsState()
     val venues by viewModel.venues.collectAsState()
+    val hasRoster = volunteers.isNotEmpty() || guests.isNotEmpty()
 
-    var authState by remember { mutableStateOf<AuthState>(AuthState.Syncing) }
+    var authState by remember {
+        mutableStateOf(
+            if (hasRoster || adminGateSyncSucceeded == true) AuthState.Ready else AuthState.Syncing
+        )
+    }
     var showQRScanner by remember { mutableStateOf(false) }
     var showNoAdminRecovery by remember { mutableStateOf(false) }
     var userDismissedRecovery by remember { mutableStateOf(false) }
@@ -133,14 +163,15 @@ fun AdminAuthScreen(
         applyVerifiedAdminFromCandidates(allMatches)
     }
 
-    val gateReady = adminGateSyncSucceeded == true && !isSyncing
-    val canScanNfc = gateReady && !showNoAdminRecovery && (
-        authState is AuthState.Ready || authState is AuthState.AccessDenied ||
-            authState is AuthState.NotFound || authState is AuthState.Error
-        )
+    val gateReady = authState is AuthState.Ready ||
+        authState is AuthState.AccessDenied ||
+        authState is AuthState.NotFound ||
+        authState is AuthState.Error
+    val canScanNfc = gateReady && !showNoAdminRecovery
 
-    LaunchedEffect(gateReady, hasLocalAdmin) {
-        if (!gateReady) return@LaunchedEffect
+    LaunchedEffect(hasLocalAdmin, hasRoster, adminGateSyncSucceeded) {
+        val ready = hasLocalAdmin || hasRoster || adminGateSyncSucceeded == true
+        if (!ready) return@LaunchedEffect
         if (!hasLocalAdmin && !userDismissedRecovery) {
             showNoAdminRecovery = true
         }
@@ -155,17 +186,17 @@ fun AdminAuthScreen(
         onUidRead = ::resolveUidMatch
     )
 
-    LaunchedEffect(isSyncing, adminGateSyncSucceeded) {
+    LaunchedEffect(isSyncing, adminGateSyncSucceeded, hasLocalAdmin, hasRoster) {
         authState = when {
-            isSyncing || adminGateSyncSucceeded == null -> AuthState.Syncing
-            adminGateSyncSucceeded == false -> AuthState.SyncFailed(
-                syncError ?: "Sync failed"
-            )
             authState is AuthState.AccessGranted ||
                 authState is AuthState.AccessDenied ||
                 authState is AuthState.NotFound ||
                 authState is AuthState.Error -> authState
-            else -> AuthState.Ready
+            hasLocalAdmin || hasRoster || adminGateSyncSucceeded == true -> AuthState.Ready
+            adminGateSyncSucceeded == false -> AuthState.SyncFailed(
+                syncError ?: "Sync failed"
+            )
+            else -> AuthState.Syncing
         }
     }
 

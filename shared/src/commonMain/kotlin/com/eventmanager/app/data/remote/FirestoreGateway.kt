@@ -36,6 +36,9 @@ internal data class FirestoreMemberRecord(
  */
 interface FirestoreGateway {
     fun isAvailable(): Boolean
+    /** True when the last Firestore snapshot was confirmed by the server (not cache-only). */
+    fun isServerReachable(): Boolean = false
+    fun setServerReachabilityListener(listener: (() -> Unit)?) {}
     suspend fun startOrgListeners(orgIds: List<String>, onChange: suspend (FirestoreRemoteChange) -> Unit)
     fun stopOrgListeners()
     suspend fun flushPendingWrites()
@@ -61,6 +64,7 @@ interface FirestoreGateway {
         count: Int,
         deviceId: String,
         writerAccountEmail: String = "",
+        lastModified: Long = 0L,
     )
     suspend fun runLedgerTransaction(
         orgId: String,
@@ -103,6 +107,7 @@ class NoOpFirestoreGateway : FirestoreGateway {
         count: Int,
         deviceId: String,
         writerAccountEmail: String,
+        lastModified: Long,
     ) {}
     override suspend fun runLedgerTransaction(
         orgId: String,

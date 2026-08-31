@@ -43,7 +43,7 @@ interface GuestDao {
     suspend fun getVolunteerBenefitGuests(): List<Guest>
     
     @Query("SELECT * FROM guests WHERE isVolunteerBenefit = 1 AND volunteerId = :volunteerId")
-    suspend fun getVolunteerBenefitGuest(volunteerId: String): Guest?
+    suspend fun getVolunteerBenefitGuestsForVolunteer(volunteerId: String): List<Guest>
     
     @Query("SELECT * FROM guests WHERE sheetsId = :sheetsId")
     suspend fun getGuestBySheetsId(sheetsId: String): Guest?

@@ -18,6 +18,9 @@ interface VenueDao {
     @Query("SELECT * FROM venues WHERE name = :name")
     suspend fun getVenueByName(name: String): VenueEntity?
 
+    @Query("SELECT * FROM venues WHERE name = :name")
+    suspend fun getVenuesByName(name: String): List<VenueEntity>
+
     @Query("SELECT * FROM venues WHERE name = :name AND firebaseOrgId = :orgId LIMIT 1")
     suspend fun getVenueByNameAndOrg(name: String, orgId: String): VenueEntity?
 

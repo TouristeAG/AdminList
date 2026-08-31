@@ -9,6 +9,19 @@ import com.google.zxing.qrcode.QRCodeWriter
 
 actual object QRCodeUtils {
     actual fun generateQrImageBitmap(content: String, sizePx: Int): ImageBitmap? {
+        return generateQrBitmap(content, sizePx)?.asImageBitmap()
+    }
+
+    actual fun generateStaffObfuscatedQrImageBitmap(content: String, sizePx: Int): ImageBitmap? {
+        val source = generateQrBitmap(content, sizePx) ?: return null
+        val tinySize = (sizePx / 32).coerceIn(8, 16)
+        val tiny = Bitmap.createScaledBitmap(source, tinySize, tinySize, true)
+        val obfuscated = Bitmap.createScaledBitmap(tiny, sizePx, sizePx, true)
+        if (tiny !== source) tiny.recycle()
+        return obfuscated.asImageBitmap()
+    }
+
+    private fun generateQrBitmap(content: String, sizePx: Int): Bitmap? {
         if (content.isEmpty()) return null
         return try {
             val hints = mapOf<EncodeHintType, Any>(EncodeHintType.MARGIN to 1)
@@ -24,7 +37,7 @@ actual object QRCodeUtils {
             }
             val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
             bitmap.setPixels(pixels, 0, width, 0, 0, width, height)
-            bitmap.asImageBitmap()
+            bitmap
         } catch (_: Exception) {
             null
         }

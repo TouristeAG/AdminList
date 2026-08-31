@@ -393,7 +393,11 @@ fun PeopleCounter(
                 }
             }
 
-            if (hint != null) {
+            val showPriorityHint = hint != null &&
+                !(anotherDeviceHasPriority &&
+                    (hint == PeopleCounterUiHint.AnotherDeviceBlocked ||
+                        hint == PeopleCounterUiHint.PriorityLost))
+            if (showPriorityHint) {
                 Text(
                     text = peopleCounterHintMessage(hint!!),
                     style = MaterialTheme.typography.bodySmall,

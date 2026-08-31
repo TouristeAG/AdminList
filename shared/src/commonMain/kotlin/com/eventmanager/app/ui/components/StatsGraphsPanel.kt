@@ -11,12 +11,19 @@ import org.jetbrains.compose.resources.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
@@ -41,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.Canvas
 import com.eventmanager.app.data.models.*
+import com.eventmanager.app.data.utils.GuestListOccupancy
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -77,9 +85,11 @@ import com.eventmanager.app.ui.utils.isTablet
 import java.io.File
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import com.eventmanager.app.data.sync.settingsManagerFor
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.yield
 import com.eventmanager.app.platform.PlatformContext
 
 data class InteractionState(
@@ -102,45 +112,90 @@ private fun <T> rememberCallbackRef(callback: T): CallbackRef<T> {
     return ref
 }
 
+internal data class AsyncGraphData<T>(
+    val loading: Boolean,
+    val value: T,
+)
+
 /**
- * PERFORMANCE OPTIMIZATION: Deferred graph container that shows a loading placeholder
- * and defers the actual graph rendering until after initial composition.
- * This prevents all graphs from being computed at once during initial load.
+ * Yields the first frame, then optionally staggers composition so Canvas/graph work
+ * does not land on the UI thread in one burst.
  */
 @Composable
-private fun DeferredGraph(
+internal fun DeferredGraph(
     delayMs: Long = 0L,
     isPhone: Boolean = true,
+    placeholderCount: Int = 1,
     content: @Composable () -> Unit
 ) {
-    var isLoaded by remember { mutableStateOf(delayMs == 0L) }
-    
+    var isLoaded by remember { mutableStateOf(false) }
+
     LaunchedEffect(Unit) {
-        if (delayMs > 0) {
-            delay(delayMs)
-            isLoaded = true
-        }
+        yield()
+        if (delayMs > 0) delay(delayMs)
+        isLoaded = true
     }
-    
+
     if (isLoaded) {
         content()
     } else {
-        // Show a lightweight placeholder while the graph loads
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(if (isPhone) 200.dp else 250.dp)
-                .padding(horizontal = if (isPhone) 4.dp else 8.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-        ) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
+        GraphLoadingPlaceholder(isPhone = isPhone, cardCount = placeholderCount)
+    }
+}
+
+@Composable
+internal fun GraphLoadingPlaceholder(
+    isPhone: Boolean,
+    modifier: Modifier = Modifier,
+    cardCount: Int = 1,
+) {
+    val pulse = rememberInfiniteTransition(label = "graphLoadingPulse")
+    val alpha by pulse.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 0.9f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 850, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "graphLoadingAlpha",
+    )
+    val height = if (isPhone) 200.dp else 250.dp
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        repeat(cardCount.coerceAtLeast(1)) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(height)
+                    .padding(horizontal = if (isPhone) 4.dp else 8.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                ),
             ) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(32.dp),
-                    strokeWidth = 2.dp
-                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .alpha(alpha),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(if (isPhone) 28.dp else 32.dp),
+                            strokeWidth = 2.dp,
+                        )
+                        Text(
+                            text = stringResource(Res.string.stats_graphs_loading),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
             }
         }
     }
@@ -155,7 +210,8 @@ fun StatsGraphsPanel(
     venues: List<VenueEntity>,
     jobTypeConfigs: List<JobTypeConfig>,
     isPhone: Boolean,
-    onOpenPosReport: () -> Unit = {},
+    accountTransfers: List<AccountTransfer> = emptyList(),
+    salesSheetItems: List<SalesSheetItem> = emptyList(),
     modifier: Modifier = Modifier
 ) {
     val settingsManager = remember(platformContext) { com.eventmanager.app.data.sync.settingsManagerFor(platformContext) }
@@ -191,17 +247,6 @@ fun StatsGraphsPanel(
             modifier = Modifier.padding(horizontal = if (isPhone) 4.dp else 8.dp)
         )
 
-        PosAccountingReportEntryCard(
-            onClick = onOpenPosReport,
-            isPhone = isPhone,
-            modifier = Modifier.padding(horizontal = if (isPhone) 4.dp else 8.dp),
-        )
-
-        HorizontalDivider(
-            modifier = Modifier.padding(horizontal = if (isPhone) 4.dp else 8.dp, vertical = 4.dp),
-            color = MaterialTheme.colorScheme.outlineVariant,
-        )
-
         // Time Period Selector
         TimePeriodSelector(
             selectedPeriod = selectedPeriod,
@@ -209,111 +254,282 @@ fun StatsGraphsPanel(
             isPhone = isPhone
         )
 
-        // Active Volunteers Section - loads immediately (first visible graph)
-        SectionHeader(
-            title = stringResource(Res.string.active_volunteers),
-            description = stringResource(Res.string.active_volunteers_description),
-            isPhone = isPhone
-        )
-        DeferredGraph(delayMs = 0L, isPhone = isPhone) {
-            ActiveVolunteersGraph(
-                volunteers = volunteers,
-                jobs = jobs,
-                timePeriod = selectedPeriod,
-                isPhone = isPhone
+        val currencyCode = remember { settingsManager.getCurrencyCode() }
+        val offsetHours = remember { settingsManager.getDateChangeOffsetHours() }
+        val statsNow = remember(
+            selectedPeriod,
+            accountTransfers,
+            salesSheetItems,
+            volunteers,
+            jobs,
+            guests,
+            jobTypeConfigs,
+            offsetHours,
+        ) { System.currentTimeMillis() }
+        val posStatsLoad by produceState(
+            initialValue = AsyncGraphData(
+                loading = true,
+                value = com.eventmanager.app.data.utils.PosDashboardSnapshot.EMPTY,
+            ),
+            accountTransfers,
+            salesSheetItems,
+            selectedPeriod,
+            statsNow,
+        ) {
+            value = withContext(Dispatchers.Default) {
+                val earliest = accountTransfers.minOfOrNull { it.createdAt }
+                val start = com.eventmanager.app.data.utils.PosDashboardStats.periodStart(
+                    now = statsNow,
+                    periodDays = selectedPeriod.days,
+                    earliestEventMs = earliest,
+                )
+                AsyncGraphData(
+                    loading = false,
+                    value = com.eventmanager.app.data.utils.PosDashboardStats.build(
+                        transfers = accountTransfers,
+                        salesItems = salesSheetItems,
+                        startTime = start,
+                        endTime = statsNow,
+                        aggregationMs = com.eventmanager.app.data.utils.PosDashboardStats.aggregationPeriodMs(selectedPeriod.days),
+                    ),
+                )
+            }
+        }
+        val posStats = posStatsLoad.value
+        val volunteerStatsLoad by produceState(
+            initialValue = AsyncGraphData(
+                loading = true,
+                value = com.eventmanager.app.data.utils.VolunteerDashboardSnapshot.EMPTY,
+            ),
+            volunteers,
+            jobs,
+            guests,
+            jobTypeConfigs,
+            selectedPeriod,
+            statsNow,
+            offsetHours,
+        ) {
+            value = withContext(Dispatchers.Default) {
+                val earliest = jobs.minOfOrNull { it.date }
+                val start = com.eventmanager.app.data.utils.PosDashboardStats.periodStart(
+                    now = statsNow,
+                    periodDays = selectedPeriod.days,
+                    earliestEventMs = earliest,
+                )
+                AsyncGraphData(
+                    loading = false,
+                    value = com.eventmanager.app.data.utils.VolunteerDashboardStats.build(
+                        volunteers = volunteers,
+                        jobs = jobs,
+                        guests = guests,
+                        jobTypeConfigs = jobTypeConfigs,
+                        startTime = start,
+                        endTime = statsNow,
+                        aggregationMs = com.eventmanager.app.data.utils.PosDashboardStats.aggregationPeriodMs(selectedPeriod.days),
+                        now = statsNow,
+                        offsetHours = offsetHours,
+                    ),
+                )
+            }
+        }
+        val volunteerStats = volunteerStatsLoad.value
+
+        var expandedCategories by remember {
+            mutableStateOf(
+                StatsGraphCategory.entries.filter { category ->
+                    settingsManager.isDashboardGraphCategoryExpanded(category.name)
+                }.toSet()
+            )
+        }
+        val volunteerCategoryTitle = stringResource(Res.string.stats_category_volunteers)
+        val guestListCategoryTitle = stringResource(Res.string.stats_category_guest_list)
+        val posActivityCategoryTitle = stringResource(Res.string.stats_category_pos_activity)
+        val posMixCategoryTitle = stringResource(Res.string.stats_category_pos_mix)
+        val categories = remember(
+            volunteerCategoryTitle,
+            guestListCategoryTitle,
+            posActivityCategoryTitle,
+            posMixCategoryTitle,
+        ) {
+            listOf(
+                StatsGraphCategoryItem(
+                    id = StatsGraphCategory.VOLUNTEERS,
+                    title = volunteerCategoryTitle,
+                    icon = Icons.Default.Group,
+                ),
+                StatsGraphCategoryItem(
+                    id = StatsGraphCategory.GUEST_LIST,
+                    title = guestListCategoryTitle,
+                    icon = Icons.Default.People,
+                ),
+                StatsGraphCategoryItem(
+                    id = StatsGraphCategory.POS_ACTIVITY,
+                    title = posActivityCategoryTitle,
+                    icon = Icons.Default.PointOfSale,
+                ),
+                StatsGraphCategoryItem(
+                    id = StatsGraphCategory.POS_MIX,
+                    title = posMixCategoryTitle,
+                    icon = Icons.Default.PieChart,
+                ),
             )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Shift Statistics Section - deferred loading
-        SectionHeader(
-            title = stringResource(Res.string.shift_statistics),
-            description = stringResource(Res.string.shift_statistics_description),
-            isPhone = isPhone
+        StatsGraphCategoryLayout(
+            isDesktop = platformContext.isDesktop,
+            categories = categories,
+            expandedCategories = expandedCategories,
+            onToggleCategory = { category ->
+                val nowExpanded = category !in expandedCategories
+                expandedCategories = if (nowExpanded) {
+                    expandedCategories + category
+                } else {
+                    expandedCategories - category
+                }
+                settingsManager.setDashboardGraphCategoryExpanded(category.name, nowExpanded)
+            },
+            volunteerContent = {
+                SectionHeader(
+                    title = stringResource(Res.string.active_volunteers),
+                    description = stringResource(Res.string.active_volunteers_description),
+                    isPhone = isPhone
+                )
+                DeferredGraph(delayMs = 0L, isPhone = isPhone) {
+                    ActiveVolunteersGraph(
+                        volunteers = volunteers,
+                        jobs = jobs,
+                        timePeriod = selectedPeriod,
+                        isPhone = isPhone
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                SectionHeader(
+                    title = stringResource(Res.string.shift_statistics),
+                    description = stringResource(Res.string.shift_statistics_description),
+                    isPhone = isPhone
+                )
+                DeferredGraph(delayMs = 48L, isPhone = isPhone, placeholderCount = 2) {
+                    ShiftStatisticsGraph(
+                        jobs = jobs,
+                        venues = venues,
+                        timePeriod = selectedPeriod,
+                        isPhone = isPhone
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                SectionHeader(
+                    title = stringResource(Res.string.free_drinks_statistics),
+                    description = stringResource(Res.string.free_drinks_statistics_description),
+                    isPhone = isPhone
+                )
+                DeferredGraph(delayMs = 96L, isPhone = isPhone) {
+                    FreeDrinksGraph(
+                        volunteers = volunteers,
+                        jobs = jobs,
+                        jobTypeConfigs = jobTypeConfigs,
+                        timePeriod = selectedPeriod,
+                        isPhone = isPhone
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                if (volunteerStatsLoad.loading) {
+                    GraphLoadingPlaceholder(isPhone = isPhone, cardCount = 4)
+                } else {
+                    DeferredGraph(delayMs = 128L, isPhone = isPhone, placeholderCount = 4) {
+                        VolunteerExtraGraphs(
+                            stats = volunteerStats,
+                            timePeriod = selectedPeriod,
+                            isPhone = isPhone,
+                            now = statsNow,
+                        )
+                    }
+                }
+            },
+            guestListContent = {
+                SectionHeader(
+                    title = stringResource(Res.string.guest_list_statistics),
+                    description = stringResource(Res.string.guest_list_statistics_description),
+                    isPhone = isPhone
+                )
+                DeferredGraph(delayMs = 0L, isPhone = isPhone) {
+                    GuestListStatisticsGraph(
+                        volunteers = volunteers,
+                        guests = guests,
+                        jobs = jobs,
+                        jobTypeConfigs = jobTypeConfigs,
+                        timePeriod = selectedPeriod,
+                        isPhone = isPhone
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                if (volunteerStatsLoad.loading) {
+                    GraphLoadingPlaceholder(isPhone = isPhone, cardCount = 2)
+                } else {
+                    DeferredGraph(delayMs = 24L, isPhone = isPhone, placeholderCount = 2) {
+                        GuestListExtraGraphs(
+                            stats = volunteerStats,
+                            isPhone = isPhone,
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                SectionHeader(
+                    title = stringResource(Res.string.gender_parity),
+                    description = stringResource(Res.string.gender_parity_description),
+                    isPhone = isPhone
+                )
+                DeferredGraph(delayMs = 48L, isPhone = isPhone) {
+                    GenderParityGraph(
+                        volunteers = volunteers,
+                        isPhone = isPhone
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                SectionHeader(
+                    title = stringResource(Res.string.age_distribution),
+                    description = stringResource(Res.string.age_distribution_description),
+                    isPhone = isPhone
+                )
+                DeferredGraph(delayMs = 96L, isPhone = isPhone) {
+                    AgeDistributionGraph(
+                        volunteers = volunteers,
+                        isPhone = isPhone
+                    )
+                }
+            },
+            posActivityContent = {
+                if (posStatsLoad.loading) {
+                    GraphLoadingPlaceholder(isPhone = isPhone, cardCount = 5)
+                } else {
+                    DeferredGraph(delayMs = 0L, isPhone = isPhone, placeholderCount = 5) {
+                        PosActivityGraphs(
+                            stats = posStats,
+                            timePeriod = selectedPeriod,
+                            isPhone = isPhone,
+                            now = statsNow,
+                        )
+                    }
+                }
+            },
+            posMixContent = {
+                if (posStatsLoad.loading) {
+                    GraphLoadingPlaceholder(isPhone = isPhone, cardCount = 4)
+                } else {
+                    DeferredGraph(delayMs = 32L, isPhone = isPhone, placeholderCount = 4) {
+                        PosMixGraphs(
+                            stats = posStats,
+                            isPhone = isPhone,
+                            currencyCode = currencyCode,
+                        )
+                    }
+                }
+            },
         )
-        DeferredGraph(delayMs = 50L, isPhone = isPhone) {
-            ShiftStatisticsGraph(
-                jobs = jobs,
-                venues = venues,
-                timePeriod = selectedPeriod,
-                isPhone = isPhone
-            )
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Guest List Statistics Section - deferred loading
-        SectionHeader(
-            title = stringResource(Res.string.guest_list_statistics),
-            description = stringResource(Res.string.guest_list_statistics_description),
-            isPhone = isPhone
-        )
-        DeferredGraph(delayMs = 100L, isPhone = isPhone) {
-            GuestListStatisticsGraph(
-                volunteers = volunteers,
-                guests = guests,
-                jobs = jobs,
-                jobTypeConfigs = jobTypeConfigs,
-                timePeriod = selectedPeriod,
-                isPhone = isPhone
-            )
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Gender Parity Section - deferred loading
-        SectionHeader(
-            title = stringResource(Res.string.gender_parity),
-            description = stringResource(Res.string.gender_parity_description),
-            isPhone = isPhone
-        )
-        DeferredGraph(delayMs = 150L, isPhone = isPhone) {
-            GenderParityGraph(
-                volunteers = volunteers,
-                isPhone = isPhone
-            )
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Age Distribution Section - deferred loading
-        SectionHeader(
-            title = stringResource(Res.string.age_distribution),
-            description = stringResource(Res.string.age_distribution_description),
-            isPhone = isPhone
-        )
-        DeferredGraph(delayMs = 200L, isPhone = isPhone) {
-            AgeDistributionGraph(
-                volunteers = volunteers,
-                isPhone = isPhone
-            )
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Free Drinks Statistics Section - deferred loading
-        SectionHeader(
-            title = stringResource(Res.string.free_drinks_statistics),
-            description = stringResource(Res.string.free_drinks_statistics_description),
-            isPhone = isPhone
-        )
-        DeferredGraph(delayMs = 250L, isPhone = isPhone) {
-            FreeDrinksGraph(
-                volunteers = volunteers,
-                jobs = jobs,
-                jobTypeConfigs = jobTypeConfigs,
-                timePeriod = selectedPeriod,
-                isPhone = isPhone
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
 @Composable
-private fun SectionHeader(
+internal fun SectionHeader(
     title: String,
     description: String,
     isPhone: Boolean = true
@@ -391,23 +607,28 @@ private fun ActiveVolunteersGraph(
 ) {
     val platformContext = LocalPlatformContext.current
     val graphTitle = stringResource(Res.string.active_volunteers)
-    val dataPoints by produceState(
-        initialValue = emptyList<DataPoint>(),
+    val load by produceState(
+        initialValue = AsyncGraphData(true, emptyList<DataPoint>()),
         volunteers,
         jobs,
         timePeriod
     ) {
-        value = calculateActiveVolunteersData(volunteers, jobs, timePeriod)
+        value = withContext(Dispatchers.Default) {
+            AsyncGraphData(false, calculateActiveVolunteersData(volunteers, jobs, timePeriod))
+        }
     }
-
-    if (dataPoints.isEmpty()) return
-
     var showExportDialog by remember { mutableStateOf(false) }
     var showPreviewDialog by remember { mutableStateOf(false) }
     var exportedFile by remember { mutableStateOf<File?>(null) }
     var exportType by remember { mutableStateOf<ExportType?>(null) }
     var isExporting by remember { mutableStateOf(false) }
     var pendingExportType by remember { mutableStateOf<ExportType?>(null) }
+    if (load.loading) {
+        GraphLoadingPlaceholder(isPhone = isPhone)
+        return
+    }
+    val dataPoints = load.value
+    if (dataPoints.isEmpty()) return
 
     GraphCard(
         title = stringResource(Res.string.active_volunteers),
@@ -495,7 +716,7 @@ private fun ActiveVolunteersGraph(
     }
 }
 
-private enum class ExportType {
+internal enum class ExportType {
     XLSX, JPG
 }
 
@@ -503,7 +724,7 @@ private enum class ExportType {
  * Helper composable that wraps GraphCard with export functionality
  */
 @Composable
-private fun GraphCardWithExport(
+internal fun GraphCardWithExport(
     title: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     dataPoints: List<DataPoint>,
@@ -618,17 +839,26 @@ private fun FreeDrinksGraph(
     val platformContext = LocalPlatformContext.current
     val settingsManager = remember { com.eventmanager.app.data.sync.settingsManagerFor(platformContext) }
     val offsetHours = remember { settingsManager.getDateChangeOffsetHours() }
-    val dataPoints by produceState(
-        initialValue = emptyList<DataPoint>(),
+    val dataPointsLoad by produceState(
+        initialValue = AsyncGraphData(true, emptyList<DataPoint>()),
         volunteers,
         jobs,
         jobTypeConfigs,
         timePeriod,
         offsetHours
     ) {
-        value = calculateFreeDrinksData(volunteers, jobs, jobTypeConfigs, timePeriod, offsetHours)
+        value = withContext(Dispatchers.Default) {
+            AsyncGraphData(
+                false,
+                calculateFreeDrinksData(volunteers, jobs, jobTypeConfigs, timePeriod, offsetHours),
+            )
+        }
     }
-
+    if (dataPointsLoad.loading) {
+        GraphLoadingPlaceholder(isPhone = isPhone)
+        return
+    }
+    val dataPoints = dataPointsLoad.value
     if (dataPoints.isEmpty()) return
 
     GraphCardWithExport(
@@ -657,32 +887,30 @@ private fun ShiftStatisticsGraph(
         venues.filter { it.isActive }
     }
     
-    // Create dynamic data for each venue on background thread
-    val allVenueData by produceState(
-        initialValue = emptyList<Pair<String, List<DataPoint>>>(),
+    val shiftLoad by produceState(
+        initialValue = AsyncGraphData(
+            true,
+            emptyList<Pair<String, List<DataPoint>>>() to emptyList<DataPoint>(),
+        ),
         jobs,
         activeVenues,
         timePeriod
     ) {
         value = withContext(Dispatchers.Default) {
-            activeVenues.map { venue ->
-                Pair(
-                    venue.name,
-                    calculateVenueShiftData(jobs, venue.name, timePeriod)
-                )
-            }
+            AsyncGraphData(
+                false,
+                activeVenues.map { venue ->
+                    venue.name to calculateVenueShiftData(jobs, venue.name, timePeriod)
+                } to calculateTotalShiftData(jobs, timePeriod),
+            )
         }
     }
-    
-    val totalData by produceState(
-        initialValue = emptyList<DataPoint>(),
-        jobs,
-        timePeriod
-    ) {
-        value = withContext(Dispatchers.Default) {
-            calculateTotalShiftData(jobs, timePeriod)
-        }
+    if (shiftLoad.loading) {
+        GraphLoadingPlaceholder(isPhone = isPhone, cardCount = 2)
+        return
     }
+    val allVenueData = shiftLoad.value.first
+    val totalData = shiftLoad.value.second
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -720,11 +948,10 @@ private fun ShiftStatisticsGraph(
     }
 }
 
-@Suppress("UNUSED_PARAMETER")
 @Composable
 private fun GuestListStatisticsGraph(
     volunteers: List<Volunteer>,
-    guests: List<Guest>, // Kept for future use with direct guest statistics
+    guests: List<Guest>,
     jobs: List<Job>,
     jobTypeConfigs: List<JobTypeConfig>,
     timePeriod: TimePeriod,
@@ -733,10 +960,10 @@ private fun GuestListStatisticsGraph(
     val platformContext = LocalPlatformContext.current
     val settingsManager = remember { com.eventmanager.app.data.sync.settingsManagerFor(platformContext) }
     val offsetHours = remember { settingsManager.getDateChangeOffsetHours() }
-    
-    // Calculate volunteer guest list data (historical) - run on background thread
-    val volunteerGuestData by produceState(
-        initialValue = emptyList<DataPoint>(),
+
+    val guestListLoad by produceState(
+        initialValue = AsyncGraphData(true, GuestListGraphSeries()),
+        guests,
         volunteers,
         jobs,
         jobTypeConfigs,
@@ -744,32 +971,26 @@ private fun GuestListStatisticsGraph(
         offsetHours
     ) {
         value = withContext(Dispatchers.Default) {
-            calculateVolunteerGuestListData(volunteers, jobs, jobTypeConfigs, timePeriod, offsetHours)
+            AsyncGraphData(
+                false,
+                calculateGuestListGraphSeries(
+                    guests = guests,
+                    volunteers = volunteers,
+                    jobs = jobs,
+                    jobTypeConfigs = jobTypeConfigs,
+                    timePeriod = timePeriod,
+                    offsetHours = offsetHours,
+                ),
+            )
         }
     }
-    
-    // Calculate volunteer invites data (historical) - run on background thread
-    val volunteerInvitesData by produceState(
-        initialValue = emptyList<DataPoint>(),
-        volunteers,
-        jobs,
-        jobTypeConfigs,
-        timePeriod,
-        offsetHours
-    ) {
-        value = withContext(Dispatchers.Default) {
-            calculateVolunteerInvitesData(volunteers, jobs, jobTypeConfigs, timePeriod, offsetHours)
-        }
+    if (guestListLoad.loading) {
+        GraphLoadingPlaceholder(isPhone = isPhone, cardCount = 3)
+        return
     }
-    
-    // Calculate total data (volunteers + invites) - lightweight, can run on main thread
-    val totalGuestData by produceState(
-        initialValue = emptyList<DataPoint>(),
-        volunteerGuestData,
-        volunteerInvitesData
-    ) {
-        value = calculateTotalGuestListData(volunteerGuestData, volunteerInvitesData)
-    }
+    val volunteerGuestData = guestListLoad.value.volunteers
+    val volunteerInvitesData = guestListLoad.value.invites
+    val totalGuestData = guestListLoad.value.total
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -829,13 +1050,26 @@ private fun GenderParityGraph(
     val useTouchGestures = !platformContext.isDesktop
     val genderDistributionTitle = stringResource(Res.string.gender_distribution)
     
-    // Filter to only active volunteers
-    val activeVolunteers = volunteers.filter { it.isActive }
-    
-    // Calculate gender distribution
-    val genderData = remember(activeVolunteers) {
-        calculateGenderDistribution(activeVolunteers)
+    val genderLoad by produceState(
+        initialValue = AsyncGraphData(true, GenderDistribution(emptyList(), 0)),
+        volunteers,
+    ) {
+        value = withContext(Dispatchers.Default) {
+            val activeVolunteers = volunteers.filter { it.isActive }
+            AsyncGraphData(false, calculateGenderDistribution(activeVolunteers))
+        }
     }
+    var showExportDialog by remember { mutableStateOf(false) }
+    var showPreviewDialog by remember { mutableStateOf(false) }
+    var exportedFile by remember { mutableStateOf<File?>(null) }
+    var exportType by remember { mutableStateOf<ExportType?>(null) }
+    var isExporting by remember { mutableStateOf(false) }
+    var pendingExportType by remember { mutableStateOf<ExportType?>(null) }
+    if (genderLoad.loading) {
+        GraphLoadingPlaceholder(isPhone = isPhone)
+        return
+    }
+    val genderData = genderLoad.value
     
     if (genderData.totalCount == 0) {
         Card(
@@ -864,14 +1098,6 @@ private fun GenderParityGraph(
         }
         return
     }
-    
-    // Export state
-    var showExportDialog by remember { mutableStateOf(false) }
-    var showPreviewDialog by remember { mutableStateOf(false) }
-    var exportedFile by remember { mutableStateOf<File?>(null) }
-    var exportType by remember { mutableStateOf<ExportType?>(null) }
-    var isExporting by remember { mutableStateOf(false) }
-    var pendingExportType by remember { mutableStateOf<ExportType?>(null) }
 
     Card(
         modifier = Modifier
@@ -938,7 +1164,7 @@ private fun GenderParityGraph(
                         .padding(8.dp)
                 ) {
                     PieChart(
-                        data = genderData.segments,
+                        data = genderData.segments.map { PieSlice("", it.percentage, it.color) },
                         modifier = Modifier.fillMaxSize()
                     )
                 }
@@ -1160,13 +1386,26 @@ private fun AgeDistributionGraph(
     val useTouchGestures = !platformContext.isDesktop
     val ageDistributionTitle = stringResource(Res.string.age_distribution_title)
     
-    // Filter to only active volunteers
-    val activeVolunteers = volunteers.filter { it.isActive }
-    
-    // Calculate age distribution
-    val ageData = remember(activeVolunteers) {
-        calculateAgeDistribution(activeVolunteers)
+    val ageLoad by produceState(
+        initialValue = AsyncGraphData(true, AgeDistribution(emptyList(), 0)),
+        volunteers,
+    ) {
+        value = withContext(Dispatchers.Default) {
+            val activeVolunteers = volunteers.filter { it.isActive }
+            AsyncGraphData(false, calculateAgeDistribution(activeVolunteers))
+        }
     }
+    var showExportDialog by remember { mutableStateOf(false) }
+    var showPreviewDialog by remember { mutableStateOf(false) }
+    var exportedFile by remember { mutableStateOf<File?>(null) }
+    var exportType by remember { mutableStateOf<ExportType?>(null) }
+    var isExporting by remember { mutableStateOf(false) }
+    var pendingExportType by remember { mutableStateOf<ExportType?>(null) }
+    if (ageLoad.loading) {
+        GraphLoadingPlaceholder(isPhone = isPhone)
+        return
+    }
+    val ageData = ageLoad.value
     
     if (ageData.totalCount == 0) {
         Card(
@@ -1195,14 +1434,6 @@ private fun AgeDistributionGraph(
         }
         return
     }
-    
-    // Export state
-    var showExportDialog by remember { mutableStateOf(false) }
-    var showPreviewDialog by remember { mutableStateOf(false) }
-    var exportedFile by remember { mutableStateOf<File?>(null) }
-    var exportType by remember { mutableStateOf<ExportType?>(null) }
-    var isExporting by remember { mutableStateOf(false) }
-    var pendingExportType by remember { mutableStateOf<ExportType?>(null) }
 
     Card(
         modifier = Modifier
@@ -1268,8 +1499,8 @@ private fun AgeDistributionGraph(
                         .aspectRatio(1f)
                         .padding(8.dp)
                 ) {
-                    AgePieChart(
-                        data = ageData.segments,
+                    PieChart(
+                        data = ageData.segments.map { PieSlice("", it.percentage, it.color) },
                         modifier = Modifier.fillMaxSize()
                     )
                 }
@@ -1534,49 +1765,20 @@ private fun calculateAgeDistribution(volunteers: List<Volunteer>): AgeDistributi
 }
 
 @Composable
-private fun AgePieChart(
-    data: List<AgeSegment>,
+internal fun PieChart(
+    data: List<PieSlice>,
     modifier: Modifier = Modifier
 ) {
     Canvas(modifier = modifier) {
         val canvasSize = size.minDimension
         val center = Offset(size.width / 2f, size.height / 2f)
-        val radius = canvasSize / 2f * 0.85f // Leave some padding
-        
-        var startAngle = -90f // Start from top
-        
-        data.forEach { segment ->
-            val sweepAngle = (segment.percentage / 100f) * 360f
-            
-            drawArc(
-                color = segment.color,
-                startAngle = startAngle,
-                sweepAngle = sweepAngle,
-                useCenter = true,
-                topLeft = Offset(center.x - radius, center.y - radius),
-                size = androidx.compose.ui.geometry.Size(radius * 2f, radius * 2f)
-            )
-            
-            startAngle += sweepAngle
-        }
-    }
-}
+        val radius = canvasSize / 2f * 0.85f
 
-@Composable
-private fun PieChart(
-    data: List<GenderSegment>,
-    modifier: Modifier = Modifier
-) {
-    Canvas(modifier = modifier) {
-        val canvasSize = size.minDimension
-        val center = Offset(size.width / 2f, size.height / 2f)
-        val radius = canvasSize / 2f * 0.85f // Leave some padding
-        
-        var startAngle = -90f // Start from top
-        
+        var startAngle = -90f
+
         data.forEach { segment ->
             val sweepAngle = (segment.percentage / 100f) * 360f
-            
+
             drawArc(
                 color = segment.color,
                 startAngle = startAngle,
@@ -1585,7 +1787,7 @@ private fun PieChart(
                 topLeft = Offset(center.x - radius, center.y - radius),
                 size = androidx.compose.ui.geometry.Size(radius * 2f, radius * 2f)
             )
-            
+
             startAngle += sweepAngle
         }
     }
@@ -1596,11 +1798,12 @@ private fun PieChart(
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun MultiLineGraph(
+internal fun MultiLineGraph(
     label: String,
     seriesData: List<Triple<String, List<DataPoint>, Color>>,
     timePeriod: TimePeriod,
-    isPhone: Boolean = true
+    isPhone: Boolean = true,
+    description: String? = null,
 ) {
     val platformContext = LocalPlatformContext.current
     val useTouchGestures = !platformContext.isDesktop
@@ -1665,6 +1868,19 @@ private fun MultiLineGraph(
                 .padding(vertical = 4.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
+            Text(
+                text = label,
+                style = if (isPhone) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            if (description != null) {
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         // Graph with Y-axis labels
         Row(
             modifier = Modifier
@@ -1780,6 +1996,34 @@ private fun MultiLineGraph(
                 fontSize = 9.sp,
                 fontWeight = FontWeight.Medium
             )
+        }
+        if (seriesData.size > 1) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally)
+            ) {
+                seriesData.forEach { (name, _, color) ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .background(color, CircleShape)
+                        )
+                        Text(
+                            text = name,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 9.sp,
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
         }
         }
     }
@@ -2042,7 +2286,7 @@ private fun calculateNearestPointIndex(xPosition: Float, width: Float, dataPoint
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun Modifier.graphCardExportInteraction(
+internal fun Modifier.graphCardExportInteraction(
     useTouchGestures: Boolean,
     onExportRequest: () -> Unit,
 ): Modifier {
@@ -2776,45 +3020,47 @@ private fun calculateActiveVolunteersData(
         now - timePeriod.days * 24L * 60 * 60 * 1000
     }
 
-    val dateFormat = getDateFormat(timePeriod, startTime, now)
+    val dateFormat = formatGraphDateLabel(timePeriod, startTime, now)
     val oneYearInMs = 365L * 24 * 60 * 60 * 1000
     val aggregationMs = getAggregationPeriodMs(timePeriod)
-    
-    // Generate data points using the aggregation period
+    val sortedJobDatesByVolunteer = jobs
+        .groupBy { it.volunteerId }
+        .mapValues { (_, volunteerJobs) -> volunteerJobs.map { it.date }.sorted() }
+
     val dataPoints = mutableListOf<DataPoint>()
     var currentDate = startTime
-    
     while (currentDate <= now) {
-        // For this date, determine how many volunteers would be considered active
-        // A volunteer is active if their most recent job (up to this date) is within 1 year of this date
-        
+        val oneYearBeforeThisDate = currentDate - oneYearInMs
         var activeCount = 0
-        
-        // Check each volunteer
         for (volunteer in volunteers) {
-            // Find this volunteer's most recent job UP TO and INCLUDING this date
-            val jobsUpToThisDate = jobs.filter { job ->
-                job.volunteerId == volunteer.id && job.date <= currentDate
-            }
-            
-            val mostRecentJobDate = jobsUpToThisDate.maxOfOrNull { it.date }
-            
-            if (mostRecentJobDate != null) {
-                // Check if this job is within 1 year of the current date
-                val oneYearBeforeThisDate = currentDate - oneYearInMs
-                if (mostRecentJobDate >= oneYearBeforeThisDate) {
-                    activeCount++
-                }
+            val dates = sortedJobDatesByVolunteer[volunteer.id] ?: continue
+            val mostRecentJobDate = mostRecentOnOrBefore(dates, currentDate) ?: continue
+            if (mostRecentJobDate >= oneYearBeforeThisDate) {
+                activeCount++
             }
         }
-        
-        val label = dateFormat(currentDate)
-        dataPoints.add(DataPoint(label, activeCount.toFloat(), currentDate))
-        
+        dataPoints.add(DataPoint(dateFormat(currentDate), activeCount.toFloat(), currentDate))
         currentDate += aggregationMs
     }
 
-    return dataPoints.ifEmpty { emptyList() }
+    return dataPoints
+}
+
+private fun mostRecentOnOrBefore(sortedDates: List<Long>, limit: Long): Long? {
+    var lo = 0
+    var hi = sortedDates.lastIndex
+    var found: Long? = null
+    while (lo <= hi) {
+        val mid = (lo + hi) ushr 1
+        val value = sortedDates[mid]
+        if (value <= limit) {
+            found = value
+            lo = mid + 1
+        } else {
+            hi = mid - 1
+        }
+    }
+    return found
 }
 
 private fun calculateFreeDrinksData(
@@ -2831,7 +3077,7 @@ private fun calculateFreeDrinksData(
         now - timePeriod.days * 24L * 60 * 60 * 1000
     }
 
-    val dateFormat = getDateFormat(timePeriod, startTime, now)
+        val dateFormat = formatGraphDateLabel(timePeriod, startTime, now)
     val aggregationMs = getAggregationPeriodMs(timePeriod)
 
     // Same source of truth as volunteer benefits: Nova subtypes, Galaxie bonus drink, manual rewards, etc.
@@ -2877,7 +3123,7 @@ private fun calculateVenueShiftData(
         now - timePeriod.days * 24L * 60 * 60 * 1000
     }
 
-    val dateFormat = getDateFormat(timePeriod, startTime, now)
+        val dateFormat = formatGraphDateLabel(timePeriod, startTime, now)
     val aggregationMs = getAggregationPeriodMs(timePeriod)
     
     // Generate data points using the aggregation period
@@ -2913,7 +3159,7 @@ private fun calculateTotalShiftData(
         now - timePeriod.days * 24L * 60 * 60 * 1000
     }
 
-    val dateFormat = getDateFormat(timePeriod, startTime, now)
+        val dateFormat = formatGraphDateLabel(timePeriod, startTime, now)
     val aggregationMs = getAggregationPeriodMs(timePeriod)
     
     // Generate data points using the aggregation period
@@ -2936,172 +3182,51 @@ private fun calculateTotalShiftData(
     return dataPoints.ifEmpty { emptyList() }
 }
 
-private fun calculateVolunteerGuestListData(
+private data class GuestListGraphSeries(
+    val volunteers: List<DataPoint> = emptyList(),
+    val invites: List<DataPoint> = emptyList(),
+    val total: List<DataPoint> = emptyList(),
+)
+
+private fun calculateGuestListGraphSeries(
+    guests: List<Guest>,
     volunteers: List<Volunteer>,
     jobs: List<Job>,
     jobTypeConfigs: List<JobTypeConfig>,
     timePeriod: TimePeriod,
     offsetHours: Int = 0
-): List<DataPoint> {
+): GuestListGraphSeries {
     val now = System.currentTimeMillis()
     val startTime = if (timePeriod == TimePeriod.MAX) {
-        jobs.minOfOrNull { it.date } ?: (now - 365L * 24 * 60 * 60 * 1000)
+        val jobMin = jobs.minOfOrNull { it.date }
+        val guestMin = guests.minOfOrNull { it.lastModified }
+        listOfNotNull(jobMin, guestMin).minOrNull() ?: (now - 365L * 24 * 60 * 60 * 1000)
     } else {
         now - timePeriod.days * 24L * 60 * 60 * 1000
     }
-
-    val dateFormat = getDateFormat(timePeriod, startTime, now)
-    val aggregationMs = getAggregationPeriodMs(timePeriod)
-    
-    // Generate data points using the aggregation period
-    val dataPoints = mutableListOf<DataPoint>()
-    var currentDate = startTime
-    
-    while (currentDate <= now) {
-        // For this date, determine how many volunteers would have guest list access
-        var volunteerCount = 0
-        
-        // Check each volunteer
-        for (volunteer in volunteers) {
-            // Find this volunteer's jobs UP TO and INCLUDING this date
-            val jobsUpToThisDate = jobs.filter { job ->
-                job.volunteerId == volunteer.id && job.date <= currentDate
-            }
-            
-            // Calculate benefit status at this point in time
-            val benefitStatus = com.eventmanager.app.data.models.BenefitCalculator.calculateVolunteerBenefitStatus(
-                volunteer = volunteer,
-                jobs = jobsUpToThisDate,
-                jobTypeConfigs = jobTypeConfigs,
-                currentTime = currentDate,
-                offsetHours = offsetHours
-            )
-            
-            // Check if volunteer has guest list access at this date
-            if (benefitStatus.benefits.isActive && 
-                benefitStatus.benefits.guestListAccess &&
-                (benefitStatus.benefits.validUntil == null || currentDate < benefitStatus.benefits.validUntil)) {
-                volunteerCount++
-            }
-        }
-        
-        val label = dateFormat(currentDate)
-        dataPoints.add(DataPoint(label, volunteerCount.toFloat(), currentDate))
-        
-        currentDate += aggregationMs
-    }
-
-    return dataPoints.ifEmpty { emptyList() }
-}
-
-private fun calculateVolunteerInvitesData(
-    volunteers: List<Volunteer>,
-    jobs: List<Job>,
-    jobTypeConfigs: List<JobTypeConfig>,
-    timePeriod: TimePeriod,
-    offsetHours: Int = 0
-): List<DataPoint> {
-    val now = System.currentTimeMillis()
-    val startTime = if (timePeriod == TimePeriod.MAX) {
-        jobs.minOfOrNull { it.date } ?: (now - 365L * 24 * 60 * 60 * 1000)
-    } else {
-        now - timePeriod.days * 24L * 60 * 60 * 1000
-    }
-
-    val dateFormat = getDateFormat(timePeriod, startTime, now)
-    val aggregationMs = getAggregationPeriodMs(timePeriod)
-    
-    // Generate data points using the aggregation period
-    val dataPoints = mutableListOf<DataPoint>()
-    var currentDate = startTime
-    
-    while (currentDate <= now) {
-        // For this date, calculate total invites volunteers could give
-        var totalInvites = 0
-        
-        // Check each volunteer
-        for (volunteer in volunteers) {
-            // Find this volunteer's jobs UP TO and INCLUDING this date
-            val jobsUpToThisDate = jobs.filter { job ->
-                job.volunteerId == volunteer.id && job.date <= currentDate
-            }
-            
-            // Calculate benefit status at this point in time
-            val benefitStatus = com.eventmanager.app.data.models.BenefitCalculator.calculateVolunteerBenefitStatus(
-                volunteer = volunteer,
-                jobs = jobsUpToThisDate,
-                jobTypeConfigs = jobTypeConfigs,
-                currentTime = currentDate,
-                offsetHours = offsetHours
-            )
-            
-            // Check if volunteer has guest list access at this date
-            if (benefitStatus.benefits.isActive && 
-                benefitStatus.benefits.guestListAccess &&
-                (benefitStatus.benefits.validUntil == null || currentDate < benefitStatus.benefits.validUntil)) {
-                // `inviteCount` can represent total guest-list spots (volunteer included).
-                // For this chart we only want +1 invitations, so exclude the volunteer slot.
-                val plusOneInvitesOnly = (benefitStatus.benefits.inviteCount - 1).coerceAtLeast(0)
-                totalInvites += plusOneInvitesOnly
-            }
-        }
-        
-        val label = dateFormat(currentDate)
-        dataPoints.add(DataPoint(label, totalInvites.toFloat(), currentDate))
-        
-        currentDate += aggregationMs
-    }
-
-    return dataPoints.ifEmpty { emptyList() }
-}
-
-private fun calculateTotalGuestListData(
-    volunteerGuestData: List<DataPoint>,
-    volunteerInvitesData: List<DataPoint>
-): List<DataPoint> {
-    if (volunteerGuestData.isEmpty() && volunteerInvitesData.isEmpty()) {
-        return emptyList()
-    }
-    
-    // Create a map of timestamp to total value
-    val totals = mutableMapOf<Long, Pair<String, Float>>() // timestamp -> (label, total)
-    
-    // Collect all unique timestamps
-    val allTimestamps = mutableSetOf<Long>()
-    allTimestamps.addAll(volunteerGuestData.map { it.timestamp })
-    allTimestamps.addAll(volunteerInvitesData.map { it.timestamp })
-    
-    // Initialize all timestamps with their labels and zero totals
-    allTimestamps.forEach { timestamp ->
-        val label = volunteerGuestData.find { it.timestamp == timestamp }?.label
-            ?: volunteerInvitesData.find { it.timestamp == timestamp }?.label
-            ?: ""
-        totals[timestamp] = Pair(label, 0f)
-    }
-    
-    // Add volunteer guest data
-    volunteerGuestData.forEach { point ->
-        val existing = totals[point.timestamp]
-        if (existing != null) {
-            totals[point.timestamp] = Pair(existing.first, existing.second + point.value)
-        } else {
-            totals[point.timestamp] = Pair(point.label, point.value)
-        }
-    }
-    
-    // Add volunteer invites data
-    volunteerInvitesData.forEach { point ->
-        val existing = totals[point.timestamp]
-        if (existing != null) {
-            totals[point.timestamp] = Pair(existing.first, existing.second + point.value)
-        } else {
-            totals[point.timestamp] = Pair(point.label, point.value)
-        }
-    }
-    
-    return totals.map { (timestamp, labelAndTotal) ->
-        DataPoint(labelAndTotal.first, labelAndTotal.second, timestamp)
-    }.sortedBy { it.timestamp }
+        val dateFormat = formatGraphDateLabel(timePeriod, startTime, now)
+    val series = GuestListOccupancy.historicalSeries(
+        guests = guests,
+        volunteers = volunteers,
+        jobs = jobs,
+        jobTypeConfigs = jobTypeConfigs,
+        startTime = startTime,
+        now = now,
+        aggregationMs = getAggregationPeriodMs(timePeriod),
+        offsetHours = offsetHours,
+    )
+    if (series.isEmpty()) return GuestListGraphSeries()
+    return GuestListGraphSeries(
+        volunteers = series.map { point ->
+            DataPoint(dateFormat(point.timestamp), point.volunteersOnList.toFloat(), point.timestamp)
+        },
+        invites = series.map { point ->
+            DataPoint(dateFormat(point.timestamp), point.volunteerFriendInvites.toFloat(), point.timestamp)
+        },
+        total = series.map { point ->
+            DataPoint(dateFormat(point.timestamp), point.totalList.toFloat(), point.timestamp)
+        },
+    )
 }
 
 // Thread-safe cached SimpleDateFormat instances for graph date formatting
@@ -3122,7 +3247,7 @@ private val calendarCache = object : JavaThreadLocal<Calendar>() {
     }
 }
 
-private fun getDateFormat(timePeriod: TimePeriod, startTime: Long, now: Long): (Long) -> String {
+internal fun formatGraphDateLabel(timePeriod: TimePeriod, startTime: Long, now: Long): (Long) -> String {
     // Pre-fetch cached formatters to avoid ambiguous lambda syntax
     // Using !! since initialValue() guarantees non-null values
     val dayFormatter = graphDayFormatterCache.get()!!
@@ -3202,7 +3327,7 @@ private fun GraphExportDialogShell(
 }
 
 @Composable
-private fun ExportLoadingDialog() {
+internal fun ExportLoadingDialog() {
     GraphExportDialogShell(onDismiss = {}) {
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -3222,7 +3347,7 @@ private fun ExportLoadingDialog() {
  * Export options dialog
  */
 @Composable
-private fun ExportOptionsDialog(
+internal fun ExportOptionsDialog(
     onDismiss: () -> Unit,
     onExportXLSX: () -> Unit,
     onExportJPG: () -> Unit
@@ -3330,7 +3455,7 @@ private fun ExportOptionsDialog(
  * Preview dialog with Share / Open with / Save as (same actions as POS report export).
  */
 @Composable
-private fun ExportedFilePreviewDialog(
+internal fun ExportedFilePreviewDialog(
     file: File,
     exportType: ExportType,
     title: String,

@@ -7,17 +7,30 @@ import java.util.Calendar
 object VolunteerActivityManager {
     private const val ACTIVE_THRESHOLD_YEARS = 1
 
-    fun isVolunteerActive(volunteer: Volunteer): Boolean {
-        val lastShiftDate = volunteer.lastShiftDate ?: return false
-        val calendar = Calendar.getInstance()
-        val oneYearAgo = calendar.apply {
+    /**
+     * Active means a shift in the last year. The stored [Volunteer.isActive] flag is not used:
+     * new volunteers default to `isActive = true` even when they have never worked.
+     */
+    fun isVolunteerActive(volunteer: Volunteer, volunteerJobs: List<Job>? = null): Boolean {
+        val lastShiftDate = effectiveLastShiftDate(volunteer, volunteerJobs) ?: return false
+        val oneYearAgo = Calendar.getInstance().apply {
             add(Calendar.YEAR, -ACTIVE_THRESHOLD_YEARS)
         }.timeInMillis
         return lastShiftDate >= oneYearAgo
     }
 
-    fun getDaysSinceLastShift(volunteer: Volunteer): Long? {
-        val lastShiftDate = volunteer.lastShiftDate ?: return null
+    fun effectiveLastShiftDate(volunteer: Volunteer, volunteerJobs: List<Job>? = null): Long? {
+        if (volunteerJobs != null) {
+            val fromJobs = volunteerJobs.maxOfOrNull { job ->
+                if (job.volunteerId == volunteer.id) job.date else Long.MIN_VALUE
+            }?.takeIf { it != Long.MIN_VALUE && it > 0L }
+            if (fromJobs != null) return fromJobs
+        }
+        return volunteer.lastShiftDate
+    }
+
+    fun getDaysSinceLastShift(volunteer: Volunteer, volunteerJobs: List<Job>? = null): Long? {
+        val lastShiftDate = effectiveLastShiftDate(volunteer, volunteerJobs) ?: return null
         val currentTime = Calendar.getInstance().timeInMillis
         return (currentTime - lastShiftDate) / (1000 * 60 * 60 * 24)
     }
@@ -64,8 +77,8 @@ object VolunteerActivityManager {
         }
     }
 
-    fun getActivityStatusText(volunteer: Volunteer): String {
-        val daysSince = getDaysSinceLastShift(volunteer) ?: return "Never worked"
+    fun getActivityStatusText(volunteer: Volunteer, volunteerJobs: List<Job>? = null): String {
+        val daysSince = getDaysSinceLastShift(volunteer, volunteerJobs) ?: return "Never worked"
         return when {
             daysSince == 0L -> "Active today"
             daysSince < 30 -> "Active ${daysSince}d ago"

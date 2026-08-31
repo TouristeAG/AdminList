@@ -998,7 +998,7 @@
     <string name="guest_list_statistics_description">Guest list statistics showing volunteers with access and their available invitations</string>
     <string name="volunteer_guests_description">Number of volunteers who had guest list access at each point in time</string>
     <string name="volunteer_invites_description">Total number of invitations that volunteers with guest list access could give at each point in time</string>
-    <string name="total_guests_description">Total number of people on the guest list (volunteers with access + their available invitations) at each point in time</string>
+    <string name="total_guests_description">Total number of people on the guest list (permanent and temporary guests + their friend invitations, plus volunteers with shift access + their friend invitations) at each point in time</string>
     <string name="free_drinks_statistics_description">Number of free drinks available over time</string>
     <string name="gender_parity">Gender Parity</string>
     <string name="gender_parity_description">Distribution of genders among active volunteers</string>

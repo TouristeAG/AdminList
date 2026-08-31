@@ -37,6 +37,7 @@ import com.eventmanager.app.ui.util.shiftTimeLabel
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import java.text.Collator
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -703,6 +704,7 @@ fun AddJobDialog(
     
     // Filter active job type configs
     val activeJobTypeConfigs = jobTypeConfigs.filter { it.isActive }
+    val volunteersAlphabetical = remember(volunteers) { volunteersSortedAlphabetically(volunteers) }
 
     val isCompact = isCompactScreen()
     val scrollState = rememberScrollState()
@@ -767,7 +769,7 @@ fun AddJobDialog(
             ) {
                 // Volunteer selection with search
                 SearchableDropdown(
-                    items = volunteers,
+                    items = volunteersAlphabetical,
                     selectedItem = selectedVolunteer,
                     onItemSelected = { volunteer -> selectedVolunteer = volunteer },
                     itemText = { volunteer -> 
@@ -1028,6 +1030,7 @@ fun EditJobDialog(
     
     // Filter active job type configs
     val activeJobTypeConfigs = jobTypeConfigs.filter { it.isActive }
+    val volunteersAlphabetical = remember(volunteers) { volunteersSortedAlphabetically(volunteers) }
     // Keep current selection visible even if that type was deactivated
     val jobTypesForEditDropdown = remember(activeJobTypeConfigs, selectedJobTypeConfig) {
         val cur = selectedJobTypeConfig
@@ -1101,7 +1104,7 @@ fun EditJobDialog(
                 ) {
                 // Volunteer selection with search
                 SearchableDropdown(
-                    items = volunteers,
+                    items = volunteersAlphabetical,
                     selectedItem = selectedVolunteer,
                     onItemSelected = { volunteer -> selectedVolunteer = volunteer },
                     itemText = { volunteer -> 
@@ -1339,5 +1342,13 @@ fun EditJobDialog(
 
 private fun formatDate(timestamp: Long, platformContext: com.eventmanager.app.platform.PlatformContext): String {
     return DateFormatUtils.formatDateTime(timestamp, platformContext)
+}
+
+private fun volunteersSortedAlphabetically(volunteers: List<Volunteer>): List<Volunteer> {
+    val collator = Collator.getInstance().apply { strength = Collator.SECONDARY }
+    return volunteers.sortedWith(
+        compareBy<Volunteer, String>(collator) { it.name.trim() }
+            .thenBy(collator) { it.lastNameAbbreviation.trim() }
+    )
 }
 

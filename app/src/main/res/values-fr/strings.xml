@@ -975,7 +975,7 @@
     <string name="guest_list_statistics_description">Statistiques de la liste des invité·e·s montrant les bénévoles avec accès et leurs invitations disponibles</string>
     <string name="volunteer_guests_description">Nombre de bénévoles qui avaient accès à la liste des invité·e·s à chaque moment</string>
     <string name="volunteer_invites_description">Nombre total d\'invitations que les bénévoles avec accès à la liste des invité·e·s pouvaient donner à chaque moment</string>
-    <string name="total_guests_description">Nombre total de personnes sur la liste des invité·e·s (bénévoles avec accès + leurs invitations disponibles) à chaque moment</string>
+    <string name="total_guests_description">Nombre total de personnes sur la liste des invité·e·s (invité·e·s permanent·e·s et temporaire·s + leurs invitations, plus les bénévoles selon leurs shifts + leurs invitations) à chaque moment</string>
     <string name="free_drinks_statistics_description">Nombre de boissons gratuites disponibles au fil du temps</string>
     <string name="gender_parity">Parité des genres</string>
     <string name="gender_parity_description">Répartition des genres parmi les bénévoles actif·ve·s</string>

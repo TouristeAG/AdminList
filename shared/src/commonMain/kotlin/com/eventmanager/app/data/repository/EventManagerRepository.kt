@@ -93,6 +93,9 @@ class EventManagerRepository(
     suspend fun getVolunteerBenefitGuests(): List<Guest> =
         decryptGuestsIfNeeded(guestDao.getVolunteerBenefitGuests())
 
+    suspend fun getVolunteerBenefitGuestsForVolunteer(volunteerId: String): List<Guest> =
+        decryptGuestsIfNeeded(guestDao.getVolunteerBenefitGuestsForVolunteer(volunteerId))
+
     suspend fun getGuestByNanoId(nanoId: String): Guest? =
         guestDao.getGuestByNanoId(nanoId)?.let { SensitiveFieldCodec.decryptGuestFields(it) }
 
@@ -101,6 +104,18 @@ class EventManagerRepository(
 
     suspend fun getVenueByNameAndOrg(name: String, orgId: String): VenueEntity? =
         venueDao.getVenueByNameAndOrg(name, orgId)
+
+    suspend fun getVenuesByName(name: String): List<VenueEntity> =
+        venueDao.getVenuesByName(name)
+
+    /**
+     * Firestore venues are keyed by name. Prefer the org-tagged row, then a leftover
+     * untagged (Sheets-era) row with the same name so pull/listeners do not insert a twin.
+     */
+    suspend fun findVenueForRemoteApply(name: String, orgId: String): VenueEntity? {
+        getVenueByNameAndOrg(name, orgId)?.let { return it }
+        return getVenuesByName(name).firstOrNull { it.firebaseOrgId.isBlank() }
+    }
 
     suspend fun getJobTypeConfigByNameAndOrg(name: String, orgId: String): JobTypeConfig? =
         jobTypeConfigDao.getJobTypeConfigByNameAndOrg(name, orgId)

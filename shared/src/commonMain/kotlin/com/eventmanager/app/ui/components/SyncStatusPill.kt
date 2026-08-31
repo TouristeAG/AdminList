@@ -55,8 +55,6 @@ import com.eventmanager.app.ui.viewmodel.EventManagerViewModel
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 
-private const val FIREBASE_LIVE_RECENT_MS = 120_000L
-
 @Composable
 fun SyncStatusPill(
     viewModel: EventManagerViewModel,
@@ -175,9 +173,7 @@ private fun FirebaseSyncStatusPill(
     val hasFailedPending = firebaseStatus.failedPendingWriteCount > 0
     val isLiveHealthy = firebaseStatus.mode == FirebaseSyncTransport.LIVE &&
         !hasPending &&
-        !hasFailedPending &&
-        (firebaseStatus.lastActivityAt <= 0L ||
-            System.currentTimeMillis() - firebaseStatus.lastActivityAt <= FIREBASE_LIVE_RECENT_MS)
+        !hasFailedPending
 
     val iconVector = when {
         hasFailedPending -> Icons.Default.SyncProblem
@@ -235,9 +231,9 @@ private fun firebasePillLabel(
     if (status.pendingWriteCount > 0) {
         return stringResource(Res.string.firebase_pill_pending, status.pendingWriteCount)
     }
-    when (status.mode) {
+    return when (status.mode) {
         FirebaseSyncTransport.OFFLINE -> {
-            return if (!status.orgConfigured) {
+            if (!status.orgConfigured) {
                 stringResource(Res.string.firebase_pill_not_setup)
             } else {
                 stringResource(Res.string.firebase_pill_offline)
@@ -245,20 +241,12 @@ private fun firebasePillLabel(
         }
         FirebaseSyncTransport.PULL -> {
             if (status.lastActivityAt > 0L && timeAgoLabel != null) {
-                return stringResource(Res.string.firebase_pill_line, timeAgoLabel)
+                stringResource(Res.string.firebase_pill_line, timeAgoLabel)
+            } else {
+                stringResource(Res.string.firebase_pill_pull)
             }
-            return stringResource(Res.string.firebase_pill_pull)
         }
-        FirebaseSyncTransport.LIVE -> {
-            if (status.lastActivityAt <= 0L) {
-                return stringResource(Res.string.firebase_pill_live)
-            }
-            val recent = System.currentTimeMillis() - status.lastActivityAt <= FIREBASE_LIVE_RECENT_MS
-            if (recent) {
-                return stringResource(Res.string.firebase_pill_live)
-            }
-            return stringResource(Res.string.firebase_pill_line, timeAgoLabel.orEmpty())
-        }
+        FirebaseSyncTransport.LIVE -> stringResource(Res.string.firebase_pill_live)
     }
 }
 

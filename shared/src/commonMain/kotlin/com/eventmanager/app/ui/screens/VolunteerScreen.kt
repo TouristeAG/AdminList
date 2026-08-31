@@ -87,8 +87,12 @@ fun VolunteerScreen(
     // Memoize filter options list to avoid recomputation on every recomposition
     val filterOptions = remember { listOf(filterActive, filterInactive) + VolunteerRank.values().map { it.name } }
 
+    val jobsByVolunteerId = remember(volunteerJobs) {
+        VolunteerActivityManager.groupJobsByVolunteerId(volunteerJobs)
+    }
+
     // Compute filtered volunteers once - memoized to avoid recalculation on recomposition
-    val filteredVolunteers = remember(volunteers, searchText, selectedFilter) {
+    val filteredVolunteers = remember(volunteers, volunteerJobs, searchText, selectedFilter, filterActive, filterInactive, filterAll) {
         val lowerSearchText = searchText.lowercase()
         volunteers.filter { volunteer ->
             val matchesSearch = searchText.isEmpty() || 
@@ -97,11 +101,15 @@ fun VolunteerScreen(
                 volunteer.lastNameAbbreviation.lowercase().contains(lowerSearchText) ||
                 volunteer.nfcCardUid.lowercase().contains(lowerSearchText)
             
+            val isActiveNow = VolunteerActivityManager.isVolunteerActive(
+                volunteer,
+                jobsByVolunteerId[volunteer.id],
+            )
             val matchesFilter = selectedFilter?.let { filter ->
                 when (filter) {
                     filterAll -> true
-                    filterActive -> volunteer.isActive
-                    filterInactive -> !volunteer.isActive
+                    filterActive -> isActiveNow
+                    filterInactive -> !isActiveNow
                     else -> volunteer.currentRank?.name == filter
                 }
             } ?: true
@@ -183,6 +191,10 @@ fun VolunteerScreen(
         ) { volunteer ->
             VolunteerCard(
                 volunteer = volunteer,
+                isActive = VolunteerActivityManager.isVolunteerActive(
+                    volunteer,
+                    jobsByVolunteerId[volunteer.id],
+                ),
                 accountBalance = accountBalances[AccountHolderKey(AccountHolderType.VOLUNTEER, volunteer.id)]
                     ?: viewModel?.getVolunteerAccountBalance(volunteer.id)
                     ?: 0.0,
@@ -378,6 +390,7 @@ fun VolunteerCard(
     onClick: (Volunteer) -> Unit,
     accountBalance: Double = 0.0,
     currencyCode: String = "CHF",
+    isActive: Boolean = VolunteerActivityManager.isVolunteerActive(volunteer),
     modifier: Modifier = Modifier
 ) {
     val platformContext = LocalPlatformContext.current
@@ -401,9 +414,6 @@ fun VolunteerCard(
                 Column(
                     modifier = Modifier.weight(1f)
                 ) {
-                    // Activity status - use the isActive field from the volunteer
-                    val isActive = volunteer.isActive
-                    
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)

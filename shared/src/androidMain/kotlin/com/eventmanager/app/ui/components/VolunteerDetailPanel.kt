@@ -134,10 +134,12 @@ actual fun VolunteerDetailPanel(
     // Sort jobs by date (most recent first)
     val sortedJobs = volunteerJobs.sortedByDescending { it.date }
     
-    // Calculate statistics
+    val activityVolunteer = remember(volunteer, volunteerJobs) {
+        VolunteerActivityManager.calculateActivityFromJobs(volunteer, volunteerJobs)
+    }
     val totalShifts = volunteerJobs.size
-    val isActive = VolunteerActivityManager.isVolunteerActive(volunteer)
-    val activityStatusText = VolunteerActivityManager.getActivityStatusText(volunteer, context)
+    val isActive = VolunteerActivityManager.isVolunteerActive(activityVolunteer)
+    val activityStatusText = VolunteerActivityManager.getActivityStatusText(activityVolunteer, context)
     
     // Calculate current rank dynamically
     val settingsManager = remember { com.eventmanager.app.data.sync.settingsManagerFor(context) }
@@ -291,6 +293,7 @@ actual fun VolunteerDetailPanel(
                             isActive = isActive,
                             activityStatusText = activityStatusText,
                             totalShifts = totalShifts,
+                            lastShiftDate = activityVolunteer.lastShiftDate,
                             isPhone = isPhone,
                             currentRank = currentRank
                         )
@@ -1211,6 +1214,7 @@ private fun VolunteerSpecificSection(
     isActive: Boolean,
     activityStatusText: String,
     totalShifts: Int,
+    lastShiftDate: Long?,
     isPhone: Boolean,
     currentRank: VolunteerRank?
 ) {
@@ -1292,7 +1296,7 @@ private fun VolunteerSpecificSection(
             )
             
             // Last shift date
-            volunteer.lastShiftDate?.let { lastShift ->
+            lastShiftDate?.let { lastShift ->
                 InfoRow(
                     label = getStringResource(R.string.last_shift),
                     value = formatDateTime(lastShift, LocalContext.current),

@@ -79,13 +79,16 @@ object PosAccountingReportBuilder {
             .filter { PosVenueScope.matchesTransferVenue(it.posVenueName, period.venueScope, period.venueName) }
             .sortedBy { it.createdAt }
 
-        val itemCategoryById = salesItems.associate { it.id to parseCategories(it.categories) }
-        val itemCategoryByName = salesItems.associate { it.name.lowercase() to parseCategories(it.categories) }
+        val (itemCategoryById, itemCategoryByName) = PosItemParser.categoryLookups(salesItems)
 
         val posSales = inRange
             .filter { it.type == AccountTransferType.POS_SALE }
             .map { transfer ->
-                val lines = parsePosItemsJson(transfer.posItemsJson, itemCategoryById, itemCategoryByName)
+                val lines = PosItemParser.parsePosItemsJson(
+                    transfer.posItemsJson,
+                    itemCategoryById,
+                    itemCategoryByName,
+                )
                 val gross = lines.sumOf { it.lineTotal }
                 val credit = transfer.creditAmountPaid ?: 0.0
                 val cash = transfer.cashAmountPaid ?: 0.0
@@ -158,38 +161,5 @@ object PosAccountingReportBuilder {
             totalShiftReversal = shiftReversals.sumOf { it.amount },
             totalBarDiscountSavings = barDiscountSavings,
         )
-    }
-
-    private fun parseCategories(categories: String): SalesCategory {
-        val first = categories.split(",").map { it.trim().uppercase() }.firstOrNull { it.isNotBlank() }
-        return runCatching { SalesCategory.valueOf(first ?: "OTHER") }.getOrDefault(SalesCategory.OTHER)
-    }
-
-    private fun parsePosItemsJson(
-        json: String,
-        itemCategoryById: Map<Long, SalesCategory>,
-        itemCategoryByName: Map<String, SalesCategory>,
-    ): List<PosReportLineItem> {
-        if (json.isBlank()) return emptyList()
-        return json.split("|").mapNotNull { segment ->
-            val parts = segment.split(":")
-            if (parts.size < 4) return@mapNotNull null
-            val itemId = parts[0].toLongOrNull() ?: 0L
-            val name = parts[1]
-            val price = parts[2].toDoubleOrNull() ?: 0.0
-            val qty = parts[3].toIntOrNull() ?: 0
-            if (qty <= 0) return@mapNotNull null
-            val category = itemCategoryById[itemId]
-                ?: itemCategoryByName[name.lowercase()]
-                ?: SalesCategory.OTHER
-            PosReportLineItem(
-                itemId = itemId,
-                name = name,
-                unitPrice = price,
-                quantity = qty,
-                lineTotal = price * qty,
-                category = category,
-            )
-        }
     }
 }

@@ -1,5 +1,7 @@
 package com.eventmanager.app.ui.components
 
+import androidx.compose.ui.graphics.Color
+
 enum class TimePeriod(val displayName: String, val days: Long, val unitLabel: String) {
     ONE_WEEK("1 Week", 7, "Day"),
     TWO_WEEKS("2 Weeks", 14, "Day"),
@@ -13,6 +15,14 @@ data class DataPoint(
     val label: String,
     val value: Float,
     val timestamp: Long
+)
+
+data class PieSlice(
+    val label: String,
+    val percentage: Float,
+    val color: Color,
+    val detail: String = "",
+    val count: Int = 0,
 )
 
 data class AnnouncementDisplay(

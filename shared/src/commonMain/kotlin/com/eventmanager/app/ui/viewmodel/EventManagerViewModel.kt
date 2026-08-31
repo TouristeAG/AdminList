@@ -700,8 +700,10 @@ class EventManagerViewModel(
     val peopleCounterUiHint: StateFlow<PeopleCounterUiHint?> = _peopleCounterUiHint.asStateFlow()
 
     private val peopleCounterUploadMutex = Mutex()
+    private val peopleCounterAdjustMutex = Mutex()
     private val peopleCounterQuietRefreshMutex = Mutex()
     private val peopleCounterUserSelectionGraceMs = 8_000L
+    private val peopleCounterFirebaseDebounceMs = 120L
     @Volatile private var peopleCounterLastUserSelectedVenueId: Long = 0L
     @Volatile private var peopleCounterLastUserSelectionAtMs: Long = 0L
 
@@ -711,6 +713,7 @@ class EventManagerViewModel(
     )
 
     private val peopleCounterThrottleByVenue = mutableMapOf<Long, PeopleCounterThrottle>()
+    private val peopleCounterDebounceJobs = mutableMapOf<Long, kotlinx.coroutines.Job>()
 
     // State for sync status
     private val _isSyncing = MutableStateFlow(false)
@@ -3875,35 +3878,53 @@ class EventManagerViewModel(
 
     /**
      * Ensures sheet structure + data are ready before the admin NFC/QR gate.
-     * Skips a full network repair/download when a successful Sheets pull already happened
-     * recently (startup precheck), so tapping Admin is not delayed by a second full sync.
+     * Local roster is enough to open the login immediately; a full refresh/recalc
+     * must not freeze the first frame after tapping Admin.
      */
     fun prepareForAdminAuthentication() {
+        val localReady = hasLocalDataForVisibleOrg()
+        val fresh = hasFreshRemotePullForAdminGate()
+        if (localReady || fresh) {
+            _syncError.value = null
+            _adminGateSyncSucceeded.value = true
+            if (fresh || _isSyncing.value) return
+            viewModelScope.launch {
+                try {
+                    val result = withContext(Dispatchers.IO) {
+                        syncCoordinator?.prepareForAdminGate()
+                            ?: syncManager?.repairSheetStructureThenFullDownload()
+                    }
+                    if (result?.isSuccess == true) {
+                        updateSyncTime()
+                        withContext(Dispatchers.IO) {
+                            recalcAndUploadVolunteerGuestList()
+                            if (settingsManagerCached?.getBackendType() != BackendType.FIREBASE) {
+                                refreshTemporaryGuestsFromSheets()
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    AppLogger.e("EventManagerViewModel", "Background admin-gate sync failed", e)
+                }
+            }
+            return
+        }
+
         viewModelScope.launch {
             _adminGateSyncSucceeded.value = null
             _syncError.value = null
             try {
-                // Startup precheck may still be running — wait for it instead of stacking another sync.
                 if (_isSyncing.value) {
                     AppLogger.i(
                         "EventManagerViewModel",
                         "Admin gate waiting for in-flight sync instead of starting another"
                     )
                     isSyncing.first { !it }
-                    if (hasFreshRemotePullForAdminGate()) {
-                        withContext(Dispatchers.Main) { refreshAllData() }
+                    if (hasLocalDataForVisibleOrg() || hasFreshRemotePullForAdminGate()) {
                         _adminGateSyncSucceeded.value = true
-                        AppLogger.i("EventManagerViewModel", "Admin gate preparation reused fresh sync")
+                        AppLogger.i("EventManagerViewModel", "Admin gate preparation reused in-flight sync")
                         return@launch
                     }
-                } else if (hasFreshRemotePullForAdminGate()) {
-                    withContext(Dispatchers.Main) { refreshAllData() }
-                    _adminGateSyncSucceeded.value = true
-                    AppLogger.i(
-                        "EventManagerViewModel",
-                        "Admin gate preparation skipped full sync (data fresh)"
-                    )
-                    return@launch
                 }
 
                 _isSyncing.value = true
@@ -3920,13 +3941,15 @@ class EventManagerViewModel(
                     withContext(Dispatchers.Main) {
                         refreshAllData()
                     }
-                    recalcAndUploadVolunteerGuestList()
-                    if (settingsManagerCached?.getBackendType() != BackendType.FIREBASE) {
-                        refreshTemporaryGuestsFromSheets()
-                    }
                     updateSyncTime()
                     _adminGateSyncSucceeded.value = true
                     AppLogger.i("EventManagerViewModel", "Admin gate preparation completed")
+                    withContext(Dispatchers.IO) {
+                        recalcAndUploadVolunteerGuestList()
+                        if (settingsManagerCached?.getBackendType() != BackendType.FIREBASE) {
+                            refreshTemporaryGuestsFromSheets()
+                        }
+                    }
                 } else {
                     val errorResult = result as? SyncResult.Error
                     val errorMsg = errorResult?.message ?: "Admin gate sync failed"
@@ -4020,43 +4043,17 @@ class EventManagerViewModel(
             val newVolunteerGuests = computeVolunteerGuestEntries()
             println("Computed ${newVolunteerGuests.size} volunteer guest entries")
 
-            // Get existing volunteer benefit guests
             val existingVolunteerGuests = repository.getVolunteerBenefitGuests()
             println("Found ${existingVolunteerGuests.size} existing volunteer benefit guests")
 
-            // Create maps for efficient comparison using volunteerId as key
-            val existingByVolunteerId = existingVolunteerGuests.associateBy { it.volunteerId }
-            val newByVolunteerId = newVolunteerGuests.associateBy { it.volunteerId }
-
-            // Determine changes
-            val toDelete = mutableListOf<Guest>()
-            val toInsert = mutableListOf<Guest>()
-            val toUpdate = mutableListOf<Guest>()
-
-            // Find deleted (in existing but not in new)
-            for ((volunteerId, existingGuest) in existingByVolunteerId) {
-                if (volunteerId != null && !newByVolunteerId.containsKey(volunteerId)) {
-                    toDelete.add(existingGuest)
-                }
-            }
-
-            // Find new and modified
-            for ((volunteerId, newGuest) in newByVolunteerId) {
-                val existingGuest = existingByVolunteerId[volunteerId]
-                if (existingGuest == null) {
-                    toInsert.add(
-                        VolunteerBenefitGuestMerge.prepareForInsert(
-                            newGuest,
-                            resolveActiveFirebaseOrgIdForWrites(),
-                        ),
-                    )
-                } else if (existingGuest.name != newGuest.name ||
-                           existingGuest.invitations != newGuest.invitations ||
-                           existingGuest.notes != newGuest.notes ||
-                           existingGuest.nfcCardUid != newGuest.nfcCardUid) {
-                    toUpdate.add(VolunteerBenefitGuestMerge.prepareForUpdate(existingGuest, newGuest))
-                }
-            }
+            val diff = VolunteerBenefitGuestMerge.diff(
+                existingVolunteerGuests,
+                newVolunteerGuests,
+                resolveActiveFirebaseOrgIdForWrites(),
+            )
+            val toDelete = diff.toDelete
+            val toInsert = diff.toInsert
+            val toUpdate = diff.toUpdate
 
             println("Volunteer benefit changes: ${toInsert.size} new, ${toUpdate.size} modified, ${toDelete.size} deleted")
 
@@ -4079,7 +4076,7 @@ class EventManagerViewModel(
                     
                     // Remove deleted volunteer benefits from UI
                     toDelete.forEach { deleted ->
-                        currentGuests.removeAll { it.volunteerId == deleted.volunteerId && it.isVolunteerBenefit }
+                        currentGuests.removeAll { VolunteerBenefitGuestMerge.isSameBenefitRow(it, deleted) }
                     }
                     
                     // Add new volunteer benefits to UI
@@ -4735,10 +4732,11 @@ class EventManagerViewModel(
             return if (NanoIdGenerator.isValidNanoId(g.nanoId)) g.nanoId else "row:${g.id}"
         }
         val byKey = scoped.groupBy { dedupeKey(it) }
-        return byKey.values.map { group ->
+        val uniqueByIdentity = byKey.values.map { group ->
             // Keep the newest entry for each identity to avoid reverting recent changes.
             group.maxByOrNull { it.lastModified } ?: group.first()
         }
+        return VolunteerBenefitGuestMerge.collapseDuplicates(uniqueByIdentity)
     }
     
     /**
@@ -4825,30 +4823,12 @@ class EventManagerViewModel(
     }
 
     /**
-     * Remove duplicate venues based on the following rules:
-     * 1. If ID is the same → keep the OLDER one (lower lastModified)
-     * 2. If ID is different BUT all info is exactly the same → keep the OLDER one
-     * 3. Everything else should NOT be filtered
+     * Scope to the visible Firebase org, then collapse same-name twins:
+     * tagged vs leftover untagged rows, and pull+listener inserts of the same org+name.
      */
     private fun removeDuplicateVenues(venues: List<VenueEntity>): List<VenueEntity> {
         val scoped = filterForVisibleOrg(venues) { it.firebaseOrgId }
-        // Group by ID first to handle same-ID duplicates
-        val byId = scoped.groupBy { it.id }
-        
-        // For each ID group, keep only the oldest (lowest lastModified)
-        val uniqueById = byId.values.map { group ->
-            group.minByOrNull { it.lastModified } ?: group.first()
-        }
-        
-        // Now check for content duplicates (different ID but same info)
-        fun contentKey(v: VenueEntity) = "${v.firebaseOrgId}_${v.name}_${v.description}_${v.isActive}"
-        
-        val byContent = uniqueById.groupBy { contentKey(it) }
-        
-        // For each content group, keep only the oldest (lowest lastModified)
-        return byContent.values.map { group ->
-            group.minByOrNull { it.lastModified } ?: group.first()
-        }
+        return PersistIdentityDedupe.venues(scoped)
     }
 
     // Get volunteer benefits with time-based calculation
@@ -5602,62 +5582,48 @@ class EventManagerViewModel(
             // Get current guest list
             val currentGuests = _guests.value.toMutableList()
             val existingBenefitGuests = currentGuests.filter { it.isVolunteerBenefit }
-            
-            // Compute new volunteer benefit entries
             val newBenefitGuests = computeVolunteerGuestEntries()
-            
+            val diff = VolunteerBenefitGuestMerge.diff(
+                existingBenefitGuests,
+                newBenefitGuests,
+                resolveActiveFirebaseOrgIdForWrites(),
+            )
+
             println("📋 Volunteer benefits - Current: ${existingBenefitGuests.size}, New: ${newBenefitGuests.size}")
-            
-            // DIFFERENTIAL COMPARISON: Identify what changed in volunteer benefits
-            val benefitMap = existingBenefitGuests.associateBy { "${it.volunteerId}_${it.name}" }
-            val newBenefitMap = newBenefitGuests.associateBy { "${it.volunteerId}_${it.name}" }
-            
-            // Remove deleted benefit entries (in current but not in new)
-            val deletedBenefits = existingBenefitGuests.filter { existing ->
-                val key = "${existing.volunteerId}_${existing.name}"
-                !newBenefitMap.containsKey(key)
-            }
-            deletedBenefits.forEach { deletedGuest ->
-                currentGuests.removeAll { it.id == deletedGuest.id }
+
+            diff.toDelete.forEach { deletedGuest ->
+                if (deletedGuest.id > 0L) {
+                    runCatching { repository.deleteGuest(deletedGuest) }
+                }
+                currentGuests.removeAll { guest ->
+                    VolunteerBenefitGuestMerge.isSameBenefitRow(guest, deletedGuest)
+                }
                 println("🗑️ Removed deleted volunteer benefit: ${deletedGuest.name}")
             }
-            
-            // Add new benefit entries (in new but not in current)
-            val newBenefits = newBenefitGuests.filter { newBenefit ->
-                val key = "${newBenefit.volunteerId}_${newBenefit.name}"
-                !benefitMap.containsKey(key)
-            }
-            currentGuests.addAll(newBenefits)
-            newBenefits.forEach { newGuest ->
+
+            currentGuests.addAll(diff.toInsert)
+            diff.toInsert.forEach { newGuest ->
                 println("➕ Added new volunteer benefit: ${newGuest.name}")
             }
-            
-            // Update modified benefit entries (same ID but different data)
-            val modifiedBenefits = newBenefitGuests.filter { newBenefit ->
-                val key = "${newBenefit.volunteerId}_${newBenefit.name}"
-                benefitMap[key]?.let { existingBenefit ->
-                    // Check if any relevant fields changed
-                    existingBenefit.invitations != newBenefit.invitations ||
-                    existingBenefit.notes != newBenefit.notes
-                } ?: false
-            }
-            modifiedBenefits.forEach { modifiedGuest ->
-                val index = currentGuests.indexOfFirst { 
-                    it.volunteerId == modifiedGuest.volunteerId && 
-                    it.isVolunteerBenefit && 
-                    it.name == modifiedGuest.name 
+
+            diff.toUpdate.forEach { modifiedGuest ->
+                val index = currentGuests.indexOfFirst { existing ->
+                    existing.isVolunteerBenefit &&
+                        VolunteerBenefitGuestMerge.benefitIdentityKey(existing) ==
+                        VolunteerBenefitGuestMerge.benefitIdentityKey(modifiedGuest)
                 }
                 if (index >= 0) {
                     currentGuests[index] = modifiedGuest
                     println("✏️ Updated volunteer benefit: ${modifiedGuest.name}")
+                } else {
+                    currentGuests.add(modifiedGuest)
                 }
             }
-            
-            // Update UI with targeted changes (only affected rows update)
+
             _guests.value = removeDuplicateGuests(currentGuests)
-            
-            val totalChanges = deletedBenefits.size + newBenefits.size + modifiedBenefits.size
-            println("✅ Applied $totalChanges targeted volunteer benefit guest updates (${deletedBenefits.size} deleted, ${newBenefits.size} new, ${modifiedBenefits.size} modified)")
+
+            val totalChanges = diff.toDelete.size + diff.toInsert.size + diff.toUpdate.size
+            println("✅ Applied $totalChanges targeted volunteer benefit guest updates (${diff.toDelete.size} deleted, ${diff.toInsert.size} new, ${diff.toUpdate.size} modified)")
             
         } catch (e: Exception) {
             println("❌ Failed to apply volunteer benefit updates: ${e.message}")
@@ -6222,42 +6188,15 @@ class EventManagerViewModel(
             // STEP 1: Calculate new volunteer benefits (TEMP_DB)
             val newBenefitGuests = computeVolunteerGuestEntries()
             println("📥 Calculated ${newBenefitGuests.size} volunteer benefit entries")
-            
-            // STEP 2: Get existing volunteer benefit entries from MAIN_DB
+
             val existingBenefits = repository.getVolunteerBenefitGuests()
             println("📊 Current MAIN_DB: ${existingBenefits.size} volunteer benefit entries")
-            
-            // STEP 3: Compare TEMP_DB vs MAIN_DB using differential logic
-            val benefitMap = existingBenefits.associateBy { "${it.volunteerId}_${it.name}" }
-            val newBenefitMap = newBenefitGuests.associateBy { "${it.volunteerId}_${it.name}" }
-            
-            // Identify deleted (in MAIN_DB but not in TEMP_DB)
-            val deletedBenefits = existingBenefits.filter { existing ->
-                val key = "${existing.volunteerId}_${existing.name}"
-                !newBenefitMap.containsKey(key)
-            }
-            
-            // Identify new (in TEMP_DB but not in MAIN_DB)
-            val addedBenefits = newBenefitGuests.filter { newBenefit ->
-                val key = "${newBenefit.volunteerId}_${newBenefit.name}"
-                !benefitMap.containsKey(key)
-            }
-            
-            // Identify modified (same key but different data)
-            val modifiedBenefits = newBenefitGuests.filter { newBenefit ->
-                val key = "${newBenefit.volunteerId}_${newBenefit.name}"
-                benefitMap[key]?.let { existingBenefit ->
-                    existingBenefit.invitations != newBenefit.invitations ||
-                    existingBenefit.notes != newBenefit.notes
-                } ?: false
-            }
-            
+
             val orgId = resolveActiveFirebaseOrgIdForWrites()
-            val addedToSave = addedBenefits.map { VolunteerBenefitGuestMerge.prepareForInsert(it, orgId) }
-            val modifiedToSave = modifiedBenefits.map { computed ->
-                val existing = benefitMap["${computed.volunteerId}_${computed.name}"]
-                if (existing != null) VolunteerBenefitGuestMerge.prepareForUpdate(existing, computed) else computed
-            }
+            val diff = VolunteerBenefitGuestMerge.diff(existingBenefits, newBenefitGuests, orgId)
+            val deletedBenefits = diff.toDelete
+            val addedToSave = diff.toInsert
+            val modifiedToSave = diff.toUpdate
             
             println("📋 Changes: ${addedToSave.size} new, ${modifiedToSave.size} modified, ${deletedBenefits.size} deleted")
             
@@ -6266,6 +6205,14 @@ class EventManagerViewModel(
                 deletedBenefits.forEach { repository.deleteGuest(it) }
                 addedToSave.forEach { repository.insertGuest(it) }
                 modifiedToSave.forEach { repository.updateGuest(it) }
+                if (settingsManagerCached?.getBackendType() == BackendType.FIREBASE) {
+                    deletedBenefits.forEach { guest ->
+                        runCatching { syncCoordinator?.afterGuestDeleted(guest) }
+                    }
+                    (addedToSave + modifiedToSave).forEach { guest ->
+                        runCatching { syncCoordinator?.afterGuestSaved(guest) }
+                    }
+                }
                 
                 println("✅ Applied ${deletedBenefits.size + addedToSave.size + modifiedToSave.size} changes to MAIN_DB")
             } else {
@@ -6276,7 +6223,7 @@ class EventManagerViewModel(
             val currentGuests = _guests.value.toMutableList()
             
             deletedBenefits.forEach { deleted ->
-                currentGuests.removeAll { it.id == deleted.id }
+                currentGuests.removeAll { VolunteerBenefitGuestMerge.isSameBenefitRow(it, deleted) }
             }
             
             currentGuests.addAll(addedToSave)
@@ -6306,7 +6253,7 @@ class EventManagerViewModel(
                 }
             }
             
-            println("✅ Volunteer benefits update completed (${deletedBenefits.size + addedBenefits.size + modifiedBenefits.size} changes)")
+            println("✅ Volunteer benefits update completed (${deletedBenefits.size + addedToSave.size + modifiedToSave.size} changes)")
             
         } catch (e: Exception) {
             println("❌ Failed to recalc volunteer benefits: ${e.message}")
@@ -6373,16 +6320,26 @@ class EventManagerViewModel(
                     val now = System.currentTimeMillis()
                     val count = venue.peopleCounterCount
                     peopleCounterUploadMutex.withLock {
+                        val pcm = com.eventmanager.app.data.remote.FirestoreApplyPolicy
+                            .nextPeopleCounterTimestamp(venue.peopleCounterLastModified, now)
+                        val stamped = patchPeopleCounterWriter(venue, myId, pcm, backendFirebase)
                         if (backendFirebase) {
-                            syncCoordinator?.updatePeopleCounter(venue, count, venue.firebaseOrgId)
+                            syncCoordinator?.updatePeopleCounter(stamped, count, venue.firebaseOrgId)
                         } else {
                             val row = venue.sheetsId?.toIntOrNull() ?: return@withLock
                             twoWaySyncService?.updateVenuePeopleCounterOnSheets(row, count, myId, now)
                         }
-                        val fresh = repository.getVenueById(vid) ?: return@withLock
-                        repository.updateVenue(
-                            patchPeopleCounterWriter(fresh, myId, now, backendFirebase = true)
-                        )
+                        peopleCounterAdjustMutex.withLock {
+                            val fresh = repository.getVenueById(vid) ?: return@withLock
+                            repository.updateVenue(
+                                patchPeopleCounterWriter(
+                                    fresh,
+                                    myId,
+                                    maxOf(fresh.peopleCounterLastModified, pcm),
+                                    backendFirebase,
+                                )
+                            )
+                        }
                         val t = peopleCounterThrottleByVenue.getOrPut(vid) { PeopleCounterThrottle() }
                         t.lastUploadAtMs = now
                         t.countAtLastUpload = count
@@ -6473,6 +6430,10 @@ class EventManagerViewModel(
             return
         }
         val now = System.currentTimeMillis()
+        val pcm = com.eventmanager.app.data.remote.FirestoreApplyPolicy.nextPeopleCounterTimestamp(
+            venue.peopleCounterLastModified,
+            now,
+        )
         val countForSheetAndDb = if (!backendFirebase) {
             val row = venue.sheetsId?.toIntOrNull()
             if (row == null) {
@@ -6488,7 +6449,7 @@ class EventManagerViewModel(
             count
         } else {
             val count = venue.peopleCounterCount
-            val writerVenue = patchPeopleCounterWriter(venue, myId, now, backendFirebase = true)
+            val writerVenue = patchPeopleCounterWriter(venue, myId, pcm, backendFirebase = true)
             syncCoordinator?.updatePeopleCounter(writerVenue, count)
             count
         }
@@ -6501,7 +6462,7 @@ class EventManagerViewModel(
                 } else {
                     ""
                 },
-                peopleCounterLastModified = now
+                peopleCounterLastModified = pcm
             )
         )
         sm.setPeopleCounterPriority(venue.id, true)
@@ -6625,26 +6586,53 @@ class EventManagerViewModel(
     fun adjustPeopleCounterCount(venueId: Long, delta: Int) {
         viewModelScope.launch {
             if (rejectIfCrudSoftLocked("editing people counter")) return@launch
-            if (!canEditPeopleCounter(venueId)) return@launch
-            val venue = repository.getVenueById(venueId) ?: return@launch
-            val before = venue.peopleCounterCount
-            val next = (before + delta).coerceAtLeast(0)
-            if (next == before) return@launch
-            repository.updateVenue(venue.copy(peopleCounterCount = next))
-            maybeUploadVenueCounterAfterLocalEdit(venueId, next)
+            val changed = peopleCounterAdjustMutex.withLock {
+                applyLocalPeopleCounterDelta(venueId, delta)
+            }
+            if (changed) schedulePeopleCounterUpload(venueId)
         }
     }
 
     fun resetPeopleCounterForVenue(venueId: Long) {
         viewModelScope.launch {
             if (rejectIfCrudSoftLocked("editing people counter")) return@launch
-            if (!canEditPeopleCounter(venueId)) return@launch
-            val venue = repository.getVenueById(venueId) ?: return@launch
-            val prev = venue.peopleCounterCount
-            if (prev == 0) return@launch
-            repository.updateVenue(venue.copy(peopleCounterCount = 0))
-            maybeUploadVenueCounterAfterLocalEdit(venueId, 0)
+            val changed = peopleCounterAdjustMutex.withLock {
+                applyLocalPeopleCounterDelta(venueId, delta = null, resetToZero = true)
+            }
+            if (changed) schedulePeopleCounterUpload(venueId)
         }
+    }
+
+    /**
+     * Applies a local counter change under [peopleCounterAdjustMutex] so rapid taps and +10
+     * long-presses cannot read-modify-write the same Room row and drop increments.
+     * Stamps [VenueEntity.peopleCounterLastModified] immediately so stale Firebase snapshots
+     * lose last-write-wins against in-progress local edits.
+     */
+    private suspend fun applyLocalPeopleCounterDelta(
+        venueId: Long,
+        delta: Int? = null,
+        resetToZero: Boolean = false,
+    ): Boolean {
+        if (!canEditPeopleCounter(venueId)) return false
+        val venue = repository.getVenueById(venueId) ?: return false
+        val before = venue.peopleCounterCount
+        val next = when {
+            resetToZero -> 0
+            delta != null -> (before + delta).coerceAtLeast(0)
+            else -> before
+        }
+        if (next == before) return false
+        val pcm = com.eventmanager.app.data.remote.FirestoreApplyPolicy.nextPeopleCounterTimestamp(
+            venue.peopleCounterLastModified
+        )
+        repository.updateVenue(
+            venue.copy(
+                peopleCounterCount = next,
+                peopleCounterLastModified = pcm,
+            )
+        )
+        return true
     }
 
     /**
@@ -6671,7 +6659,20 @@ class EventManagerViewModel(
         return w.isEmpty() || w == myId
     }
 
-    private suspend fun maybeUploadVenueCounterAfterLocalEdit(venueId: Long, @Suppress("UNUSED_PARAMETER") newCount: Int) {
+    private fun schedulePeopleCounterUpload(venueId: Long) {
+        val firebase = settingsManagerCached?.getBackendType() == BackendType.FIREBASE
+        if (!firebase) {
+            viewModelScope.launch { maybeUploadVenueCounterAfterLocalEdit(venueId) }
+            return
+        }
+        peopleCounterDebounceJobs[venueId]?.cancel()
+        peopleCounterDebounceJobs[venueId] = viewModelScope.launch {
+            delay(peopleCounterFirebaseDebounceMs)
+            maybeUploadVenueCounterAfterLocalEdit(venueId)
+        }
+    }
+
+    private suspend fun maybeUploadVenueCounterAfterLocalEdit(venueId: Long) {
         val ctx = platformContext ?: return
         val sm = SettingsManager(ctx)
         if (!sm.isPeopleCounterPriority(venueId)) return
@@ -6680,36 +6681,60 @@ class EventManagerViewModel(
         val myId = sm.getOrCreatePersistentDeviceId()
         if (w.isEmpty() || w != myId) return
         peopleCounterUploadMutex.withLock {
-            val fresh = repository.getVenueById(venueId) ?: return@withLock
-            val count = fresh.peopleCounterCount
-            val t = peopleCounterThrottleByVenue.getOrPut(venueId) { PeopleCounterThrottle() }
-            val now = System.currentTimeMillis()
             val backendFirebase = sm.getBackendType() == BackendType.FIREBASE
-            if (!backendFirebase) {
-                val lastUp = t.countAtLastUpload
-                val hitTenBoundary = count % 10 == 0 && count != lastUp
-                val idleOneMinuteSinceLastUpload =
-                    t.lastUploadAtMs > 0L &&
-                        now - t.lastUploadAtMs >= 60_000L &&
-                        count != lastUp
-                if (!hitTenBoundary && !idleOneMinuteSinceLastUpload) return@withLock
-            }
+            var guard = 0
+            while (guard++ < 8) {
+                val fresh = repository.getVenueById(venueId) ?: return@withLock
+                val count = fresh.peopleCounterCount
+                val t = peopleCounterThrottleByVenue.getOrPut(venueId) { PeopleCounterThrottle() }
+                val now = System.currentTimeMillis()
+                if (backendFirebase && count == t.countAtLastUpload) return@withLock
+                if (!backendFirebase) {
+                    val lastUp = t.countAtLastUpload
+                    val hitTenBoundary = count % 10 == 0 && count != lastUp
+                    val idleOneMinuteSinceLastUpload =
+                        t.lastUploadAtMs > 0L &&
+                            now - t.lastUploadAtMs >= 60_000L &&
+                            count != lastUp
+                    if (!hitTenBoundary && !idleOneMinuteSinceLastUpload) return@withLock
+                }
 
-            if (backendFirebase) {
-                syncCoordinator?.updatePeopleCounter(
-                    patchPeopleCounterWriter(fresh, myId, now, backendFirebase = true),
-                    count,
-                    fresh.firebaseOrgId,
+                val pcm = fresh.peopleCounterLastModified
+                val writerVenue = patchPeopleCounterWriter(
+                    fresh,
+                    myId,
+                    if (pcm > 0L) pcm else now,
+                    backendFirebase = backendFirebase,
                 )
-            } else {
+                if (backendFirebase) {
+                    syncCoordinator?.updatePeopleCounter(
+                        writerVenue,
+                        count,
+                        fresh.firebaseOrgId,
+                    )
+                    t.lastUploadAtMs = now
+                    t.countAtLastUpload = count
+                    val latest = repository.getVenueById(venueId)?.peopleCounterCount
+                    if (latest == null || latest == count) return@withLock
+                    continue
+                }
                 val row = fresh.sheetsId?.toIntOrNull() ?: return@withLock
                 twoWaySyncService?.updateVenuePeopleCounterOnSheets(row, count, myId, now)
+                peopleCounterAdjustMutex.withLock {
+                    val latest = repository.getVenueById(venueId) ?: return@withLock
+                    repository.updateVenue(
+                        patchPeopleCounterWriter(
+                            latest,
+                            myId,
+                            maxOf(latest.peopleCounterLastModified, now),
+                            backendFirebase = false,
+                        )
+                    )
+                }
+                t.lastUploadAtMs = now
+                t.countAtLastUpload = count
+                return@withLock
             }
-            repository.updateVenue(
-                patchPeopleCounterWriter(fresh, myId, now, backendFirebase = backendFirebase)
-            )
-            t.lastUploadAtMs = now
-            t.countAtLastUpload = count
         }
     }
 

@@ -3,12 +3,15 @@ package com.eventmanager.app.data.remote
 import com.eventmanager.app.data.models.Guest
 import com.eventmanager.app.data.models.Job
 import com.eventmanager.app.data.models.JobTypeConfig
+import com.eventmanager.app.data.models.VenueEntity
 import com.eventmanager.app.data.models.Volunteer
 import com.eventmanager.app.data.utils.NanoIdGenerator
 
 /**
- * Persistence-safe identity collapse. Unlike UI [MultiOrgMerge.filterForVisibleOrg], this
- * never drops untagged rows just because another org-tagged row exists.
+ * Persistence-safe identity collapse. Unlike UI [MultiOrgMerge.filterForVisibleOrg], guests /
+ * volunteers / jobs never drop untagged rows just because another org-tagged row exists.
+ * Venues are keyed by name within an org, so an untagged row is absorbed when a tagged
+ * row with the same name already exists (Desktop pull+listener otherwise shows each lieu twice).
  */
 object PersistIdentityDedupe {
     fun guests(items: List<Guest>): List<Guest> {
@@ -44,6 +47,33 @@ object PersistIdentityDedupe {
         val byNameOrg = uniqueById.groupBy { "${it.firebaseOrgId}\u0000${it.name}" }
         return byNameOrg.values.map { group ->
             pickPreferringTagged(group, { it.lastModified }, { it.firebaseOrgId })
+        }
+    }
+
+    fun venues(items: List<VenueEntity>): List<VenueEntity> {
+        val uniqueById = items.groupBy { it.id }.values.map { group ->
+            pickPreferringTagged(
+                group,
+                { maxOf(it.lastModified, it.peopleCounterLastModified) },
+                { it.firebaseOrgId },
+            )
+        }
+        val uniqueByOrgName = uniqueById
+            .groupBy { "${it.firebaseOrgId.trim()}\u0000${it.name.trim()}" }
+            .values
+            .map { group ->
+                pickPreferringTagged(
+                    group,
+                    { maxOf(it.lastModified, it.peopleCounterLastModified) },
+                    { it.firebaseOrgId },
+                )
+            }
+        val taggedNames = uniqueByOrgName
+            .filter { it.firebaseOrgId.isNotBlank() }
+            .map { it.name.trim() }
+            .toSet()
+        return uniqueByOrgName.filter { venue ->
+            venue.firebaseOrgId.isNotBlank() || venue.name.trim() !in taggedNames
         }
     }
 

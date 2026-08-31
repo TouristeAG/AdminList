@@ -231,24 +231,25 @@ actual fun GuestListScreen(
                     .fillMaxSize()
                     .padding(responsivePadding)
             ) {
-            // Header
-            Text(
-                text = if (isCompact) context.getString(R.string.guest_list_title) else context.getString(R.string.guest_list_management),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
-            )
-            
-            Spacer(modifier = Modifier.height(if (isCompact) 4.dp else 8.dp))
-            
-            if (!isCompact) {
+            if (!readOnly) {
                 Text(
-                    text = context.getString(R.string.guest_list_description),
-                    style = getResponsiveBodyTypography(),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = if (isCompact) context.getString(R.string.guest_list_title) else context.getString(R.string.guest_list_management),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold
                 )
+                
+                Spacer(modifier = Modifier.height(if (isCompact) 4.dp else 8.dp))
+                
+                if (!isCompact) {
+                    Text(
+                        text = context.getString(R.string.guest_list_description),
+                        style = getResponsiveBodyTypography(),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(responsiveSpacing))
             }
-            
-            Spacer(modifier = Modifier.height(responsiveSpacing))
             
             if (isCompact) {
                 // Stack vertically on phones
@@ -396,24 +397,26 @@ actual fun GuestListScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 // Header section (scrolls away)
-                item {
-                    Text(
-                        text = if (isCompact) context.getString(R.string.guest_list_title) else context.getString(R.string.guest_list_management),
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    
-                    Spacer(modifier = Modifier.height(if (isCompact) 4.dp else 8.dp))
-                    
-                    if (!isCompact) {
+                if (!readOnly) {
+                    item {
                         Text(
-                            text = context.getString(R.string.guest_list_description),
-                            style = getResponsiveBodyTypography(),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = if (isCompact) context.getString(R.string.guest_list_title) else context.getString(R.string.guest_list_management),
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold
                         )
+                        
+                        Spacer(modifier = Modifier.height(if (isCompact) 4.dp else 8.dp))
+                        
+                        if (!isCompact) {
+                            Text(
+                                text = context.getString(R.string.guest_list_description),
+                                style = getResponsiveBodyTypography(),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.height(responsiveSpacing))
                     }
-                    
-                    Spacer(modifier = Modifier.height(responsiveSpacing))
                 }
                 
                 item {
@@ -559,24 +562,26 @@ actual fun GuestListScreen(
                     .padding(responsivePadding),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                item {
-                    Text(
-                        text = if (isCompact) context.getString(R.string.guest_list_title) else context.getString(R.string.guest_list_management),
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    
-                    Spacer(modifier = Modifier.height(if (isCompact) 4.dp else 8.dp))
-                    
-                    if (!isCompact) {
+                if (!readOnly) {
+                    item {
                         Text(
-                            text = context.getString(R.string.guest_list_description),
-                            style = getResponsiveBodyTypography(),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = if (isCompact) context.getString(R.string.guest_list_title) else context.getString(R.string.guest_list_management),
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold
                         )
+                        
+                        Spacer(modifier = Modifier.height(if (isCompact) 4.dp else 8.dp))
+                        
+                        if (!isCompact) {
+                            Text(
+                                text = context.getString(R.string.guest_list_description),
+                                style = getResponsiveBodyTypography(),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.height(responsiveSpacing))
                     }
-                    
-                    Spacer(modifier = Modifier.height(responsiveSpacing))
                 }
                 
                 item {

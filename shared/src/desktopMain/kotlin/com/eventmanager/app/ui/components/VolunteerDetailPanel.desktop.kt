@@ -53,8 +53,11 @@ actual fun VolunteerDetailPanel(
 
     val age = remember(volunteer.dateOfBirth) { desktopCalculateAge(volunteer.dateOfBirth) }
     val sortedJobs = remember(volunteerJobs) { volunteerJobs.sortedByDescending { it.date } }
-    val isActive = VolunteerActivityManager.isVolunteerActive(volunteer)
-    val activityStatus = VolunteerActivityManager.getActivityStatusText(volunteer)
+    val activityVolunteer = remember(volunteer, volunteerJobs) {
+        VolunteerActivityManager.calculateActivityFromJobs(volunteer, volunteerJobs)
+    }
+    val isActive = VolunteerActivityManager.isVolunteerActive(activityVolunteer)
+    val activityStatus = VolunteerActivityManager.getActivityStatusText(activityVolunteer)
     val offsetHours = remember { settingsManager.getDateChangeOffsetHours() }
     val benefitStatus = remember(volunteer.id, volunteerJobs, jobTypeConfigs, offsetHours) {
         BenefitCalculator.calculateVolunteerBenefitStatus(volunteer, volunteerJobs, jobTypeConfigs, offsetHours = offsetHours)
@@ -138,7 +141,7 @@ actual fun VolunteerDetailPanel(
                 DesktopInfoRow(stringResource(Res.string.current_rank), rankLabel)
                 DesktopInfoRow(stringResource(Res.string.status), activityStatus)
                 DesktopInfoRow(stringResource(Res.string.total_shifts), volunteerJobs.size.toString())
-                volunteer.lastShiftDate?.let {
+                activityVolunteer.lastShiftDate?.let {
                     DesktopInfoRow(
                         stringResource(Res.string.last_shift),
                         DateFormatUtils.formatDateTime(it, platformContext)

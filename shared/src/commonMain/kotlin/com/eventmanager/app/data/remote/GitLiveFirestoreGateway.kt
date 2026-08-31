@@ -37,6 +37,8 @@ class GitLiveFirestoreGateway(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val listenerJobs = mutableListOf<CoroutineJob>()
     private val mutex = Mutex()
+    private var serverReachable: Boolean = false
+    private var serverReachabilityListener: (() -> Unit)? = null
 
     private val watchedCollections = listOf(
         "guests",
@@ -71,6 +73,18 @@ class GitLiveFirestoreGateway(
 
     override fun isAvailable(): Boolean = ensureReady() && db() != null
 
+    override fun isServerReachable(): Boolean = serverReachable
+
+    override fun setServerReachabilityListener(listener: (() -> Unit)?) {
+        serverReachabilityListener = listener
+    }
+
+    private fun noteServerReachability(fromServer: Boolean) {
+        if (serverReachable == fromServer) return
+        serverReachable = fromServer
+        serverReachabilityListener?.invoke()
+    }
+
     override suspend fun startOrgListeners(orgIds: List<String>, onChange: suspend (FirestoreRemoteChange) -> Unit) {
         val distinct = orgIds.map { it.trim() }.filter { it.isNotBlank() }.distinct()
         if (distinct.isEmpty()) return
@@ -81,9 +95,10 @@ class GitLiveFirestoreGateway(
                 for (collection in watchedCollections) {
                     val job = scope.launch {
                         firestore.collection("orgs").document(orgId).collection(collection)
-                            .snapshots
+                            .snapshots(includeMetadataChanges = true)
                             .catch { /* keep other listeners alive */ }
                             .collect { snapshot ->
+                                noteServerReachability(!snapshot.metadata.isFromCache)
                                 snapshot.documentChanges.forEach { change ->
                                     val docId = change.document.id
                                     val deleted = change.type == ChangeType.REMOVED
@@ -122,6 +137,7 @@ class GitLiveFirestoreGateway(
     override fun stopOrgListeners() {
         listenerJobs.forEach { it.cancel() }
         listenerJobs.clear()
+        noteServerReachability(false)
     }
 
     override suspend fun flushPendingWrites() {
@@ -199,6 +215,9 @@ class GitLiveFirestoreGateway(
         }
         for (collection in toPull) {
             val snap = firestore.collection("orgs").document(orgId).collection(collection).get()
+            if (!snap.metadata.isFromCache) {
+                noteServerReachability(true)
+            }
             for (doc in snap.documents) {
                 val data = decodeSnapshot(doc)
                 if (data.isEmpty()) continue
@@ -357,9 +376,12 @@ class GitLiveFirestoreGateway(
         count: Int,
         deviceId: String,
         writerAccountEmail: String,
+        lastModified: Long,
     ) {
         val firestore = db() ?: return
         if (orgId.isBlank() || venueName.isBlank()) return
+        val writeAt = if (lastModified > 0L) lastModified else System.currentTimeMillis()
+        val sourceDeviceId = settingsManager?.getOrCreatePersistentDeviceId()?.trim().orEmpty()
         firestore.runTransaction {
             val ref = firestore.collection("orgs").document(orgId).collection("venues").document(venueName)
             val snap = get(ref)
@@ -369,16 +391,28 @@ class GitLiveFirestoreGateway(
                 // Soft arbitration: another device holds the counter; only force-steal paths pass empty→deviceId.
                 // Callers that need steal should pass the new deviceId after reading remote (claim with force).
             }
+            val remotePcm = when (val raw = existing["peopleCounterLastModified"]) {
+                is Number -> raw.toLong()
+                is String -> raw.toLongOrNull() ?: 0L
+                else -> 0L
+            }
+            // Stale in-flight writes must not clobber a newer count that already committed.
+            if (FirestoreApplyPolicy.shouldKeepLocal(remotePcm, writeAt) && remotePcm > 0L) {
+                return@runTransaction
+            }
             val merged = existing.toMutableMap().apply {
                 put("peopleCounterCount", count)
                 put("peopleCounterWriterDeviceId", deviceId)
                 put("peopleCounterWriterAccountEmail", writerAccountEmail.trim())
-                put("peopleCounterLastModified", System.currentTimeMillis())
+                put("peopleCounterLastModified", writeAt)
                 put("name", venueName)
                 put("lastModified", maxOf(
                     (existing["lastModified"] as? Number)?.toLong() ?: 0L,
-                    System.currentTimeMillis(),
+                    writeAt,
                 ))
+                if (sourceDeviceId.isNotBlank()) {
+                    put("sourceDeviceId", sourceDeviceId)
+                }
             }
             set(ref, toFirestoreFieldMap(ruleCompatibleFirestoreMap(merged)), merge = true)
         }
