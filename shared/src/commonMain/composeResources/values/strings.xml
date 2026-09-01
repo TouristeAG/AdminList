@@ -479,7 +479,7 @@
     
     <!-- App Information -->
     <string name="app_info_title">App Information</string>
-    <string name="app_version">NoctuList 1.1.1</string>
+    <string name="app_version">NoctuList 2.0.0</string>
     <string name="app_designed_for">Designed for Collectif Nocturne venues</string>
     <!-- Single full sentence to avoid spacing issues across locales -->
     <string name="app_developed_full">Developed for the Collectif Nocturne by Leonardo Mondada</string>
@@ -903,6 +903,8 @@
     <string name="share_profile_photo">Share</string>
     <string name="download_profile_photo">Download</string>
     <string name="profile_photo_cd">Profile photo</string>
+    <string name="profile_photo_preview_label">Profile photo preview</string>
+    <string name="profile_photo_preview_hint">This is how the photo will appear on the profile. Tap the circle or the button below to choose an image.</string>
     <string name="profile_photo_too_large">That image is too large (max 2 MB after compression).</string>
     <string name="profile_photo_upload_failed">The profile photo could not be uploaded. The person was saved without a photo.</string>
     <string name="profile_photos_settings_title">Profile photos (optional)</string>

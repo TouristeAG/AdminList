@@ -58,6 +58,8 @@ import com.eventmanager.app.resources.add_profile_photo
 import com.eventmanager.app.resources.change_profile_photo
 import com.eventmanager.app.resources.download_profile_photo
 import com.eventmanager.app.resources.profile_photo_cd
+import com.eventmanager.app.resources.profile_photo_preview_hint
+import com.eventmanager.app.resources.profile_photo_preview_label
 import com.eventmanager.app.resources.remove_profile_photo
 import com.eventmanager.app.resources.remove_profile_photo_confirm
 import com.eventmanager.app.resources.share_profile_photo
@@ -67,6 +69,7 @@ import com.eventmanager.app.data.models.Guest
 import com.eventmanager.app.data.models.Volunteer
 import com.eventmanager.app.data.remote.isStoredProfilePhotoRef
 import com.eventmanager.app.resources.cancel
+import com.eventmanager.app.ui.utils.isTablet
 import com.eventmanager.app.ui.viewmodel.EventManagerViewModel
 import com.eventmanager.app.utils.ProfilePhotoDisplayQuality
 import com.eventmanager.app.utils.ProfilePhotoImageCache
@@ -211,6 +214,7 @@ fun ProfilePhotoAvatar(
     onClick: (() -> Unit)? = null,
     fullQuality: Boolean = false,
     photoPath: String = "",
+    pendingBytes: ByteArray? = null,
 ) {
     val initial = remember(name) { profilePhotoInitial(name) }
     val background = when (tone) {
@@ -244,22 +248,31 @@ fun ProfilePhotoAvatar(
             fontWeight = FontWeight.Bold,
             color = initialColor,
         )
-        if (photoUrl.isStoredProfilePhotoRef() || photoPath.isStoredProfilePhotoRef()) {
-            ProfileRemoteImage(
-                url = photoUrl,
-                storagePath = photoPath,
-                modifier = Modifier.fillMaxSize().clip(CircleShape),
-                contentDescription = stringResource(Res.string.profile_photo_cd),
-                quality = ProfilePhotoDisplayQuality.Thumbnail,
-            )
-            if (fullQuality) {
+        when {
+            pendingBytes != null -> {
+                ProfileDecodedImage(
+                    bytes = pendingBytes,
+                    modifier = Modifier.fillMaxSize().clip(CircleShape),
+                    contentDescription = stringResource(Res.string.profile_photo_cd),
+                )
+            }
+            photoUrl.isStoredProfilePhotoRef() || photoPath.isStoredProfilePhotoRef() -> {
                 ProfileRemoteImage(
                     url = photoUrl,
                     storagePath = photoPath,
                     modifier = Modifier.fillMaxSize().clip(CircleShape),
                     contentDescription = stringResource(Res.string.profile_photo_cd),
-                    quality = ProfilePhotoDisplayQuality.Full,
+                    quality = ProfilePhotoDisplayQuality.Thumbnail,
                 )
+                if (fullQuality) {
+                    ProfileRemoteImage(
+                        url = photoUrl,
+                        storagePath = photoPath,
+                        modifier = Modifier.fillMaxSize().clip(CircleShape),
+                        contentDescription = stringResource(Res.string.profile_photo_cd),
+                        quality = ProfilePhotoDisplayQuality.Full,
+                    )
+                }
             }
         }
     }
@@ -510,26 +523,78 @@ fun ProfilePhotoFormPicker(
 ) {
     if (!enabled) return
     val pick = rememberProfilePhotoPicker(onPicked)
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
+    val platformContext = LocalPlatformContext.current
+    val useStackedLayout = platformContext.isDesktop || isTablet()
+    val hasPhoto = pendingBytes != null ||
+        currentUrl.isStoredProfilePhotoRef() ||
+        currentPath.isStoredProfilePhotoRef()
+    val avatarSize = if (useStackedLayout) 96.dp else 64.dp
+    val previewLabel = stringResource(Res.string.profile_photo_preview_label)
+    val previewHint = stringResource(Res.string.profile_photo_preview_hint)
+    val avatar = @Composable {
         ProfilePhotoAvatar(
             name = name,
-            photoUrl = if (pendingBytes != null) "" else currentUrl,
-            photoPath = if (pendingBytes != null) "" else currentPath,
-            size = 56.dp,
+            photoUrl = currentUrl,
+            photoPath = currentPath,
+            pendingBytes = pendingBytes,
+            size = avatarSize,
             onClick = pick,
         )
+    }
+    val actions = @Composable {
         ProfilePhotoActionButtons(
-            hasPhoto = pendingBytes != null || currentUrl.isNotBlank() || currentPath.isNotBlank(),
+            hasPhoto = hasPhoto,
             enabled = true,
             onAddOrChange = pick,
             onRemove = {
                 if (pendingBytes != null) onClearPending() else onRemoveExisting?.invoke()
             },
-            fillWidth = false,
+            fillWidth = !useStackedLayout,
+            sideBySide = useStackedLayout && hasPhoto,
         )
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
+            .padding(16.dp),
+        horizontalAlignment = if (useStackedLayout) Alignment.CenterHorizontally else Alignment.Start,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = if (useStackedLayout) Alignment.CenterHorizontally else Alignment.Start,
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                text = previewLabel,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = previewHint,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = if (useStackedLayout) TextAlign.Center else TextAlign.Start,
+            )
+        }
+        if (useStackedLayout) {
+            avatar()
+            actions()
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                avatar()
+                Box(modifier = Modifier.weight(1f)) {
+                    actions()
+                }
+            }
+        }
     }
 }
 

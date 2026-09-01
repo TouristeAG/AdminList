@@ -640,16 +640,16 @@ fun AddVolunteerDialog(
                                 }
                             }
                         }
-                    }
 
-                    ProfilePhotoFormPicker(
-                        enabled = profilePhotosEnabled,
-                        currentUrl = "",
-                        name = name,
-                        pendingBytes = pendingPhotoBytes,
-                        onPicked = { pendingPhotoBytes = it },
-                        onClearPending = { pendingPhotoBytes = null },
-                    )
+                        ProfilePhotoFormPicker(
+                            enabled = profilePhotosEnabled,
+                            currentUrl = "",
+                            name = name,
+                            pendingBytes = pendingPhotoBytes,
+                            onPicked = { pendingPhotoBytes = it },
+                            onClearPending = { pendingPhotoBytes = null },
+                        )
+                    }
                     
                     // Action Buttons
                     Row(
@@ -843,22 +843,22 @@ fun EditVolunteerDialog(
                                     }
                                 )
                             }
-                            }
                         }
                     }
 
                     ProfilePhotoFormPicker(
-                        enabled = rememberProfilePhotosUploadEnabled(viewModel),
-                        currentUrl = volunteer.profilePhotoUrl,
-                        currentPath = volunteer.resolvedProfilePhotoPath(),
-                        name = name,
-                        pendingBytes = pendingPhotoBytes,
-                        onPicked = { pendingPhotoBytes = it },
-                        onClearPending = { pendingPhotoBytes = null },
-                        onRemoveExisting = { viewModel?.removeProfilePhotoForVolunteer(volunteer) },
+                            enabled = rememberProfilePhotosUploadEnabled(viewModel),
+                            currentUrl = volunteer.profilePhotoUrl,
+                            currentPath = volunteer.resolvedProfilePhotoPath(),
+                            name = name,
+                            pendingBytes = pendingPhotoBytes,
+                            onPicked = { pendingPhotoBytes = it },
+                            onClearPending = { pendingPhotoBytes = null },
+                            onRemoveExisting = { viewModel?.removeProfilePhotoForVolunteer(volunteer) },
                     )
+                }
                     
-                    // Action Buttons
+                // Action Buttons
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()

@@ -479,7 +479,7 @@
     
     <!-- App Information -->
     <string name="app_info_title">Informations inapplication</string>
-    <string name="app_version">NoctuList 1.1.1</string>
+    <string name="app_version">NoctuList 2.0.0</string>
     <string name="app_designed_for">Nocturne Collective locis disposito</string>
     <!-- Single full sentence to avoid spacing issues across locales -->
     <string name="app_developed_full">Developed for Nocturne Collective by Leonardo Mondada</string>
@@ -899,6 +899,8 @@
     <string name="share_profile_photo">Communicare</string>
     <string name="download_profile_photo">Deponere</string>
     <string name="profile_photo_cd">Photographemma profili</string>
+    <string name="profile_photo_preview_label">Praevisio photographematis profili</string>
+    <string name="profile_photo_preview_hint">Sic photographema in profilo apparebit. Circulum vel puga pyram infra tange ut imaginem eligas.</string>
     <string name="profile_photo_too_large">Imago nimis magna est (max. 2 MB post compressionem).</string>
     <string name="profile_photo_upload_failed">Photographemma profili mitti non potuit. Persona sine imagine servata est.</string>
     <string name="profile_photos_settings_title">Photogrammæ profili (facultativum)</string>

@@ -388,7 +388,7 @@
     
     <!-- App Information -->
     <string name="app_info_title">应用程序信息</string>
-    <string name="app_version">NoctuList 1.1.1</string>
+    <string name="app_version">NoctuList 2.0.0</string>
     <string name="app_designed_for">专为 Collectif Nocturne 场地设计</string>
     <string name="app_developed_full">为 Collectif Nocturne 开发，开发者：Leonardo Mondada</string>
     <string name="last_sync">上次更新：%1$s</string>
@@ -783,6 +783,8 @@
     <string name="share_profile_photo">分享</string>
     <string name="download_profile_photo">下载</string>
     <string name="profile_photo_cd">个人资料照片</string>
+    <string name="profile_photo_preview_label">个人资料照片预览</string>
+    <string name="profile_photo_preview_hint">这是照片在个人资料上的显示效果。点击圆圈或下方按钮选择图片。</string>
     <string name="profile_photo_too_large">图片过大（压缩后最大 2 MB）。</string>
     <string name="profile_photo_upload_failed">无法上传个人资料照片。已保存该人员且不含照片。</string>
     <string name="profile_photos_settings_title">个人资料照片（可选）</string>

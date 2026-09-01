@@ -1,13 +1,13 @@
 {
-  "latestVersionCode": 25,
-  "latestVersionName": "1.1.1",
-  "minSupportedVersionCode": "24",
-  "changelogShort": "Faster and more reliable desktop BLE NFC SoftDevice reading, clearer NFC reader status, native file dialogs, and various desktop fixes.",
-  "downloadUrl": "https://github.com/TouristeAG/NoctuList/releases/download/1.1.1/app-release-1.1.1.apk",
-  "desktopDownloadUrlDmg": "https://github.com/TouristeAG/NoctuList/releases/download/1.1.1/NoctuList-1.1.1.dmg",
-  "desktopDownloadUrlMsi": "https://github.com/TouristeAG/NoctuList/releases/download/1.1.1/NoctuList-1.1.1.msi",
-  "desktopDownloadUrlExe": "https://github.com/TouristeAG/NoctuList/releases/download/1.1.1/NoctuList-1.1.1.exe",
-  "desktopDownloadUrlDeb": "https://github.com/TouristeAG/NoctuList/releases/download/1.1.1/NoctuList-1.1.1.deb",
-  "desktopDownloadUrlAppImage": "https://github.com/TouristeAG/NoctuList/releases/download/1.1.1/NoctuList-1.1.1.AppImage",
+  "latestVersionCode": 26,
+  "latestVersionName": "2.0.0",
+  "minSupportedVersionCode": "25",
+  "changelogShort": "Major release: Firebase/Firestore sync, backend choice and migration, multi-organization mode, profile photos, account credits and POS ledger, UI improvements, and more.",
+  "downloadUrl": "https://github.com/TouristeAG/NoctuList/releases/download/2.0.0/app-release-2.0.0.apk",
+  "desktopDownloadUrlDmg": "https://github.com/TouristeAG/NoctuList/releases/download/2.0.0/NoctuList-2.0.0.dmg",
+  "desktopDownloadUrlMsi": "https://github.com/TouristeAG/NoctuList/releases/download/2.0.0/NoctuList-2.0.0.msi",
+  "desktopDownloadUrlExe": "https://github.com/TouristeAG/NoctuList/releases/download/2.0.0/NoctuList-2.0.0.exe",
+  "desktopDownloadUrlDeb": "https://github.com/TouristeAG/NoctuList/releases/download/2.0.0/NoctuList-2.0.0.deb",
+  "desktopDownloadUrlAppImage": "https://github.com/TouristeAG/NoctuList/releases/download/2.0.0/NoctuList-2.0.0.AppImage",
   "storeUrl": "https://play.google.com/store/apps/details?id=com.eventmanager.app"
 }

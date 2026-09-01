@@ -392,7 +392,7 @@
     
     <!-- App Information -->
     <string name="app_info_title">Informations in l\'application</string>
-    <string name="app_version">NoctuList 1.1.1</string>
+    <string name="app_version">NoctuList 2.0.0</string>
     <string name="app_designed_for">Nocturne Collective locis disposito</string>
     <!-- Single full sentence to avoid spacing issues across locales -->
     <string name="app_developed_full">Developed for Nocturne Collective by Leonardo Mondada</string>

@@ -479,7 +479,7 @@
     
     <!-- App Information -->
     <string name="app_info_title">ऐप की जानकारी</string>
-    <string name="app_version">NoctuList 1.1.1</string>
+    <string name="app_version">NoctuList 2.0.0</string>
     <string name="app_designed_for">कलेक्टिफ़ नॉक्टर्न स्थानों के लिए डिज़ाइन किया गया</string>
     <!-- Single full sentence to avoid spacing issues across locales -->
     <string name="app_developed_full">लियोनार्डो मोंडाडा द्वारा कलेक्टिफ़ नॉक्टर्न के लिए विकसित किया गया</string>
@@ -899,6 +899,8 @@
     <string name="share_profile_photo">साझा करें</string>
     <string name="download_profile_photo">डाउनलोड</string>
     <string name="profile_photo_cd">प्रोफ़ाइल फ़ोटो</string>
+    <string name="profile_photo_preview_label">प्रोफ़ाइल फ़ोटो पूर्वावलोकन</string>
+    <string name="profile_photo_preview_hint">प्रोफ़ाइल पर फ़ोटो इसी तरह दिखेगी। छवि चुनने के लिए वृत्त या नीचे का बटन टैप करें।</string>
     <string name="profile_photo_too_large">यह छवि बहुत बड़ी है (संपीड़न के बाद अधिकतम 2 MB)।</string>
     <string name="profile_photo_upload_failed">प्रोफ़ाइल फ़ोटो अपलोड नहीं हो सकी। व्यक्ति को बिना फ़ोटो सहेजा गया।</string>
     <string name="profile_photos_settings_title">प्रोफ़ाइल फ़ोटो (वैकल्पिक)</string>

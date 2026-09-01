@@ -868,7 +868,7 @@
     
     <!-- App Information -->
     <string name="app_info_title">Informations sur l'application</string>
-    <string name="app_version">NoctuList 1.1.1</string>
+    <string name="app_version">NoctuList 2.0.0</string>
     <string name="app_designed_for">Conçu pour les lieux du Collectif Nocturne</string>
     <string name="app_developed_full">Développé pour le Collectif Nocturne par Leonardo Mondada</string>
     <string name="last_sync">Dernière mise à jour : %1$s</string>
@@ -893,6 +893,8 @@
     <string name="share_profile_photo">Partager</string>
     <string name="download_profile_photo">Télécharger</string>
     <string name="profile_photo_cd">Photo de profil</string>
+    <string name="profile_photo_preview_label">Aperçu de la photo de profil</string>
+    <string name="profile_photo_preview_hint">Voici l’apparence de la photo sur le profil. Touchez le cercle ou le bouton ci-dessous pour choisir une image.</string>
     <string name="profile_photo_too_large">Cette image est trop lourde (max. 2 Mo après compression).</string>
     <string name="profile_photo_upload_failed">La photo de profil n’a pas pu être envoyée. La personne a été enregistrée sans photo.</string>
     <string name="profile_photos_settings_title">Photos de profil (facultatif)</string>
