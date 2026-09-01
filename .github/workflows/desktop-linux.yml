@@ -29,9 +29,20 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Read version from version.json
+        id: version
+        run: |
+          VERSION=$(python3 -c "import json; print(json.load(open('version.json'))['latestVersionName'])")
+          echo "name=$VERSION" >> "$GITHUB_OUTPUT"
+
       - name: Build Linux packages
         run: |
           ./gradlew :desktopApp:packageReleaseDeb :desktopApp:packageReleaseAppImage --no-daemon
+
+      - name: Rename .deb for release manifest
+        run: |
+          DEB=$(ls desktopApp/build/compose/packaged/main-release/deb/*.deb | head -1)
+          cp "$DEB" "NoctuList-${{ steps.version.outputs.name }}.deb"
 
       - name: Upload workflow artifacts
         if: github.event_name == 'workflow_dispatch'
@@ -39,13 +50,13 @@ jobs:
         with:
           name: noctulist-linux-desktop
           path: |
-            desktopApp/build/compose/binaries/main-release/deb/*.deb
-            desktopApp/build/compose/binaries/main-release/appImage/*.AppImage
+            NoctuList-*.deb
+            desktopApp/build/compose/packaged/main-release/appImage/*.AppImage
 
       - name: Upload release assets
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            desktopApp/build/compose/binaries/main-release/deb/*.deb
-            desktopApp/build/compose/binaries/main-release/appImage/*.AppImage
+            NoctuList-*.deb
+            desktopApp/build/compose/packaged/main-release/appImage/*.AppImage

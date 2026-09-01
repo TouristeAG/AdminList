@@ -22,9 +22,11 @@ Use this when tagging and publishing **NoctuList 2.0.0** on GitHub.
 
 # Desktop (macOS — run on Mac with Temurin JDK 17)
 ./scripts/package-desktop.sh
-# → desktopApp/build/compose/binaries/…/NoctuList-2.0.0.dmg (etc.)
+# → desktopApp/build/compose/packaged/…/NoctuList-2.0.0.dmg (etc.)
 
-# Linux CI builds .deb + .AppImage on release publish (.github/workflows/desktop-linux.yml)
+# Windows + Linux: use GitHub Actions (see .github/workflows/desktop-*.yml)
+#   gh workflow run desktop-linux.yml
+#   gh workflow run desktop-windows.yml
 ```
 
 Expected GitHub asset names (must match `version.json` URLs):
