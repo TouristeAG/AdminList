@@ -1315,6 +1315,11 @@
     <string name="biometric_enrollment_success">已啟用指紋登入以存取管理員功能</string>
     <string name="biometric_enrollment_verify_description">請先掃描管理員徽章或 QR 碼確認身分，再啟用生物辨識登入</string>
     <string name="biometric_enrollment_verify_title">驗證管理員存取權</string>
+    <string name="biometric_enrollment_org_select_title">選擇機構</string>
+    <string name="biometric_enrollment_org_select_description">選擇此裝置上哪些機構接受指紋管理員登入。您需要分別為每個機構驗證管理員存取權。</string>
+    <string name="biometric_enrollment_org_select_continue">繼續</string>
+    <string name="biometric_enrollment_org_verify_step">驗證 %1$s 的管理員存取權（第 %2$d 個，共 %3$d 個）</string>
+    <string name="biometric_enrollment_org_enrolled">已註冊：%1$s</string>
     <string name="biometric_warning_accept">我了解相關風險</string>
     <string name="biometric_warning_cancel">取消</string>
     <string name="biometric_warning_message">任何持有此裝置解鎖密碼的人都可以新增指紋，進而進入管理員頁面。\n\n嚴禁在可被公眾或其他不應存取私人資訊者使用的裝置上啟用此功能。\n\n此功能僅供理解並接受相關風險的使用者使用。\n\n繼續操作前，將先透過 QR 碼或 NFC 徽章驗證您的管理員身分。</string>

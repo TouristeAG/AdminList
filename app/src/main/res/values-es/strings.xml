@@ -1315,6 +1315,11 @@
     <string name="biometric_enrollment_success">El inicio de sesión por huella se ha activado para el acceso de administrador</string>
     <string name="biometric_enrollment_verify_description">Escanee su insignia de administrador o código QR para confirmar su identidad antes de activar el inicio de sesión biométrico</string>
     <string name="biometric_enrollment_verify_title">Verificar acceso de administrador</string>
+    <string name="biometric_enrollment_org_select_title">Seleccionar instituciones</string>
+    <string name="biometric_enrollment_org_select_description">Elija para qué instituciones este dispositivo aceptará el inicio de sesión de administrador por huella. Deberá verificar el acceso de administrador por separado para cada una.</string>
+    <string name="biometric_enrollment_org_select_continue">Continuar</string>
+    <string name="biometric_enrollment_org_verify_step">Verificar acceso de administrador para %1$s (%2$d de %3$d)</string>
+    <string name="biometric_enrollment_org_enrolled">Inscrito: %1$s</string>
     <string name="biometric_warning_accept">Entiendo los riesgos</string>
     <string name="biometric_warning_cancel">Cancelar</string>
     <string name="biometric_warning_message">Cualquier persona con el código de desbloqueo de este dispositivo puede añadir una huella digital y así acceder a la página de administrador.\n\nEsto está estrictamente prohibido en dispositivos accesibles al público o a personas que no deberían tener acceso a esta información privada.\n\nEsta función es SOLO para usuarios que comprenden y aceptan los riesgos asociados.\n\nPara continuar, su identidad de administrador se verificará primero mediante un código QR o una insignia NFC.</string>

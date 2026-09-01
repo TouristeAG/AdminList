@@ -573,6 +573,11 @@
     <string name="biometric_enrollment_success">Fingerprint login datum est pro\'Administrator accessum</string>
     <string name="biometric_enrollment_prompt_title">Registra biometriam</string>
     <string name="biometric_enrollment_prompt_subtitle">Confirmez tuum empreinte pro activer connexio admin</string>
+    <string name="biometric_enrollment_org_select_title">Selige institutiones</string>
+    <string name="biometric_enrollment_org_select_description">Elige quibus institutionibus fingerprint admin login in hoc instrumento activum sit. Pro quaque separatim admin accessum verificabis.</string>
+    <string name="biometric_enrollment_org_select_continue">Perge</string>
+    <string name="biometric_enrollment_org_verify_step">Verifica admin accessum pro %1$s (%2$d ex %3$d)</string>
+    <string name="biometric_enrollment_org_enrolled">Inscriptus: %1$s</string>
 
     <!-- Ticketing (Billeterie) hub -->
     <string name="ticket_check_title">Billeterie</string>

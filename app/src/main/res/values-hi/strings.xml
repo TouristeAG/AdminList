@@ -573,6 +573,11 @@
     <string name="biometric_enrollment_success">व्यवस्थापक पहुंच के लिए फ़िंगरप्रिंट लॉगिन सक्षम किया गया है</string>
     <string name="biometric_enrollment_prompt_title">बायोमेट्रिक्स रजिस्टर करें</string>
     <string name="biometric_enrollment_prompt_subtitle">व्यवस्थापक लॉगिन सक्षम करने के लिए अपने फ़िंगरप्रिंट की पुष्टि करें</string>
+    <string name="biometric_enrollment_org_select_title">संस्थाएँ चुनें</string>
+    <string name="biometric_enrollment_org_select_description">चुनें कि इस डिवाइस पर कौन-सी संस्थाएँ फ़िंगरप्रिंट एडमिन लॉगिन स्वीकार करेंगी। आपको प्रत्येक के लिए अलग से एडमिन पहुंच सत्यापित करनी होगी।</string>
+    <string name="biometric_enrollment_org_select_continue">जारी रखें</string>
+    <string name="biometric_enrollment_org_verify_step">%1$s के लिए एडमिन पहुंच सत्यापित करें (%3$d में से %2$d)</string>
+    <string name="biometric_enrollment_org_enrolled">नामांकित: %1$s</string>
 
     <!-- Ticketing (Billeterie) hub -->
     <string name="ticket_check_title">टिकटिंग</string>

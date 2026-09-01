@@ -342,6 +342,11 @@
     <string name="biometric_enrollment_success">La connexion par empreinte a été activée pour l\'accès admin</string>
     <string name="biometric_enrollment_prompt_title">Enregistrer la biométrie</string>
     <string name="biometric_enrollment_prompt_subtitle">Confirmez votre empreinte pour activer la connexion admin</string>
+    <string name="biometric_enrollment_org_select_title">Sélectionner les institutions</string>
+    <string name="biometric_enrollment_org_select_description">Choisissez pour quelles institutions la connexion admin par empreinte sera active sur cet appareil. Vous devrez prouver vos droits admin séparément pour chacune.</string>
+    <string name="biometric_enrollment_org_select_continue">Continuer</string>
+    <string name="biometric_enrollment_org_verify_step">Vérifier l\'accès admin pour %1$s (%2$d sur %3$d)</string>
+    <string name="biometric_enrollment_org_enrolled">Inscrit : %1$s</string>
 
     <!-- Billeterie -->
     <string name="ticket_check_title">Billeterie</string>

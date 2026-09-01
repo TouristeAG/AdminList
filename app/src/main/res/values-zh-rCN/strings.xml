@@ -1315,6 +1315,11 @@
     <string name="biometric_enrollment_success">已启用指纹登录以访问管理员功能</string>
     <string name="biometric_enrollment_verify_description">请先扫描管理员徽章或二维码确认身份，再启用生物识别登录</string>
     <string name="biometric_enrollment_verify_title">验证管理员访问权限</string>
+    <string name="biometric_enrollment_org_select_title">选择机构</string>
+    <string name="biometric_enrollment_org_select_description">选择此设备上哪些机构接受指纹管理员登录。您需要分别为每个机构验证管理员访问权限。</string>
+    <string name="biometric_enrollment_org_select_continue">继续</string>
+    <string name="biometric_enrollment_org_verify_step">验证 %1$s 的管理员访问权限（第 %2$d 个，共 %3$d 个）</string>
+    <string name="biometric_enrollment_org_enrolled">已注册：%1$s</string>
     <string name="biometric_warning_accept">我了解相关风险</string>
     <string name="biometric_warning_cancel">取消</string>
     <string name="biometric_warning_message">任何持有此设备解锁密码的人都可以添加指纹，从而进入管理员页面。\n\n严禁在可被公众或其他不应访问私人信息者使用的设备上启用此功能。\n\n此功能仅供理解并接受相关风险的用户使用。\n\n继续操作前，将先通过二维码或 NFC 徽章验证您的管理员身份。</string>
