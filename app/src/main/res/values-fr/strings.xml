@@ -693,7 +693,7 @@
     <string name="add_new_venue">Ajouter un nouveau lieu</string>
     <string name="edit_venue_configuration">Modifier la configuration du lieu</string>
     <string name="venue_all">TOUS</string>
-    <string name="venue_both">LES DEUX</string>
+    <string name="venue_both">TOUS</string>
 
     <!-- Temporary Guest List -->
     <string name="temp_guest_artist_label">Artiste / Groupe</string>
@@ -744,6 +744,17 @@
     <string name="camera_error">Erreur de caméra</string>
     <string name="enter_id_manually">Entrer l\'ID manuellement</string>
     <string name="add_nfc_card">Ajouter une carte NFC</string>
+    <string name="add_profile_photo">Ajouter une photo</string>
+    <string name="change_profile_photo">Modifier la photo</string>
+    <string name="remove_profile_photo">Supprimer la photo</string>
+    <string name="remove_profile_photo_confirm">Supprimer cette photo de profil ?</string>
+    <string name="share_profile_photo">Partager</string>
+    <string name="download_profile_photo">Télécharger</string>
+    <string name="profile_photo_saved_downloads">Photo enregistrée dans Téléchargements</string>
+    <string name="profile_photo_export_failed">Impossible d’exporter la photo</string>
+    <string name="profile_photo_cd">Photo de profil</string>
+    <string name="profile_photo_too_large">Cette image est trop lourde (max. 2 Mo après compression).</string>
+    <string name="profile_photo_upload_failed">La photo de profil n\'a pas pu être envoyée. La personne a été enregistrée sans photo.</string>
     <string name="add_nfc_card_uid_title">Ajouter l\'UID de la carte NFC</string>
     <string name="enter_uid_manually">Entrer l\'UID manuellement</string>
     <string name="read_uid_with_phone_nfc">Lire l\'UID avec le téléphone (NFC)</string>

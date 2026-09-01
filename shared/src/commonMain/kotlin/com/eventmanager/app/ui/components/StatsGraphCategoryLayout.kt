@@ -43,6 +43,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.eventmanager.app.resources.Res
 import com.eventmanager.app.resources.stats_graph_chapters
@@ -51,22 +52,28 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.yield
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.roundToInt
 
 enum class StatsGraphCategory {
-    VOLUNTEERS,
+    VOLUNTEERS_ACTIVITY,
+    VOLUNTEERS_SHIFTS,
+    VOLUNTEERS_RANKS,
+    VOLUNTEERS_PROFILE,
     GUEST_LIST,
-    POS_ACTIVITY,
+    POS_SALES,
+    POS_CREDITS,
     POS_MIX,
+    POS_CUSTOMERS,
 }
 
 data class StatsGraphCategoryItem(
     val id: StatsGraphCategory,
     val title: String,
     val icon: ImageVector,
+    val tocTitle: String = title,
+    val sectionTitle: String? = null,
 )
 
 @Composable
@@ -75,19 +82,13 @@ fun StatsGraphCategoryLayout(
     categories: List<StatsGraphCategoryItem>,
     expandedCategories: Set<StatsGraphCategory>,
     onToggleCategory: (StatsGraphCategory) -> Unit,
-    volunteerContent: @Composable () -> Unit,
-    guestListContent: @Composable () -> Unit,
-    posActivityContent: @Composable () -> Unit,
-    posMixContent: @Composable () -> Unit,
+    content: @Composable (StatsGraphCategory) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (isDesktop) {
         StatsGraphDesktopViewer(
             categories = categories,
-            volunteerContent = volunteerContent,
-            guestListContent = guestListContent,
-            posActivityContent = posActivityContent,
-            posMixContent = posMixContent,
+            content = content,
             modifier = modifier,
         )
     } else {
@@ -95,10 +96,7 @@ fun StatsGraphCategoryLayout(
             categories = categories,
             expandedCategories = expandedCategories,
             onToggleCategory = onToggleCategory,
-            volunteerContent = volunteerContent,
-            guestListContent = guestListContent,
-            posActivityContent = posActivityContent,
-            posMixContent = posMixContent,
+            content = content,
             modifier = modifier,
         )
     }
@@ -109,10 +107,7 @@ private fun StatsGraphMobileAccordion(
     categories: List<StatsGraphCategoryItem>,
     expandedCategories: Set<StatsGraphCategory>,
     onToggleCategory: (StatsGraphCategory) -> Unit,
-    volunteerContent: @Composable () -> Unit,
-    guestListContent: @Composable () -> Unit,
-    posActivityContent: @Composable () -> Unit,
-    posMixContent: @Composable () -> Unit,
+    content: @Composable (StatsGraphCategory) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -161,12 +156,7 @@ private fun StatsGraphMobileAccordion(
                     }
                     if (expanded) {
                         Spacer(modifier = Modifier.height(16.dp))
-                        when (item.id) {
-                            StatsGraphCategory.VOLUNTEERS -> volunteerContent()
-                            StatsGraphCategory.GUEST_LIST -> guestListContent()
-                            StatsGraphCategory.POS_ACTIVITY -> posActivityContent()
-                            StatsGraphCategory.POS_MIX -> posMixContent()
-                        }
+                        content(item.id)
                     }
                 }
             }
@@ -177,17 +167,15 @@ private fun StatsGraphMobileAccordion(
 @Composable
 private fun StatsGraphDesktopViewer(
     categories: List<StatsGraphCategoryItem>,
-    volunteerContent: @Composable () -> Unit,
-    guestListContent: @Composable () -> Unit,
-    posActivityContent: @Composable () -> Unit,
-    posMixContent: @Composable () -> Unit,
+    content: @Composable (StatsGraphCategory) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val screenHeight = getScreenHeightDp()
     val viewerHeight = (screenHeight * 0.72f).coerceIn(560.dp, 920.dp)
     val scrollState = rememberScrollState()
+    val tocScroll = rememberScrollState()
     val offsets = remember { mutableStateMapOf<StatsGraphCategory, Int>() }
-    var activeChapter by remember { mutableStateOf(categories.firstOrNull()?.id ?: StatsGraphCategory.VOLUNTEERS) }
+    var activeChapter by remember { mutableStateOf(categories.firstOrNull()?.id ?: StatsGraphCategory.VOLUNTEERS_ACTIVITY) }
     var composedCategories by remember {
         mutableStateOf(setOfNotNull(categories.firstOrNull()?.id))
     }
@@ -254,62 +242,80 @@ private fun StatsGraphDesktopViewer(
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(horizontal = 12.dp),
                 )
-                Spacer(Modifier.height(16.dp))
-                categories.forEach { item ->
-                    val isSelected = item.id == activeChapter
-                    val container = if (isSelected) {
-                        MaterialTheme.colorScheme.secondaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.surfaceContainer
-                    }
-                    val content = if (isSelected) {
-                        MaterialTheme.colorScheme.onSecondaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.onSurface
-                    }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(container)
-                            .clickable {
-                                activeChapter = item.id
-                                ensureComposed(item.id)
-                                pendingScrollTo = item.id
-                            }
-                            .padding(horizontal = 10.dp, vertical = 11.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Box(
+                Spacer(Modifier.height(12.dp))
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(tocScroll),
+                ) {
+                    categories.forEachIndexed { index, item ->
+                        item.sectionTitle?.let { section ->
+                            if (index > 0) Spacer(Modifier.height(10.dp))
+                            Text(
+                                text = section,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            )
+                        }
+                        val isSelected = item.id == activeChapter
+                        val container = if (isSelected) {
+                            MaterialTheme.colorScheme.secondaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.surfaceContainer
+                        }
+                        val tocTextColor = if (isSelected) {
+                            MaterialTheme.colorScheme.onSecondaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        }
+                        Row(
                             modifier = Modifier
-                                .width(3.dp)
-                                .height(22.dp)
-                                .clip(RoundedCornerShape(2.dp))
-                                .background(
-                                    if (isSelected) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.0f),
-                                ),
-                        )
-                        Spacer(Modifier.width(10.dp))
-                        Icon(
-                            imageVector = item.icon,
-                            contentDescription = null,
-                            tint = if (isSelected) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
-                            modifier = Modifier.size(20.dp),
-                        )
-                        Spacer(Modifier.width(10.dp))
-                        Text(
-                            text = item.title,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                            color = content,
-                        )
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(container)
+                                .clickable {
+                                    activeChapter = item.id
+                                    ensureComposed(item.id)
+                                    pendingScrollTo = item.id
+                                }
+                                .padding(horizontal = 10.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .width(3.dp)
+                                    .height(22.dp)
+                                    .clip(RoundedCornerShape(2.dp))
+                                    .background(
+                                        if (isSelected) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.0f),
+                                    ),
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Icon(
+                                imageVector = item.icon,
+                                contentDescription = null,
+                                tint = if (isSelected) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                                modifier = Modifier.size(20.dp),
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                text = item.tocTitle,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                color = tocTextColor,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        Spacer(Modifier.height(4.dp))
                     }
-                    Spacer(Modifier.height(4.dp))
                 }
             }
 
@@ -355,12 +361,7 @@ private fun StatsGraphDesktopViewer(
                             )
                         }
                         if (item.id in composedCategories) {
-                            when (item.id) {
-                                StatsGraphCategory.VOLUNTEERS -> volunteerContent()
-                                StatsGraphCategory.GUEST_LIST -> guestListContent()
-                                StatsGraphCategory.POS_ACTIVITY -> posActivityContent()
-                                StatsGraphCategory.POS_MIX -> posMixContent()
-                            }
+                            content(item.id)
                         } else {
                             GraphLoadingPlaceholder(isPhone = false, cardCount = 2)
                         }

@@ -54,7 +54,8 @@ Both need a short visit to the **other** console once:
    restrictions cause `API key not valid` on Identity Toolkit). Optionally restrict by API to
    Identity Toolkit API + Token Service API only. Enable **Identity Toolkit API** in the library
    if prompted.
-8. In NoctuList: Org ID + those values → Sign-In → join QR for other devices.
+8. In NoctuList: Org ID + those values → Sign-In → join QR for other devices.  
+   **Optional photos:** skip Storage to stay on Spark — see [Optional — profile photos](#optional--profile-photos-firebase-storage) below.
 
 ### Method B — Google Cloud Console
 
@@ -74,7 +75,19 @@ Both need a short visit to the **other** console once:
      - `http://localhost:9090/Callback`
 6. **Application ID:** Firebase → Project settings → Web app → `appId`  
    (or paste Firebase web config into NoctuList).
-7. Same NoctuList steps as Method A.
+7. Same NoctuList steps as Method A. **Optional photos:** skip Storage to stay on Spark — see below.
+
+### Optional — profile photos (Firebase Storage)
+
+**Skip this entire section to stay on the free Spark plan.** Enabling Storage can require a paid Blaze plan. The rest of NoctuList (wizard, join, sync, guest list, volunteers, scanner, ticketing) works without Storage. Circles still show initials.
+
+If you want profile photos later:
+
+1. Firebase Console → **Build → Storage** → Get started (same project).
+2. **Storage → Rules** (URL must contain `/storage/rules`, not Firestore) → paste [`firebase/storage.rules`](firebase/storage.rules) → **Publish**. Republish if you already published an older copy: members must be allowed to **delete** profile photos (a single `write` rule with `request.resource` size/type checks blocks Remove).
+3. In NoctuList **Settings → Firebase**, turn on **Enable profile photos** (off by default). This setting syncs to every device in the organization.
+
+Without that toggle, there is no upload UI and no Storage `put`. You can copy the same rules from the in-app Firebase help (`?`).
 
 ### Android Sign-In (Web OAuth loopback — no SHA-1 per institution)
 

@@ -835,7 +835,7 @@
     <string name="add_new_venue">Ajouter un nouveau lieu</string>
     <string name="edit_venue_configuration">Modifier la configuration du lieu</string>
     <string name="venue_all">TOUS</string>
-    <string name="venue_both">LES DEUX</string>
+    <string name="venue_both">TOUS</string>
 
     <!-- Temporary Guest List -->
     <string name="temp_guest_artist_label">Artiste / Groupe</string>
@@ -886,6 +886,18 @@
     <string name="camera_error">Erreur de caméra</string>
     <string name="enter_id_manually">Entrer l'ID manuellement</string>
     <string name="add_nfc_card">Ajouter une carte NFC</string>
+    <string name="add_profile_photo">Ajouter une photo</string>
+    <string name="change_profile_photo">Modifier la photo</string>
+    <string name="remove_profile_photo">Supprimer la photo</string>
+    <string name="remove_profile_photo_confirm">Supprimer cette photo de profil ?</string>
+    <string name="share_profile_photo">Partager</string>
+    <string name="download_profile_photo">Télécharger</string>
+    <string name="profile_photo_cd">Photo de profil</string>
+    <string name="profile_photo_too_large">Cette image est trop lourde (max. 2 Mo après compression).</string>
+    <string name="profile_photo_upload_failed">La photo de profil n’a pas pu être envoyée. La personne a été enregistrée sans photo.</string>
+    <string name="profile_photos_settings_title">Photos de profil (facultatif)</string>
+    <string name="profile_photos_settings_body">Utilise Firebase Storage et peut exiger le plan Blaze (payant). Laissez désactivé pour rester sur l’offre gratuite Spark. Ignorer Storage ne bloque jamais le reste de l’app. Si un administrateur l’active, tous les appareils de l’organisation l’activent aussi.</string>
+    <string name="profile_photos_enable">Activer les photos de profil</string>
     <string name="add_nfc_card_uid_title">Ajouter l'UID de la carte NFC</string>
     <string name="enter_uid_manually">Entrer l'UID manuellement</string>
     <string name="read_uid_with_phone_nfc">Lire l'UID avec le téléphone (NFC)</string>
@@ -1191,7 +1203,26 @@
     <string name="stats_category_volunteers">Bénévoles</string>
     <string name="stats_category_guest_list">Liste d'invité·e·s</string>
     <string name="stats_category_pos_activity">POS — Ventes et crédits</string>
-    <string name="stats_category_pos_mix">POS — Répartitions et records</string>
+    <string name="stats_category_pos_mix">POS — Mix</string>
+    <string name="stats_section_volunteers">Bénévoles</string>
+    <string name="stats_section_guest_list">Liste d'invité·e·s</string>
+    <string name="stats_section_pos">POS</string>
+    <string name="stats_category_volunteer_activity">Bénévoles — activité</string>
+    <string name="stats_category_volunteer_shifts">Bénévoles — shifts</string>
+    <string name="stats_category_volunteer_ranks">Bénévoles — rangs</string>
+    <string name="stats_category_volunteer_profile">Bénévoles — profil</string>
+    <string name="stats_category_pos_sales">POS — Ventes</string>
+    <string name="stats_category_pos_credits">POS — Crédits</string>
+    <string name="stats_category_pos_customers">POS — Clients et soldes</string>
+    <string name="stats_category_toc_activity">Activité</string>
+    <string name="stats_category_toc_shifts">Shifts</string>
+    <string name="stats_category_toc_ranks">Rangs</string>
+    <string name="stats_category_toc_profile">Profil</string>
+    <string name="stats_category_toc_guest_list">Occupation</string>
+    <string name="stats_category_toc_sales">Ventes</string>
+    <string name="stats_category_toc_credits">Crédits</string>
+    <string name="stats_category_toc_mix">Mix</string>
+    <string name="stats_category_toc_customers">Clients</string>
     <string name="stats_graph_chapters">Chapitres</string>
     <string name="stats_graphs_loading">Chargement des graphiques…</string>
     <string name="pos_stats_sales_count">Nombre de ventes</string>
@@ -1626,6 +1657,11 @@
     <string name="firebase_tutorial_copy_rules">Copier firestore.rules dans le presse-papiers</string>
     <string name="firebase_tutorial_copy_rules_done">Copié - collez dans Firestore → Rules, puis Publier</string>
     <string name="firebase_tutorial_copy_rules_error">Impossible de charger les règles — ouvrez firebase/firestore.rules dans le projet</string>
+    <string name="firebase_tutorial_storage_optional_title">Facultatif : photos de profil (Firebase Storage)</string>
+    <string name="firebase_tutorial_storage_optional_body">Ignorez cette étape pour rester sur l’offre gratuite Spark. Activer Storage peut exiger le plan Blaze (payant).\n\nPour les photos de profil :\n1. Firebase Console → Build → Storage → Get started (même projet).\n2. Storage → Rules (l’URL doit contenir /storage/rules — pas Firestore).\n3. Collez les règles Storage NoctuList (bouton ci-dessous) → Publish.\n4. Dans NoctuList Réglages → Firebase, activez « Activer les photos de profil » (tous les appareils de l’organisation l’activent aussi).\n\nVous pouvez le faire plus tard. L’app fonctionne entièrement sans Storage.</string>
+    <string name="firebase_tutorial_copy_storage_rules">Copier storage.rules dans le presse-papiers</string>
+    <string name="firebase_tutorial_copy_storage_rules_done">Copié — collez dans Storage → Rules, puis Publish</string>
+    <string name="firebase_tutorial_copy_storage_rules_error">Impossible de charger les règles — ouvrez firebase/storage.rules dans le projet</string>
 
     <string name="firebase_tutorial_fb_step1_title">1. Créer ou ouvrir le projet Firebase</string>
     <string name="firebase_tutorial_fb_step1_body">1. Ouvrez https://console.firebase.google.com avec un compte Google de l\'institution qui peut gérer le projet.\n2. Cliquez sur Ajouter un projet (ou sélectionnez un projet existant).\n3. Si Google Sheets utilise déjà un projet Cloud : choisissez « Utiliser un projet Google Cloud existant » et ce même projet — ne créez pas un second projet vide.\n4. Analytics est facultatif. Terminez l\'assistant.\n5. Notez le Project ID (Paramètres du projet → Général). Vous le collerez dans NoctuList.</string>

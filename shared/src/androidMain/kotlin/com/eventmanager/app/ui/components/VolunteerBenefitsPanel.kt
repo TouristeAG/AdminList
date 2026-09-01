@@ -44,6 +44,8 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
 import com.eventmanager.app.data.models.*
+import com.eventmanager.app.data.remote.hasStoredProfilePhoto
+import com.eventmanager.app.data.remote.resolvedProfilePhotoPath
 import com.eventmanager.app.data.utils.effectiveBenefitFutureEntriesRemaining
 import com.eventmanager.app.data.utils.jobTypeSupportsTrackedFutureEntries
 import com.eventmanager.app.data.utils.DateTimeUtils
@@ -173,6 +175,7 @@ actual fun VolunteerBenefitsPanel(
     onManualAccountAdjust: ((Double, String) -> Unit)?,
     viewModel: EventManagerViewModel?
 ) {
+    val volunteer = rememberLiveVolunteer(volunteer, viewModel)
     val context = LocalContext.current
     val isPhone = !isTablet()
     val responsivePadding = if (isPhone) getPhonePortraitPadding() else getResponsivePadding()
@@ -346,46 +349,20 @@ actual fun VolunteerBenefitsPanel(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(
+                                Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.weight(1f)
                             ) {
-                                // Avatar circle
-                                Card(
-                                    modifier = Modifier.size(if (isPhone) 40.dp else 48.dp),
-                                    shape = CircleShape,
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = when (volunteerBenefitStatus.rank) {
-                                            VolunteerRank.NOVA -> MaterialTheme.colorScheme.primary
-                                            VolunteerRank.ETOILE -> MaterialTheme.colorScheme.secondary
-                                            VolunteerRank.GALAXIE -> Color(0xFF7C3AED) // Deep purple for galaxy - always readable
-                                            VolunteerRank.ORION -> MaterialTheme.colorScheme.error
-                                            VolunteerRank.VETERAN -> MaterialTheme.colorScheme.surfaceVariant
-                                            VolunteerRank.SPECIAL -> MaterialTheme.colorScheme.primaryContainer
-                                            null -> MaterialTheme.colorScheme.surfaceVariant
-                                        }
-                                    )
-                                ) {
-                                    Box(
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = volunteer.name.take(1).uppercase(),
-                                            style = if (isPhone) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge,
-                                            fontWeight = FontWeight.Bold,
-                                            color = when (volunteerBenefitStatus.rank) {
-                                                VolunteerRank.NOVA -> MaterialTheme.colorScheme.onPrimary
-                                                VolunteerRank.ETOILE -> MaterialTheme.colorScheme.onSecondary
-                                                VolunteerRank.GALAXIE -> Color.White // White on deep purple - always readable
-                                                VolunteerRank.ORION -> MaterialTheme.colorScheme.onError
-                                                VolunteerRank.VETERAN -> MaterialTheme.colorScheme.onSurfaceVariant
-                                                VolunteerRank.SPECIAL -> MaterialTheme.colorScheme.onPrimaryContainer
-                                                null -> MaterialTheme.colorScheme.onSurfaceVariant
-                                            }
-                                        )
-                                    }
-                                }
+                                ProfilePhotoHeaderAvatar(
+                                    name = volunteer.name,
+                                    photoUrl = volunteer.profilePhotoUrl,
+                                    photoPath = volunteer.resolvedProfilePhotoPath(),
+                                    size = if (isPhone) 48.dp else 52.dp,
+                                    canExport = !readOnly,
+                                    canManage = !readOnly && (rememberProfilePhotosUploadEnabled(viewModel)),
+                                    onUpload = { bytes -> viewModel?.uploadProfilePhotoForVolunteer(volunteer, bytes) },
+                                    onRemove = { viewModel?.removeProfilePhotoForVolunteer(volunteer) },
+                                )
                                 
                                 Spacer(modifier = Modifier.width(if (isPhone) 8.dp else 12.dp))
                                 
@@ -615,6 +592,16 @@ actual fun VolunteerBenefitsPanel(
                                     }
                                 }
                             }
+                            val pickPhoto = rememberProfilePhotoPicker { bytes ->
+                                viewModel?.uploadProfilePhotoForVolunteer(volunteer, bytes)
+                            }
+                            ProfilePhotoActionButtons(
+                                hasPhoto = volunteer.hasStoredProfilePhoto(),
+                                enabled = rememberProfilePhotosUploadEnabled(viewModel),
+                                onAddOrChange = pickPhoto,
+                                onRemove = { viewModel?.removeProfilePhotoForVolunteer(volunteer) },
+                                sideBySide = !isPhone,
+                            )
                         }
 
                         item {

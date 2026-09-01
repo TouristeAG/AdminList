@@ -12,8 +12,11 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
-import com.eventmanager.app.ui.components.DataPoint
+import com.eventmanager.app.ui.components.BarExportItem
+import com.eventmanager.app.ui.components.GraphSeriesExport
 import com.eventmanager.app.ui.components.TimePeriod
+import com.eventmanager.app.ui.components.buildGraphExportTable
+import com.eventmanager.app.ui.components.sanitizeExportSheetName
 import org.apache.poi.ss.usermodel.*
 import org.apache.poi.ss.util.CellRangeAddress
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
@@ -21,41 +24,20 @@ import org.apache.poi.xssf.usermodel.XSSFDrawing
 import org.apache.poi.xssf.usermodel.XSSFClientAnchor
 import org.apache.poi.xssf.usermodel.XSSFPicture
 import java.io.ByteArrayOutputStream
-import java.util.Calendar
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
 
-object GraphExportAndroid {
-    
-    /**
-     * Converts Java timestamp to Excel date serial number
-     * Excel stores dates as days since January 1, 1900
-     */
-    private fun timestampToExcelDate(timestamp: Long): Double {
-        // Excel epoch is January 1, 1900, but Excel incorrectly treats 1900 as a leap year
-        // So we need to account for that
-        val excelEpoch = Calendar.getInstance().apply {
-            set(1900, Calendar.JANUARY, 1, 0, 0, 0)
-            set(Calendar.MILLISECOND, 0)
-        }.timeInMillis
-        
-        // Calculate days difference
-        val daysDiff = (timestamp - excelEpoch).toDouble() / (24 * 60 * 60 * 1000)
-        
-        // Excel date serial starts at 1 (not 0), and we need to add 1 day for the 1900 leap year bug
-        return daysDiff + 1.0
-    }
-    
+internal object GraphExportAndroid { 
     /**
      * Exports graph data to XLSX format with data table and Excel chart
      */
     fun exportToXLSX(
         context: Context,
         title: String,
-        dataPoints: List<DataPoint>,
-        trendPoints: List<DataPoint>,
+        series: List<GraphSeriesExport>,
         timePeriod: TimePeriod,
         graphBitmap: Bitmap?
     ): File {
@@ -80,7 +62,10 @@ object GraphExportAndroid {
         val exportDate = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
         
         val workbook: Workbook = XSSFWorkbook()
-        val sheet: Sheet = workbook.createSheet("Active Volunteers")
+        val table = buildGraphExportTable(series)
+        val includeTrend = series.size == 1 && series.first().trendPoints.isNotEmpty()
+        val lastDataColumn = table.seriesNames.size + if (includeTrend) 1 else 0
+        val sheet: Sheet = workbook.createSheet(sanitizeExportSheetName(title))
         
         // Create styles (using POI 3.15 constants instead of enums)
         val titleStyle = workbook.createCellStyle().apply {
@@ -133,7 +118,7 @@ object GraphExportAndroid {
         val titleCell = titleRow.createCell(0)
         titleCell.setCellValue(title)
         titleCell.cellStyle = titleStyle
-        sheet.addMergedRegion(CellRangeAddress(0, 0, 0, 2))
+        sheet.addMergedRegion(CellRangeAddress(0, 0, 0, lastDataColumn.coerceAtLeast(1)))
         
         // Empty row
         currentRow++
@@ -153,7 +138,7 @@ object GraphExportAndroid {
         
         val metadataRow3 = sheet.createRow(currentRow++)
         metadataRow3.createCell(0).apply {
-            setCellValue("Total Data Points: ${dataPoints.size}")
+            setCellValue("Total Data Points: ${table.rows.size}")
             cellStyle = metadataStyle
         }
         
@@ -165,66 +150,48 @@ object GraphExportAndroid {
         val dateHeader = headerRow.createCell(0)
         dateHeader.setCellValue(dateColumnHeader)
         dateHeader.cellStyle = headerStyle
-        
-        val valueHeader = headerRow.createCell(1)
-        valueHeader.setCellValue("Active Volunteers")
-        valueHeader.cellStyle = headerStyle
-        
-        val trendHeader = headerRow.createCell(2)
-        trendHeader.setCellValue("Trend")
-        trendHeader.cellStyle = headerStyle
-        
-        // Store data row start for chart reference
-        val dataStartRow = currentRow
-        
-        // Create date style for Excel date format
-        val dateCellStyle = workbook.createCellStyle().apply {
-            val font = workbook.createFont()
-            font.fontHeightInPoints = 11
-            setFont(font)
-            alignment = CellStyle.ALIGN_CENTER
-            verticalAlignment = CellStyle.VERTICAL_CENTER
-            borderBottom = CellStyle.BORDER_THIN
-            borderTop = CellStyle.BORDER_THIN
-            borderLeft = CellStyle.BORDER_THIN
-            borderRight = CellStyle.BORDER_THIN
-            // Set date format based on time period
-            val dateFormat = when (timePeriod) {
-                TimePeriod.ONE_WEEK, TimePeriod.TWO_WEEKS, TimePeriod.ONE_MONTH -> "dd/mm/yyyy"
-                TimePeriod.SIX_MONTHS -> "dd/mm/yyyy"
-                TimePeriod.ONE_YEAR, TimePeriod.MAX -> "mm/yyyy"
+        table.seriesNames.forEachIndexed { index, name ->
+            headerRow.createCell(1 + index).apply {
+                setCellValue(name)
+                cellStyle = headerStyle
             }
-            dataFormat = workbook.creationHelper.createDataFormat().getFormat(dateFormat)
+        }
+        if (includeTrend) {
+            headerRow.createCell(1 + table.seriesNames.size).apply {
+                setCellValue("Trend")
+                cellStyle = headerStyle
+            }
         }
         
-        // Data rows with Excel date format
-        dataPoints.forEachIndexed { index, dataPoint ->
+        val trendByTimestamp = series.firstOrNull()?.trendPoints?.associateBy { it.timestamp }.orEmpty()
+        table.rows.forEach { tableRow ->
             val row = sheet.createRow(currentRow++)
-            
-            val dateCell = row.createCell(0)
-            // Convert timestamp to Excel date format
-            val excelDate = timestampToExcelDate(dataPoint.timestamp)
-            dateCell.setCellValue(excelDate)
-            dateCell.cellStyle = dateCellStyle
-            
-            val valueCell = row.createCell(1)
-            valueCell.setCellValue(dataPoint.value.toDouble())
-            valueCell.cellStyle = dataStyle
-            
-            if (index < trendPoints.size) {
-                val trendCell = row.createCell(2)
-                trendCell.setCellValue(trendPoints[index].value.toDouble())
-                trendCell.cellStyle = dataStyle
+            val labelCell = row.createCell(0)
+            labelCell.setCellValue(tableRow.label)
+            labelCell.cellStyle = dataStyle
+            tableRow.values.forEachIndexed { index, value ->
+                if (value != null) {
+                    row.createCell(1 + index).apply {
+                        setCellValue(value.toDouble())
+                        cellStyle = dataStyle
+                    }
+                }
+            }
+            if (includeTrend) {
+                trendByTimestamp[tableRow.timestamp]?.let { trend ->
+                    row.createCell(1 + table.seriesNames.size).apply {
+                        setCellValue(trend.value.toDouble())
+                        cellStyle = dataStyle
+                    }
+                }
             }
         }
-        
-        val dataEndRow = currentRow - 1
         
         // Empty row
         currentRow++
         
-        // Summary statistics
-        if (dataPoints.isNotEmpty()) {
+        val allValues = table.rows.flatMap { row -> row.values.filterNotNull() }
+        if (allValues.isNotEmpty()) {
             val summaryTitleRow = sheet.createRow(currentRow++)
             val summaryTitleCell = summaryTitleRow.createCell(0)
             summaryTitleCell.setCellValue("Summary Statistics")
@@ -234,11 +201,11 @@ object GraphExportAndroid {
             summaryFont.fontHeightInPoints = 12
             summaryStyle.setFont(summaryFont)
             summaryTitleCell.cellStyle = summaryStyle
-            sheet.addMergedRegion(CellRangeAddress(currentRow - 1, currentRow - 1, 0, 2))
+            sheet.addMergedRegion(CellRangeAddress(currentRow - 1, currentRow - 1, 0, lastDataColumn.coerceAtLeast(1)))
             
-            val maxValue = dataPoints.maxOfOrNull { it.value } ?: 0f
-            val minValue = dataPoints.minOfOrNull { it.value } ?: 0f
-            val avgValue = dataPoints.map { it.value }.average()
+            val maxValue = allValues.maxOrNull() ?: 0f
+            val minValue = allValues.minOrNull() ?: 0f
+            val avgValue = allValues.map { it.toDouble() }.average()
             
             val maxRow = sheet.createRow(currentRow++)
             maxRow.createCell(0).setCellValue("Maximum: ${maxValue.toInt()}")
@@ -250,13 +217,15 @@ object GraphExportAndroid {
             avgRow.createCell(0).setCellValue("Average: ${String.format("%.2f", avgValue)}")
         }
         
-        // Auto-size columns
         sheet.setColumnWidth(0, 5000)
-        sheet.setColumnWidth(1, 5000)
-        sheet.setColumnWidth(2, 5000)
+        table.seriesNames.indices.forEach { index ->
+            sheet.setColumnWidth(1 + index, 5000)
+        }
+        if (includeTrend) {
+            sheet.setColumnWidth(1 + table.seriesNames.size, 5000)
+        }
         
-        // Embed graph as image instead of native chart (more reliable on Android)
-        if (dataPoints.isNotEmpty() && graphBitmap != null && workbook is XSSFWorkbook) {
+        if (table.rows.isNotEmpty() && graphBitmap != null && workbook is XSSFWorkbook) {
             try {
                 val drawing = sheet.createDrawingPatriarch() as XSSFDrawing
                 
@@ -307,12 +276,11 @@ object GraphExportAndroid {
      * Renders the graph as a bitmap for export - matches app styling
      */
     fun renderGraphAsBitmap(
-        dataPoints: List<DataPoint>,
-        trendPoints: List<DataPoint>,
+        series: List<GraphSeriesExport>,
         title: String,
         timePeriod: TimePeriod,
-        width: Int = 1600,  // Increased for better quality
-        height: Int = 1000, // Increased for better quality
+        width: Int = 1600,
+        height: Int = 1000,
         density: Density
     ): Bitmap {
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
@@ -324,8 +292,9 @@ object GraphExportAndroid {
         // Better padding for modern look
         val leftPadding = 100f
         val rightPadding = 80f
-        val topPadding = 120f
-        val bottomPadding = 120f
+        val topPadding = 130f
+        val legendRows = if (series.size > 1) (series.size + 3) / 4 else 0
+        val bottomPadding = 120f + legendRows * 36f
         val graphWidth = width - leftPadding - rightPadding
         val graphHeight = height - topPadding - bottomPadding
         
@@ -334,19 +303,17 @@ object GraphExportAndroid {
             isDither = true
         }
         
-        // Title styling - modern typography
         val titlePaint = Paint().apply {
             isAntiAlias = true
-            color = Color.parseColor("#1C1B1F") // Material Design onSurface
+            color = Color.parseColor("#1C1B1F")
             textSize = 48f
             textAlign = Paint.Align.CENTER
             typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
         }
         
-        // Label styling
         val labelPaint = Paint().apply {
             isAntiAlias = true
-            color = Color.parseColor("#49454F") // Material Design onSurfaceVariant
+            color = Color.parseColor("#49454F")
             textSize = 28f
         }
         
@@ -357,97 +324,173 @@ object GraphExportAndroid {
             textAlign = Paint.Align.RIGHT
         }
         
-        // Draw title
-        canvas.drawText(title, width / 2f, 70f, titlePaint)
+        canvas.drawText(title, width / 2f, 58f, titlePaint)
+        labelPaint.textAlign = Paint.Align.CENTER
+        canvas.drawText(timePeriod.displayName, width / 2f, 98f, labelPaint)
         
-        // Calculate value range
-        val maxValue = dataPoints.maxOfOrNull { it.value } ?: 1f
+        val allPoints = series.flatMap { it.dataPoints }
+        val maxValue = (allPoints.maxOfOrNull { it.value } ?: 1f).let { if (it <= 0f) 1f else it * 1.15f }
         val minValue = 0f
-        val valueRange = maxValue - minValue
+        val valueRange = (maxValue - minValue).coerceAtLeast(0.0001f)
         
-        // Draw subtle grid lines (matching app - alpha 0.1)
-        val gridColor = Color.parseColor("#79747E") // onSurfaceVariant
+        val gridColor = Color.parseColor("#79747E")
         paint.color = Color.argb((255 * 0.1f).toInt(), Color.red(gridColor), Color.green(gridColor), Color.blue(gridColor))
         paint.strokeWidth = 0.5f
         paint.pathEffect = null
-        
-        // Draw 3 horizontal grid lines (at 1/3, 2/3, and bottom)
         for (i in 1..3) {
             val y = topPadding + (graphHeight * i / 3)
             canvas.drawLine(leftPadding, y, leftPadding + graphWidth, y, paint)
         }
         
-        // Draw Y-axis labels (matching app style)
-        for (i in 0..3) {
-            val value = maxValue - (valueRange * i / 3)
-            val y = topPadding + (graphHeight * i / 3)
+        for (i in 0..2) {
+            val value = maxValue - (valueRange * i / 2)
+            val y = topPadding + (graphHeight * i / 2)
             canvas.drawText(value.toInt().toString(), leftPadding - 20f, y + 10f, yAxisLabelPaint)
         }
         
-        // Draw X-axis labels (first and last, matching app)
         labelPaint.textAlign = Paint.Align.CENTER
-        if (dataPoints.isNotEmpty()) {
-            val firstLabel = dataPoints.first().label
-            val lastLabel = dataPoints.last().label
-            canvas.drawText(firstLabel, leftPadding, height - bottomPadding + 50f, labelPaint)
-            canvas.drawText(lastLabel, leftPadding + graphWidth, height - bottomPadding + 50f, labelPaint)
+        val axisPoints = series.firstOrNull()?.dataPoints.orEmpty()
+        if (axisPoints.isNotEmpty()) {
+            canvas.drawText(axisPoints.first().label, leftPadding, height - bottomPadding + 44f, labelPaint)
+            canvas.drawText(axisPoints.last().label, leftPadding + graphWidth, height - bottomPadding + 44f, labelPaint)
         }
         
-        // Draw trend line first (behind main line) - matching app styling
+        series.forEach { item ->
+            drawExportedSeries(
+                canvas = canvas,
+                paint = paint,
+                series = item,
+                leftPadding = leftPadding,
+                topPadding = topPadding,
+                graphWidth = graphWidth,
+                graphHeight = graphHeight,
+                minValue = minValue,
+                valueRange = valueRange,
+                width = width,
+            )
+        }
+
+        if (series.size > 1) {
+            val legendPaint = Paint().apply {
+                isAntiAlias = true
+                color = Color.parseColor("#49454F")
+                textSize = 24f
+                textAlign = Paint.Align.LEFT
+            }
+            series.forEachIndexed { index, item ->
+                val col = index % 4
+                val row = index / 4
+                val x = leftPadding + col * (graphWidth / 4f)
+                val y = height - bottomPadding + 78f + row * 32f
+                paint.color = item.colorArgb
+                paint.style = Paint.Style.FILL
+                canvas.drawRoundRect(x, y - 16f, x + 20f, y + 4f, 4f, 4f, paint)
+                canvas.drawText(item.name, x + 28f, y, legendPaint)
+            }
+        }
+        
+        return bitmap
+    }
+
+    private fun drawExportedSeries(
+        canvas: Canvas,
+        paint: Paint,
+        series: GraphSeriesExport,
+        leftPadding: Float,
+        topPadding: Float,
+        graphWidth: Float,
+        graphHeight: Float,
+        minValue: Float,
+        valueRange: Float,
+        width: Int,
+    ) {
+        val dataPoints = series.dataPoints
+        val trendPoints = series.trendPoints
+        val color = series.colorArgb
         if (trendPoints.size >= 2) {
-            val trendColor = Color.parseColor("#FF6B9D") // Tertiary color
-            paint.color = Color.argb((255 * 0.7f).toInt(), Color.red(trendColor), Color.green(trendColor), Color.blue(trendColor))
-            paint.strokeWidth = 2f * (width / 1200f) // Scale with resolution
+            paint.color = Color.argb((255 * 0.5f).toInt(), Color.red(color), Color.green(color), Color.blue(color))
+            paint.strokeWidth = 2f * (width / 1200f)
             paint.pathEffect = android.graphics.DashPathEffect(floatArrayOf(6f, 3f), 0f)
             paint.style = Paint.Style.STROKE
-            
             val path = Path()
             for (i in trendPoints.indices) {
                 val x = leftPadding + (i.toFloat() / (trendPoints.size - 1)) * graphWidth
                 val y = topPadding + graphHeight - ((trendPoints[i].value - minValue) / valueRange) * graphHeight
-                
-                if (i == 0) {
-                    path.moveTo(x, y)
-                } else {
-                    path.lineTo(x, y)
-                }
+                if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
             }
             canvas.drawPath(path, paint)
         }
-        
-        // Draw main value line (matching app - strokeWidth 2.5f)
         if (dataPoints.size >= 2) {
-            paint.color = Color.parseColor("#6200EE") // Primary color
-            paint.strokeWidth = 2.5f * (width / 1200f) // Scale with resolution
+            paint.color = color
+            paint.strokeWidth = 2.5f * (width / 1200f)
             paint.pathEffect = null
             paint.style = Paint.Style.STROKE
-            
             val path = Path()
             for (i in dataPoints.indices) {
                 val x = leftPadding + (i.toFloat() / (dataPoints.size - 1)) * graphWidth
                 val y = topPadding + graphHeight - ((dataPoints[i].value - minValue) / valueRange) * graphHeight
-                
-                if (i == 0) {
-                    path.moveTo(x, y)
-                } else {
-                    path.lineTo(x, y)
-                }
+                if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
             }
             canvas.drawPath(path, paint)
+            paint.style = Paint.Style.FILL
+            val pointRadius = 3.5f * (width / 1200f)
+            for (i in dataPoints.indices) {
+                val x = leftPadding + (i.toFloat() / (dataPoints.size - 1)) * graphWidth
+                val y = topPadding + graphHeight - ((dataPoints[i].value - minValue) / valueRange) * graphHeight
+                canvas.drawCircle(x, y, pointRadius, paint)
+            }
         }
-        
-        // Draw data points (matching app - radius 3.5f)
-        paint.color = Color.parseColor("#6200EE")
-        paint.style = Paint.Style.FILL
-        val pointRadius = 3.5f * (width / 1200f) // Scale with resolution
-        for (i in dataPoints.indices) {
-            val x = leftPadding + (i.toFloat() / (dataPoints.size - 1)) * graphWidth
-            val y = topPadding + graphHeight - ((dataPoints[i].value - minValue) / valueRange) * graphHeight
-            canvas.drawCircle(x, y, pointRadius, paint)
+    }
+
+    fun renderBarChartAsBitmap(
+        bars: List<BarExportItem>,
+        title: String,
+        width: Int = 1600,
+        height: Int = 1000,
+    ): Bitmap {
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        canvas.drawColor(Color.parseColor("#FAFAFA"))
+        val titlePaint = Paint().apply {
+            isAntiAlias = true
+            color = Color.parseColor("#1C1B1F")
+            textSize = 48f
+            textAlign = Paint.Align.CENTER
+            typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
         }
-        
-        // No visible axes (matching app - only grid lines)
-        
+        canvas.drawText(title, width / 2f, 70f, titlePaint)
+        val paint = Paint().apply { isAntiAlias = true }
+        val labelPaint = Paint().apply {
+            isAntiAlias = true
+            color = Color.parseColor("#49454F")
+            textSize = 22f
+            textAlign = Paint.Align.CENTER
+        }
+        val countPaint = Paint().apply {
+            isAntiAlias = true
+            color = Color.parseColor("#1C1B1F")
+            textSize = 24f
+            textAlign = Paint.Align.CENTER
+            typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+        }
+        val left = 80f
+        val right = width - 80f
+        val top = 140f
+        val bottom = height - 160f
+        val maxValue = bars.maxOfOrNull { it.value }?.coerceAtLeast(1f) ?: 1f
+        val slotWidth = if (bars.isEmpty()) 0f else (right - left) / bars.size
+        val barWidth = (slotWidth * 0.62f).coerceAtLeast(12f)
+        bars.forEachIndexed { index, bar ->
+            val barHeight = ((bar.value / maxValue) * (bottom - top)).coerceAtLeast(if (bar.value > 0f) 6f else 0f)
+            val x = left + index * slotWidth + (slotWidth - barWidth) / 2f
+            val y = bottom - barHeight
+            paint.color = bar.colorArgb
+            paint.style = Paint.Style.FILL
+            canvas.drawRoundRect(x, y, x + barWidth, bottom, 12f, 12f, paint)
+            canvas.drawText(bar.count.toString(), x + barWidth / 2f, y - 12f, countPaint)
+            val label = bar.label.replace('\n', ' ')
+            canvas.drawText(label.take(18), x + barWidth / 2f, bottom + 36f, labelPaint)
+        }
         return bitmap
     }
     

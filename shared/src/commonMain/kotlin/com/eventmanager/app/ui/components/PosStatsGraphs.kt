@@ -148,7 +148,7 @@ internal val SlicePalette = listOf(
 )
 
 @Composable
-fun PosActivityGraphs(
+fun PosSalesGraphs(
     stats: PosDashboardSnapshot,
     timePeriod: TimePeriod,
     isPhone: Boolean,
@@ -167,6 +167,45 @@ fun PosActivityGraphs(
             isPhone = isPhone,
             now = now,
         )
+        PosHourGraph(
+            title = stringResource(Res.string.pos_stats_peak_hours),
+            description = stringResource(Res.string.pos_stats_peak_hours_description),
+            icon = Icons.Default.AccessTime,
+            hours = stats.peakHourSales,
+            isPhone = isPhone,
+        )
+        PosLineGraph(
+            title = stringResource(Res.string.pos_stats_credit_used),
+            description = stringResource(Res.string.pos_stats_credit_used_description),
+            icon = Icons.Default.AccountBalanceWallet,
+            series = stats.creditUsedChf,
+            timePeriod = timePeriod,
+            isPhone = isPhone,
+            now = now,
+        )
+        PosLineGraph(
+            title = stringResource(Res.string.pos_stats_cash_personnel),
+            description = stringResource(Res.string.pos_stats_cash_personnel_description),
+            icon = Icons.Default.Payments,
+            series = stats.cashPersonnelChf,
+            timePeriod = timePeriod,
+            isPhone = isPhone,
+            now = now,
+        )
+    }
+}
+
+@Composable
+fun PosCreditsGraphs(
+    stats: PosDashboardSnapshot,
+    timePeriod: TimePeriod,
+    isPhone: Boolean,
+    now: Long,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
         PosLineGraph(
             title = stringResource(Res.string.pos_stats_credits_granted),
             description = stringResource(Res.string.pos_stats_credits_granted_description),
@@ -193,31 +232,6 @@ fun PosActivityGraphs(
             timePeriod = timePeriod,
             isPhone = isPhone,
             now = now,
-        )
-        PosLineGraph(
-            title = stringResource(Res.string.pos_stats_credit_used),
-            description = stringResource(Res.string.pos_stats_credit_used_description),
-            icon = Icons.Default.AccountBalanceWallet,
-            series = stats.creditUsedChf,
-            timePeriod = timePeriod,
-            isPhone = isPhone,
-            now = now,
-        )
-        PosLineGraph(
-            title = stringResource(Res.string.pos_stats_cash_personnel),
-            description = stringResource(Res.string.pos_stats_cash_personnel_description),
-            icon = Icons.Default.Payments,
-            series = stats.cashPersonnelChf,
-            timePeriod = timePeriod,
-            isPhone = isPhone,
-            now = now,
-        )
-        PosHourGraph(
-            title = stringResource(Res.string.pos_stats_peak_hours),
-            description = stringResource(Res.string.pos_stats_peak_hours_description),
-            icon = Icons.Default.AccessTime,
-            hours = stats.peakHourSales,
-            isPhone = isPhone,
         )
         PosCreditsChfGraph(
             stats = stats,
@@ -318,7 +332,20 @@ fun PosMixGraphs(
             isPhone = isPhone,
             emptyText = emptyText,
         )
+    }
+}
 
+@Composable
+fun PosCustomerGraphs(
+    stats: PosDashboardSnapshot,
+    isPhone: Boolean,
+    currencyCode: String,
+) {
+    val emptyText = stringResource(Res.string.pos_stats_no_data)
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
         PosHighlightCard(
             title = stringResource(Res.string.pos_stats_highest_credit_sale),
             icon = Icons.Default.EmojiEvents,
@@ -994,11 +1021,16 @@ internal fun StatsBarCard(
                             },
                         )
                     } else {
-                        GraphExportBridge.exportPieChartJpg(
+                        GraphExportBridge.exportBarChartJpg(
                             platformContext = platformContext,
                             title = title,
-                            segments = bars.map { bar ->
-                                Pair(bar.label, Pair((bar.value / total) * 100f, bar.color.toArgb()))
+                            bars = bars.map { bar ->
+                                BarExportItem(
+                                    label = bar.label,
+                                    value = bar.value,
+                                    count = bar.count,
+                                    colorArgb = bar.color.toArgb(),
+                                )
                             },
                         )
                     }

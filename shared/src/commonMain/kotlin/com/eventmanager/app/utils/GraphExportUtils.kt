@@ -1,16 +1,16 @@
 package com.eventmanager.app.utils
 
 import com.eventmanager.app.platform.PlatformContext
-import com.eventmanager.app.ui.components.DataPoint
+import com.eventmanager.app.ui.components.BarExportItem
+import com.eventmanager.app.ui.components.GraphSeriesExport
 import com.eventmanager.app.ui.components.TimePeriod
 import java.io.File
 
-expect object GraphExportUtils {
+internal expect object GraphExportUtils {
     fun exportToXLSX(
         platformContext: PlatformContext,
         title: String,
-        dataPoints: List<DataPoint>,
-        trendPoints: List<DataPoint>,
+        series: List<GraphSeriesExport>,
         timePeriod: TimePeriod,
         graphImagePath: String?
     ): File
@@ -18,8 +18,13 @@ expect object GraphExportUtils {
     fun exportToJPG(
         platformContext: PlatformContext,
         title: String,
-        dataPoints: List<DataPoint>,
-        trendPoints: List<DataPoint>,
+        series: List<GraphSeriesExport>,
         timePeriod: TimePeriod
+    ): File
+
+    fun exportBarChartToJPG(
+        platformContext: PlatformContext,
+        title: String,
+        bars: List<BarExportItem>,
     ): File
 }

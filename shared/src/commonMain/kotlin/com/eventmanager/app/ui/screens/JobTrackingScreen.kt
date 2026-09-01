@@ -877,12 +877,7 @@ fun AddJobDialog(
                                 .heightIn(max = 280.dp)
                                 .verticalScroll(venueMenuScrollState)
                         ) {
-                            // Add BOTH/ALL option
-                            val allOptionText = if (venues.filter { it.isActive }.size <= 2) {
-                                stringResource(Res.string.venue_both)
-                            } else {
-                                stringResource(Res.string.venue_all)
-                            }
+                            val allOptionText = stringResource(Res.string.venue_all)
                             DropdownMenuItem(
                                 text = { Text(allOptionText) },
                                 onClick = {
@@ -1212,12 +1207,7 @@ fun EditJobDialog(
                                 .heightIn(max = 280.dp)
                                 .verticalScroll(venueMenuScrollState)
                         ) {
-                            // Add BOTH/ALL option
-                            val allOptionText = if (venues.filter { it.isActive }.size <= 2) {
-                                stringResource(Res.string.venue_both)
-                            } else {
-                                stringResource(Res.string.venue_all)
-                            }
+                            val allOptionText = stringResource(Res.string.venue_all)
                             DropdownMenuItem(
                                 text = { Text(allOptionText) },
                                 onClick = {

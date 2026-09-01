@@ -352,7 +352,7 @@
     <string name="add_new_venue">新增場地</string>
     <string name="edit_venue_configuration">編輯場地配置</string>
     <string name="venue_all">全部</string>
-    <string name="venue_both">兩者</string>
+    <string name="venue_both">全部</string>
 
     <!-- Temporary Guest List -->
     <string name="temp_guest_artist_label">藝人 / 團體</string>
@@ -712,6 +712,17 @@
     <string name="camera_error">相機錯誤</string>
     <string name="enter_id_manually">手動輸入 ID</string>
     <string name="add_nfc_card">新增 NFC 卡片</string>
+    <string name="add_profile_photo">新增照片</string>
+    <string name="change_profile_photo">更換照片</string>
+    <string name="remove_profile_photo">刪除照片</string>
+    <string name="remove_profile_photo_confirm">刪除此個人資料照片？</string>
+    <string name="share_profile_photo">分享</string>
+    <string name="download_profile_photo">下載</string>
+    <string name="profile_photo_saved_downloads">照片已儲存到下載</string>
+    <string name="profile_photo_export_failed">無法匯出照片</string>
+    <string name="profile_photo_cd">個人資料照片</string>
+    <string name="profile_photo_too_large">圖片過大（壓縮後最大 2 MB）。</string>
+    <string name="profile_photo_upload_failed">無法上傳個人資料照片。已儲存該人員且不含照片。</string>
     <string name="add_nfc_card_uid_title">新增 NFC 卡片 UID</string>
     <string name="enter_uid_manually">手動輸入 UID</string>
     <string name="read_uid_with_phone_nfc">使用手機讀取 UID（NFC）</string>

@@ -44,6 +44,7 @@ jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
 gitlive-firebase-app = { module = "dev.gitlive:firebase-app", version.ref = "gitliveFirebase" }
 gitlive-firebase-auth = { module = "dev.gitlive:firebase-auth", version.ref = "gitliveFirebase" }
 gitlive-firebase-firestore = { module = "dev.gitlive:firebase-firestore", version.ref = "gitliveFirebase" }
+gitlive-firebase-storage = { module = "dev.gitlive:firebase-storage", version.ref = "gitliveFirebase" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
 grpc-api = { module = "io.grpc:grpc-api", version.ref = "grpc" }
 grpc-core = { module = "io.grpc:grpc-core", version.ref = "grpc" }

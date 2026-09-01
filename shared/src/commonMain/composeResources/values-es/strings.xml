@@ -355,7 +355,7 @@
     <string name="add_new_venue">Agregar nuevo lugar</string>
     <string name="edit_venue_configuration">Editar configuración del lugar</string>
     <string name="venue_all">TODOS</string>
-    <string name="venue_both">AMBOS</string>
+    <string name="venue_both">TODOS</string>
 
     <!-- Temporary Guest List -->
     <string name="temp_guest_artist_label">Artista / Grupo</string>
@@ -776,6 +776,18 @@
     <string name="camera_error">Error de cámara</string>
     <string name="enter_id_manually">Ingresar ID manualmente</string>
     <string name="add_nfc_card">Agregar tarjeta NFC</string>
+    <string name="add_profile_photo">Añadir foto</string>
+    <string name="change_profile_photo">Cambiar foto</string>
+    <string name="remove_profile_photo">Quitar foto</string>
+    <string name="remove_profile_photo_confirm">¿Quitar esta foto de perfil?</string>
+    <string name="share_profile_photo">Compartir</string>
+    <string name="download_profile_photo">Descargar</string>
+    <string name="profile_photo_cd">Foto de perfil</string>
+    <string name="profile_photo_too_large">Esta imagen es demasiado grande (máx. 2 MB tras comprimir).</string>
+    <string name="profile_photo_upload_failed">No se pudo subir la foto de perfil. La persona se guardó sin foto.</string>
+    <string name="profile_photos_settings_title">Fotos de perfil (opcional)</string>
+    <string name="profile_photos_settings_body">Usa Firebase Storage y puede exigir el plan Blaze (de pago). Déjelo desactivado para permanecer en el plan gratuito Spark. Omitir Storage no bloquea nunca el resto de la app. Si un administrador lo activa, se activa en todos los dispositivos de la organización.</string>
+    <string name="profile_photos_enable">Activar fotos de perfil</string>
     <string name="add_nfc_card_uid_title">Agregar UID de tarjeta NFC</string>
     <string name="enter_uid_manually">Ingresar UID manualmente</string>
     <string name="read_uid_with_phone_nfc">Leer UID con el teléfono (NFC)</string>
@@ -1103,7 +1115,26 @@
     <string name="stats_category_volunteers">Voluntarios</string>
     <string name="stats_category_guest_list">Lista de invitados</string>
     <string name="stats_category_pos_activity">POS — Ventas y créditos</string>
-    <string name="stats_category_pos_mix">POS — Distribución y récords</string>
+    <string name="stats_category_pos_mix">POS — Mix</string>
+    <string name="stats_section_volunteers">Voluntarios</string>
+    <string name="stats_section_guest_list">Lista de invitados</string>
+    <string name="stats_section_pos">POS</string>
+    <string name="stats_category_volunteer_activity">Voluntarios — actividad</string>
+    <string name="stats_category_volunteer_shifts">Voluntarios — turnos</string>
+    <string name="stats_category_volunteer_ranks">Voluntarios — rangos</string>
+    <string name="stats_category_volunteer_profile">Voluntarios — perfil</string>
+    <string name="stats_category_pos_sales">POS — Ventas</string>
+    <string name="stats_category_pos_credits">POS — Créditos</string>
+    <string name="stats_category_pos_customers">POS — Clientes y saldos</string>
+    <string name="stats_category_toc_activity">Actividad</string>
+    <string name="stats_category_toc_shifts">Turnos</string>
+    <string name="stats_category_toc_ranks">Rangos</string>
+    <string name="stats_category_toc_profile">Perfil</string>
+    <string name="stats_category_toc_guest_list">Ocupación</string>
+    <string name="stats_category_toc_sales">Ventas</string>
+    <string name="stats_category_toc_credits">Créditos</string>
+    <string name="stats_category_toc_mix">Mix</string>
+    <string name="stats_category_toc_customers">Clientes</string>
     <string name="stats_graph_chapters">Capítulos</string>
     <string name="stats_graphs_loading">Cargando gráficos…</string>
     <string name="pos_stats_sales_count">Número de ventas</string>
@@ -1411,6 +1442,11 @@
     <string name="firebase_tutorial_copy_rules">Copiar firestore.rules al portapapeles</string>
     <string name="firebase_tutorial_copy_rules_done">Copiado — pegue en Firestore → Rules y luego Publique</string>
     <string name="firebase_tutorial_copy_rules_error">No se pudieron cargar las reglas — abra firebase/firestore.rules en el proyecto</string>
+    <string name="firebase_tutorial_storage_optional_title">Opcional: fotos de perfil (Firebase Storage)</string>
+    <string name="firebase_tutorial_storage_optional_body">Omítalo para permanecer en el plan gratuito Spark. Activar Storage puede exigir el plan Blaze (de pago).\n\nSi desea fotos de perfil:\n1. Firebase Console → Build → Storage → Get started (mismo proyecto).\n2. Storage → Rules (la URL debe contener /storage/rules — no Firestore).\n3. Pegue las reglas Storage de NoctuList (botón abajo) → Publish.\n4. En NoctuList Ajustes → Firebase, active «Activar fotos de perfil» (se activa en todos los dispositivos de la organización).\n\nPuede hacerlo más tarde. La app funciona por completo sin Storage.</string>
+    <string name="firebase_tutorial_copy_storage_rules">Copiar storage.rules al portapapeles</string>
+    <string name="firebase_tutorial_copy_storage_rules_done">Copiado — pegue en Storage → Rules y luego Publique</string>
+    <string name="firebase_tutorial_copy_storage_rules_error">No se pudieron cargar las reglas — abra firebase/storage.rules en el proyecto</string>
     <string name="firebase_tutorial_fb_step1_title">1. Crear o abrir el proyecto Firebase</string>
     <string name="firebase_tutorial_fb_step1_body">1. Abra https://console.firebase.google.com e inicie sesión con una cuenta de Google de la institución que pueda gestionar el proyecto.
 2. Haga clic en Añadir proyecto (o seleccione uno existente).

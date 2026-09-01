@@ -25,7 +25,12 @@ object FirebaseOptionsReader {
             applicationId = settings.getFirebaseApplicationId(),
             projectId = settings.getFirebaseProjectId(),
             gcmSenderId = settings.getFirebaseGcmSenderId(),
-            storageBucket = settings.getFirebaseStorageBucket(),
+            storageBucket = settings.getFirebaseStorageBucket().ifBlank {
+                firebaseStorageBucketCandidates(
+                    storedBucket = "",
+                    projectId = settings.getFirebaseProjectId(),
+                ).firstOrNull().orEmpty()
+            },
         )
         return opts.takeIf { it.isComplete() }
     }

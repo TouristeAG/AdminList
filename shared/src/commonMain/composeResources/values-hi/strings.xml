@@ -446,7 +446,7 @@
     <string name="add_new_venue">नया स्थान जोड़ें</string>
     <string name="edit_venue_configuration">स्थान कॉन्फ़िगरेशन संपादित करें</string>
     <string name="venue_all">सब</string>
-    <string name="venue_both">दोनों</string>
+    <string name="venue_both">सब</string>
 
     <!-- Temporary Guest List -->
     <string name="temp_guest_artist_label">कलाकार/समूह</string>
@@ -892,6 +892,18 @@
     <string name="camera_error">कैमरा त्रुटि</string>
     <string name="enter_id_manually">आईडी मैन्युअल रूप से दर्ज करें</string>
     <string name="add_nfc_card">एनएफसी कार्ड जोड़ें</string>
+    <string name="add_profile_photo">फ़ोटो जोड़ें</string>
+    <string name="change_profile_photo">फ़ोटो बदलें</string>
+    <string name="remove_profile_photo">फ़ोटो हटाएँ</string>
+    <string name="remove_profile_photo_confirm">यह प्रोफ़ाइल फ़ोटो हटाएँ?</string>
+    <string name="share_profile_photo">साझा करें</string>
+    <string name="download_profile_photo">डाउनलोड</string>
+    <string name="profile_photo_cd">प्रोफ़ाइल फ़ोटो</string>
+    <string name="profile_photo_too_large">यह छवि बहुत बड़ी है (संपीड़न के बाद अधिकतम 2 MB)।</string>
+    <string name="profile_photo_upload_failed">प्रोफ़ाइल फ़ोटो अपलोड नहीं हो सकी। व्यक्ति को बिना फ़ोटो सहेजा गया।</string>
+    <string name="profile_photos_settings_title">प्रोफ़ाइल फ़ोटो (वैकल्पिक)</string>
+    <string name="profile_photos_settings_body">Firebase Storage का उपयोग करता है और सशुल्क Blaze प्लान की आवश्यकता हो सकती है। मुफ़्त Spark प्लान पर रहने के लिए इसे बंद रखें। Storage छोड़ने से ऐप का बाकी हिस्सा कभी नहीं रुकता। व्यवस्थापक के चालू करने पर यह संगठन के सभी डिवाइसों पर चालू हो जाता है।</string>
+    <string name="profile_photos_enable">प्रोफ़ाइल फ़ोटो सक्षम करें</string>
     <string name="add_nfc_card_uid_title">एनएफसी कार्ड यूआईडी जोड़ें</string>
     <string name="enter_uid_manually">यूआईडी मैन्युअल रूप से दर्ज करें</string>
     <string name="read_uid_with_phone_nfc">फ़ोन (एनएफसी) के साथ यूआईडी पढ़ें</string>
@@ -1219,7 +1231,26 @@
     <string name="stats_category_volunteers">स्वयंसेवक</string>
     <string name="stats_category_guest_list">अतिथि सूची</string>
     <string name="stats_category_pos_activity">POS — बिक्री और क्रेडिट</string>
-    <string name="stats_category_pos_mix">POS — वितरण और रिकॉर्ड</string>
+    <string name="stats_category_pos_mix">POS — मिश्रण</string>
+    <string name="stats_section_volunteers">स्वयंसेवक</string>
+    <string name="stats_section_guest_list">अतिथि सूची</string>
+    <string name="stats_section_pos">POS</string>
+    <string name="stats_category_volunteer_activity">स्वयंसेवक — गतिविधि</string>
+    <string name="stats_category_volunteer_shifts">स्वयंसेवक — शिफ्ट</string>
+    <string name="stats_category_volunteer_ranks">स्वयंसेवक — रैंक</string>
+    <string name="stats_category_volunteer_profile">स्वयंसेवक — प्रोफ़ाइल</string>
+    <string name="stats_category_pos_sales">POS — बिक्री</string>
+    <string name="stats_category_pos_credits">POS — क्रेडिट</string>
+    <string name="stats_category_pos_customers">POS — ग्राहक और शेष</string>
+    <string name="stats_category_toc_activity">गतिविधि</string>
+    <string name="stats_category_toc_shifts">शिफ्ट</string>
+    <string name="stats_category_toc_ranks">रैंक</string>
+    <string name="stats_category_toc_profile">प्रोफ़ाइल</string>
+    <string name="stats_category_toc_guest_list">अधिभोग</string>
+    <string name="stats_category_toc_sales">बिक्री</string>
+    <string name="stats_category_toc_credits">क्रेडिट</string>
+    <string name="stats_category_toc_mix">मिश्रण</string>
+    <string name="stats_category_toc_customers">ग्राहक</string>
     <string name="stats_graph_chapters">अध्याय</string>
     <string name="stats_graphs_loading">ग्राफ़ लोड हो रहे हैं…</string>
     <string name="pos_stats_sales_count">बिक्री की संख्या</string>
@@ -1527,6 +1558,11 @@
     <string name="firebase_tutorial_copy_rules">firestore.rules क्लिपबोर्ड पर कॉपी करें</string>
     <string name="firebase_tutorial_copy_rules_done">कॉपी हुआ — Firestore → Rules में चिपकाएँ, फिर Publish</string>
     <string name="firebase_tutorial_copy_rules_error">नियम लोड नहीं हो सके — प्रोजेक्ट में firebase/firestore.rules खोलें</string>
+    <string name="firebase_tutorial_storage_optional_title">वैकल्पिक: प्रोफ़ाइल फ़ोटो (Firebase Storage)</string>
+    <string name="firebase_tutorial_storage_optional_body">मुफ़्त Spark प्लान पर रहने के लिए इसे छोड़ दें। Storage सक्षम करने के लिए सशुल्क Blaze प्लान लग सकता है।\n\nप्रोफ़ाइल फ़ोटो के लिए:\n1. Firebase Console → Build → Storage → Get started (वही प्रोजेक्ट)।\n2. Storage → Rules (URL में /storage/rules होना चाहिए — Firestore नहीं)।\n3. NoctuList storage नियम चिपकाएँ (नीचे बटन) → Publish।\n4. NoctuList सेटिंग्स → Firebase में «प्रोफ़ाइल फ़ोटो सक्षम करें» चालू करें (संगठन के सभी डिवाइसों पर लागू होता है)।\n\nबाद में भी कर सकते हैं। Storage के बिना ऐप पूरी तरह चलती है।</string>
+    <string name="firebase_tutorial_copy_storage_rules">storage.rules क्लिपबोर्ड पर कॉपी करें</string>
+    <string name="firebase_tutorial_copy_storage_rules_done">कॉपी हो गया — Storage → Rules में चिपकाएँ, फिर Publish</string>
+    <string name="firebase_tutorial_copy_storage_rules_error">नियम लोड नहीं हो सके — प्रोजेक्ट में firebase/storage.rules खोलें</string>
     <string name="firebase_tutorial_fb_step1_title">1. Firebase प्रोजेक्ट बनाएँ या खोलें</string>
     <string name="firebase_tutorial_fb_step1_body">1. https://console.firebase.google.com खोलें और संस्था Google खाते से साइन इन करें जो प्रोजेक्ट प्रबंधित कर सके।
 2. Add project पर क्लिक करें (या मौजूदा चुनें)।

@@ -352,7 +352,7 @@
     <string name="add_new_venue">Agregar nuevo lugar</string>
     <string name="edit_venue_configuration">Editar configuración del lugar</string>
     <string name="venue_all">TODOS</string>
-    <string name="venue_both">AMBOS</string>
+    <string name="venue_both">TODOS</string>
 
     <!-- Temporary Guest List -->
     <string name="temp_guest_artist_label">Artista / Grupo</string>
@@ -712,6 +712,17 @@
     <string name="camera_error">Error de cámara</string>
     <string name="enter_id_manually">Ingresar ID manualmente</string>
     <string name="add_nfc_card">Agregar tarjeta NFC</string>
+    <string name="add_profile_photo">Añadir foto</string>
+    <string name="change_profile_photo">Cambiar foto</string>
+    <string name="remove_profile_photo">Quitar foto</string>
+    <string name="remove_profile_photo_confirm">¿Quitar esta foto de perfil?</string>
+    <string name="share_profile_photo">Compartir</string>
+    <string name="download_profile_photo">Descargar</string>
+    <string name="profile_photo_saved_downloads">Foto guardada en Descargas</string>
+    <string name="profile_photo_export_failed">No se pudo exportar la foto</string>
+    <string name="profile_photo_cd">Foto de perfil</string>
+    <string name="profile_photo_too_large">Esta imagen es demasiado grande (máx. 2 MB tras comprimir).</string>
+    <string name="profile_photo_upload_failed">No se pudo subir la foto de perfil. La persona se guardó sin foto.</string>
     <string name="add_nfc_card_uid_title">Agregar UID de tarjeta NFC</string>
     <string name="enter_uid_manually">Ingresar UID manualmente</string>
     <string name="read_uid_with_phone_nfc">Leer UID con el teléfono (NFC)</string>

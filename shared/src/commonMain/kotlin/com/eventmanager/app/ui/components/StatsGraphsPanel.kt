@@ -341,36 +341,102 @@ fun StatsGraphsPanel(
                 }.toSet()
             )
         }
-        val volunteerCategoryTitle = stringResource(Res.string.stats_category_volunteers)
+        val volunteerSection = stringResource(Res.string.stats_section_volunteers)
+        val posSection = stringResource(Res.string.stats_section_pos)
+        val volunteerActivityTitle = stringResource(Res.string.stats_category_volunteer_activity)
+        val volunteerShiftsTitle = stringResource(Res.string.stats_category_volunteer_shifts)
+        val volunteerRanksTitle = stringResource(Res.string.stats_category_volunteer_ranks)
+        val volunteerProfileTitle = stringResource(Res.string.stats_category_volunteer_profile)
         val guestListCategoryTitle = stringResource(Res.string.stats_category_guest_list)
-        val posActivityCategoryTitle = stringResource(Res.string.stats_category_pos_activity)
+        val posSalesTitle = stringResource(Res.string.stats_category_pos_sales)
+        val posCreditsTitle = stringResource(Res.string.stats_category_pos_credits)
         val posMixCategoryTitle = stringResource(Res.string.stats_category_pos_mix)
+        val posCustomersTitle = stringResource(Res.string.stats_category_pos_customers)
+        val tocActivity = stringResource(Res.string.stats_category_toc_activity)
+        val tocShifts = stringResource(Res.string.stats_category_toc_shifts)
+        val tocRanks = stringResource(Res.string.stats_category_toc_ranks)
+        val tocProfile = stringResource(Res.string.stats_category_toc_profile)
+        val tocSales = stringResource(Res.string.stats_category_toc_sales)
+        val tocCredits = stringResource(Res.string.stats_category_toc_credits)
+        val tocMix = stringResource(Res.string.stats_category_toc_mix)
+        val tocCustomers = stringResource(Res.string.stats_category_toc_customers)
         val categories = remember(
-            volunteerCategoryTitle,
+            volunteerSection,
+            posSection,
+            volunteerActivityTitle,
+            volunteerShiftsTitle,
+            volunteerRanksTitle,
+            volunteerProfileTitle,
             guestListCategoryTitle,
-            posActivityCategoryTitle,
+            posSalesTitle,
+            posCreditsTitle,
             posMixCategoryTitle,
+            posCustomersTitle,
+            tocActivity,
+            tocShifts,
+            tocRanks,
+            tocProfile,
+            tocSales,
+            tocCredits,
+            tocMix,
+            tocCustomers,
         ) {
             listOf(
                 StatsGraphCategoryItem(
-                    id = StatsGraphCategory.VOLUNTEERS,
-                    title = volunteerCategoryTitle,
+                    id = StatsGraphCategory.VOLUNTEERS_ACTIVITY,
+                    title = volunteerActivityTitle,
                     icon = Icons.Default.Group,
+                    tocTitle = tocActivity,
+                    sectionTitle = volunteerSection,
+                ),
+                StatsGraphCategoryItem(
+                    id = StatsGraphCategory.VOLUNTEERS_SHIFTS,
+                    title = volunteerShiftsTitle,
+                    icon = Icons.Default.Work,
+                    tocTitle = tocShifts,
+                ),
+                StatsGraphCategoryItem(
+                    id = StatsGraphCategory.VOLUNTEERS_RANKS,
+                    title = volunteerRanksTitle,
+                    icon = Icons.Default.MilitaryTech,
+                    tocTitle = tocRanks,
+                ),
+                StatsGraphCategoryItem(
+                    id = StatsGraphCategory.VOLUNTEERS_PROFILE,
+                    title = volunteerProfileTitle,
+                    icon = Icons.Default.Person,
+                    tocTitle = tocProfile,
                 ),
                 StatsGraphCategoryItem(
                     id = StatsGraphCategory.GUEST_LIST,
                     title = guestListCategoryTitle,
                     icon = Icons.Default.People,
+                    tocTitle = guestListCategoryTitle,
                 ),
                 StatsGraphCategoryItem(
-                    id = StatsGraphCategory.POS_ACTIVITY,
-                    title = posActivityCategoryTitle,
-                    icon = Icons.Default.PointOfSale,
+                    id = StatsGraphCategory.POS_SALES,
+                    title = posSalesTitle,
+                    icon = Icons.Default.ShoppingCart,
+                    tocTitle = tocSales,
+                    sectionTitle = posSection,
+                ),
+                StatsGraphCategoryItem(
+                    id = StatsGraphCategory.POS_CREDITS,
+                    title = posCreditsTitle,
+                    icon = Icons.Default.AccountBalanceWallet,
+                    tocTitle = tocCredits,
                 ),
                 StatsGraphCategoryItem(
                     id = StatsGraphCategory.POS_MIX,
                     title = posMixCategoryTitle,
                     icon = Icons.Default.PieChart,
+                    tocTitle = tocMix,
+                ),
+                StatsGraphCategoryItem(
+                    id = StatsGraphCategory.POS_CUSTOMERS,
+                    title = posCustomersTitle,
+                    icon = Icons.Default.Repeat,
+                    tocTitle = tocCustomers,
                 ),
             )
         }
@@ -388,139 +454,197 @@ fun StatsGraphsPanel(
                 }
                 settingsManager.setDashboardGraphCategoryExpanded(category.name, nowExpanded)
             },
-            volunteerContent = {
-                SectionHeader(
-                    title = stringResource(Res.string.active_volunteers),
-                    description = stringResource(Res.string.active_volunteers_description),
-                    isPhone = isPhone
-                )
-                DeferredGraph(delayMs = 0L, isPhone = isPhone) {
-                    ActiveVolunteersGraph(
-                        volunteers = volunteers,
-                        jobs = jobs,
-                        timePeriod = selectedPeriod,
-                        isPhone = isPhone
-                    )
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                SectionHeader(
-                    title = stringResource(Res.string.shift_statistics),
-                    description = stringResource(Res.string.shift_statistics_description),
-                    isPhone = isPhone
-                )
-                DeferredGraph(delayMs = 48L, isPhone = isPhone, placeholderCount = 2) {
-                    ShiftStatisticsGraph(
-                        jobs = jobs,
-                        venues = venues,
-                        timePeriod = selectedPeriod,
-                        isPhone = isPhone
-                    )
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                SectionHeader(
-                    title = stringResource(Res.string.free_drinks_statistics),
-                    description = stringResource(Res.string.free_drinks_statistics_description),
-                    isPhone = isPhone
-                )
-                DeferredGraph(delayMs = 96L, isPhone = isPhone) {
-                    FreeDrinksGraph(
-                        volunteers = volunteers,
-                        jobs = jobs,
-                        jobTypeConfigs = jobTypeConfigs,
-                        timePeriod = selectedPeriod,
-                        isPhone = isPhone
-                    )
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                if (volunteerStatsLoad.loading) {
-                    GraphLoadingPlaceholder(isPhone = isPhone, cardCount = 4)
-                } else {
-                    DeferredGraph(delayMs = 128L, isPhone = isPhone, placeholderCount = 4) {
-                        VolunteerExtraGraphs(
-                            stats = volunteerStats,
-                            timePeriod = selectedPeriod,
-                            isPhone = isPhone,
-                            now = statsNow,
+            content = { category ->
+                when (category) {
+                    StatsGraphCategory.VOLUNTEERS_ACTIVITY -> {
+                        SectionHeader(
+                            title = stringResource(Res.string.active_volunteers),
+                            description = stringResource(Res.string.active_volunteers_description),
+                            isPhone = isPhone
                         )
+                        DeferredGraph(delayMs = 0L, isPhone = isPhone) {
+                            ActiveVolunteersGraph(
+                                volunteers = volunteers,
+                                jobs = jobs,
+                                timePeriod = selectedPeriod,
+                                isPhone = isPhone
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        if (volunteerStatsLoad.loading) {
+                            GraphLoadingPlaceholder(isPhone = isPhone, cardCount = 2)
+                        } else {
+                            DeferredGraph(delayMs = 48L, isPhone = isPhone, placeholderCount = 2) {
+                                VolunteerActivityExtraGraphs(
+                                    stats = volunteerStats,
+                                    isPhone = isPhone,
+                                )
+                            }
+                        }
                     }
-                }
-            },
-            guestListContent = {
-                SectionHeader(
-                    title = stringResource(Res.string.guest_list_statistics),
-                    description = stringResource(Res.string.guest_list_statistics_description),
-                    isPhone = isPhone
-                )
-                DeferredGraph(delayMs = 0L, isPhone = isPhone) {
-                    GuestListStatisticsGraph(
-                        volunteers = volunteers,
-                        guests = guests,
-                        jobs = jobs,
-                        jobTypeConfigs = jobTypeConfigs,
-                        timePeriod = selectedPeriod,
-                        isPhone = isPhone
-                    )
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                if (volunteerStatsLoad.loading) {
-                    GraphLoadingPlaceholder(isPhone = isPhone, cardCount = 2)
-                } else {
-                    DeferredGraph(delayMs = 24L, isPhone = isPhone, placeholderCount = 2) {
-                        GuestListExtraGraphs(
-                            stats = volunteerStats,
-                            isPhone = isPhone,
+                    StatsGraphCategory.VOLUNTEERS_SHIFTS -> {
+                        SectionHeader(
+                            title = stringResource(Res.string.shift_statistics),
+                            description = stringResource(Res.string.shift_statistics_description),
+                            isPhone = isPhone
                         )
+                        DeferredGraph(delayMs = 0L, isPhone = isPhone, placeholderCount = 2) {
+                            ShiftStatisticsGraph(
+                                jobs = jobs,
+                                venues = venues,
+                                timePeriod = selectedPeriod,
+                                isPhone = isPhone
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        if (volunteerStatsLoad.loading) {
+                            GraphLoadingPlaceholder(isPhone = isPhone, cardCount = 3)
+                        } else {
+                            DeferredGraph(delayMs = 48L, isPhone = isPhone, placeholderCount = 3) {
+                                VolunteerShiftDetailGraphs(
+                                    stats = volunteerStats,
+                                    timePeriod = selectedPeriod,
+                                    isPhone = isPhone,
+                                    now = statsNow,
+                                )
+                            }
+                        }
                     }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                SectionHeader(
-                    title = stringResource(Res.string.gender_parity),
-                    description = stringResource(Res.string.gender_parity_description),
-                    isPhone = isPhone
-                )
-                DeferredGraph(delayMs = 48L, isPhone = isPhone) {
-                    GenderParityGraph(
-                        volunteers = volunteers,
-                        isPhone = isPhone
-                    )
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                SectionHeader(
-                    title = stringResource(Res.string.age_distribution),
-                    description = stringResource(Res.string.age_distribution_description),
-                    isPhone = isPhone
-                )
-                DeferredGraph(delayMs = 96L, isPhone = isPhone) {
-                    AgeDistributionGraph(
-                        volunteers = volunteers,
-                        isPhone = isPhone
-                    )
-                }
-            },
-            posActivityContent = {
-                if (posStatsLoad.loading) {
-                    GraphLoadingPlaceholder(isPhone = isPhone, cardCount = 5)
-                } else {
-                    DeferredGraph(delayMs = 0L, isPhone = isPhone, placeholderCount = 5) {
-                        PosActivityGraphs(
-                            stats = posStats,
-                            timePeriod = selectedPeriod,
-                            isPhone = isPhone,
-                            now = statsNow,
+                    StatsGraphCategory.VOLUNTEERS_RANKS -> {
+                        if (volunteerStatsLoad.loading) {
+                            GraphLoadingPlaceholder(isPhone = isPhone, cardCount = 2)
+                        } else {
+                            DeferredGraph(delayMs = 0L, isPhone = isPhone, placeholderCount = 2) {
+                                VolunteerRankGraphs(
+                                    stats = volunteerStats,
+                                    timePeriod = selectedPeriod,
+                                    isPhone = isPhone,
+                                    now = statsNow,
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        SectionHeader(
+                            title = stringResource(Res.string.free_drinks_statistics),
+                            description = stringResource(Res.string.free_drinks_statistics_description),
+                            isPhone = isPhone
                         )
+                        DeferredGraph(delayMs = 48L, isPhone = isPhone) {
+                            FreeDrinksGraph(
+                                volunteers = volunteers,
+                                jobs = jobs,
+                                jobTypeConfigs = jobTypeConfigs,
+                                timePeriod = selectedPeriod,
+                                isPhone = isPhone
+                            )
+                        }
                     }
-                }
-            },
-            posMixContent = {
-                if (posStatsLoad.loading) {
-                    GraphLoadingPlaceholder(isPhone = isPhone, cardCount = 4)
-                } else {
-                    DeferredGraph(delayMs = 32L, isPhone = isPhone, placeholderCount = 4) {
-                        PosMixGraphs(
-                            stats = posStats,
-                            isPhone = isPhone,
-                            currencyCode = currencyCode,
+                    StatsGraphCategory.VOLUNTEERS_PROFILE -> {
+                        SectionHeader(
+                            title = stringResource(Res.string.gender_parity),
+                            description = stringResource(Res.string.gender_parity_description),
+                            isPhone = isPhone
                         )
+                        DeferredGraph(delayMs = 0L, isPhone = isPhone) {
+                            GenderParityGraph(
+                                volunteers = volunteers,
+                                isPhone = isPhone
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        SectionHeader(
+                            title = stringResource(Res.string.age_distribution),
+                            description = stringResource(Res.string.age_distribution_description),
+                            isPhone = isPhone
+                        )
+                        DeferredGraph(delayMs = 48L, isPhone = isPhone) {
+                            AgeDistributionGraph(
+                                volunteers = volunteers,
+                                isPhone = isPhone
+                            )
+                        }
+                    }
+                    StatsGraphCategory.GUEST_LIST -> {
+                        SectionHeader(
+                            title = stringResource(Res.string.guest_list_statistics),
+                            description = stringResource(Res.string.guest_list_statistics_description),
+                            isPhone = isPhone
+                        )
+                        DeferredGraph(delayMs = 0L, isPhone = isPhone) {
+                            GuestListStatisticsGraph(
+                                volunteers = volunteers,
+                                guests = guests,
+                                jobs = jobs,
+                                jobTypeConfigs = jobTypeConfigs,
+                                timePeriod = selectedPeriod,
+                                isPhone = isPhone
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        if (volunteerStatsLoad.loading) {
+                            GraphLoadingPlaceholder(isPhone = isPhone, cardCount = 2)
+                        } else {
+                            DeferredGraph(delayMs = 24L, isPhone = isPhone, placeholderCount = 2) {
+                                GuestListExtraGraphs(
+                                    stats = volunteerStats,
+                                    isPhone = isPhone,
+                                )
+                            }
+                        }
+                    }
+                    StatsGraphCategory.POS_SALES -> {
+                        if (posStatsLoad.loading) {
+                            GraphLoadingPlaceholder(isPhone = isPhone, cardCount = 4)
+                        } else {
+                            DeferredGraph(delayMs = 0L, isPhone = isPhone, placeholderCount = 4) {
+                                PosSalesGraphs(
+                                    stats = posStats,
+                                    timePeriod = selectedPeriod,
+                                    isPhone = isPhone,
+                                    now = statsNow,
+                                )
+                            }
+                        }
+                    }
+                    StatsGraphCategory.POS_CREDITS -> {
+                        if (posStatsLoad.loading) {
+                            GraphLoadingPlaceholder(isPhone = isPhone, cardCount = 5)
+                        } else {
+                            DeferredGraph(delayMs = 0L, isPhone = isPhone, placeholderCount = 5) {
+                                PosCreditsGraphs(
+                                    stats = posStats,
+                                    timePeriod = selectedPeriod,
+                                    isPhone = isPhone,
+                                    now = statsNow,
+                                )
+                            }
+                        }
+                    }
+                    StatsGraphCategory.POS_MIX -> {
+                        if (posStatsLoad.loading) {
+                            GraphLoadingPlaceholder(isPhone = isPhone, cardCount = 4)
+                        } else {
+                            DeferredGraph(delayMs = 0L, isPhone = isPhone, placeholderCount = 4) {
+                                PosMixGraphs(
+                                    stats = posStats,
+                                    isPhone = isPhone,
+                                    currencyCode = currencyCode,
+                                )
+                            }
+                        }
+                    }
+                    StatsGraphCategory.POS_CUSTOMERS -> {
+                        if (posStatsLoad.loading) {
+                            GraphLoadingPlaceholder(isPhone = isPhone, cardCount = 4)
+                        } else {
+                            DeferredGraph(delayMs = 0L, isPhone = isPhone, placeholderCount = 4) {
+                                PosCustomerGraphs(
+                                    stats = posStats,
+                                    isPhone = isPhone,
+                                    currencyCode = currencyCode,
+                                )
+                            }
+                        }
                     }
                 }
             },
@@ -672,8 +796,7 @@ private fun ActiveVolunteersGraph(
                     val file = GraphExportBridge.exportLineGraph(
                         platformContext = platformContext,
                         title = graphTitle,
-                        dataPoints = dataPoints,
-                        trendPoints = trendPoints,
+                        series = singleSeriesGraphExport(graphTitle, dataPoints, trendPoints),
                         timePeriod = timePeriod,
                         density = density,
                         exportType = if (pendingExportType == ExportType.XLSX) GraphExportType.XLSX else GraphExportType.JPG
@@ -735,6 +858,7 @@ internal fun GraphCardWithExport(
     description: String? = null
 ) {
     val platformContext = LocalPlatformContext.current
+    val lineColorArgb = MaterialTheme.colorScheme.primary.toArgb()
     var showExportDialog by remember { mutableStateOf(false) }
     var showPreviewDialog by remember { mutableStateOf(false) }
     var exportedFile by remember { mutableStateOf<File?>(null) }
@@ -784,8 +908,7 @@ internal fun GraphCardWithExport(
                     val file = GraphExportBridge.exportLineGraph(
                         platformContext = platformContext,
                         title = title,
-                        dataPoints = dataPoints,
-                        trendPoints = trendPoints,
+                        series = singleSeriesGraphExport(title, dataPoints, trendPoints, lineColorArgb),
                         timePeriod = timePeriod,
                         density = density,
                         exportType = if (pendingExportType == ExportType.XLSX) GraphExportType.XLSX else GraphExportType.JPG
@@ -1837,8 +1960,8 @@ internal fun MultiLineGraph(
         interactionState = InteractionState()
     }
 
-    // Export state - export first series
-    val firstSeriesData = seriesData.firstOrNull()?.second ?: emptyList()
+    // Export all series, matching the on-screen graph
+    val canExport = seriesData.any { it.second.isNotEmpty() }
     var showExportDialog by remember { mutableStateOf(false) }
     var showPreviewDialog by remember { mutableStateOf(false) }
     var exportedFile by remember { mutableStateOf<File?>(null) }
@@ -2029,7 +2152,7 @@ internal fun MultiLineGraph(
     }
 
     // Export options dialog
-    if (showExportDialog && firstSeriesData.isNotEmpty()) {
+    if (showExportDialog && canExport) {
         ExportOptionsDialog(
             onDismiss = { showExportDialog = false },
             onExportXLSX = {
@@ -2051,15 +2174,21 @@ internal fun MultiLineGraph(
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
     LaunchedEffect(isExporting, pendingExportType) {
-        if (isExporting && pendingExportType != null && firstSeriesData.isNotEmpty()) {
+        if (isExporting && pendingExportType != null && canExport) {
             scope.launch(Dispatchers.IO) {
                 try {
-                    val trendPoints = calculateTrendLine(firstSeriesData)
+                    val exportSeries = seriesData.map { (name, points, color) ->
+                        GraphSeriesExport(
+                            name = name,
+                            dataPoints = points,
+                            trendPoints = calculateTrendLine(points),
+                            colorArgb = color.toArgb(),
+                        )
+                    }
                     val file = GraphExportBridge.exportLineGraph(
                         platformContext = platformContext,
                         title = label,
-                        dataPoints = firstSeriesData,
-                        trendPoints = trendPoints,
+                        series = exportSeries,
                         timePeriod = timePeriod,
                         density = density,
                         exportType = if (pendingExportType == ExportType.XLSX) GraphExportType.XLSX else GraphExportType.JPG
@@ -2625,6 +2754,7 @@ private fun InteractiveLineGraph(
 ) {
     val platformContext = LocalPlatformContext.current
     val useTouchGestures = !platformContext.isDesktop
+    val lineColorArgb = MaterialTheme.colorScheme.primary.toArgb()
     if (dataPoints.size < 2) return
 
     val height = if (isPhone) 180.dp else 220.dp
@@ -2830,8 +2960,7 @@ private fun InteractiveLineGraph(
                     val file = GraphExportBridge.exportLineGraph(
                         platformContext = platformContext,
                         title = label,
-                        dataPoints = dataPoints,
-                        trendPoints = trendPoints,
+                        series = singleSeriesGraphExport(label, dataPoints, trendPoints, lineColorArgb),
                         timePeriod = timePeriod,
                         density = density,
                         exportType = if (pendingExportType == ExportType.XLSX) GraphExportType.XLSX else GraphExportType.JPG

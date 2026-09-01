@@ -27,11 +27,14 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.eventmanager.app.data.models.*
 import com.eventmanager.app.data.remote.MultiOrgMerge
+import com.eventmanager.app.data.remote.resolvedProfilePhotoPath
 import com.eventmanager.app.data.sync.settingsManagerFor
 import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.ui.components.SearchBarWithFilter
 import com.eventmanager.app.ui.components.VolunteerBenefitsPanel
 import com.eventmanager.app.ui.components.GuestDetailPanel
+import com.eventmanager.app.ui.components.ProfilePhotoFormPicker
+import com.eventmanager.app.ui.components.rememberProfilePhotosUploadEnabled
 import com.eventmanager.app.ui.components.fullScreenDialogProperties
 import com.eventmanager.app.ui.utils.*
 import com.eventmanager.app.R
@@ -96,7 +99,7 @@ actual fun GuestListScreen(
     jobs: List<Job>,
     jobTypeConfigs: List<JobTypeConfig>,
     venues: List<VenueEntity>,
-    onAddGuest: (Guest) -> Unit,
+    onAddGuest: (Guest, ByteArray?) -> Unit,
     onAddTemporaryGuests: (ManualTemporaryGuestBatch) -> Unit,
     onUpdateGuest: (Guest) -> Unit,
     onUpdateVolunteer: (Volunteer) -> Unit,
@@ -737,7 +740,8 @@ actual fun GuestListScreen(
         AddGuestDialog(
             venues = venues,
             onDismiss = { showAddDialog = false },
-            onConfirmPermanent = { name, email, phoneNumber, invitations, venueName, notes ->
+            profilePhotosEnabled = rememberProfilePhotosUploadEnabled(viewModel),
+            onConfirmPermanent = { name, email, phoneNumber, invitations, venueName, notes, photoBytes ->
                 val newGuest = Guest(
                     name = name,
                     email = email,
@@ -746,7 +750,7 @@ actual fun GuestListScreen(
                     venueName = venueName,
                     notes = notes
                 )
-                onAddGuest(newGuest)
+                onAddGuest(newGuest, photoBytes)
                 showAddDialog = false
             },
             onConfirmTemporary = { batch ->
@@ -895,6 +899,8 @@ actual fun GuestListScreen(
         EditGuestDialog(
             guest = showEditGuestDialog!!,
             venues = venues,
+            profilePhotosEnabled = rememberProfilePhotosUploadEnabled(viewModel),
+            viewModel = viewModel,
             onDismiss = { showEditGuestDialog = null },
             onConfirm = { updatedGuest ->
                 onUpdateGuest(updatedGuest)
@@ -1844,8 +1850,9 @@ private fun cursorAfterIsoDateFormat(formattedText: String, incoming: TextFieldV
 fun AddGuestDialog(
     venues: List<VenueEntity>,
     onDismiss: () -> Unit,
-    onConfirmPermanent: (String, String, String, Int, String, String) -> Unit,
-    onConfirmTemporary: (ManualTemporaryGuestBatch) -> Unit
+    onConfirmPermanent: (String, String, String, Int, String, String, ByteArray?) -> Unit,
+    onConfirmTemporary: (ManualTemporaryGuestBatch) -> Unit,
+    profilePhotosEnabled: Boolean = false,
 ) {
     val context = LocalContext.current
     var selectedTab by remember { mutableStateOf(0) }
@@ -1857,6 +1864,7 @@ fun AddGuestDialog(
     var selectedVenueName by remember { mutableStateOf<String?>(null) }
     var notes by remember { mutableStateOf("") }
     var showVenueDropdown by remember { mutableStateOf(false) }
+    var pendingPhotoBytes by remember { mutableStateOf<ByteArray?>(null) }
 
     var temporaryArtist by remember { mutableStateOf("") }
     var temporaryEventDateTf by remember { mutableStateOf(TextFieldValue("")) }
@@ -2007,11 +2015,7 @@ fun AddGuestDialog(
                                     expanded = showVenueDropdown,
                                     onDismissRequest = { showVenueDropdown = false }
                                 ) {
-                                    val allOptionText = if (activeVenues.size <= 2) {
-                                        context.getString(R.string.venue_both)
-                                    } else {
-                                        context.getString(R.string.venue_all)
-                                    }
+                                    val allOptionText = context.getString(R.string.venue_all)
                                     DropdownMenuItem(
                                         text = { Text(allOptionText) },
                                         onClick = {
@@ -2038,6 +2042,14 @@ fun AddGuestDialog(
                                 label = { Text(context.getString(R.string.notes)) },
                                 modifier = Modifier.fillMaxWidth(),
                                 maxLines = 3
+                            )
+                            ProfilePhotoFormPicker(
+                                enabled = profilePhotosEnabled,
+                                currentUrl = "",
+                                name = name,
+                                pendingBytes = pendingPhotoBytes,
+                                onPicked = { pendingPhotoBytes = it },
+                                onClearPending = { pendingPhotoBytes = null },
                             )
                         } else {
                             OutlinedTextField(
@@ -2146,7 +2158,8 @@ fun AddGuestDialog(
                                         phoneNumber,
                                         invitationCount,
                                         selectedVenueName ?: defaultVenue,
-                                        notes
+                                        notes,
+                                        pendingPhotoBytes
                                     )
                                 } else {
                                     val millis = temporaryEventDateMillis ?: return@TextButton
@@ -2182,7 +2195,9 @@ fun EditGuestDialog(
     guest: Guest,
     venues: List<VenueEntity>,
     onDismiss: () -> Unit,
-    onConfirm: (Guest) -> Unit
+    onConfirm: (Guest) -> Unit,
+    profilePhotosEnabled: Boolean = false,
+    viewModel: EventManagerViewModel? = null,
 ) {
     val context = LocalContext.current
     val isTemporaryGuest = guest.isTemporaryGuest
@@ -2207,6 +2222,7 @@ fun EditGuestDialog(
         )
     }
     var showVenueDropdown by remember { mutableStateOf(false) }
+    var pendingPhotoBytes by remember { mutableStateOf<ByteArray?>(null) }
 
     val isCompact = isCompactScreen()
     val scrollState = rememberScrollState()
@@ -2358,12 +2374,7 @@ fun EditGuestDialog(
                                     expanded = showVenueDropdown,
                                     onDismissRequest = { showVenueDropdown = false }
                                 ) {
-                                    // Add BOTH/ALL option
-                                    val allOptionText = if (activeVenues.size <= 2) {
-                                        context.getString(R.string.venue_both)
-                                    } else {
-                                        context.getString(R.string.venue_all)
-                                    }
+                                    val allOptionText = context.getString(R.string.venue_all)
                                     DropdownMenuItem(
                                         text = { Text(allOptionText) },
                                         onClick = {
@@ -2393,6 +2404,18 @@ fun EditGuestDialog(
                             modifier = Modifier.fillMaxWidth(),
                             maxLines = 3
                         )
+                        if (!isTemporaryGuest) {
+                            ProfilePhotoFormPicker(
+                                enabled = profilePhotosEnabled,
+                                currentUrl = guest.profilePhotoUrl,
+                                currentPath = guest.resolvedProfilePhotoPath(),
+                                name = name,
+                                pendingBytes = pendingPhotoBytes,
+                                onPicked = { pendingPhotoBytes = it },
+                                onClearPending = { pendingPhotoBytes = null },
+                                onRemoveExisting = { viewModel?.removeProfilePhotoForGuest(guest) },
+                            )
+                        }
                     }
                     
                     // Footer
@@ -2436,6 +2459,9 @@ fun EditGuestDialog(
                                     )
                                 }
                                 onConfirm(updatedGuest)
+                                if (!isTemporaryGuest) {
+                                    pendingPhotoBytes?.let { viewModel?.uploadProfilePhotoForGuest(updatedGuest, it) }
+                                }
                             },
                             enabled = name.isNotBlank() && (!isTemporaryGuest || parsedTempEventDate != null)
                         ) {

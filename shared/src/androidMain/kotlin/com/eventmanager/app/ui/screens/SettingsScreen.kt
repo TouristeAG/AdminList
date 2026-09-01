@@ -1611,6 +1611,7 @@ actual fun SettingsScreen(
     // Sync status dialog state
     val syncStatusMessage by viewModel.syncStatusMessage.collectAsState()
     val showSyncStatusDialog by viewModel.showSyncStatusDialog.collectAsState()
+    val profilePhotosEnabled by viewModel.profilePhotosUploadEnabled.collectAsState()
     
     // Check if JSON key file exists on first load
     LaunchedEffect(Unit) {
@@ -1757,6 +1758,8 @@ actual fun SettingsScreen(
                     platformContext = platformContext,
                     onMirrorSettingsChanged = { viewModel.onSheetsMirrorSettingsChanged() },
                     settingsManager = settingsManager,
+                    profilePhotosEnabled = profilePhotosEnabled,
+                    onProfilePhotosEnabledChange = { viewModel.setProfilePhotosEnabled(it) },
                     projectId = settingsManager.getFirebaseProjectId(),
                     apiKey = settingsManager.getFirebaseApiKey(),
                     applicationId = settingsManager.getFirebaseApplicationId(),

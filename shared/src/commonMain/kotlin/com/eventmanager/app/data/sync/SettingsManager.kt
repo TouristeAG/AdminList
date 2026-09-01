@@ -188,6 +188,7 @@ class SettingsManager(private val storage: AppStorage) {
         private const val KEY_FIREBASE_APPLICATION_ID = "firebase_application_id"
         private const val KEY_FIREBASE_GCM_SENDER_ID = "firebase_gcm_sender_id"
         private const val KEY_FIREBASE_STORAGE_BUCKET = "firebase_storage_bucket"
+        private const val KEY_PROFILE_PHOTOS_ENABLED = "profile_photos_enabled"
         private const val KEY_FIREBASE_WEB_CLIENT_ID = "firebase_web_client_id"
         private const val KEY_FIREBASE_WEB_CLIENT_SECRET = "firebase_web_client_secret"
         private const val KEY_ALLOWED_EMAIL_DOMAINS = "allowed_email_domains"
@@ -302,6 +303,16 @@ class SettingsManager(private val storage: AppStorage) {
 
     fun getFirebaseStorageBucket(): String = storage.getString(KEY_FIREBASE_STORAGE_BUCKET, "") ?: ""
     fun setFirebaseStorageBucket(value: String) = storage.putString(KEY_FIREBASE_STORAGE_BUCKET, value)
+
+    /**
+     * Opt-in for profile photo uploads (Firebase Storage). Default off so skipping Storage
+     * keeps the app fully usable on the free Spark plan.
+     */
+    fun isProfilePhotosEnabled(): Boolean = storage.getBoolean(KEY_PROFILE_PHOTOS_ENABLED, false)
+    fun setProfilePhotosEnabled(enabled: Boolean) {
+        storage.putBoolean(KEY_PROFILE_PHOTOS_ENABLED, enabled)
+        touchInstitutionSettingLastModified(InstitutionSettingsKeys.PROFILE_PHOTOS_ENABLED)
+    }
 
     /** OAuth Web client ID used to request Google ID tokens for Firebase Auth (Android). */
     fun getFirebaseWebClientId(): String = storage.getString(KEY_FIREBASE_WEB_CLIENT_ID, "") ?: ""
@@ -764,6 +775,7 @@ class SettingsManager(private val storage: AppStorage) {
                 setInstitutionSettingLastModified(key, now)
             }
         }
+        touchIfUnset(InstitutionSettingsKeys.PROFILE_PHOTOS_ENABLED, isProfilePhotosEnabled())
         touchIfUnset(InstitutionSettingsKeys.SHEETS_MIRROR_ENABLED, isSheetsMirrorEnabled())
         touchIfUnset(
             InstitutionSettingsKeys.SHEETS_MIRROR_SPREADSHEET_ID,
@@ -812,6 +824,7 @@ class SettingsManager(private val storage: AppStorage) {
                 storage.getString("inst_val_" + InstitutionSettingsKeys.SHEETS_SPREADSHEET_ID_HINT, "") ?: ""
             InstitutionSettingsKeys.ALLOWED_EMAIL_DOMAINS ->
                 com.eventmanager.app.data.remote.FirebaseEmailDomainPolicy.serialize(getAllowedEmailDomains())
+            InstitutionSettingsKeys.PROFILE_PHOTOS_ENABLED -> isProfilePhotosEnabled().toString()
             InstitutionSettingsKeys.SHEETS_MIRROR_ENABLED -> isSheetsMirrorEnabled().toString()
             InstitutionSettingsKeys.SHEETS_MIRROR_SPREADSHEET_ID -> getSheetsMirrorSpreadsheetId()
             InstitutionSettingsKeys.SHEETS_MIRROR_INTERVAL_MINUTES ->
@@ -920,6 +933,8 @@ class SettingsManager(private val storage: AppStorage) {
             -> {
                 // Secrets are device-local only — never apply from remote institution settings.
             }
+            InstitutionSettingsKeys.PROFILE_PHOTOS_ENABLED ->
+                storage.putBoolean(KEY_PROFILE_PHOTOS_ENABLED, value.trim().equals("true", ignoreCase = true))
             InstitutionSettingsKeys.SHEETS_MIRROR_ENABLED ->
                 storage.putBoolean(KEY_SHEETS_MIRROR_ENABLED, value.trim().equals("true", ignoreCase = true))
             InstitutionSettingsKeys.SHEETS_MIRROR_SPREADSHEET_ID ->

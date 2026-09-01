@@ -18,6 +18,9 @@ object FirestoreRulesClipboardContent {
     suspend fun load(): String {
         val raw = Res.readBytes("files/firestore.rules").decodeToString()
         val sanitized = sanitizeForFirebaseConsole(raw)
+        require(sanitized.contains("service cloud.firestore")) {
+            "files/firestore.rules is not Firestore rules"
+        }
         // #region agent log
         debugAgentLog(
             hypothesisId = "D",

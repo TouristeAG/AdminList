@@ -535,7 +535,7 @@ actual fun AppRootContent(
                                         onConfirmFutureEntry = { job, invites -> viewModel.markBenefitAsUsed(job, invites) },
                                         scrollBehavior = settingsManager.getScrollBehavior(),
                                         viewModel = viewModel,
-                                        onAddVolunteer = { viewModel.addVolunteer(it) },
+                                        onAddVolunteer = { volunteer, photo -> viewModel.addVolunteer(volunteer, photo) },
                                         onUpdateVolunteer = { viewModel.updateVolunteer(it) },
                                         onDeleteVolunteer = { volunteer, deleteShifts ->
                                             viewModel.deleteVolunteer(volunteer, deleteShifts)
@@ -647,7 +647,8 @@ actual fun AppRootContent(
                             onAssignNfcUid = { updated, uid ->
                                 viewModel.updateVolunteer(updated.copy(nfcCardUid = uid, lastModified = System.currentTimeMillis()))
                                 showVolunteerBenefits = updated.copy(nfcCardUid = uid)
-                            }
+                            },
+                            viewModel = viewModel
                         )
                     }
                 }
@@ -671,7 +672,8 @@ actual fun AppRootContent(
                                 viewModel.deleteGuest(toDelete)
                                 showScannedGuestDetail = null
                             },
-                            onClose = { showScannedGuestDetail = null }
+                            onClose = { showScannedGuestDetail = null },
+                            viewModel = viewModel
                         )
                     }
                 }
@@ -999,7 +1001,7 @@ private fun DesktopGuestListWithViewModel(
         lastSyncTime = settingsManager.getLastSyncTime(),
         scrollBehavior = settingsManager.getScrollBehavior(),
         readOnly = readOnly,
-        onAddGuest = { scope.launch { viewModel.addGuest(it) } },
+        onAddGuest = { guest, photo -> scope.launch { viewModel.addGuest(guest, photo) } },
         onAddTemporaryGuests = { scope.launch { viewModel.addTemporaryGuestBatch(it) } },
         onUpdateGuest = { scope.launch { viewModel.updateGuest(it) } },
         onUpdateVolunteer = { scope.launch { viewModel.updateVolunteer(it) } },

@@ -1497,7 +1497,8 @@ if (pageAnimationsEnabled) {
                                 )
                             )
                             showVolunteerBenefits = updatedVolunteer.copy(nfcCardUid = uid)
-                        }
+                        },
+                        viewModel = viewModel
                     )
                 }
             }
@@ -1537,7 +1538,8 @@ if (pageAnimationsEnabled) {
                             viewModel.deleteGuest(toDelete)
                             showScannedGuestDetail = null
                         },
-                        onClose = { showScannedGuestDetail = null }
+                        onClose = { showScannedGuestDetail = null },
+                        viewModel = viewModel
                     )
                 }
             }
@@ -2379,10 +2381,10 @@ fun GuestListScreenWithViewModel(
         lastSyncTime = settingsManager.getLastSyncTime(),
         scrollBehavior = scrollBehavior,
         readOnly = readOnly,
-        onAddGuest = { 
+        onAddGuest = { guest, photo -> 
             coroutineScope.launch { 
                 try {
-                    viewModel.addGuest(it)
+                    viewModel.addGuest(guest, photo)
                 } catch (e: Exception) {
                     // Exception is already handled in ViewModel and shown in syncError
                     println("Guest addition failed: ${e.message}")
@@ -2462,10 +2464,10 @@ fun VolunteerScreenWithViewModel(viewModel: EventManagerViewModel) {
         jobTypeConfigs = jobTypeConfigs,
         onConfirmFutureEntry = { job, selectedInvites -> viewModel.markBenefitAsUsed(job, selectedInvites) },
         scrollBehavior = scrollBehavior,
-        onAddVolunteer = { 
+        onAddVolunteer = { volunteer, photo -> 
             coroutineScope.launch { 
                 try {
-                    viewModel.addVolunteer(it)
+                    viewModel.addVolunteer(volunteer, photo)
                 } catch (e: Exception) {
                     println("Volunteer addition failed: ${e.message}")
                 }

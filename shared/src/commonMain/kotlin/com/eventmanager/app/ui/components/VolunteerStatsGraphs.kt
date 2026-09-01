@@ -69,27 +69,150 @@ private val RankColors = mapOf(
 )
 
 @Composable
-fun VolunteerExtraGraphs(
+fun VolunteerActivityExtraGraphs(
+    stats: VolunteerDashboardSnapshot,
+    isPhone: Boolean,
+) {
+    val emptyText = stringResource(Res.string.stats_no_volunteer_data)
+    val recency030 = stringResource(Res.string.stats_recency_0_30)
+    val recency3090 = stringResource(Res.string.stats_recency_30_90)
+    val recency90365 = stringResource(Res.string.stats_recency_90_365)
+    val recencyInactive = stringResource(Res.string.stats_recency_inactive)
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        StatsBarCard(
+            title = stringResource(Res.string.stats_shift_recency),
+            description = stringResource(Res.string.stats_shift_recency_description),
+            icon = Icons.Default.History,
+            bars = stats.recencyHistogram.toBarItems(
+                colorFor = { _, index -> SlicePalette[index % SlicePalette.size] },
+                labelFor = { item ->
+                    when (item.key) {
+                        VolunteerDashboardStats.RECENCY_D0_30 -> recency030
+                        VolunteerDashboardStats.RECENCY_D30_90 -> recency3090
+                        VolunteerDashboardStats.RECENCY_D90_365 -> recency90365
+                        else -> recencyInactive
+                    }
+                },
+            ),
+            isPhone = isPhone,
+            emptyText = emptyText,
+        )
+        val nfc = stats.nfcEnrollment
+        PosHighlightCard(
+            title = stringResource(Res.string.stats_nfc_enrollment),
+            icon = Icons.Default.Nfc,
+            isPhone = isPhone,
+            value = if (nfc.volunteerTotal + nfc.guestTotal > 0) {
+                stringResource(
+                    Res.string.stats_nfc_enrollment_value,
+                    formatPct(nfc.volunteerPercent.toFloat()),
+                    formatPct(nfc.guestPercent.toFloat()),
+                )
+            } else {
+                null
+            },
+            subtitle = if (nfc.volunteerTotal + nfc.guestTotal > 0) {
+                stringResource(
+                    Res.string.stats_nfc_enrollment_subtitle,
+                    nfc.volunteerEnrolled,
+                    nfc.volunteerTotal,
+                    nfc.guestEnrolled,
+                    nfc.guestTotal,
+                )
+            } else {
+                stringResource(Res.string.stats_nfc_enrollment_description)
+            },
+            emptyText = stringResource(Res.string.stats_nfc_enrollment_empty),
+        )
+    }
+}
+
+@Composable
+fun VolunteerShiftDetailGraphs(
+    stats: VolunteerDashboardSnapshot,
+    timePeriod: TimePeriod,
+    isPhone: Boolean,
+    now: Long,
+) {
+    val otherLabel = stringResource(Res.string.pos_stats_other_products)
+    val totalLabel = stringResource(Res.string.total)
+    val emptyText = stringResource(Res.string.stats_no_volunteer_data)
+    val profitedLabel = stringResource(Res.string.shift_time_evening_profited)
+    val nonProfitedLabel = stringResource(Res.string.shift_time_evening_non_profited)
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        val jobTypeSeries = stats.shiftsByJobType.mapIndexed { index, series ->
+            val label = when (series.key) {
+                VolunteerDashboardStats.OTHER_KEY -> otherLabel
+                VolunteerDashboardStats.TOTAL_KEY -> totalLabel
+                else -> series.key
+            }
+            val color = if (series.key == VolunteerDashboardStats.TOTAL_KEY) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                SlicePalette[index % SlicePalette.size]
+            }
+            Triple(label, series.points.toGraphPoints(timePeriod, now), color)
+        }
+        if (jobTypeSeries.any { it.second.size >= 2 }) {
+            MultiLineGraph(
+                label = stringResource(Res.string.stats_shifts_by_job_type),
+                description = stringResource(Res.string.stats_shifts_by_job_type_description),
+                seriesData = jobTypeSeries,
+                timePeriod = timePeriod,
+                isPhone = isPhone,
+            )
+        }
+        StatsPieCard(
+            title = stringResource(Res.string.stats_shift_time_split),
+            description = stringResource(Res.string.stats_shift_time_split_description),
+            icon = Icons.Default.Nightlife,
+            slices = stats.shiftTimePie.toPieSlices(
+                colorFor = { item, _ ->
+                    if (item.key == VolunteerDashboardStats.SHIFT_PROFITED) SlicePalette[0] else SlicePalette[1]
+                },
+                labelFor = { item ->
+                    if (item.key == VolunteerDashboardStats.SHIFT_PROFITED) profitedLabel else nonProfitedLabel
+                },
+                detailFor = { item, pct -> "${item.quantity} (${formatPct(pct)})" },
+            ),
+            isPhone = isPhone,
+            emptyText = emptyText,
+        )
+        val shiftTimeSeries = listOf(
+            Triple(profitedLabel, stats.shiftTimeProfitedOverTime.toGraphPoints(timePeriod, now), SlicePalette[0]),
+            Triple(nonProfitedLabel, stats.shiftTimeNonProfitedOverTime.toGraphPoints(timePeriod, now), SlicePalette[1]),
+        )
+        if (shiftTimeSeries.any { it.second.size >= 2 }) {
+            MultiLineGraph(
+                label = stringResource(Res.string.stats_shift_time_over_time),
+                description = stringResource(Res.string.stats_shift_time_over_time_description),
+                seriesData = shiftTimeSeries,
+                timePeriod = timePeriod,
+                isPhone = isPhone,
+            )
+        }
+    }
+}
+
+@Composable
+fun VolunteerRankGraphs(
     stats: VolunteerDashboardSnapshot,
     timePeriod: TimePeriod,
     isPhone: Boolean,
     now: Long,
 ) {
     val emptyText = stringResource(Res.string.stats_no_volunteer_data)
-    val otherLabel = stringResource(Res.string.pos_stats_other_products)
-    val totalLabel = stringResource(Res.string.total)
     val novaLabel = stringResource(Res.string.stats_rank_nova)
     val galaxieLabel = stringResource(Res.string.stats_rank_galaxie)
     val orionLabel = stringResource(Res.string.stats_rank_orion)
     val veteranLabel = stringResource(Res.string.stats_rank_veteran)
     val rankOtherLabel = stringResource(Res.string.stats_rank_other)
-    val recency030 = stringResource(Res.string.stats_recency_0_30)
-    val recency3090 = stringResource(Res.string.stats_recency_30_90)
-    val recency90365 = stringResource(Res.string.stats_recency_90_365)
-    val recencyInactive = stringResource(Res.string.stats_recency_inactive)
-    val profitedLabel = stringResource(Res.string.shift_time_evening_profited)
-    val nonProfitedLabel = stringResource(Res.string.shift_time_evening_non_profited)
-
     fun rankLabel(key: String): String = when (key) {
         VolunteerDashboardStats.RANK_NOVA -> novaLabel
         VolunteerDashboardStats.RANK_GALAXIE -> galaxieLabel
@@ -97,7 +220,6 @@ fun VolunteerExtraGraphs(
         VolunteerDashboardStats.RANK_VETERAN -> veteranLabel
         else -> rankOtherLabel
     }
-
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -128,106 +250,6 @@ fun VolunteerExtraGraphs(
                 isPhone = isPhone,
             )
         }
-
-        val jobTypeSeries = stats.shiftsByJobType.mapIndexed { index, series ->
-            val label = when (series.key) {
-                VolunteerDashboardStats.OTHER_KEY -> otherLabel
-                VolunteerDashboardStats.TOTAL_KEY -> totalLabel
-                else -> series.key
-            }
-            val color = if (series.key == VolunteerDashboardStats.TOTAL_KEY) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                SlicePalette[index % SlicePalette.size]
-            }
-            Triple(label, series.points.toGraphPoints(timePeriod, now), color)
-        }
-        if (jobTypeSeries.any { it.second.size >= 2 }) {
-            MultiLineGraph(
-                label = stringResource(Res.string.stats_shifts_by_job_type),
-                description = stringResource(Res.string.stats_shifts_by_job_type_description),
-                seriesData = jobTypeSeries,
-                timePeriod = timePeriod,
-                isPhone = isPhone,
-            )
-        }
-
-        StatsBarCard(
-            title = stringResource(Res.string.stats_shift_recency),
-            description = stringResource(Res.string.stats_shift_recency_description),
-            icon = Icons.Default.History,
-            bars = stats.recencyHistogram.toBarItems(
-                colorFor = { _, index -> SlicePalette[index % SlicePalette.size] },
-                labelFor = { item ->
-                    when (item.key) {
-                        VolunteerDashboardStats.RECENCY_D0_30 -> recency030
-                        VolunteerDashboardStats.RECENCY_D30_90 -> recency3090
-                        VolunteerDashboardStats.RECENCY_D90_365 -> recency90365
-                        else -> recencyInactive
-                    }
-                },
-            ),
-            isPhone = isPhone,
-            emptyText = emptyText,
-        )
-
-        StatsPieCard(
-            title = stringResource(Res.string.stats_shift_time_split),
-            description = stringResource(Res.string.stats_shift_time_split_description),
-            icon = Icons.Default.Nightlife,
-            slices = stats.shiftTimePie.toPieSlices(
-                colorFor = { item, _ ->
-                    if (item.key == VolunteerDashboardStats.SHIFT_PROFITED) SlicePalette[0] else SlicePalette[1]
-                },
-                labelFor = { item ->
-                    if (item.key == VolunteerDashboardStats.SHIFT_PROFITED) profitedLabel else nonProfitedLabel
-                },
-                detailFor = { item, pct -> "${item.quantity} (${formatPct(pct)})" },
-            ),
-            isPhone = isPhone,
-            emptyText = emptyText,
-        )
-        val shiftTimeSeries = listOf(
-            Triple(profitedLabel, stats.shiftTimeProfitedOverTime.toGraphPoints(timePeriod, now), SlicePalette[0]),
-            Triple(nonProfitedLabel, stats.shiftTimeNonProfitedOverTime.toGraphPoints(timePeriod, now), SlicePalette[1]),
-        )
-        if (shiftTimeSeries.any { it.second.size >= 2 }) {
-            MultiLineGraph(
-                label = stringResource(Res.string.stats_shift_time_over_time),
-                description = stringResource(Res.string.stats_shift_time_over_time_description),
-                seriesData = shiftTimeSeries,
-                timePeriod = timePeriod,
-                isPhone = isPhone,
-            )
-        }
-
-        val nfc = stats.nfcEnrollment
-        PosHighlightCard(
-            title = stringResource(Res.string.stats_nfc_enrollment),
-            icon = Icons.Default.Nfc,
-            isPhone = isPhone,
-            value = if (nfc.volunteerTotal + nfc.guestTotal > 0) {
-                stringResource(
-                    Res.string.stats_nfc_enrollment_value,
-                    formatPct(nfc.volunteerPercent.toFloat()),
-                    formatPct(nfc.guestPercent.toFloat()),
-                )
-            } else {
-                null
-            },
-            subtitle = if (nfc.volunteerTotal + nfc.guestTotal > 0) {
-                stringResource(
-                    Res.string.stats_nfc_enrollment_subtitle,
-                    nfc.volunteerEnrolled,
-                    nfc.volunteerTotal,
-                    nfc.guestEnrolled,
-                    nfc.guestTotal,
-                )
-            } else {
-                stringResource(Res.string.stats_nfc_enrollment_description)
-            },
-            emptyText = stringResource(Res.string.stats_nfc_enrollment_empty),
-        )
     }
 }
 

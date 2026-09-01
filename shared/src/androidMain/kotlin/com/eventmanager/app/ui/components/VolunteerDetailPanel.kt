@@ -45,6 +45,8 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
 import com.eventmanager.app.data.models.*
+import com.eventmanager.app.data.remote.hasStoredProfilePhoto
+import com.eventmanager.app.data.remote.resolvedProfilePhotoPath
 import com.eventmanager.app.data.utils.DateTimeUtils
 import com.eventmanager.app.data.utils.VolunteerActivityManager
 import com.eventmanager.app.data.utils.getActivityStatusText
@@ -103,6 +105,7 @@ actual fun VolunteerDetailPanel(
     onManualAccountAdjust: ((Double, String) -> Unit)?,
     viewModel: EventManagerViewModel?
 ) {
+    val volunteer = rememberLiveVolunteer(volunteer, viewModel)
     val context = LocalContext.current
     val isPhone = !isTablet()
     val responsivePadding = if (isPhone) getPhonePortraitPadding() else getResponsivePadding()
@@ -211,6 +214,17 @@ actual fun VolunteerDetailPanel(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            ProfilePhotoHeaderAvatar(
+                                name = volunteer.name,
+                                photoUrl = volunteer.profilePhotoUrl,
+                                photoPath = volunteer.resolvedProfilePhotoPath(),
+                                size = if (isPhone) 48.dp else 56.dp,
+                                canExport = true,
+                                canManage = rememberProfilePhotosUploadEnabled(viewModel),
+                                onUpload = { bytes -> viewModel?.uploadProfilePhotoForVolunteer(volunteer, bytes) },
+                                onRemove = { viewModel?.removeProfilePhotoForVolunteer(volunteer) },
+                            )
+                            Spacer(modifier = Modifier.width(if (isPhone) 8.dp else 12.dp))
                             Column(
                                 modifier = Modifier.weight(1f)
                             ) {
@@ -354,7 +368,10 @@ actual fun VolunteerDetailPanel(
                             onAddNfcCard = { showNfcDialog = true },
                             onDelete = onDelete,
                             onShowQr = { showQrDialog = true },
-                            isPhone = isPhone
+                            isPhone = isPhone,
+                            canManagePhoto = rememberProfilePhotosUploadEnabled(viewModel),
+                            onUploadPhoto = { bytes -> viewModel?.uploadProfilePhotoForVolunteer(volunteer, bytes) },
+                            onRemovePhoto = { viewModel?.removeProfilePhotoForVolunteer(volunteer) },
                         )
                     }
                 }
@@ -1466,7 +1483,10 @@ private fun ActionButtonsSection(
     onAddNfcCard: () -> Unit,
     onDelete: (Volunteer) -> Unit,
     onShowQr: (Volunteer) -> Unit,
-    isPhone: Boolean
+    isPhone: Boolean,
+    canManagePhoto: Boolean = false,
+    onUploadPhoto: (ByteArray) -> Unit = {},
+    onRemovePhoto: () -> Unit = {},
 ) {
     val responsivePadding = if (isPhone) getPhonePortraitCardPadding() else getResponsiveCardPadding()
     val responsiveSpacing = if (isPhone) getPhonePortraitSpacing() else getResponsiveSpacing()
@@ -1524,6 +1544,14 @@ private fun ActionButtonsSection(
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(getStringResource(R.string.add_nfc_card))
                 }
+
+                val pickPhoto = rememberProfilePhotoPicker(onUploadPhoto)
+                ProfilePhotoActionButtons(
+                    hasPhoto = volunteer.hasStoredProfilePhoto(),
+                    enabled = canManagePhoto,
+                    onAddOrChange = pickPhoto,
+                    onRemove = onRemovePhoto,
+                )
 
                 OutlinedButton(
                     onClick = { onEdit(volunteer) },

@@ -26,11 +26,15 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.eventmanager.app.data.remote.FirestoreRulesClipboardContent
+import com.eventmanager.app.data.remote.StorageRulesClipboardContent
 import com.eventmanager.app.resources.Res
 import com.eventmanager.app.resources.firebase_tutorial_close
 import com.eventmanager.app.resources.firebase_tutorial_copy_rules
 import com.eventmanager.app.resources.firebase_tutorial_copy_rules_done
 import com.eventmanager.app.resources.firebase_tutorial_copy_rules_error
+import com.eventmanager.app.resources.firebase_tutorial_copy_storage_rules
+import com.eventmanager.app.resources.firebase_tutorial_copy_storage_rules_done
+import com.eventmanager.app.resources.firebase_tutorial_copy_storage_rules_error
 import com.eventmanager.app.resources.firebase_tutorial_intro
 import com.eventmanager.app.resources.firebase_tutorial_method_cloud
 import com.eventmanager.app.resources.firebase_tutorial_method_cloud_hint
@@ -38,6 +42,8 @@ import com.eventmanager.app.resources.firebase_tutorial_method_firebase
 import com.eventmanager.app.resources.firebase_tutorial_method_firebase_hint
 import com.eventmanager.app.resources.firebase_tutorial_method_label
 import com.eventmanager.app.resources.firebase_tutorial_oauth_note
+import com.eventmanager.app.resources.firebase_tutorial_storage_optional_body
+import com.eventmanager.app.resources.firebase_tutorial_storage_optional_title
 import com.eventmanager.app.resources.firebase_tutorial_cloud_step1_body
 import com.eventmanager.app.resources.firebase_tutorial_cloud_step1_title
 import com.eventmanager.app.resources.firebase_tutorial_cloud_step2_body
@@ -83,11 +89,14 @@ fun FirebaseSetupTutorialDialog(
     val clipboard = LocalClipboardManager.current
     val scope = rememberCoroutineScope()
     var rulesText by remember { mutableStateOf<String?>(null) }
-    var copyStatus by remember { mutableStateOf<CopyStatus>(CopyStatus.Idle) }
+    var storageRulesText by remember { mutableStateOf<String?>(null) }
+    var firestoreCopyStatus by remember { mutableStateOf<CopyStatus>(CopyStatus.Idle) }
+    var storageCopyStatus by remember { mutableStateOf<CopyStatus>(CopyStatus.Idle) }
     var method by remember { mutableStateOf(TutorialConsoleMethod.Firebase) }
 
     LaunchedEffect(Unit) {
         rulesText = runCatching { FirestoreRulesClipboardContent.load() }.getOrNull()
+        storageRulesText = runCatching { StorageRulesClipboardContent.load() }.getOrNull()
     }
 
     val steps = when (method) {
@@ -211,19 +220,19 @@ fun FirebaseSetupTutorialDialog(
                                         val text = rulesText
                                             ?: runCatching { FirestoreRulesClipboardContent.load() }.getOrNull()
                                         if (text.isNullOrBlank() || !text.startsWith("rules_version")) {
-                                            copyStatus = CopyStatus.Error
+                                            firestoreCopyStatus = CopyStatus.Error
                                             return@launch
                                         }
                                         clipboard.setText(AnnotatedString(text))
                                         rulesText = text
-                                        copyStatus = CopyStatus.Done
+                                        firestoreCopyStatus = CopyStatus.Done
                                     }
                                 },
-                                enabled = copyStatus != CopyStatus.Error || rulesText != null,
+                                enabled = firestoreCopyStatus != CopyStatus.Error || rulesText != null,
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
                                 Text(
-                                    when (copyStatus) {
+                                    when (firestoreCopyStatus) {
                                         CopyStatus.Done ->
                                             stringResource(Res.string.firebase_tutorial_copy_rules_done)
                                         CopyStatus.Error ->
@@ -234,6 +243,47 @@ fun FirebaseSetupTutorialDialog(
                                 )
                             }
                         }
+                    }
+                }
+
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        stringResource(Res.string.firebase_tutorial_storage_optional_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        stringResource(Res.string.firebase_tutorial_storage_optional_body),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    OutlinedButton(
+                        onClick = {
+                            scope.launch {
+                                val text = storageRulesText
+                                    ?: runCatching { StorageRulesClipboardContent.load() }.getOrNull()
+                                if (text.isNullOrBlank() || !text.startsWith("rules_version")) {
+                                    storageCopyStatus = CopyStatus.Error
+                                    return@launch
+                                }
+                                clipboard.setText(AnnotatedString(text))
+                                storageRulesText = text
+                                storageCopyStatus = CopyStatus.Done
+                            }
+                        },
+                        enabled = storageCopyStatus != CopyStatus.Error || storageRulesText != null,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            when (storageCopyStatus) {
+                                CopyStatus.Done ->
+                                    stringResource(Res.string.firebase_tutorial_copy_storage_rules_done)
+                                CopyStatus.Error ->
+                                    stringResource(Res.string.firebase_tutorial_copy_storage_rules_error)
+                                CopyStatus.Idle ->
+                                    stringResource(Res.string.firebase_tutorial_copy_storage_rules)
+                            },
+                        )
                     }
                 }
             }

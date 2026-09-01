@@ -36,11 +36,14 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.eventmanager.app.ui.components.VolunteerDetailPanel
+import com.eventmanager.app.ui.components.ProfilePhotoFormPicker
+import com.eventmanager.app.ui.components.rememberProfilePhotosUploadEnabled
 import com.eventmanager.app.ui.components.genderDisplayLabel
 import com.eventmanager.app.ui.components.BirthdayDatePicker
 import com.eventmanager.app.ui.components.DeleteVolunteerDialog
 import com.eventmanager.app.ui.components.fullScreenDialogProperties
 import com.eventmanager.app.data.models.*
+import com.eventmanager.app.data.remote.resolvedProfilePhotoPath
 import com.eventmanager.app.data.utils.VolunteerActivityManager
 import com.eventmanager.app.ui.components.SearchBarWithFilter
 import com.eventmanager.app.utils.ValidationUtils
@@ -55,7 +58,7 @@ fun VolunteerScreen(
     volunteers: List<Volunteer>,
     volunteerJobs: List<Job>,
     venues: List<VenueEntity>,
-    onAddVolunteer: (Volunteer) -> Unit,
+    onAddVolunteer: (Volunteer, ByteArray?) -> Unit,
     onUpdateVolunteer: (Volunteer) -> Unit,
     onDeleteVolunteer: (Volunteer, Boolean) -> Unit,
     jobTypeConfigs: List<JobTypeConfig> = emptyList(),
@@ -273,7 +276,8 @@ fun VolunteerScreen(
     if (showAddDialog) {
         AddVolunteerDialog(
             onDismiss = { showAddDialog = false },
-            onConfirm = { name, abbreviation, email, phone, dateOfBirth, gender ->
+            profilePhotosEnabled = rememberProfilePhotosUploadEnabled(viewModel),
+            onConfirm = { name, abbreviation, email, phone, dateOfBirth, gender, photo ->
                 val newVolunteer = Volunteer(
                     name = name,
                     lastNameAbbreviation = abbreviation,
@@ -282,7 +286,7 @@ fun VolunteerScreen(
                     dateOfBirth = dateOfBirth,
                     gender = gender
                 )
-                onAddVolunteer(newVolunteer)
+                onAddVolunteer(newVolunteer, photo)
                 showAddDialog = false
             }
         )
@@ -293,6 +297,7 @@ fun VolunteerScreen(
         EditVolunteerDialog(
             volunteer = volunteer,
             onDismiss = { showEditDialog = null },
+            viewModel = viewModel,
             onConfirm = { updatedVolunteer ->
                 onUpdateVolunteer(updatedVolunteer)
                 showEditDialog = null
@@ -478,7 +483,8 @@ fun VolunteerCard(
 @Composable
 fun AddVolunteerDialog(
     onDismiss: () -> Unit,
-    onConfirm: (String, String, String, String, String, Gender?) -> Unit
+    onConfirm: (String, String, String, String, String, Gender?, ByteArray?) -> Unit,
+    profilePhotosEnabled: Boolean = false,
 ) {
     val platformContext = LocalPlatformContext.current
     var name by remember { mutableStateOf("") }
@@ -488,6 +494,7 @@ fun AddVolunteerDialog(
     var dateOfBirth by remember { mutableStateOf("") }
     var selectedGender by remember { mutableStateOf<Gender?>(null) }
     var expandedGender by remember { mutableStateOf(false) }
+    var pendingPhotoBytes by remember { mutableStateOf<ByteArray?>(null) }
     
     // Validation states
     var emailError by remember { mutableStateOf<String?>(null) }
@@ -634,6 +641,15 @@ fun AddVolunteerDialog(
                             }
                         }
                     }
+
+                    ProfilePhotoFormPicker(
+                        enabled = profilePhotosEnabled,
+                        currentUrl = "",
+                        name = name,
+                        pendingBytes = pendingPhotoBytes,
+                        onPicked = { pendingPhotoBytes = it },
+                        onClearPending = { pendingPhotoBytes = null },
+                    )
                     
                     // Action Buttons
                     Row(
@@ -652,7 +668,7 @@ fun AddVolunteerDialog(
                         Button(
                             onClick = { 
                                 val storageDate = ValidationUtils.convertDateToStorageFormat(dateOfBirth) ?: dateOfBirth
-                                onConfirm(name, abbreviation, email, phone, storageDate, selectedGender) 
+                                onConfirm(name, abbreviation, email, phone, storageDate, selectedGender, pendingPhotoBytes) 
                             },
                             enabled = name.isNotBlank() && abbreviation.isNotBlank() && 
                                      email.isNotBlank() && phone.isNotBlank() && dateOfBirth.isNotBlank() &&
@@ -672,7 +688,8 @@ fun AddVolunteerDialog(
 fun EditVolunteerDialog(
     volunteer: Volunteer,
     onDismiss: () -> Unit,
-    onConfirm: (Volunteer) -> Unit
+    onConfirm: (Volunteer) -> Unit,
+    viewModel: EventManagerViewModel? = null,
 ) {
     val platformContext = LocalPlatformContext.current
     var name by remember { mutableStateOf(volunteer.name) }
@@ -682,6 +699,7 @@ fun EditVolunteerDialog(
     var dateOfBirth by remember { mutableStateOf(ValidationUtils.convertDateToDisplayFormat(volunteer.dateOfBirth)) }
     var selectedGender by remember { mutableStateOf(volunteer.gender) }
     var expandedGender by remember { mutableStateOf(false) }
+    var pendingPhotoBytes by remember { mutableStateOf<ByteArray?>(null) }
     
     // Validation states
     var emailError by remember { mutableStateOf<String?>(null) }
@@ -825,11 +843,22 @@ fun EditVolunteerDialog(
                                     }
                                 )
                             }
+                            }
                         }
                     }
-                }
-                
-                // Action Buttons
+
+                    ProfilePhotoFormPicker(
+                        enabled = rememberProfilePhotosUploadEnabled(viewModel),
+                        currentUrl = volunteer.profilePhotoUrl,
+                        currentPath = volunteer.resolvedProfilePhotoPath(),
+                        name = name,
+                        pendingBytes = pendingPhotoBytes,
+                        onPicked = { pendingPhotoBytes = it },
+                        onClearPending = { pendingPhotoBytes = null },
+                        onRemoveExisting = { viewModel?.removeProfilePhotoForVolunteer(volunteer) },
+                    )
+                    
+                    // Action Buttons
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -855,6 +884,7 @@ fun EditVolunteerDialog(
                                 gender = selectedGender
                             )
                             onConfirm(updatedVolunteer)
+                            pendingPhotoBytes?.let { viewModel?.uploadProfilePhotoForVolunteer(updatedVolunteer, it) }
                         },
                         enabled = name.isNotBlank() && abbreviation.isNotBlank() && 
                                  email.isNotBlank() && phone.isNotBlank() && dateOfBirth.isNotBlank() &&

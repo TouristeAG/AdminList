@@ -446,7 +446,7 @@
     <string name="add_new_venue">Add New Venue</string>
     <string name="edit_venue_configuration">Edit Venue Configuration</string>
     <string name="venue_all">ALL</string>
-    <string name="venue_both">BOTH</string>
+    <string name="venue_both">ALL</string>
 
     <!-- Temporary Guest List -->
     <string name="temp_guest_artist_label">Artist / Group</string>
@@ -896,6 +896,18 @@
     <string name="camera_error">Camera Error</string>
     <string name="enter_id_manually">Enter ID Manually</string>
     <string name="add_nfc_card">Add NFC card</string>
+    <string name="add_profile_photo">Add photo</string>
+    <string name="change_profile_photo">Change photo</string>
+    <string name="remove_profile_photo">Remove photo</string>
+    <string name="remove_profile_photo_confirm">Remove this profile photo?</string>
+    <string name="share_profile_photo">Share</string>
+    <string name="download_profile_photo">Download</string>
+    <string name="profile_photo_cd">Profile photo</string>
+    <string name="profile_photo_too_large">That image is too large (max 2 MB after compression).</string>
+    <string name="profile_photo_upload_failed">The profile photo could not be uploaded. The person was saved without a photo.</string>
+    <string name="profile_photos_settings_title">Profile photos (optional)</string>
+    <string name="profile_photos_settings_body">Uses Firebase Storage and may require a paid Blaze plan. Leave this off to stay on the free Spark plan. Skipping Storage never blocks the rest of the app. When an admin turns this on, every device in the organization gets it.</string>
+    <string name="profile_photos_enable">Enable profile photos</string>
     <string name="add_nfc_card_uid_title">Add NFC card UID</string>
     <string name="enter_uid_manually">Enter UID manually</string>
     <string name="read_uid_with_phone_nfc">Read UID with phone (NFC)</string>
@@ -1222,7 +1234,26 @@
     <string name="stats_category_volunteers">Volunteers</string>
     <string name="stats_category_guest_list">Guest list</string>
     <string name="stats_category_pos_activity">POS — Sales &amp; credits</string>
-    <string name="stats_category_pos_mix">POS — Mix &amp; records</string>
+    <string name="stats_category_pos_mix">POS — Mix</string>
+    <string name="stats_section_volunteers">Volunteers</string>
+    <string name="stats_section_guest_list">Guest list</string>
+    <string name="stats_section_pos">POS</string>
+    <string name="stats_category_volunteer_activity">Volunteers — activity</string>
+    <string name="stats_category_volunteer_shifts">Volunteers — shifts</string>
+    <string name="stats_category_volunteer_ranks">Volunteers — ranks</string>
+    <string name="stats_category_volunteer_profile">Volunteers — profile</string>
+    <string name="stats_category_pos_sales">POS — Sales</string>
+    <string name="stats_category_pos_credits">POS — Credits</string>
+    <string name="stats_category_pos_customers">POS — Customers &amp; balances</string>
+    <string name="stats_category_toc_activity">Activity</string>
+    <string name="stats_category_toc_shifts">Shifts</string>
+    <string name="stats_category_toc_ranks">Ranks</string>
+    <string name="stats_category_toc_profile">Profile</string>
+    <string name="stats_category_toc_guest_list">Occupancy</string>
+    <string name="stats_category_toc_sales">Sales</string>
+    <string name="stats_category_toc_credits">Credits</string>
+    <string name="stats_category_toc_mix">Mix</string>
+    <string name="stats_category_toc_customers">Customers</string>
     <string name="stats_graph_chapters">Chapters</string>
     <string name="stats_graphs_loading">Loading graphs…</string>
     <string name="pos_stats_sales_count">Number of sales</string>
@@ -1531,6 +1562,11 @@
     <string name="firebase_tutorial_copy_rules">Copy firestore.rules to clipboard</string>
     <string name="firebase_tutorial_copy_rules_done">Copied — paste into Firestore → Rules, then Publish</string>
     <string name="firebase_tutorial_copy_rules_error">Could not load rules — open firebase/firestore.rules in the project instead</string>
+    <string name="firebase_tutorial_storage_optional_title">Optional: profile photos (Firebase Storage)</string>
+    <string name="firebase_tutorial_storage_optional_body">Skip this to stay on the free Spark plan. Enabling Storage can require a paid Blaze plan.\n\nIf you want profile photos:\n1. Firebase Console → Build → Storage → Get started (same project).\n2. Storage → Rules (URL must contain /storage/rules — not Firestore).\n3. Paste the NoctuList storage rules (button below) → Publish.\n4. In NoctuList Settings → Firebase, turn on “Enable profile photos” (every device in the organization gets it).\n\nYou can do this later. The app works fully without Storage.</string>
+    <string name="firebase_tutorial_copy_storage_rules">Copy storage.rules to clipboard</string>
+    <string name="firebase_tutorial_copy_storage_rules_done">Copied — paste into Storage → Rules, then Publish</string>
+    <string name="firebase_tutorial_copy_storage_rules_error">Could not load rules — open firebase/storage.rules in the project instead</string>
 
     <string name="firebase_tutorial_fb_step1_title">1. Create or open the Firebase project</string>
     <string name="firebase_tutorial_fb_step1_body">1. Open https://console.firebase.google.com and sign in with an institution Google account that can manage the project.\n2. Click Add project (or select an existing one).\n3. If you already use Google Sheets on a Cloud project: choose “Use an existing Google Cloud project” and pick that same project — do not create a second empty project.\n4. Analytics is optional. Finish the wizard.\n5. Note the Project ID (Project settings → General). You will paste it into NoctuList.</string>

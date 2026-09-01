@@ -14,7 +14,7 @@ expect fun GuestListScreen(
     jobs: List<Job>,
     jobTypeConfigs: List<JobTypeConfig>,
     venues: List<VenueEntity>,
-    onAddGuest: (Guest) -> Unit,
+    onAddGuest: (Guest, ByteArray?) -> Unit,
     onAddTemporaryGuests: (ManualTemporaryGuestBatch) -> Unit,
     onUpdateGuest: (Guest) -> Unit,
     onUpdateVolunteer: (Volunteer) -> Unit,

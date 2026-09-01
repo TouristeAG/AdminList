@@ -1,0 +1,29 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function memberPath(orgId) {
+      return /databases/(default)/documents/orgs/$(orgId)/members/$(request.auth.uid);
+    }
+
+    function isMember(orgId) {
+      return isSignedIn() && firestore.exists(memberPath(orgId));
+    }
+
+    match /orgs/{orgId}/profilePhotos/{kind}/{fileName} {
+      allow read: if isMember(orgId)
+        && kind in ['guests', 'volunteers'];
+      // Delete has no request.resource — a single `write` rule with size/type checks
+      // would deny Remove even for org members.
+      allow create, update: if isMember(orgId)
+        && kind in ['guests', 'volunteers']
+        && request.resource.size < 3 * 1024 * 1024
+        && request.resource.contentType.matches('image/jpeg');
+      allow delete: if isMember(orgId)
+        && kind in ['guests', 'volunteers'];
+    }
+  }
+}

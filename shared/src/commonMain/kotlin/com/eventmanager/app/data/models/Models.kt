@@ -41,6 +41,10 @@ data class Guest(
     val nfcCardUidHash: String = "",
     val isAdmin: Boolean = false,
     val firebaseOrgId: String = "",
+    /** Firebase Storage object path; empty when unused. Never synced to Google Sheets. */
+    val profilePhotoPath: String = "",
+    /** Firebase Storage download URL; empty when unused. Never synced to Google Sheets. */
+    val profilePhotoUrl: String = "",
 )
 
 /**
@@ -82,6 +86,10 @@ data class Volunteer(
     val nfcCardUidHash: String = "",
     val isAdmin: Boolean = false,
     val firebaseOrgId: String = "",
+    /** Firebase Storage object path; empty when unused. Never synced to Google Sheets. */
+    val profilePhotoPath: String = "",
+    /** Firebase Storage download URL; empty when unused. Never synced to Google Sheets. */
+    val profilePhotoUrl: String = "",
 )
 
 @Entity(

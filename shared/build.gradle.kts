@@ -59,6 +59,7 @@ kotlin {
                 implementation(libs.gitlive.firebase.app)
                 implementation(libs.gitlive.firebase.auth)
                 implementation(libs.gitlive.firebase.firestore)
+                implementation(libs.gitlive.firebase.storage)
                 implementation(libs.kotlinx.serialization.json)
             }
         }

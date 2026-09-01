@@ -1106,7 +1106,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
                 }
                 
                 val valueRange = ValueRange()
-                    .setValues(listOf(listOf("Name", "Email", "Phone", "Invitations", "Venue", "Notes", "Volunteer Benefit", "Last Modified", "NFC UID", "ID", "Admin")) + values)
+                    .setValues(listOf(SheetsColumnContract.GUEST_LIST) + values)
                 
                 val guestTab = quoteSheetTabForRange(settingsManager.getGuestListSheet())
                 val response = sheetsService?.spreadsheets()?.values()?.update(
@@ -1170,7 +1170,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
                         )
                     }
                     val valueRange = ValueRange()
-                        .setValues(listOf(listOf("Name", "Last Name Abbreviation", "Invitations", "Venue", "Notes", "Volunteer Benefit", "Last Modified", "NFC UID")) + values)
+                        .setValues(listOf(SheetsColumnContract.VOLUNTEER_GUEST_LIST) + values)
                     val spreadsheetId = settingsManager.getSpreadsheetId()
                     val volunteerGuestTab = settingsManager.getVolunteerGuestListSheet()
                     val vgRange = "${quoteSheetTabForRange(volunteerGuestTab)}!A1"
@@ -1579,7 +1579,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
                 }
                 
                 val valueRange = ValueRange()
-                    .setValues(listOf(listOf("ID", "Name", "Abbreviation", "Email", "Phone", "Date of Birth", "Gender", "Rank", "Active", "Last Modified", "NFC UID", "Admin")) + values)
+                    .setValues(listOf(SheetsColumnContract.VOLUNTEERS) + values)
                 
                 val response = sheetsService?.spreadsheets()?.values()?.update(
                     settingsManager.getSpreadsheetId(),
@@ -3260,15 +3260,15 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
     private fun getSheetDefinitions(): List<SheetDefinition> = listOf(
         SheetDefinition(
             settingsManager.getGuestListSheet(),
-                listOf("Name", "Email", "Phone", "Invitations", "Venue", "Notes", "Volunteer Benefit", "Last Modified", "NFC UID", "ID", "Admin")
+            SheetsColumnContract.GUEST_LIST
         ),
         SheetDefinition(
             settingsManager.getVolunteerGuestListSheet(),
-                listOf("Name", "Last Name Abbreviation", "Invitations", "Venue", "Notes", "Volunteer Benefit", "Last Modified", "NFC UID")
+            SheetsColumnContract.VOLUNTEER_GUEST_LIST
         ),
         SheetDefinition(
             settingsManager.getVolunteerSheet(),
-                listOf("ID", "Name", "Abbreviation", "Email", "Phone", "Date of Birth", "Gender", "Rank", "Active", "Last Modified", "NFC UID", "Admin")
+            SheetsColumnContract.VOLUNTEERS
         ),
         SheetDefinition(
             settingsManager.getJobsSheet(),

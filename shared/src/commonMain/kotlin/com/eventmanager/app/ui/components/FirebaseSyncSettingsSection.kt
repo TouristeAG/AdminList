@@ -72,15 +72,20 @@ import com.eventmanager.app.resources.sheets_migrate_card_body
 import com.eventmanager.app.resources.sheets_migrate_card_title
 import com.eventmanager.app.resources.sheets_migrate_to_firebase
 import com.eventmanager.app.resources.firebase_tutorial_help_cd
+import com.eventmanager.app.resources.profile_photos_enable
+import com.eventmanager.app.resources.profile_photos_settings_body
+import com.eventmanager.app.resources.profile_photos_settings_title
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -112,6 +117,8 @@ fun FirebaseSyncSettingsSection(
     allowedEmailDomains: List<String> = emptyList(),
     onAllowedEmailDomainsChange: (List<String>) -> Unit = {},
     signInFeedback: String? = null,
+    profilePhotosEnabled: Boolean = false,
+    onProfilePhotosEnabledChange: (Boolean) -> Unit = {},
 ) {
     val ready = firebaseConnectionReady(configuredOrgs, projectId, applicationId, apiKey, authEmail)
     val projectReady = projectId.isNotBlank() && applicationId.isNotBlank() && apiKey.isNotBlank()
@@ -231,6 +238,28 @@ fun FirebaseSyncSettingsSection(
 
         FirebaseSettingsSectionHeader(stringResource(Res.string.firebase_settings_section_optional))
         if (settingsManager != null) {
+            GuidedStepCard(
+                title = stringResource(Res.string.profile_photos_settings_title),
+                body = stringResource(Res.string.profile_photos_settings_body),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        stringResource(Res.string.profile_photos_enable),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f).padding(end = 8.dp),
+                    )
+                    Switch(
+                        checked = profilePhotosEnabled,
+                        onCheckedChange = { enabled ->
+                            onProfilePhotosEnabledChange(enabled)
+                        },
+                    )
+                }
+            }
             FirebaseSheetsMirrorSettingsSection(
                 settingsManager = settingsManager,
                 platformContext = platformContext,

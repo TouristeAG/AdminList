@@ -355,7 +355,7 @@
     <string name="add_new_venue">添加新场地</string>
     <string name="edit_venue_configuration">编辑场地配置</string>
     <string name="venue_all">全部</string>
-    <string name="venue_both">两者</string>
+    <string name="venue_both">全部</string>
 
     <!-- Temporary Guest List -->
     <string name="temp_guest_artist_label">艺人 / 团体</string>
@@ -776,6 +776,18 @@
     <string name="camera_error">相机错误</string>
     <string name="enter_id_manually">手动输入 ID</string>
     <string name="add_nfc_card">添加 NFC 卡</string>
+    <string name="add_profile_photo">添加照片</string>
+    <string name="change_profile_photo">更换照片</string>
+    <string name="remove_profile_photo">删除照片</string>
+    <string name="remove_profile_photo_confirm">删除此个人资料照片？</string>
+    <string name="share_profile_photo">分享</string>
+    <string name="download_profile_photo">下载</string>
+    <string name="profile_photo_cd">个人资料照片</string>
+    <string name="profile_photo_too_large">图片过大（压缩后最大 2 MB）。</string>
+    <string name="profile_photo_upload_failed">无法上传个人资料照片。已保存该人员且不含照片。</string>
+    <string name="profile_photos_settings_title">个人资料照片（可选）</string>
+    <string name="profile_photos_settings_body">使用 Firebase Storage，可能需要付费 Blaze 方案。保持关闭即可留在免费 Spark 方案。跳过 Storage 不会阻止应用的其余功能。管理员开启后，机构内所有设备都会开启。</string>
+    <string name="profile_photos_enable">启用个人资料照片</string>
     <string name="add_nfc_card_uid_title">添加 NFC 卡 UID</string>
     <string name="enter_uid_manually">手动输入 UID</string>
     <string name="read_uid_with_phone_nfc">使用手机读取 UID（NFC）</string>
@@ -1103,7 +1115,26 @@
     <string name="stats_category_volunteers">志愿者</string>
     <string name="stats_category_guest_list">宾客名单</string>
     <string name="stats_category_pos_activity">POS — 销售与积分</string>
-    <string name="stats_category_pos_mix">POS — 分布与纪录</string>
+    <string name="stats_category_pos_mix">POS — 构成</string>
+    <string name="stats_section_volunteers">志愿者</string>
+    <string name="stats_section_guest_list">宾客名单</string>
+    <string name="stats_section_pos">POS</string>
+    <string name="stats_category_volunteer_activity">志愿者 — 活动</string>
+    <string name="stats_category_volunteer_shifts">志愿者 — 班次</string>
+    <string name="stats_category_volunteer_ranks">志愿者 — 等级</string>
+    <string name="stats_category_volunteer_profile">志愿者 — 资料</string>
+    <string name="stats_category_pos_sales">POS — 销售</string>
+    <string name="stats_category_pos_credits">POS — 积分</string>
+    <string name="stats_category_pos_customers">POS — 客户与余额</string>
+    <string name="stats_category_toc_activity">活动</string>
+    <string name="stats_category_toc_shifts">班次</string>
+    <string name="stats_category_toc_ranks">等级</string>
+    <string name="stats_category_toc_profile">资料</string>
+    <string name="stats_category_toc_guest_list">占用</string>
+    <string name="stats_category_toc_sales">销售</string>
+    <string name="stats_category_toc_credits">积分</string>
+    <string name="stats_category_toc_mix">构成</string>
+    <string name="stats_category_toc_customers">客户</string>
     <string name="stats_graph_chapters">章节</string>
     <string name="stats_graphs_loading">正在加载图表…</string>
     <string name="pos_stats_sales_count">销售笔数</string>
@@ -1411,6 +1442,11 @@
     <string name="firebase_tutorial_copy_rules">复制 firestore.rules 到剪贴板</string>
     <string name="firebase_tutorial_copy_rules_done">已复制 — 粘贴到 Firestore → Rules，然后发布</string>
     <string name="firebase_tutorial_copy_rules_error">无法加载规则 — 请打开项目中的 firebase/firestore.rules</string>
+    <string name="firebase_tutorial_storage_optional_title">可选：个人资料照片（Firebase Storage）</string>
+    <string name="firebase_tutorial_storage_optional_body">跳过此步以留在免费 Spark 方案。启用 Storage 可能需要付费 Blaze 方案。\n\n如需个人资料照片：\n1. Firebase Console → Build → Storage → Get started（同一项目）。\n2. Storage → Rules（网址须包含 /storage/rules — 不是 Firestore）。\n3. 粘贴 NoctuList 的 Storage 规则（下方按钮）→ Publish。\n4. 在 NoctuList 设置 → Firebase 中打开「启用个人资料照片」（机构内所有设备都会开启）。\n\n可以稍后完成。没有 Storage，应用仍可完整使用。</string>
+    <string name="firebase_tutorial_copy_storage_rules">复制 storage.rules 到剪贴板</string>
+    <string name="firebase_tutorial_copy_storage_rules_done">已复制 — 粘贴到 Storage → Rules，然后发布</string>
+    <string name="firebase_tutorial_copy_storage_rules_error">无法加载规则 — 请打开项目中的 firebase/storage.rules</string>
     <string name="firebase_tutorial_fb_step1_title">1. 创建或打开 Firebase 项目</string>
     <string name="firebase_tutorial_fb_step1_body">1. 打开 https://console.firebase.google.com，使用可管理项目的机构 Google 账号登录。
 2. 点击添加项目（或选择现有项目）。

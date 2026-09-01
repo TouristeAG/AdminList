@@ -28,11 +28,16 @@ internal expect object GraphExportBridge {
     suspend fun exportLineGraph(
         platformContext: PlatformContext,
         title: String,
-        dataPoints: List<DataPoint>,
-        trendPoints: List<DataPoint>,
+        series: List<GraphSeriesExport>,
         timePeriod: TimePeriod,
         density: Density,
         exportType: GraphExportType
+    ): File
+
+    suspend fun exportBarChartJpg(
+        platformContext: PlatformContext,
+        title: String,
+        bars: List<BarExportItem>,
     ): File
 
     suspend fun exportPieChartJpg(

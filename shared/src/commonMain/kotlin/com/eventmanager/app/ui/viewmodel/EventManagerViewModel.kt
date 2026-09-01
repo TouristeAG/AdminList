@@ -48,7 +48,17 @@ import com.eventmanager.app.data.remote.FirebaseLedgerResult
 import com.eventmanager.app.data.remote.PendingRemoteWriteQueue
 import com.eventmanager.app.data.remote.createFirestoreGateway
 import com.eventmanager.app.data.remote.createFirebaseAuthService
+import com.eventmanager.app.data.remote.GitLiveProfilePhotoStorageGateway
+import com.eventmanager.app.data.remote.FirestoreApplyPolicy
+import com.eventmanager.app.data.remote.PROFILE_PHOTO_CLEARED_SENTINEL
+import com.eventmanager.app.data.remote.ProfilePhotoKind
+import com.eventmanager.app.data.remote.ProfilePhotoStorageGateway
+import com.eventmanager.app.data.remote.isStoredProfilePhotoRef
+import com.eventmanager.app.data.remote.parseFirebaseStorageDownloadUrl
+import com.eventmanager.app.data.remote.resolvedProfilePhotoPath
 import com.eventmanager.app.data.utils.effectiveBenefitFutureEntriesRemaining
+import com.eventmanager.app.utils.ProfilePhotoCodec
+import com.eventmanager.app.utils.ProfilePhotoImageCache
 import com.eventmanager.app.data.utils.effectiveBenefitFutureEntryInvites
 import com.eventmanager.app.data.utils.jobTypeSupportsTrackedFutureEntries
 import com.eventmanager.app.data.update.UpdateChecker
@@ -113,6 +123,9 @@ class EventManagerViewModel(
     }
 
     private val settingsManagerCached = platformContext?.let { SettingsManager(it) }
+
+    private val profilePhotoStorage: ProfilePhotoStorageGateway =
+        GitLiveProfilePhotoStorageGateway(platformContext, settingsManagerCached)
 
     /** Routes Sheets vs Firebase intents. Null when no platform context. */
     private val syncCoordinator: SyncCoordinator? = if (
@@ -769,6 +782,24 @@ class EventManagerViewModel(
     fun getActiveBackendType(): BackendType =
         settingsManagerCached?.getBackendType() ?: BackendType.SHEETS
 
+    fun isProfilePhotoUploadEnabled(): Boolean {
+        val settings = settingsManagerCached ?: return false
+        return settings.getBackendType() == BackendType.FIREBASE && settings.isProfilePhotosEnabled()
+    }
+
+    private val _profilePhotosUploadEnabled = MutableStateFlow(isProfilePhotoUploadEnabled())
+    val profilePhotosUploadEnabled: StateFlow<Boolean> = _profilePhotosUploadEnabled.asStateFlow()
+
+    fun setProfilePhotosEnabled(enabled: Boolean) {
+        settingsManagerCached?.setProfilePhotosEnabled(enabled)
+        publishProfilePhotosUploadEnabled()
+        backupInstitutionSettingsToSheets()
+    }
+
+    private fun publishProfilePhotosUploadEnabled() {
+        _profilePhotosUploadEnabled.value = isProfilePhotoUploadEnabled()
+    }
+
     // Background sync job
     private var backgroundSyncJob: kotlinx.coroutines.Job? = null
     private var sheetsMirrorJob: kotlinx.coroutines.Job? = null
@@ -1200,13 +1231,14 @@ class EventManagerViewModel(
     }
 
     // Guest operations
-    fun addGuest(guest: Guest) {
+    fun addGuest(guest: Guest, profilePhotoJpeg: ByteArray? = null) {
         viewModelScope.launch {
             try {
                 if (rejectIfCrudSoftLocked("adding guests")) return@launch
                 val tagged = tagGuestWithActiveOrg(guest)
                 val saved = repository.insertGuest(tagged)
-                syncCoordinator?.afterGuestSaved(saved)
+                val withPhoto = persistGuestPhotoAfterSave(saved, profilePhotoJpeg)
+                syncCoordinator?.afterGuestSaved(withPhoto)
                     ?: twoWaySyncService?.backupGuestsToSheets()?.also {
                         recalcAndUploadVolunteerGuestList()
                     }
@@ -1323,14 +1355,14 @@ class EventManagerViewModel(
     }
 
     // Volunteer operations
-    fun addVolunteer(volunteer: Volunteer) {
+    fun addVolunteer(volunteer: Volunteer, profilePhotoJpeg: ByteArray? = null) {
         viewModelScope.launch {
             try {
                 if (rejectIfCrudSoftLocked("adding volunteers")) return@launch
                 val tagged = tagVolunteerWithActiveOrg(volunteer)
                 repository.insertVolunteer(tagged)
-                // BACKUP MODE: Upload entire volunteer dataset to Google Sheets
-                syncCoordinator?.afterVolunteerSaved(tagged) ?: twoWaySyncService?.backupVolunteersToSheets()
+                val withPhoto = persistVolunteerPhotoAfterSave(tagged, profilePhotoJpeg)
+                syncCoordinator?.afterVolunteerSaved(withPhoto) ?: twoWaySyncService?.backupVolunteersToSheets()
                 recalcAndUploadVolunteerGuestList()
             } catch (e: Exception) {
             println("Failed to add volunteer: ${e.message}")
@@ -1355,6 +1387,202 @@ class EventManagerViewModel(
             _syncError.value = "Failed to update volunteer: ${e.message}"
             }
         }
+    }
+
+    fun uploadProfilePhotoForGuest(guest: Guest, imageBytes: ByteArray) {
+        viewModelScope.launch {
+            try {
+                if (rejectIfCrudSoftLocked("updating guests")) return@launch
+                val tagged = tagGuestWithActiveOrg(guest)
+                val updated = persistGuestPhotoAfterSave(tagged, imageBytes)
+                syncCoordinator?.afterGuestSaved(updated)
+                    ?: twoWaySyncService?.backupGuestsToSheets()
+            } catch (e: Exception) {
+                println("Failed to upload guest photo: ${e.message}")
+                _syncError.value = "Profile photo could not be uploaded."
+            }
+        }
+    }
+
+    fun uploadProfilePhotoForVolunteer(volunteer: Volunteer, imageBytes: ByteArray) {
+        viewModelScope.launch {
+            try {
+                if (rejectIfCrudSoftLocked("updating volunteers")) return@launch
+                val tagged = tagVolunteerWithActiveOrg(volunteer)
+                val updated = persistVolunteerPhotoAfterSave(tagged, imageBytes)
+                syncCoordinator?.afterVolunteerSaved(updated) ?: twoWaySyncService?.backupVolunteersToSheets()
+            } catch (e: Exception) {
+                println("Failed to upload volunteer photo: ${e.message}")
+                _syncError.value = "Profile photo could not be uploaded."
+            }
+        }
+    }
+
+    fun removeProfilePhotoForGuest(guest: Guest) {
+        viewModelScope.launch {
+            try {
+                if (rejectIfCrudSoftLocked("updating guests")) return@launch
+                val tagged = tagGuestWithActiveOrg(guest)
+                deleteStoredProfilePhoto(
+                    path = tagged.profilePhotoPath,
+                    url = tagged.profilePhotoUrl,
+                    resolvedPath = tagged.resolvedProfilePhotoPath(),
+                )
+                val updated = tagged.copy(
+                    profilePhotoPath = PROFILE_PHOTO_CLEARED_SENTINEL,
+                    profilePhotoUrl = PROFILE_PHOTO_CLEARED_SENTINEL,
+                    lastModified = FirestoreApplyPolicy.nextPeopleCounterTimestamp(tagged.lastModified),
+                )
+                repository.updateGuest(updated)
+                syncCoordinator?.afterGuestSaved(updated)
+                    ?: twoWaySyncService?.backupGuestsToSheets()
+            } catch (e: Exception) {
+                println("Failed to remove guest photo: ${e.message}")
+                _syncError.value = "Failed to remove profile photo: ${e.message}"
+            }
+        }
+    }
+
+    fun removeProfilePhotoForVolunteer(volunteer: Volunteer) {
+        viewModelScope.launch {
+            try {
+                if (rejectIfCrudSoftLocked("updating volunteers")) return@launch
+                val tagged = tagVolunteerWithActiveOrg(volunteer)
+                deleteStoredProfilePhoto(
+                    path = tagged.profilePhotoPath,
+                    url = tagged.profilePhotoUrl,
+                    resolvedPath = tagged.resolvedProfilePhotoPath(),
+                )
+                val updated = tagged.copy(
+                    profilePhotoPath = PROFILE_PHOTO_CLEARED_SENTINEL,
+                    profilePhotoUrl = PROFILE_PHOTO_CLEARED_SENTINEL,
+                    lastModified = FirestoreApplyPolicy.nextPeopleCounterTimestamp(tagged.lastModified),
+                )
+                repository.updateVolunteer(updated)
+                syncCoordinator?.afterVolunteerSaved(updated) ?: twoWaySyncService?.backupVolunteersToSheets()
+            } catch (e: Exception) {
+                println("Failed to remove volunteer photo: ${e.message}")
+                _syncError.value = "Failed to remove profile photo: ${e.message}"
+            }
+        }
+    }
+
+    private suspend fun deleteStoredProfilePhoto(path: String, url: String, resolvedPath: String) {
+        val storagePaths = listOf(
+            path,
+            resolvedPath,
+            parseFirebaseStorageDownloadUrl(url)?.path.orEmpty(),
+        ).map { it.trim() }.filter { it.isStoredProfilePhotoRef() }.distinct()
+        for (storagePath in storagePaths) {
+            val deleted = runCatching { profilePhotoStorage.delete(storagePath) }.getOrDefault(false)
+            if (!deleted) {
+                println("Profile photo Storage delete did not confirm for $storagePath")
+            }
+        }
+        listOf(url, path, resolvedPath).map { it.trim() }.filter { it.isNotBlank() }.distinct().forEach {
+            ProfilePhotoImageCache.evict(platformContext, it)
+        }
+    }
+
+    private suspend fun persistGuestPhotoAfterSave(
+        guest: Guest,
+        imageBytes: ByteArray?,
+    ): Guest {
+        if (imageBytes == null) return guest
+        val orgId = guest.firebaseOrgId.ifBlank { resolveActiveFirebaseOrgIdForWrites() }
+        val uploaded = uploadProfilePhotoBytes(
+            orgId = orgId,
+            kind = ProfilePhotoKind.GUEST,
+            entityId = guest.nanoId,
+            imageBytes = imageBytes,
+        ) ?: return guest
+        evictReplacedProfilePhotoCache(guest.profilePhotoUrl, guest.profilePhotoPath, uploaded.url, uploaded.path)
+        val updated = guest.copy(
+            firebaseOrgId = orgId.ifBlank { guest.firebaseOrgId },
+            profilePhotoPath = uploaded.path,
+            profilePhotoUrl = uploaded.url,
+            lastModified = System.currentTimeMillis(),
+        )
+        repository.updateGuest(updated)
+        return updated
+    }
+
+    private suspend fun persistVolunteerPhotoAfterSave(
+        volunteer: Volunteer,
+        imageBytes: ByteArray?,
+    ): Volunteer {
+        if (imageBytes == null) return volunteer
+        val orgId = volunteer.firebaseOrgId.ifBlank { resolveActiveFirebaseOrgIdForWrites() }
+        val uploaded = uploadProfilePhotoBytes(
+            orgId = orgId,
+            kind = ProfilePhotoKind.VOLUNTEER,
+            entityId = volunteer.id,
+            imageBytes = imageBytes,
+        ) ?: return volunteer
+        evictReplacedProfilePhotoCache(
+            volunteer.profilePhotoUrl,
+            volunteer.profilePhotoPath,
+            uploaded.url,
+            uploaded.path,
+        )
+        val updated = volunteer.copy(
+            firebaseOrgId = orgId.ifBlank { volunteer.firebaseOrgId },
+            profilePhotoPath = uploaded.path,
+            profilePhotoUrl = uploaded.url,
+            lastModified = System.currentTimeMillis(),
+        )
+        repository.updateVolunteer(updated)
+        return updated
+    }
+
+    private suspend fun uploadProfilePhotoBytes(
+        orgId: String,
+        kind: ProfilePhotoKind,
+        entityId: String,
+        imageBytes: ByteArray,
+    ): com.eventmanager.app.data.remote.ProfilePhotoUploadResult? {
+        if (!isProfilePhotoUploadEnabled()) {
+            _syncError.value = "Profile photos are turned off. The person was saved without a photo."
+            return null
+        }
+        if (orgId.isBlank() || entityId.isBlank()) {
+            _syncError.value = "Profile photo could not be uploaded (missing organization or id)."
+            return null
+        }
+        val jpeg = ProfilePhotoCodec.compressToJpeg(imageBytes)
+        if (jpeg == null) {
+            _syncError.value = "That image could not be used as a profile photo. The person was saved without a photo."
+            return null
+        }
+        val result = profilePhotoStorage.uploadJpeg(orgId, kind, entityId, jpeg)
+        if (result == null) {
+            _syncError.value =
+                "Profile photo could not be uploaded. Sign in to Firebase, publish Storage rules, and retry."
+        } else {
+            platformContext?.let {
+                ProfilePhotoImageCache.putLocal(
+                    platformContext = it,
+                    url = result.url,
+                    jpegBytes = jpeg,
+                    extraCacheIds = listOf(result.path),
+                )
+            }
+        }
+        return result
+    }
+
+    private suspend fun evictReplacedProfilePhotoCache(
+        oldUrl: String,
+        oldPath: String,
+        newUrl: String,
+        newPath: String,
+    ) {
+        val keep = setOf(newUrl.trim(), newPath.trim()).filter { it.isNotBlank() }.toSet()
+        listOf(oldUrl, oldPath)
+            .map { it.trim() }
+            .filter { it.isNotBlank() && it !in keep }
+            .distinct()
+            .forEach { ProfilePhotoImageCache.evict(platformContext, it) }
     }
 
     fun deleteVolunteer(volunteer: Volunteer, deleteShifts: Boolean = false) {
@@ -4574,6 +4802,7 @@ class EventManagerViewModel(
                     _accountTransfers.value = nextTransfers
                     _accountBalances.value = AccountBalanceService.computeAllBalances(nextTransfers)
                 }
+                publishProfilePhotosUploadEnabled()
 
                 println("✅ StateFlows updated - Guests: $oldGuestCount → ${_guests.value.size}, Volunteers: $oldVolunteerCount → ${_volunteers.value.size}, Jobs: ${_jobs.value.size}, Job Types: ${_jobTypeConfigs.value.size}, Venues: ${_venues.value.size}, Sales Items: ${_salesSheetItems.value.size}")
             }
@@ -4757,7 +4986,7 @@ class EventManagerViewModel(
         
         // Now check for content duplicates (different NanoID but same info)
         // Content key = all identifying fields except NanoID and timestamps
-        fun contentKey(v: Volunteer) = "${v.firebaseOrgId}_${v.name}_${v.lastNameAbbreviation}_${v.email}_${v.phoneNumber}_${v.dateOfBirth}_${v.gender}_${v.currentRank}_${v.isActive}_${v.nfcCardUid}"
+        fun contentKey(v: Volunteer) = "${v.firebaseOrgId}_${v.name}_${v.lastNameAbbreviation}_${v.email}_${v.phoneNumber}_${v.dateOfBirth}_${v.gender}_${v.currentRank}_${v.isActive}_${v.nfcCardUid}_${v.profilePhotoUrl}"
         
         val byContent = uniqueByNanoId.groupBy { contentKey(it) }
         
@@ -4974,27 +5203,39 @@ class EventManagerViewModel(
                 var jobsDeleted = 0
                 val failedVolunteers = mutableListOf<String>()
                 val failedJobs = mutableListOf<String>()
-                val deletedJobs = mutableListOf<Job>()
-                val deletedVolunteers = mutableListOf<Volunteer>()
+                val offsetHours = platformContext?.let { SettingsManager(it).getDateChangeOffsetHours() } ?: 0
                 
-                // Process each volunteer: delete all their jobs first, then delete the volunteer
-                // Use proper coroutine handling to ensure deletions are awaited
+                // Process each volunteer: delete all their jobs first, then delete the volunteer.
+                // Mirrors deleteVolunteer(deleteShifts = true) so Firebase and Sheets stay in sync.
                 for (volunteer in volunteersToCleanup) {
                     try {
-                        // Get all jobs/shifts associated with this volunteer
                         val volunteerJobs = jobsByVolunteerId[volunteer.id] ?: emptyList()
                         
-                        // Delete all jobs/shifts for this volunteer
-                        // Follows the same deletion pattern as deleteJob() for consistency
                         for (job in volunteerJobs) {
                             try {
-                                // Track deletion first (same as deleteJob)
-                                deletionTracker?.trackJobDeletion(job.id.toString(), job.sheetsId, businessKey = "${job.volunteerId}_${job.jobTypeName}_${job.date}_${job.venueName}_${job.shiftTime}")
-                                
-                                // Delete from local database
+                                deletionTracker?.trackJobDeletion(
+                                    job.id.toString(),
+                                    job.sheetsId,
+                                    businessKey = "${job.volunteerId}_${job.jobTypeName}_${job.date}_${job.venueName}_${job.shiftTime}",
+                                )
                                 repository.deleteJob(job)
-                                deletedJobs.add(job)
                                 jobsDeleted++
+                                
+                                syncCoordinator?.afterJobDeleted(job)
+                                    ?: if (job.sheetsId != null) {
+                                        try {
+                                            googleSheetsService.deleteJobFromSheets(job.id.toString(), job.sheetsId)
+                                        } catch (_: Exception) {
+                                            twoWaySyncService?.backupJobsToSheets()
+                                        }
+                                    } else {
+                                        twoWaySyncService?.backupJobsToSheets()
+                                    }
+                                
+                                val reversals = accountCreditService.reverseShiftCredits(
+                                    job, volunteer, _jobTypeConfigs.value, offsetHours,
+                                )
+                                syncCreatedTransfers(reversals)
                                 
                                 println("Deleted job: ${job.jobTypeName} (ID: ${job.id}) for volunteer ${volunteer.name}")
                             } catch (e: Exception) {
@@ -5004,12 +5245,18 @@ class EventManagerViewModel(
                             }
                         }
                         
-                        // Delete the volunteer after all their jobs are deleted
-                        // Follows the same deletion pattern as deleteVolunteer() for consistency
+                        deleteStoredProfilePhoto(
+                            path = volunteer.profilePhotoPath,
+                            url = volunteer.profilePhotoUrl,
+                            resolvedPath = volunteer.resolvedProfilePhotoPath(),
+                        )
+                        
                         deletionTracker?.trackVolunteerDeletion(volunteer.id, volunteer.sheetsId)
                         repository.deleteVolunteer(volunteer)
-                        deletedVolunteers.add(volunteer)
                         volunteersDeleted++
+                        
+                        syncCoordinator?.afterVolunteerDeleted(volunteer, deleteShifts = true)
+                            ?: twoWaySyncService?.backupVolunteersToSheets()
                         
                         println("Successfully cleaned up inactive volunteer: ${volunteer.name} (ID: ${volunteer.id}) and ${volunteerJobs.size} associated job(s)")
                     } catch (e: Exception) {
@@ -5020,24 +5267,11 @@ class EventManagerViewModel(
                 }
                 
                 if (volunteersDeleted > 0 || jobsDeleted > 0) {
-                    // Small delay to ensure database commits are complete before syncing
-                    delay(100)
-                    
-                    try {
-                        if (settingsManagerCached?.getBackendType() == BackendType.FIREBASE) {
-                            deletedJobs.forEach { syncCoordinator?.afterJobDeleted(it) }
-                            deletedVolunteers.forEach { syncCoordinator?.afterVolunteerDeleted(it, deleteShifts = true) }
-                        } else {
-                            twoWaySyncService?.backupVolunteersToSheets()
-                            twoWaySyncService?.backupJobsToSheets()
-                            println("Successfully synced deletions to Google Sheets")
-                        }
-                    } catch (e: Exception) {
-                        println("Warning: Failed to sync cleanup deletions: ${e.message}")
-                        // Continue even if sync fails - local deletion was successful
+                    if (jobsDeleted > 0) {
+                        delay(100)
+                        refreshAccountBalancesFromDb()
                     }
                     
-                    // Refresh data to reflect changes (after sync)
                     refreshAllData()
                     
                     // Recalculate volunteer guest list (same as deleteVolunteer)

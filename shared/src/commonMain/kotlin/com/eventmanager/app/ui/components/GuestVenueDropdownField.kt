@@ -17,7 +17,6 @@ import com.eventmanager.app.data.models.VenueEntity
 import com.eventmanager.app.resources.Res
 import com.eventmanager.app.resources.venue
 import com.eventmanager.app.resources.venue_all
-import com.eventmanager.app.resources.venue_both
 import com.eventmanager.app.ui.utils.getVenueDisplayString
 import org.jetbrains.compose.resources.stringResource
 
@@ -34,11 +33,7 @@ fun GuestVenueDropdownField(
     val displayValue = getVenueDisplayString(selectedVenueName, venues).ifBlank {
         stringResource(Res.string.venue)
     }
-    val allOptionText = if (activeVenues.size <= 2) {
-        stringResource(Res.string.venue_both)
-    } else {
-        stringResource(Res.string.venue_all)
-    }
+    val allOptionText = stringResource(Res.string.venue_all)
 
     ExposedDropdownMenuBox(
         expanded = expanded,

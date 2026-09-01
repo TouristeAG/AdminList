@@ -31,12 +31,15 @@ import com.eventmanager.app.resources.Res
 import com.eventmanager.app.resources.*
 import com.eventmanager.app.ui.components.GuestDetailPanel
 import com.eventmanager.app.ui.components.GuestVenueDropdownField
+import com.eventmanager.app.ui.components.ProfilePhotoFormPicker
+import com.eventmanager.app.ui.components.rememberProfilePhotosUploadEnabled
 import com.eventmanager.app.ui.components.SearchBarWithFilter
 import com.eventmanager.app.ui.components.VolunteerBenefitsPanel
 import com.eventmanager.app.data.models.BenefitCalculator
 import com.eventmanager.app.data.models.AccountHolderType
 import com.eventmanager.app.data.utils.formatMoney
 import com.eventmanager.app.data.remote.MultiOrgMerge
+import com.eventmanager.app.data.remote.resolvedProfilePhotoPath
 import com.eventmanager.app.ui.utils.GuestListDefaultZoneId
 import com.eventmanager.app.ui.components.OrgColorDot
 import com.eventmanager.app.ui.utils.generateVenueFilterOptions
@@ -56,7 +59,7 @@ actual fun GuestListScreen(
     jobs: List<Job>,
     jobTypeConfigs: List<JobTypeConfig>,
     venues: List<VenueEntity>,
-    onAddGuest: (Guest) -> Unit,
+    onAddGuest: (Guest, ByteArray?) -> Unit,
     onAddTemporaryGuests: (ManualTemporaryGuestBatch) -> Unit,
     onUpdateGuest: (Guest) -> Unit,
     onUpdateVolunteer: (Volunteer) -> Unit,
@@ -282,9 +285,10 @@ actual fun GuestListScreen(
     if (!readOnly && showAddDialog) {
         DesktopAddGuestDialog(
             venues = venues,
+            profilePhotosEnabled = rememberProfilePhotosUploadEnabled(viewModel),
             onDismiss = { showAddDialog = false },
-            onConfirmPermanent = { guest ->
-                onAddGuest(guest)
+            onConfirmPermanent = { guest, photo ->
+                onAddGuest(guest, photo)
                 showAddDialog = false
             },
             onConfirmTemporary = { batch ->
@@ -298,6 +302,8 @@ actual fun GuestListScreen(
         DesktopEditGuestDialog(
             guest = guest,
             venues = venues,
+            profilePhotosEnabled = rememberProfilePhotosUploadEnabled(viewModel),
+            viewModel = viewModel,
             onDismiss = { showEditDialog = null },
             onConfirm = { updated ->
                 onUpdateGuest(updated)
@@ -600,8 +606,9 @@ private fun DesktopTimelineGuestRow(
 @Composable
 private fun DesktopAddGuestDialog(
     venues: List<VenueEntity>,
+    profilePhotosEnabled: Boolean = false,
     onDismiss: () -> Unit,
-    onConfirmPermanent: (Guest) -> Unit,
+    onConfirmPermanent: (Guest, ByteArray?) -> Unit,
     onConfirmTemporary: (ManualTemporaryGuestBatch) -> Unit
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
@@ -613,6 +620,7 @@ private fun DesktopAddGuestDialog(
     var invitations by remember { mutableStateOf("1") }
     var selectedVenueName by remember { mutableStateOf<String?>(null) }
     var notes by remember { mutableStateOf("") }
+    var pendingPhotoBytes by remember { mutableStateOf<ByteArray?>(null) }
 
     var temporaryArtist by remember { mutableStateOf("") }
     var temporaryEventDate by remember { mutableStateOf("") }
@@ -671,6 +679,14 @@ private fun DesktopAddGuestDialog(
                             modifier = Modifier.fillMaxWidth(),
                         )
                         OutlinedTextField(notes, { notes = it }, label = { Text(stringResource(Res.string.notes)) }, modifier = Modifier.fillMaxWidth())
+                        ProfilePhotoFormPicker(
+                            enabled = profilePhotosEnabled,
+                            currentUrl = "",
+                            name = name,
+                            pendingBytes = pendingPhotoBytes,
+                            onPicked = { pendingPhotoBytes = it },
+                            onClearPending = { pendingPhotoBytes = null },
+                        )
                     } else {
                         OutlinedTextField(
                             temporaryEventDate,
@@ -747,7 +763,8 @@ private fun DesktopAddGuestDialog(
                                         invitations = invitations.toIntOrNull() ?: 0,
                                         venueName = selectedVenueName ?: defaultVenue,
                                         notes = notes.trim()
-                                    )
+                                    ),
+                                    pendingPhotoBytes,
                                 )
                             } else {
                                 val millis = temporaryEventDateMillis ?: return@Button
@@ -774,6 +791,8 @@ private fun DesktopAddGuestDialog(
 private fun DesktopEditGuestDialog(
     guest: Guest,
     venues: List<VenueEntity>,
+    profilePhotosEnabled: Boolean = false,
+    viewModel: EventManagerViewModel? = null,
     onDismiss: () -> Unit,
     onConfirm: (Guest) -> Unit
 ) {
@@ -783,6 +802,7 @@ private fun DesktopEditGuestDialog(
     var invitations by remember(guest) { mutableStateOf(guest.invitations.toString()) }
     var selectedVenueName by remember(guest) { mutableStateOf(guest.venueName) }
     var notes by remember(guest) { mutableStateOf(guest.notes) }
+    var pendingPhotoBytes by remember { mutableStateOf<ByteArray?>(null) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -800,22 +820,36 @@ private fun DesktopEditGuestDialog(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(notes, { notes = it }, label = { Text(stringResource(Res.string.notes)) }, modifier = Modifier.fillMaxWidth())
+                if (!guest.isTemporaryGuest) {
+                    ProfilePhotoFormPicker(
+                        enabled = profilePhotosEnabled,
+                        currentUrl = guest.profilePhotoUrl,
+                        currentPath = guest.resolvedProfilePhotoPath(),
+                        name = name,
+                        pendingBytes = pendingPhotoBytes,
+                        onPicked = { pendingPhotoBytes = it },
+                        onClearPending = { pendingPhotoBytes = null },
+                        onRemoveExisting = { viewModel?.removeProfilePhotoForGuest(guest) },
+                    )
+                }
             }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    onConfirm(
-                        guest.copy(
-                            name = name.trim(),
-                            email = email.trim(),
-                            phoneNumber = phone.trim(),
-                            invitations = invitations.toIntOrNull() ?: guest.invitations,
-                            venueName = selectedVenueName.trim(),
-                            notes = notes.trim(),
-                            lastModified = System.currentTimeMillis()
-                        )
+                    val updated = guest.copy(
+                        name = name.trim(),
+                        email = email.trim(),
+                        phoneNumber = phone.trim(),
+                        invitations = invitations.toIntOrNull() ?: guest.invitations,
+                        venueName = selectedVenueName.trim(),
+                        notes = notes.trim(),
+                        lastModified = System.currentTimeMillis()
                     )
+                    onConfirm(updated)
+                    if (!guest.isTemporaryGuest) {
+                        pendingPhotoBytes?.let { viewModel?.uploadProfilePhotoForGuest(updated, it) }
+                    }
                 },
                 enabled = name.isNotBlank()
             ) { Text(stringResource(Res.string.save)) }

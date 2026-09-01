@@ -33,11 +33,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.eventmanager.app.data.models.*
+import com.eventmanager.app.data.remote.resolvedProfilePhotoPath
 import com.eventmanager.app.resources.Res
 import com.eventmanager.app.resources.*
 import com.eventmanager.app.ui.components.VolunteerFutureEntriesSection
 import com.eventmanager.app.ui.components.FirebaseOrgSwitcher
 import com.eventmanager.app.ui.components.FirebaseOrgSwitcherPlacement
+import com.eventmanager.app.ui.components.ScannerIdentityCard
 import com.eventmanager.app.ui.viewmodel.EventManagerViewModel
 import org.jetbrains.compose.resources.stringResource
 
@@ -448,6 +450,7 @@ fun DesktopBilleterieResultScreen(
                     result = result as BilleterieScanResult.TicketsAvailable,
                     jobTypeConfigs = jobTypeConfigs,
                     offsetHours = offsetHours,
+                    viewModel = viewModel,
                     onConfirmEntry = onConfirmEntry,
                     modifier = Modifier
                         .weight(1f)
@@ -589,30 +592,24 @@ private fun DesktopBilleterieFullScreenVerdict(
             )
 
             desktopBilleteriePersonName(result)?.let { name ->
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    text = name,
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White.copy(alpha = 0.95f),
-                    textAlign = TextAlign.Center,
-                )
-            }
-
-            desktopBilleterieRank(result)?.let { rank ->
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    text = rank,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = Color.White.copy(alpha = 0.75f),
-                )
-            }
-
-            result.scannedFirebaseOrgId()?.let { orgId ->
-                Spacer(Modifier.height(8.dp))
-                BilleterieScannerScannedOrgLabel(
-                    viewModel = viewModel,
-                    orgId = orgId,
+                Spacer(Modifier.height(16.dp))
+                ScannerIdentityCard(
+                    name = name,
+                    photoUrl = desktopBilleteriePhotoUrl(result),
+                    photoPath = desktopBilleteriePhotoPath(result),
+                    orgLabel = {
+                        result.scannedFirebaseOrgId()?.let { orgId ->
+                            BilleterieScannerScannedOrgLabel(
+                                viewModel = viewModel,
+                                orgId = orgId,
+                                lightOnColoredBackground = true,
+                            )
+                        }
+                    },
+                    extraLines = desktopBilleterieIdentityExtras(result),
+                    lightOnDark = true,
+                    largeName = true,
+                    modifier = Modifier.widthIn(max = 720.dp),
                 )
             }
 
@@ -656,15 +653,8 @@ private fun DesktopBilleterieFullScreenVerdict(
                     }
                 }
                 is BilleterieScanResult.GuestFound -> {
-                    Spacer(Modifier.height(24.dp))
-                    if (result.guest.venueName.isNotBlank()) {
-                        DesktopBilleterieVerdictDetailChip(
-                            icon = Icons.Default.Place,
-                            label = result.guest.venueName,
-                        )
-                    }
                     if (result.guest.invitations > 0) {
-                        Spacer(Modifier.height(10.dp))
+                        Spacer(Modifier.height(24.dp))
                         DesktopBilleterieVerdictDetailChip(
                             icon = Icons.Default.People,
                             label = stringResource(
@@ -685,6 +675,7 @@ private fun DesktopBilleterieTicketValidationContent(
     result: BilleterieScanResult.TicketsAvailable,
     jobTypeConfigs: List<JobTypeConfig>,
     offsetHours: Int,
+    viewModel: EventManagerViewModel? = null,
     onConfirmEntry: (Job, Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -701,35 +692,21 @@ private fun DesktopBilleterieTicketValidationContent(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        Box(
-            modifier = Modifier
-                .size(80.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primaryContainer),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = result.volunteer.name.take(1).uppercase(),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-            )
-        }
-
-        Text(
-            text = result.volunteer.name,
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
+        ScannerIdentityCard(
+            name = result.volunteer.name,
+            photoUrl = result.volunteer.profilePhotoUrl,
+            photoPath = result.volunteer.resolvedProfilePhotoPath(),
+            orgLabel = {
+                BilleterieScannerScannedOrgLabel(
+                    viewModel = viewModel,
+                    orgId = result.volunteer.firebaseOrgId,
+                    lightOnColoredBackground = false,
+                )
+            },
+            extraLines = listOfNotNull(desktopBilleterieRank(result)),
+            lightOnDark = false,
+            modifier = Modifier.widthIn(max = 520.dp),
         )
-
-        desktopBilleterieRank(result)?.let { rank ->
-            Text(
-                text = rank,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
 
         Text(
             text = stringResource(Res.string.billeterie_scanner_validate_ticket),
@@ -902,6 +879,32 @@ private fun desktopBilleteriePersonName(result: BilleterieScanResult): String? =
     is BilleterieScanResult.NoEntry -> result.volunteer.name
     is BilleterieScanResult.GuestFound -> result.guest.name
     is BilleterieScanResult.ScanError -> null
+}
+
+private fun desktopBilleteriePhotoUrl(result: BilleterieScanResult): String = when (result) {
+    is BilleterieScanResult.FreeEntry -> result.volunteer.profilePhotoUrl
+    is BilleterieScanResult.TicketsAvailable -> result.volunteer.profilePhotoUrl
+    is BilleterieScanResult.NoEntry -> result.volunteer.profilePhotoUrl
+    is BilleterieScanResult.GuestFound -> result.guest.profilePhotoUrl
+    is BilleterieScanResult.ScanError -> ""
+}
+
+private fun desktopBilleteriePhotoPath(result: BilleterieScanResult): String = when (result) {
+    is BilleterieScanResult.FreeEntry -> result.volunteer.resolvedProfilePhotoPath()
+    is BilleterieScanResult.TicketsAvailable -> result.volunteer.resolvedProfilePhotoPath()
+    is BilleterieScanResult.NoEntry -> result.volunteer.resolvedProfilePhotoPath()
+    is BilleterieScanResult.GuestFound -> result.guest.resolvedProfilePhotoPath()
+    is BilleterieScanResult.ScanError -> ""
+}
+
+@Composable
+private fun desktopBilleterieIdentityExtras(result: BilleterieScanResult): List<String> {
+    val extras = mutableListOf<String>()
+    desktopBilleterieRank(result)?.let { extras.add(it) }
+    if (result is BilleterieScanResult.GuestFound && result.guest.venueName.isNotBlank()) {
+        extras.add(result.guest.venueName)
+    }
+    return extras
 }
 
 @Composable

@@ -446,7 +446,7 @@
     <string name="add_new_venue">Ajouter novus lieu</string>
     <string name="edit_venue_configuration">Modifier configuration ex lieu</string>
     <string name="venue_all">TOUS</string>
-    <string name="venue_both">DEUX</string>
+    <string name="venue_both">TOUS</string>
 
     <!-- Temporary Guest List -->
     <string name="temp_guest_artist_label">Artiste / Groupe</string>
@@ -892,6 +892,18 @@
     <string name="camera_error">Camera error</string>
     <string name="enter_id_manually">EntrerID manu</string>
     <string name="add_nfc_card">Ajouter carte NFC</string>
+    <string name="add_profile_photo">Photographemma addere</string>
+    <string name="change_profile_photo">Photographemma mutare</string>
+    <string name="remove_profile_photo">Photographemma removere</string>
+    <string name="remove_profile_photo_confirm">Hoc photographemma profili removere?</string>
+    <string name="share_profile_photo">Communicare</string>
+    <string name="download_profile_photo">Deponere</string>
+    <string name="profile_photo_cd">Photographemma profili</string>
+    <string name="profile_photo_too_large">Imago nimis magna est (max. 2 MB post compressionem).</string>
+    <string name="profile_photo_upload_failed">Photographemma profili mitti non potuit. Persona sine imagine servata est.</string>
+    <string name="profile_photos_settings_title">Photogrammæ profili (facultativum)</string>
+    <string name="profile_photos_settings_body">Firebase Storage utitur et planum Blaze (solvendum) exigere potest. Relinque inactivum ut in plano gratuito Spark maneas. Storage omittere ceteram app numquam impedit. Si administrator hoc activat, in omnibus institutionis machinis activatur.</string>
+    <string name="profile_photos_enable">Photogrammæ profili activare</string>
     <string name="add_nfc_card_uid_title">AjouterUID carte NFC</string>
     <string name="enter_uid_manually">EntrerUID manu</string>
     <string name="read_uid_with_phone_nfc">Legere UID cum telephono (NFC)</string>
@@ -1219,7 +1231,26 @@
     <string name="stats_category_volunteers">Voluntarii</string>
     <string name="stats_category_guest_list">Index hospitum</string>
     <string name="stats_category_pos_activity">POS — Venditiones et credita</string>
-    <string name="stats_category_pos_mix">POS — Partes et recorda</string>
+    <string name="stats_category_pos_mix">POS — Mix</string>
+    <string name="stats_section_volunteers">Voluntarii</string>
+    <string name="stats_section_guest_list">Index hospitum</string>
+    <string name="stats_section_pos">POS</string>
+    <string name="stats_category_volunteer_activity">Voluntarii — actio</string>
+    <string name="stats_category_volunteer_shifts">Voluntarii — vices</string>
+    <string name="stats_category_volunteer_ranks">Voluntarii — ordines</string>
+    <string name="stats_category_volunteer_profile">Voluntarii — imago</string>
+    <string name="stats_category_pos_sales">POS — Venditiones</string>
+    <string name="stats_category_pos_credits">POS — Credita</string>
+    <string name="stats_category_pos_customers">POS — Clientes et saldi</string>
+    <string name="stats_category_toc_activity">Actio</string>
+    <string name="stats_category_toc_shifts">Vices</string>
+    <string name="stats_category_toc_ranks">Ordines</string>
+    <string name="stats_category_toc_profile">Imago</string>
+    <string name="stats_category_toc_guest_list">Occupatio</string>
+    <string name="stats_category_toc_sales">Venditiones</string>
+    <string name="stats_category_toc_credits">Credita</string>
+    <string name="stats_category_toc_mix">Mix</string>
+    <string name="stats_category_toc_customers">Clientes</string>
     <string name="stats_graph_chapters">Capita</string>
     <string name="stats_graphs_loading">Graphica onerantur…</string>
     <string name="pos_stats_sales_count">Numerus venditionum</string>
@@ -1527,6 +1558,11 @@
     <string name="firebase_tutorial_copy_rules">Copia firestore.rules in clipboard</string>
     <string name="firebase_tutorial_copy_rules_done">Copiatum — incolla in Firestore → Rules, deinde Publish</string>
     <string name="firebase_tutorial_copy_rules_error">Non potui onerare regulas — aperi firebase/firestore.rules in projecto</string>
+    <string name="firebase_tutorial_storage_optional_title">Facultativum: photogrammæ profili (Firebase Storage)</string>
+    <string name="firebase_tutorial_storage_optional_body">Omitte ut in plano gratuito Spark maneas. Storage activare planum Blaze (solvendum) exigere potest.\n\nPro photogrammatibus profili:\n1. Firebase Console → Build → Storage → Get started (idem projectum).\n2. Storage → Rules (URL debet /storage/rules continere — non Firestore).\n3. Regulas Storage NoctuList incolla (button infra) → Publish.\n4. In NoctuList Settings → Firebase, «Photogrammæ profili activare» accende (in omnibus institutionis machinis activatur).\n\nPostea facere potes. App sine Storage plene operatur.</string>
+    <string name="firebase_tutorial_copy_storage_rules">Copia storage.rules in clipboard</string>
+    <string name="firebase_tutorial_copy_storage_rules_done">Copiatum — incolla in Storage → Rules, deinde Publish</string>
+    <string name="firebase_tutorial_copy_storage_rules_error">Non potui onerare regulas — aperi firebase/storage.rules in projecto</string>
     <string name="firebase_tutorial_fb_step1_title">1. Creare vel aperire projectum Firebase</string>
     <string name="firebase_tutorial_fb_step1_body">1. Aperi https://console.firebase.google.com et sign in cum ratione Google institutionis quae potest administrare projectum.
 2. Clicca Add project (vel selige existens).

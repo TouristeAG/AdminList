@@ -50,7 +50,7 @@ private fun SQLiteConnection.query(sql: String): MigrationCursor =
         AccountTransfer::class,
         PendingRemoteWrite::class,
     ],
-    version = 41,
+    version = 42,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -1442,6 +1442,31 @@ abstract class EventManagerDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_41_42 = object : Migration(41, 42) {
+            override fun migrate(connection: SQLiteConnection) {
+                try {
+                    println("Starting migration 41→42: Firebase profile photo path/url")
+                    connection.execSQL(
+                        "ALTER TABLE guests ADD COLUMN profilePhotoPath TEXT NOT NULL DEFAULT ''",
+                    )
+                    connection.execSQL(
+                        "ALTER TABLE guests ADD COLUMN profilePhotoUrl TEXT NOT NULL DEFAULT ''",
+                    )
+                    connection.execSQL(
+                        "ALTER TABLE volunteers ADD COLUMN profilePhotoPath TEXT NOT NULL DEFAULT ''",
+                    )
+                    connection.execSQL(
+                        "ALTER TABLE volunteers ADD COLUMN profilePhotoUrl TEXT NOT NULL DEFAULT ''",
+                    )
+                    println("Migration 41→42 completed successfully")
+                } catch (e: Exception) {
+                    println("Migration 41→42 failed: ${e.message}")
+                    e.printStackTrace()
+                    throw e
+                }
+            }
+        }
+
         val ALL_MIGRATIONS: Array<Migration> = arrayOf(
             MIGRATION_1_2,
             MIGRATION_2_3,
@@ -1482,7 +1507,8 @@ abstract class EventManagerDatabase : RoomDatabase() {
             MIGRATION_37_38,
             MIGRATION_38_39,
             MIGRATION_39_40,
-            MIGRATION_40_41
+            MIGRATION_40_41,
+            MIGRATION_41_42
         )
     }
 }

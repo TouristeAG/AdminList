@@ -359,7 +359,7 @@
     <string name="add_new_venue">नया स्थान जोड़ें</string>
     <string name="edit_venue_configuration">स्थान कॉन्फ़िगरेशन संपादित करें</string>
     <string name="venue_all">सब</string>
-    <string name="venue_both">दोनों</string>
+    <string name="venue_both">सब</string>
 
     <!-- Temporary Guest List -->
     <string name="temp_guest_artist_label">कलाकार/समूह</string>
@@ -744,6 +744,17 @@
     <string name="camera_error">कैमरा त्रुटि</string>
     <string name="enter_id_manually">आईडी मैन्युअल रूप से दर्ज करें</string>
     <string name="add_nfc_card">एनएफसी कार्ड जोड़ें</string>
+    <string name="add_profile_photo">फ़ोटो जोड़ें</string>
+    <string name="change_profile_photo">फ़ोटो बदलें</string>
+    <string name="remove_profile_photo">फ़ोटो हटाएँ</string>
+    <string name="remove_profile_photo_confirm">यह प्रोफ़ाइल फ़ोटो हटाएँ?</string>
+    <string name="share_profile_photo">साझा करें</string>
+    <string name="download_profile_photo">डाउनलोड</string>
+    <string name="profile_photo_saved_downloads">फ़ोटो डाउनलोड में सहेजी गई</string>
+    <string name="profile_photo_export_failed">फ़ोटो एक्सपोर्ट नहीं हो सकी</string>
+    <string name="profile_photo_cd">प्रोफ़ाइल फ़ोटो</string>
+    <string name="profile_photo_too_large">यह छवि बहुत बड़ी है (संपीड़न के बाद अधिकतम 2 MB)।</string>
+    <string name="profile_photo_upload_failed">प्रोफ़ाइल फ़ोटो अपलोड नहीं हो सकी। व्यक्ति को बिना फ़ोटो सहेजा गया।</string>
     <string name="add_nfc_card_uid_title">एनएफसी कार्ड यूआईडी जोड़ें</string>
     <string name="enter_uid_manually">यूआईडी मैन्युअल रूप से दर्ज करें</string>
     <string name="read_uid_with_phone_nfc">फ़ोन (एनएफसी) के साथ यूआईडी पढ़ें</string>

@@ -355,7 +355,7 @@
     <string name="add_new_venue">新增場地</string>
     <string name="edit_venue_configuration">編輯場地配置</string>
     <string name="venue_all">全部</string>
-    <string name="venue_both">兩者</string>
+    <string name="venue_both">全部</string>
 
     <!-- Temporary Guest List -->
     <string name="temp_guest_artist_label">藝人 / 團體</string>
@@ -776,6 +776,18 @@
     <string name="camera_error">相機錯誤</string>
     <string name="enter_id_manually">手動輸入 ID</string>
     <string name="add_nfc_card">新增 NFC 卡片</string>
+    <string name="add_profile_photo">新增照片</string>
+    <string name="change_profile_photo">更換照片</string>
+    <string name="remove_profile_photo">刪除照片</string>
+    <string name="remove_profile_photo_confirm">刪除此個人資料照片？</string>
+    <string name="share_profile_photo">分享</string>
+    <string name="download_profile_photo">下載</string>
+    <string name="profile_photo_cd">個人資料照片</string>
+    <string name="profile_photo_too_large">圖片過大（壓縮後最大 2 MB）。</string>
+    <string name="profile_photo_upload_failed">無法上傳個人資料照片。已儲存該人員且不含照片。</string>
+    <string name="profile_photos_settings_title">個人資料照片（選用）</string>
+    <string name="profile_photos_settings_body">使用 Firebase Storage，可能需要付費 Blaze 方案。保持關閉即可留在免費 Spark 方案。略過 Storage 不會阻擋應用程式的其餘功能。管理員開啟後，機構內所有裝置都會開啟。</string>
+    <string name="profile_photos_enable">啟用個人資料照片</string>
     <string name="add_nfc_card_uid_title">新增 NFC 卡片 UID</string>
     <string name="enter_uid_manually">手動輸入 UID</string>
     <string name="read_uid_with_phone_nfc">使用手機讀取 UID（NFC）</string>
@@ -1103,7 +1115,26 @@
     <string name="stats_category_volunteers">志工</string>
     <string name="stats_category_guest_list">賓客名單</string>
     <string name="stats_category_pos_activity">POS — 銷售與點數</string>
-    <string name="stats_category_pos_mix">POS — 分布與紀錄</string>
+    <string name="stats_category_pos_mix">POS — 構成</string>
+    <string name="stats_section_volunteers">志工</string>
+    <string name="stats_section_guest_list">賓客名單</string>
+    <string name="stats_section_pos">POS</string>
+    <string name="stats_category_volunteer_activity">志工 — 活動</string>
+    <string name="stats_category_volunteer_shifts">志工 — 班次</string>
+    <string name="stats_category_volunteer_ranks">志工 — 等級</string>
+    <string name="stats_category_volunteer_profile">志工 — 資料</string>
+    <string name="stats_category_pos_sales">POS — 銷售</string>
+    <string name="stats_category_pos_credits">POS — 點數</string>
+    <string name="stats_category_pos_customers">POS — 客戶與餘額</string>
+    <string name="stats_category_toc_activity">活動</string>
+    <string name="stats_category_toc_shifts">班次</string>
+    <string name="stats_category_toc_ranks">等級</string>
+    <string name="stats_category_toc_profile">資料</string>
+    <string name="stats_category_toc_guest_list">占用</string>
+    <string name="stats_category_toc_sales">銷售</string>
+    <string name="stats_category_toc_credits">點數</string>
+    <string name="stats_category_toc_mix">構成</string>
+    <string name="stats_category_toc_customers">客戶</string>
     <string name="stats_graph_chapters">章節</string>
     <string name="stats_graphs_loading">正在載入圖表…</string>
     <string name="pos_stats_sales_count">銷售筆數</string>
@@ -1411,6 +1442,11 @@
     <string name="firebase_tutorial_copy_rules">複製 firestore.rules 到剪貼簿</string>
     <string name="firebase_tutorial_copy_rules_done">已複製 — 貼到 Firestore → Rules，然後發佈</string>
     <string name="firebase_tutorial_copy_rules_error">無法載入規則 — 請開啟專案中的 firebase/firestore.rules</string>
+    <string name="firebase_tutorial_storage_optional_title">選用：個人資料照片（Firebase Storage）</string>
+    <string name="firebase_tutorial_storage_optional_body">略過此步以留在免費 Spark 方案。啟用 Storage 可能需要付費 Blaze 方案。\n\n若要個人資料照片：\n1. Firebase Console → Build → Storage → Get started（同一專案）。\n2. Storage → Rules（網址須包含 /storage/rules — 不是 Firestore）。\n3. 貼上 NoctuList 的 Storage 規則（下方按鈕）→ Publish。\n4. 在 NoctuList 設定 → Firebase 中開啟「啟用個人資料照片」（機構內所有裝置都會開啟）。\n\n可以稍後完成。沒有 Storage，應用程式仍可完整使用。</string>
+    <string name="firebase_tutorial_copy_storage_rules">複製 storage.rules 到剪貼簿</string>
+    <string name="firebase_tutorial_copy_storage_rules_done">已複製 — 貼到 Storage → Rules，然後發佈</string>
+    <string name="firebase_tutorial_copy_storage_rules_error">無法載入規則 — 請開啟專案中的 firebase/storage.rules</string>
     <string name="firebase_tutorial_fb_step1_title">1. 建立或開啟 Firebase 專案</string>
     <string name="firebase_tutorial_fb_step1_body">1. 開啟 https://console.firebase.google.com，使用可管理專案的機構 Google 帳號登入。
 2. 點擊新增專案（或選擇現有專案）。

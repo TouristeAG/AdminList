@@ -480,50 +480,58 @@ class GitLiveFirestoreGateway(
     }
 
     override fun guestToMap(guest: Guest) = SensitiveFieldCodec.encryptGuestMap(
-        mapOf(
-        "nanoId" to guest.nanoId,
-        "name" to guest.name,
-        "lastNameAbbreviation" to guest.lastNameAbbreviation,
-        "email" to guest.email,
-        "phone" to guest.phoneNumber,
-        "invitations" to guest.invitations,
-        "venueName" to guest.venueName,
-        "notes" to guest.notes,
-        "isVolunteerBenefit" to guest.isVolunteerBenefit,
-        "volunteerId" to guest.volunteerId,
-        "lastModified" to guest.lastModified,
-        "isTemporaryGuest" to guest.isTemporaryGuest,
-        "temporaryArtistName" to guest.temporaryArtistName,
-        "temporaryEventDate" to guest.temporaryEventDate,
-        "temporaryContactPhone" to guest.temporaryContactPhone,
-        "nfcCardUid" to guest.nfcCardUid,
-        "nfcCardUidHash" to guest.nfcCardUidHash.ifBlank {
-            SensitiveFieldCodec.nfcLookupHash(guest.nfcCardUid, guest.firebaseOrgId)
+        buildMap {
+            put("nanoId", guest.nanoId)
+            put("name", guest.name)
+            put("lastNameAbbreviation", guest.lastNameAbbreviation)
+            put("email", guest.email)
+            put("phone", guest.phoneNumber)
+            put("invitations", guest.invitations)
+            put("venueName", guest.venueName)
+            put("notes", guest.notes)
+            put("isVolunteerBenefit", guest.isVolunteerBenefit)
+            put("volunteerId", guest.volunteerId)
+            put("lastModified", guest.lastModified)
+            put("isTemporaryGuest", guest.isTemporaryGuest)
+            put("temporaryArtistName", guest.temporaryArtistName)
+            put("temporaryEventDate", guest.temporaryEventDate)
+            put("temporaryContactPhone", guest.temporaryContactPhone)
+            put("nfcCardUid", guest.nfcCardUid)
+            put(
+                "nfcCardUidHash",
+                guest.nfcCardUidHash.ifBlank {
+                    SensitiveFieldCodec.nfcLookupHash(guest.nfcCardUid, guest.firebaseOrgId)
+                },
+            )
+            put("isAdmin", guest.isAdmin)
+            putProfilePhotoFields(guest.profilePhotoPath, guest.profilePhotoUrl)
         },
-        "isAdmin" to guest.isAdmin,
-        ),
         guest.firebaseOrgId,
     )
 
     override fun volunteerToMap(volunteer: Volunteer) = SensitiveFieldCodec.encryptVolunteerMap(
-        mapOf(
-        "id" to volunteer.id,
-        "name" to volunteer.name,
-        "lastNameAbbreviation" to volunteer.lastNameAbbreviation,
-        "email" to volunteer.email,
-        "phone" to volunteer.phoneNumber,
-        "dateOfBirth" to volunteer.dateOfBirth,
-        "gender" to volunteer.gender?.name,
-        "currentRank" to volunteer.currentRank?.name,
-        "isActive" to volunteer.isActive,
-        "lastShiftDate" to volunteer.lastShiftDate,
-        "lastModified" to volunteer.lastModified,
-        "nfcCardUid" to volunteer.nfcCardUid,
-        "nfcCardUidHash" to volunteer.nfcCardUidHash.ifBlank {
-            SensitiveFieldCodec.nfcLookupHash(volunteer.nfcCardUid, volunteer.firebaseOrgId)
+        buildMap {
+            put("id", volunteer.id)
+            put("name", volunteer.name)
+            put("lastNameAbbreviation", volunteer.lastNameAbbreviation)
+            put("email", volunteer.email)
+            put("phone", volunteer.phoneNumber)
+            put("dateOfBirth", volunteer.dateOfBirth)
+            put("gender", volunteer.gender?.name)
+            put("currentRank", volunteer.currentRank?.name)
+            put("isActive", volunteer.isActive)
+            put("lastShiftDate", volunteer.lastShiftDate)
+            put("lastModified", volunteer.lastModified)
+            put("nfcCardUid", volunteer.nfcCardUid)
+            put(
+                "nfcCardUidHash",
+                volunteer.nfcCardUidHash.ifBlank {
+                    SensitiveFieldCodec.nfcLookupHash(volunteer.nfcCardUid, volunteer.firebaseOrgId)
+                },
+            )
+            put("isAdmin", volunteer.isAdmin)
+            putProfilePhotoFields(volunteer.profilePhotoPath, volunteer.profilePhotoUrl)
         },
-        "isAdmin" to volunteer.isAdmin,
-        ),
         volunteer.firebaseOrgId,
     )
 
@@ -611,4 +619,11 @@ class GitLiveFirestoreGateway(
         }
         return mapped
     }
+}
+
+private fun MutableMap<String, Any?>.putProfilePhotoFields(path: String, url: String) {
+    // Omit blanks so a later volunteer/guest save on a device without the photo
+    // cannot merge-overwrite Firestore and wipe the URL for everyone else.
+    if (path.isNotBlank()) this["profilePhotoPath"] = path
+    if (url.isNotBlank()) this["profilePhotoUrl"] = url
 }

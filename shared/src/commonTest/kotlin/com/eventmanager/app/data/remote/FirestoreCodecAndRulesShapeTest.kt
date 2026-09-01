@@ -103,6 +103,7 @@ class FirestoreCodecAndRulesShapeTest {
     fun firestoreRulesShape_enforcesMemberReadRoleWhitelistAndTransferCatchAllExclusion() = runBlocking {
         // Prefer compose resource (in-app clipboard) so deploy file and app stay in sync.
         val fromResource = runCatching { FirestoreRulesClipboardContent.load() }.getOrNull()
+            ?.takeIf { it.contains("service cloud.firestore") }
         val fromRepo = sequenceOf(
             File("firebase/firestore.rules"),
             File("../firebase/firestore.rules"),
@@ -138,6 +139,40 @@ class FirestoreCodecAndRulesShapeTest {
             rules.contains("document[0] != 'transfers'"),
             "catch-all must exclude transfers writes",
         )
-        assertTrue(rules.contains("allow update, delete: if false; // append-only ledger"))
+        assertTrue(rules.contains("allow update, delete: if false;"))
+    }
+
+    @Test
+    fun storageRulesAllowMemberDeleteWithoutRequestResource() = runBlocking {
+        val fromResource = runCatching { StorageRulesClipboardContent.load() }.getOrNull()
+            ?.takeIf { it.contains("service firebase.storage") }
+        val fromRepo = sequenceOf(
+            File("firebase/storage.rules"),
+            File("../firebase/storage.rules"),
+        ).firstOrNull { it.exists() }?.readText()
+        val rules = fromResource ?: fromRepo
+            ?: error("storage.rules not found via resource or repo path")
+        assertTrue(rules.contains("allow delete: if isMember(orgId)"))
+        assertTrue(rules.contains("allow create, update:"))
+        assertFalse(
+            Regex("""allow write:[\s\S]*request\.resource\.contentType""").containsMatchIn(rules),
+            "a write+contentType rule denies Storage deletes because request.resource is null",
+        )
+    }
+
+    @Test
+    fun storageBucketCandidates_preferStoredThenFirebaseDefaults() {
+        assertEquals(
+            listOf("custom.appspot.com"),
+            firebaseStorageBucketCandidates("gs://custom.appspot.com/", ""),
+        )
+        assertEquals(
+            listOf("proj.firebasestorage.app", "proj.appspot.com"),
+            firebaseStorageBucketCandidates("", "proj"),
+        )
+        assertEquals(
+            listOf("stored.appspot.com", "proj.firebasestorage.app", "proj.appspot.com"),
+            firebaseStorageBucketCandidates("stored.appspot.com", "proj"),
+        )
     }
 }

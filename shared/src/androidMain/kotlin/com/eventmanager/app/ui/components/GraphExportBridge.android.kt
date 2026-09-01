@@ -60,16 +60,14 @@ internal actual object GraphExportBridge {
     actual suspend fun exportLineGraph(
         platformContext: PlatformContext,
         title: String,
-        dataPoints: List<DataPoint>,
-        trendPoints: List<DataPoint>,
+        series: List<GraphSeriesExport>,
         timePeriod: TimePeriod,
         density: Density,
         exportType: GraphExportType
     ): File {
         val context = platformContext.androidContext
         val graphBitmap = GraphExportAndroid.renderGraphAsBitmap(
-            dataPoints = dataPoints,
-            trendPoints = trendPoints,
+            series = series,
             title = title,
             timePeriod = timePeriod,
             density = density
@@ -78,13 +76,22 @@ internal actual object GraphExportBridge {
             GraphExportType.XLSX -> GraphExportAndroid.exportToXLSX(
                 context = context,
                 title = title,
-                dataPoints = dataPoints,
-                trendPoints = trendPoints,
+                series = series,
                 timePeriod = timePeriod,
                 graphBitmap = graphBitmap
             )
             GraphExportType.JPG -> GraphExportAndroid.exportToJPG(context, graphBitmap, title)
         }
+    }
+
+    actual suspend fun exportBarChartJpg(
+        platformContext: PlatformContext,
+        title: String,
+        bars: List<BarExportItem>,
+    ): File {
+        val context = platformContext.androidContext
+        val bitmap = GraphExportAndroid.renderBarChartAsBitmap(bars, title)
+        return GraphExportAndroid.exportToJPG(context, bitmap, title)
     }
 
     actual suspend fun exportPieChartJpg(

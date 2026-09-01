@@ -6,6 +6,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 import java.net.HttpURLConnection
 import java.net.URL
@@ -100,6 +101,70 @@ internal object DesktopFirebaseGoogleRestSignIn {
         }
     }
 
+    /**
+     * Returns a usable Firebase Auth id token, refreshing via the stored refresh token when
+     * the session is missing or near expiry. Storage REST uploads need this — GitLive JVM
+     * Auth does not refresh automatically.
+     */
+    fun idTokenForApi(apiKey: String): String? {
+        val platform = FirebaseBootstrap.platformOrNull() ?: return null
+        val raw = platform.retrieve(FIREBASE_USER_KEY) ?: return null
+        val root = runCatching { json.parseToJsonElement(raw).jsonObject }.getOrNull() ?: return null
+        val current = root.string("idToken")?.takeIf { it.isNotBlank() }
+        val refreshToken = root.string("refreshToken")?.takeIf { it.isNotBlank() }
+        val createdAt = root.longish("createdAt") ?: 0L
+        val expiresInSec = root.longish("expiresIn") ?: 3600L
+        val stillValid = current != null &&
+            createdAt > 0L &&
+            System.currentTimeMillis() < createdAt + (expiresInSec - 120L).coerceAtLeast(60L) * 1000L
+        if (stillValid) return current
+        if (refreshToken.isNullOrBlank() || apiKey.isBlank()) return current
+        return refreshAndStore(apiKey, refreshToken, root) ?: current
+    }
+
+    private fun refreshAndStore(apiKey: String, refreshToken: String, previous: JsonObject): String? {
+        val key = sanitizeApiKey(apiKey)
+        if (key.isBlank()) return null
+        val url = URL("https://securetoken.googleapis.com/v1/token?key=${URLEncoder.encode(key, Charsets.UTF_8)}")
+        val body = "grant_type=refresh_token&refresh_token=${URLEncoder.encode(refreshToken, Charsets.UTF_8)}"
+        val conn = (url.openConnection() as HttpURLConnection).apply {
+            requestMethod = "POST"
+            doOutput = true
+            setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
+            connectTimeout = 20_000
+            readTimeout = 20_000
+        }
+        return try {
+            conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+            val stream = if (conn.responseCode in 200..299) conn.inputStream else conn.errorStream
+            val text = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
+            if (conn.responseCode !in 200..299) {
+                println("Firebase token refresh failed (${conn.responseCode}): ${text.take(200)}")
+                return null
+            }
+            val refreshed = json.parseToJsonElement(text).jsonObject
+            val idToken = refreshed.string("id_token") ?: refreshed.string("idToken") ?: return null
+            val nextRefresh = refreshed.string("refresh_token") ?: refreshed.string("refreshToken") ?: refreshToken
+            val expiresIn = refreshed.string("expires_in")?.toLongOrNull()
+                ?: refreshed.longish("expires_in")
+                ?: 3600L
+            val userJson = buildJsonObject {
+                previous.forEach { (k, v) -> put(k, v) }
+                put("idToken", idToken)
+                put("refreshToken", nextRefresh)
+                put("expiresIn", expiresIn)
+                put("createdAt", System.currentTimeMillis())
+            }.toString()
+            FirebaseBootstrap.platformOrNull()?.store(FIREBASE_USER_KEY, userJson)
+            idToken
+        } catch (e: Exception) {
+            println("Firebase token refresh failed: ${e.message}")
+            null
+        } finally {
+            conn.disconnect()
+        }
+    }
+
     /** Strip paste artifacts that make Google return API_KEY_INVALID. */
     internal fun sanitizeApiKey(raw: String): String {
         var s = raw.trim().replace("\uFEFF", "")
@@ -134,6 +199,11 @@ internal object DesktopFirebaseGoogleRestSignIn {
 
     private fun JsonObject.string(key: String): String? =
         this[key]?.jsonPrimitive?.contentOrNull
+
+    private fun JsonObject.longish(key: String): Long? {
+        val p = this[key]?.jsonPrimitive ?: return null
+        return p.longOrNull ?: p.contentOrNull?.toLongOrNull()
+    }
 
     /**
      * Probe Identity Toolkit with the key alone (invalid token). Distinguishes key rejection

@@ -436,7 +436,7 @@ data class VenueOption(
 )
 
 /**
- * Generates venue options for dropdowns, including "ALL" or "BOTH" option
+ * Generates venue options for dropdowns, including the "ALL" option
  * @param venues List of active venues from database
  * @return List of VenueOption with proper display names and translations
  */
@@ -447,14 +447,8 @@ fun generateVenueOptions(venues: List<VenueEntity>): List<VenueOption> {
     
     val options = mutableListOf<VenueOption>()
     
-    // Add "ALL" or "BOTH" option based on number of venues
-    val allOptionText = if (activeVenues.size <= 2) {
-        stringResource(Res.string.venue_both)
-    } else {
-        stringResource(Res.string.venue_all)
-    }
+    val allOptionText = stringResource(Res.string.venue_all)
     
-    // Always add BOTH option first
     options.add(VenueOption(
         venue = Venue.BOTH,
         displayName = allOptionText,
@@ -549,21 +543,14 @@ private fun findVenueEntityForEnum(venue: Venue, venues: List<VenueEntity>): Ven
 @Composable
 fun getVenueDisplayName(selectedVenue: Venue?, venues: List<VenueEntity>): String {
     val platformContext = LocalPlatformContext.current
-    val activeVenues = venues.filter { it.isActive }
     
     // Handle null case - return empty string for dropdowns
     if (selectedVenue == null) {
         return ""
     }
     
-    // Handle BOTH/ALL option
     if (selectedVenue == Venue.BOTH) {
-        val result = if (activeVenues.size <= 2) {
-            stringResource(Res.string.venue_both)
-        } else {
-            stringResource(Res.string.venue_all)
-        }
-        return result
+        return stringResource(Res.string.venue_all)
     }
     
     // Handle individual venues using reverse mapping
@@ -578,7 +565,7 @@ fun getVenueDisplayName(selectedVenue: Venue?, venues: List<VenueEntity>): Strin
  * Gets the display name for a venue string value
  * @param venueName The venue name to display (e.g., "BOTH" or "GROOVE")
  * @param venues List of active venues from database
- * @return Display name for the venue (translated if BOTH/ALL)
+ * @return Display name for the venue (translated if ALL)
  */
 @Composable
 fun getVenueDisplayString(venueName: String?, venues: List<VenueEntity>): String {
@@ -586,12 +573,7 @@ fun getVenueDisplayString(venueName: String?, venues: List<VenueEntity>): String
     if (venueName == null) return ""
     
     return if (venueName == "BOTH") {
-        val activeVenues = venues.filter { it.isActive }
-        if (activeVenues.size <= 2) {
-            stringResource(Res.string.venue_both)
-        } else {
-            stringResource(Res.string.venue_all)
-        }
+        stringResource(Res.string.venue_all)
     } else {
         venueName
     }
@@ -609,12 +591,7 @@ fun generateVenueFilterOptions(venues: List<VenueEntity>): List<VenueOption> {
 
     val options = mutableListOf<VenueOption>()
 
-    // Add "Both"/"All" option
-    val allOptionText = if (activeVenues.size <= 2) {
-        stringResource(Res.string.venue_both)
-    } else {
-        stringResource(Res.string.venue_all)
-    }
+    val allOptionText = stringResource(Res.string.venue_all)
 
     options.add(VenueOption(
         venue = Venue.BOTH,

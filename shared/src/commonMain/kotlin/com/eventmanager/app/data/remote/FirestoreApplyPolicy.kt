@@ -13,6 +13,38 @@ object FirestoreApplyPolicy {
     fun shouldKeepLocal(existingLastModified: Long, remoteLastModified: Long): Boolean =
         existingLastModified >= remoteLastModified
 
+    /**
+     * Photos are independent of volunteer/guest [lastModified] except for an explicit clear.
+     * A newer local shift update must not drop a remote photo, and a missing remote field
+     * must not erase a local photo. A [PROFILE_PHOTO_CLEARED_SENTINEL] with a newer-or-equal
+     * clock wins so Remove is not resurrected by a stale snapshot.
+     */
+    fun mergeProfilePhotoFields(
+        localPath: String,
+        localUrl: String,
+        remotePath: String,
+        remoteUrl: String,
+        localLastModified: Long = 0L,
+        remoteLastModified: Long = 0L,
+    ): ProfilePhotoFields {
+        val localCleared = isProfilePhotoCleared(localPath, localUrl)
+        val remoteCleared = isProfilePhotoCleared(remotePath, remoteUrl)
+        if (localCleared && localLastModified >= remoteLastModified) {
+            return ProfilePhotoFields(PROFILE_PHOTO_CLEARED_SENTINEL, PROFILE_PHOTO_CLEARED_SENTINEL)
+        }
+        if (remoteCleared && remoteLastModified >= localLastModified) {
+            return ProfilePhotoFields(PROFILE_PHOTO_CLEARED_SENTINEL, PROFILE_PHOTO_CLEARED_SENTINEL)
+        }
+        val remoteP = remotePath.trim().takeIf { it.isStoredProfilePhotoRef() }.orEmpty()
+        val remoteU = remoteUrl.trim().takeIf { it.isStoredProfilePhotoRef() }.orEmpty()
+        val localP = localPath.trim().takeIf { it.isStoredProfilePhotoRef() }.orEmpty()
+        val localU = localUrl.trim().takeIf { it.isStoredProfilePhotoRef() }.orEmpty()
+        return ProfilePhotoFields(
+            path = remoteP.ifBlank { localP },
+            url = remoteU.ifBlank { localU },
+        )
+    }
+
     fun orgIdToPersist(existingOrg: String, remoteOrg: String): String =
         existingOrg.trim().ifBlank { remoteOrg.trim() }
 
@@ -49,6 +81,11 @@ object FirestoreApplyPolicy {
         )
     }
 }
+
+data class ProfilePhotoFields(
+    val path: String,
+    val url: String,
+)
 
 data class PeopleCounterSnapshot(
     val count: Int,

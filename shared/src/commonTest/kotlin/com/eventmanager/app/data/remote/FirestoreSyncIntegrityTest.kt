@@ -332,4 +332,136 @@ class FirestoreSyncIntegrityTest {
         assertEquals("org-a", inserted.firebaseOrgId)
         assertTrue(inserted.isVolunteerBenefit)
     }
+
+    @Test
+    fun guestAndVolunteerDefaultPhotoFieldsAreEmpty() {
+        val guest = Guest(name = "Ada", invitations = 1, venueName = "Main")
+        assertEquals("", guest.profilePhotoPath)
+        assertEquals("", guest.profilePhotoUrl)
+        val volunteer = com.eventmanager.app.data.models.Volunteer(
+            name = "Bea",
+            lastNameAbbreviation = "B",
+            email = "b@x.com",
+            phoneNumber = "1",
+        )
+        assertEquals("", volunteer.profilePhotoPath)
+        assertEquals("", volunteer.profilePhotoUrl)
+    }
+
+    @Test
+    fun firestoreMapsRoundTripUnencryptedProfilePhotoFields() {
+        val gateway = GitLiveFirestoreGateway()
+        val guest = Guest(
+            name = "Ada",
+            invitations = 1,
+            venueName = "Main",
+            firebaseOrgId = "org-a",
+            profilePhotoPath = "orgs/org-a/profilePhotos/guests/gid.jpg",
+            profilePhotoUrl = "https://example.com/g.jpg",
+        )
+        val guestMap = gateway.guestToMap(guest)
+        assertEquals(guest.profilePhotoPath, guestMap["profilePhotoPath"])
+        assertEquals(guest.profilePhotoUrl, guestMap["profilePhotoUrl"])
+        val guestDecrypted = com.eventmanager.app.data.security.crypto.SensitiveFieldCodec.decryptGuestMap(guestMap, "org-a")
+        assertEquals(guest.profilePhotoUrl, guestDecrypted["profilePhotoUrl"])
+        assertEquals(guest.profilePhotoPath, guestDecrypted["profilePhotoPath"])
+
+        val volunteer = com.eventmanager.app.data.models.Volunteer(
+            name = "Bea",
+            lastNameAbbreviation = "B",
+            email = "b@x.com",
+            phoneNumber = "1",
+            firebaseOrgId = "org-a",
+            profilePhotoPath = "orgs/org-a/profilePhotos/volunteers/vid.jpg",
+            profilePhotoUrl = "https://example.com/v.jpg",
+        )
+        val volunteerMap = gateway.volunteerToMap(volunteer)
+        assertEquals(volunteer.profilePhotoPath, volunteerMap["profilePhotoPath"])
+        assertEquals(volunteer.profilePhotoUrl, volunteerMap["profilePhotoUrl"])
+        val volunteerDecrypted = com.eventmanager.app.data.security.crypto.SensitiveFieldCodec.decryptVolunteerMap(volunteerMap, "org-a")
+        assertEquals(volunteer.profilePhotoUrl, volunteerDecrypted["profilePhotoUrl"])
+        assertEquals(volunteer.profilePhotoPath, volunteerDecrypted["profilePhotoPath"])
+    }
+
+    @Test
+    fun volunteerMapOmitsBlankPhotoFieldsSoMergeCannotWipe() {
+        val gateway = GitLiveFirestoreGateway()
+        val volunteer = com.eventmanager.app.data.models.Volunteer(
+            name = "Bea",
+            lastNameAbbreviation = "B",
+            email = "b@x.com",
+            phoneNumber = "1",
+            firebaseOrgId = "org-a",
+        )
+        val map = gateway.volunteerToMap(volunteer)
+        assertFalse(map.containsKey("profilePhotoPath"))
+        assertFalse(map.containsKey("profilePhotoUrl"))
+    }
+
+    @Test
+    fun mergeProfilePhotoFieldsPrefersRemoteThenKeepsLocal() {
+        val fromRemote = FirestoreApplyPolicy.mergeProfilePhotoFields("", "", "p", "https://u")
+        assertEquals("p", fromRemote.path)
+        assertEquals("https://u", fromRemote.url)
+        val keepLocal = FirestoreApplyPolicy.mergeProfilePhotoFields("p", "https://u", "", "")
+        assertEquals("p", keepLocal.path)
+        assertEquals("https://u", keepLocal.url)
+    }
+
+    @Test
+    fun mergeProfilePhotoFieldsKeepsLocalClearAgainstStaleRemotePhoto() {
+        val cleared = FirestoreApplyPolicy.mergeProfilePhotoFields(
+            localPath = PROFILE_PHOTO_CLEARED_SENTINEL,
+            localUrl = PROFILE_PHOTO_CLEARED_SENTINEL,
+            remotePath = "orgs/org/profilePhotos/guests/g.jpg",
+            remoteUrl = "https://example.com/old.jpg",
+            localLastModified = 200L,
+            remoteLastModified = 100L,
+        )
+        assertEquals(PROFILE_PHOTO_CLEARED_SENTINEL, cleared.path)
+        assertEquals(PROFILE_PHOTO_CLEARED_SENTINEL, cleared.url)
+    }
+
+    @Test
+    fun mergeProfilePhotoFieldsAppliesRemoteClear() {
+        val cleared = FirestoreApplyPolicy.mergeProfilePhotoFields(
+            localPath = "orgs/org/profilePhotos/guests/g.jpg",
+            localUrl = "https://example.com/old.jpg",
+            remotePath = PROFILE_PHOTO_CLEARED_SENTINEL,
+            remoteUrl = PROFILE_PHOTO_CLEARED_SENTINEL,
+            localLastModified = 100L,
+            remoteLastModified = 200L,
+        )
+        assertEquals(PROFILE_PHOTO_CLEARED_SENTINEL, cleared.path)
+        assertEquals(PROFILE_PHOTO_CLEARED_SENTINEL, cleared.url)
+    }
+
+    @Test
+    fun guestToMapWritesClearedPhotoSentinel() {
+        val gateway = GitLiveFirestoreGateway()
+        val guest = Guest(
+            name = "Ada",
+            invitations = 1,
+            venueName = "Main",
+            firebaseOrgId = "org-a",
+            profilePhotoPath = PROFILE_PHOTO_CLEARED_SENTINEL,
+            profilePhotoUrl = PROFILE_PHOTO_CLEARED_SENTINEL,
+        )
+        val map = gateway.guestToMap(guest)
+        assertEquals(PROFILE_PHOTO_CLEARED_SENTINEL, map["profilePhotoPath"])
+        assertEquals(PROFILE_PHOTO_CLEARED_SENTINEL, map["profilePhotoUrl"])
+    }
+
+    @Test
+    fun sheetsHeadersNeverIncludeProfilePhotoColumns() {
+        listOf(
+            com.eventmanager.app.data.sync.SheetsColumnContract.GUEST_LIST,
+            com.eventmanager.app.data.sync.SheetsColumnContract.VOLUNTEER_GUEST_LIST,
+            com.eventmanager.app.data.sync.SheetsColumnContract.VOLUNTEERS,
+        ).forEach { headers ->
+            headers.forEach { header ->
+                assertFalse(header.contains("photo", ignoreCase = true), header)
+            }
+        }
+    }
 }

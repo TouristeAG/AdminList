@@ -28,11 +28,13 @@ import com.eventmanager.app.ui.components.FirebaseOrgSwitcher
 import com.eventmanager.app.ui.components.FirebaseOrgSwitcherPlacement
 import com.eventmanager.app.ui.viewmodel.EventManagerViewModel
 import com.eventmanager.app.data.models.*
+import com.eventmanager.app.data.remote.resolvedProfilePhotoPath
 import com.eventmanager.app.resources.Res
 import com.eventmanager.app.resources.*
 import com.eventmanager.app.ui.components.NfcUidMatchOption
 import com.eventmanager.app.ui.components.OrgColorDot
 import com.eventmanager.app.ui.components.ScannerMatch
+import com.eventmanager.app.ui.components.ScannerIdentityCard
 import com.eventmanager.app.ui.components.VolunteerFutureEntriesSection
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
@@ -397,9 +399,8 @@ fun BilleterieScannerScannedOrgLabel(
         OrgColorDot(orgId = orgId, viewModel = viewModel, size = 10.dp)
         Text(
             text = stringResource(Res.string.billeterie_scanner_scanned_org, orgId),
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.bodyLarge,
             color = textColor,
-            textAlign = TextAlign.Center,
         )
     }
 }
@@ -521,27 +522,21 @@ private fun BilleterieFreeEntryContent(
             textAlign = TextAlign.Center,
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        Text(
-            text = volunteer.name,
-            style = MaterialTheme.typography.headlineSmall,
-            color = Color.White.copy(alpha = 0.95f),
-            textAlign = TextAlign.Center,
-        )
-
-        if (benefitStatus.rank != null) {
-            Text(
-                text = billeterieScannerRankName(benefitStatus.rank),
-                style = MaterialTheme.typography.titleMedium,
-                color = Color.White.copy(alpha = 0.7f),
-            )
-        }
-
-        BilleterieScannerScannedOrgLabel(
-            viewModel = viewModel,
-            orgId = volunteer.firebaseOrgId,
-            modifier = Modifier.padding(top = 8.dp),
+        ScannerIdentityCard(
+            name = volunteer.name,
+            photoUrl = volunteer.profilePhotoUrl,
+            photoPath = volunteer.resolvedProfilePhotoPath(),
+            orgLabel = {
+                BilleterieScannerScannedOrgLabel(
+                    viewModel = viewModel,
+                    orgId = volunteer.firebaseOrgId,
+                    lightOnColoredBackground = true,
+                )
+            },
+            extraLines = listOfNotNull(benefitStatus.rank?.let { billeterieScannerRankName(it) }),
+            lightOnDark = true,
         )
 
         if (displayPerkTexts.isNotEmpty()) {
@@ -646,16 +641,20 @@ private fun BilleterieTicketValidationContent(
                 color = Color.White,
                 textAlign = TextAlign.Center,
             )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = volunteer.name,
-                style = MaterialTheme.typography.headlineSmall,
-                color = Color.White.copy(alpha = 0.95f),
-            )
-            BilleterieScannerScannedOrgLabel(
-                viewModel = viewModel,
-                orgId = volunteer.firebaseOrgId,
-                modifier = Modifier.padding(top = 8.dp),
+            Spacer(modifier = Modifier.height(16.dp))
+            ScannerIdentityCard(
+                name = volunteer.name,
+                photoUrl = volunteer.profilePhotoUrl,
+                photoPath = volunteer.resolvedProfilePhotoPath(),
+                orgLabel = {
+                    BilleterieScannerScannedOrgLabel(
+                        viewModel = viewModel,
+                        orgId = volunteer.firebaseOrgId,
+                        lightOnColoredBackground = true,
+                    )
+                },
+                extraLines = emptyList(),
+                lightOnDark = true,
             )
             Spacer(modifier = Modifier.height(32.dp))
             BilleterieScanNextButton(onScanNext)
@@ -671,38 +670,20 @@ private fun BilleterieTicketValidationContent(
         ) {
             Spacer(modifier = Modifier.height(32.dp))
 
-            Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = volunteer.name.take(1).uppercase(),
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Text(
-                text = volunteer.name,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.Center,
+            ScannerIdentityCard(
+                name = volunteer.name,
+                photoUrl = volunteer.profilePhotoUrl,
+                photoPath = volunteer.resolvedProfilePhotoPath(),
+                orgLabel = {
+                    BilleterieScannerScannedOrgLabel(
+                        viewModel = viewModel,
+                        orgId = volunteer.firebaseOrgId,
+                        lightOnColoredBackground = false,
+                    )
+                },
+                extraLines = listOfNotNull(benefitStatus.rank?.let { billeterieScannerRankName(it) }),
+                lightOnDark = false,
             )
-
-            if (benefitStatus.rank != null) {
-                Text(
-                    text = billeterieScannerRankName(benefitStatus.rank),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -797,26 +778,21 @@ private fun BilleterieNoEntryContent(
             textAlign = TextAlign.Center,
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        Text(
-            text = volunteer.name,
-            style = MaterialTheme.typography.headlineSmall,
-            color = Color.White.copy(alpha = 0.95f),
-        )
-
-        if (benefitStatus.rank != null) {
-            Text(
-                text = billeterieScannerRankName(benefitStatus.rank),
-                style = MaterialTheme.typography.titleMedium,
-                color = Color.White.copy(alpha = 0.7f),
-            )
-        }
-
-        BilleterieScannerScannedOrgLabel(
-            viewModel = viewModel,
-            orgId = volunteer.firebaseOrgId,
-            modifier = Modifier.padding(top = 8.dp),
+        ScannerIdentityCard(
+            name = volunteer.name,
+            photoUrl = volunteer.profilePhotoUrl,
+            photoPath = volunteer.resolvedProfilePhotoPath(),
+            orgLabel = {
+                BilleterieScannerScannedOrgLabel(
+                    viewModel = viewModel,
+                    orgId = volunteer.firebaseOrgId,
+                    lightOnColoredBackground = true,
+                )
+            },
+            extraLines = listOfNotNull(benefitStatus.rank?.let { billeterieScannerRankName(it) }),
+            lightOnDark = true,
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -914,29 +890,22 @@ private fun BilleterieGuestFoundContent(
             textAlign = TextAlign.Center,
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        Text(
-            text = guest.name,
-            style = MaterialTheme.typography.headlineSmall,
-            color = Color.White.copy(alpha = 0.95f),
-            textAlign = TextAlign.Center,
+        ScannerIdentityCard(
+            name = guest.name,
+            photoUrl = guest.profilePhotoUrl,
+            photoPath = guest.resolvedProfilePhotoPath(),
+            orgLabel = {
+                BilleterieScannerScannedOrgLabel(
+                    viewModel = viewModel,
+                    orgId = guest.firebaseOrgId,
+                    lightOnColoredBackground = true,
+                )
+            },
+            extraLines = listOfNotNull(guest.venueName.takeIf { it.isNotBlank() }),
+            lightOnDark = true,
         )
-
-        BilleterieScannerScannedOrgLabel(
-            viewModel = viewModel,
-            orgId = guest.firebaseOrgId,
-            modifier = Modifier.padding(top = 8.dp),
-        )
-
-        if (guest.venueName.isNotBlank()) {
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = guest.venueName,
-                style = MaterialTheme.typography.titleMedium,
-                color = Color.White.copy(alpha = 0.7f),
-            )
-        }
 
         if (guest.invitations > 0) {
             Spacer(modifier = Modifier.height(8.dp))

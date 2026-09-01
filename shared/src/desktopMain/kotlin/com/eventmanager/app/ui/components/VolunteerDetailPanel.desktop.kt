@@ -16,6 +16,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.eventmanager.app.data.models.*
+import com.eventmanager.app.data.remote.hasStoredProfilePhoto
+import com.eventmanager.app.data.remote.resolvedProfilePhotoPath
 import com.eventmanager.app.data.sync.DateFormatUtils
 import com.eventmanager.app.data.sync.settingsManagerFor
 import com.eventmanager.app.data.utils.VolunteerActivityManager
@@ -43,6 +45,7 @@ actual fun VolunteerDetailPanel(
     onManualAccountAdjust: ((Double, String) -> Unit)?,
     viewModel: EventManagerViewModel?
 ) {
+    val volunteer = rememberLiveVolunteer(volunteer, viewModel)
     val platformContext = LocalPlatformContext.current
     val settingsManager = remember(platformContext) { settingsManagerFor(platformContext) }
     var showNfcDialog by remember { mutableStateOf(false) }
@@ -81,7 +84,18 @@ actual fun VolunteerDetailPanel(
         ) {
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        ProfilePhotoHeaderAvatar(
+                            name = volunteer.name,
+                            photoUrl = volunteer.profilePhotoUrl,
+                            photoPath = volunteer.resolvedProfilePhotoPath(),
+                            size = 56.dp,
+                            canExport = true,
+                            canManage = rememberProfilePhotosUploadEnabled(viewModel),
+                            onUpload = { bytes -> viewModel?.uploadProfilePhotoForVolunteer(volunteer, bytes) },
+                            onRemove = { viewModel?.removeProfilePhotoForVolunteer(volunteer) },
+                        )
+                        Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(
                                 volunteer.name,
@@ -194,6 +208,15 @@ actual fun VolunteerDetailPanel(
                         Spacer(Modifier.width(6.dp))
                         Text(stringResource(Res.string.add_nfc_card))
                     }
+                    val pickPhoto = rememberProfilePhotoPicker { bytes ->
+                        viewModel?.uploadProfilePhotoForVolunteer(volunteer, bytes)
+                    }
+                    ProfilePhotoActionButtons(
+                        hasPhoto = volunteer.hasStoredProfilePhoto(),
+                        enabled = rememberProfilePhotosUploadEnabled(viewModel),
+                        onAddOrChange = pickPhoto,
+                        onRemove = { viewModel?.removeProfilePhotoForVolunteer(volunteer) },
+                    )
                     OutlinedButton(onClick = { onEdit(volunteer) }, modifier = Modifier.fillMaxWidth()) {
                         Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))

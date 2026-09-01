@@ -13,6 +13,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.eventmanager.app.data.models.*
+import com.eventmanager.app.data.remote.hasStoredProfilePhoto
+import com.eventmanager.app.data.remote.resolvedProfilePhotoPath
 import com.eventmanager.app.data.sync.settingsManagerFor
 import com.eventmanager.app.data.utils.effectiveBenefitFutureEntriesRemaining
 import com.eventmanager.app.data.utils.effectiveBenefitFutureEntryInvites
@@ -45,6 +47,7 @@ actual fun VolunteerBenefitsPanel(
     onManualAccountAdjust: ((Double, String) -> Unit)?,
     viewModel: EventManagerViewModel?
 ) {
+    val volunteer = rememberLiveVolunteer(volunteer, viewModel)
     val platformContext = LocalPlatformContext.current
     val settingsManager = remember(platformContext) { settingsManagerFor(platformContext) }
     var showNfcDialog by remember { mutableStateOf(false) }
@@ -120,6 +123,17 @@ actual fun VolunteerBenefitsPanel(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    ProfilePhotoHeaderAvatar(
+                        name = volunteer.name,
+                        photoUrl = volunteer.profilePhotoUrl,
+                        photoPath = volunteer.resolvedProfilePhotoPath(),
+                        size = 48.dp,
+                        canExport = !readOnly,
+                        canManage = !readOnly && (rememberProfilePhotosUploadEnabled(viewModel)),
+                        onUpload = { bytes -> viewModel?.uploadProfilePhotoForVolunteer(volunteer, bytes) },
+                        onRemove = { viewModel?.removeProfilePhotoForVolunteer(volunteer) },
+                    )
+                    Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
                             volunteer.name,
@@ -166,6 +180,16 @@ actual fun VolunteerBenefitsPanel(
                         Text(stringResource(Res.string.qr_code))
                     }
                 }
+                val pickPhoto = rememberProfilePhotoPicker { bytes ->
+                    viewModel?.uploadProfilePhotoForVolunteer(volunteer, bytes)
+                }
+                ProfilePhotoActionButtons(
+                    hasPhoto = volunteer.hasStoredProfilePhoto(),
+                    enabled = rememberProfilePhotosUploadEnabled(viewModel),
+                    onAddOrChange = pickPhoto,
+                    onRemove = { viewModel?.removeProfilePhotoForVolunteer(volunteer) },
+                    sideBySide = true,
+                )
                 NfcUidInfoRow(uid = volunteer.nfcCardUid, isPhone = false)
             }
 

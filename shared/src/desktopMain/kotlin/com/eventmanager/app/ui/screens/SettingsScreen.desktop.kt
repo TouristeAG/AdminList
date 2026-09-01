@@ -218,6 +218,7 @@ actual fun SettingsScreen(
     val showSyncStatusDialog by viewModel.showSyncStatusDialog.collectAsState()
     val isSyncing by viewModel.isSyncing.collectAsState()
     val announcementsVenues by viewModel.venues.collectAsState()
+    val profilePhotosEnabled by viewModel.profilePhotosUploadEnabled.collectAsState()
 
     val saveLabel = stringResource(Res.string.save)
     val gmailAuthSuccessMsg = stringResource(Res.string.email_gmail_auth_success)
@@ -429,6 +430,8 @@ actual fun SettingsScreen(
                     platformContext = platformContext,
                     onMirrorSettingsChanged = { viewModel.onSheetsMirrorSettingsChanged() },
                     settingsManager = settingsManager,
+                    profilePhotosEnabled = profilePhotosEnabled,
+                    onProfilePhotosEnabledChange = { viewModel.setProfilePhotosEnabled(it) },
                     projectId = firebaseProjectId,
                     apiKey = firebaseApiKey,
                     applicationId = firebaseApplicationId,

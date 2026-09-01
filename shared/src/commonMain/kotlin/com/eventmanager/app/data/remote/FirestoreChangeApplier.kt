@@ -122,11 +122,37 @@ object FirestoreChangeApplier {
             ?: repository.getGuestByNanoId(docId)
             ?: findExistingVolunteerBenefitGuest(orgId, decrypted, repository)
         if (existing != null && FirestoreApplyPolicy.shouldKeepLocal(existing.lastModified, remoteLm)) {
-            backfillBlankOrg(existing.firebaseOrgId, orgId) { tagged ->
-                repository.updateGuest(existing.copy(firebaseOrgId = tagged))
+            val photos = FirestoreApplyPolicy.mergeProfilePhotoFields(
+                existing.profilePhotoPath,
+                existing.profilePhotoUrl,
+                stringOf(decrypted["profilePhotoPath"]).orEmpty(),
+                stringOf(decrypted["profilePhotoUrl"]).orEmpty(),
+                existing.lastModified,
+                remoteLm,
+            )
+            val orgIdToPersist = FirestoreApplyPolicy.orgIdToPersist(existing.firebaseOrgId, orgId)
+            if (orgIdToPersist != existing.firebaseOrgId ||
+                photos.path != existing.profilePhotoPath ||
+                photos.url != existing.profilePhotoUrl
+            ) {
+                repository.updateGuest(
+                    existing.copy(
+                        firebaseOrgId = orgIdToPersist,
+                        profilePhotoPath = photos.path,
+                        profilePhotoUrl = photos.url,
+                    ),
+                )
             }
             return
         }
+        val photos = FirestoreApplyPolicy.mergeProfilePhotoFields(
+            existing?.profilePhotoPath.orEmpty(),
+            existing?.profilePhotoUrl.orEmpty(),
+            stringOf(decrypted["profilePhotoPath"]).orEmpty(),
+            stringOf(decrypted["profilePhotoUrl"]).orEmpty(),
+            existing?.lastModified ?: 0L,
+            remoteLm,
+        )
         val remote = Guest(
             id = existing?.id ?: 0,
             sheetsId = existing?.sheetsId,
@@ -149,6 +175,8 @@ object FirestoreChangeApplier {
             nfcCardUidHash = stringOf(decrypted["nfcCardUidHash"]).orEmpty(),
             isAdmin = boolOf(decrypted["isAdmin"]) ?: false,
             firebaseOrgId = FirestoreApplyPolicy.orgIdToPersist(existing?.firebaseOrgId.orEmpty(), orgId),
+            profilePhotoPath = photos.path,
+            profilePhotoUrl = photos.url,
         )
         if (existing == null) {
             try {
@@ -174,11 +202,37 @@ object FirestoreChangeApplier {
         val remoteLm = longOf(decrypted["lastModified"]) ?: return
         val existing = repository.getVolunteerById(docId)
         if (existing != null && FirestoreApplyPolicy.shouldKeepLocal(existing.lastModified, remoteLm)) {
-            backfillBlankOrg(existing.firebaseOrgId, orgId) { tagged ->
-                repository.updateVolunteer(existing.copy(firebaseOrgId = tagged))
+            val photos = FirestoreApplyPolicy.mergeProfilePhotoFields(
+                existing.profilePhotoPath,
+                existing.profilePhotoUrl,
+                stringOf(decrypted["profilePhotoPath"]).orEmpty(),
+                stringOf(decrypted["profilePhotoUrl"]).orEmpty(),
+                existing.lastModified,
+                remoteLm,
+            )
+            val orgIdToPersist = FirestoreApplyPolicy.orgIdToPersist(existing.firebaseOrgId, orgId)
+            if (orgIdToPersist != existing.firebaseOrgId ||
+                photos.path != existing.profilePhotoPath ||
+                photos.url != existing.profilePhotoUrl
+            ) {
+                repository.updateVolunteer(
+                    existing.copy(
+                        firebaseOrgId = orgIdToPersist,
+                        profilePhotoPath = photos.path,
+                        profilePhotoUrl = photos.url,
+                    ),
+                )
             }
             return
         }
+        val photos = FirestoreApplyPolicy.mergeProfilePhotoFields(
+            existing?.profilePhotoPath.orEmpty(),
+            existing?.profilePhotoUrl.orEmpty(),
+            stringOf(decrypted["profilePhotoPath"]).orEmpty(),
+            stringOf(decrypted["profilePhotoUrl"]).orEmpty(),
+            existing?.lastModified ?: 0L,
+            remoteLm,
+        )
         val remote = Volunteer(
             id = docId,
             sheetsId = existing?.sheetsId,
@@ -196,6 +250,8 @@ object FirestoreChangeApplier {
             nfcCardUidHash = stringOf(decrypted["nfcCardUidHash"]).orEmpty(),
             isAdmin = boolOf(decrypted["isAdmin"]) ?: false,
             firebaseOrgId = FirestoreApplyPolicy.orgIdToPersist(existing?.firebaseOrgId.orEmpty(), orgId),
+            profilePhotoPath = photos.path,
+            profilePhotoUrl = photos.url,
         )
         if (existing == null) repository.insertVolunteer(remote) else repository.updateVolunteer(remote)
     }

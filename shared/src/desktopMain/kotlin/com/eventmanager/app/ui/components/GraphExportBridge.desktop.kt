@@ -53,20 +53,27 @@ internal actual object GraphExportBridge {
     actual suspend fun exportLineGraph(
         platformContext: PlatformContext,
         title: String,
-        dataPoints: List<DataPoint>,
-        trendPoints: List<DataPoint>,
+        series: List<GraphSeriesExport>,
         timePeriod: TimePeriod,
         density: Density,
         exportType: GraphExportType
     ): File {
         return when (exportType) {
             GraphExportType.XLSX -> GraphExportUtils.exportToXLSX(
-                platformContext, title, dataPoints, trendPoints, timePeriod, null
+                platformContext, title, series, timePeriod, null
             )
             GraphExportType.JPG -> GraphExportUtils.exportToJPG(
-                platformContext, title, dataPoints, trendPoints, timePeriod
+                platformContext, title, series, timePeriod
             )
         }
+    }
+
+    actual suspend fun exportBarChartJpg(
+        platformContext: PlatformContext,
+        title: String,
+        bars: List<BarExportItem>,
+    ): File {
+        return GraphExportUtils.exportBarChartToJPG(platformContext, title, bars)
     }
 
     actual suspend fun exportPieChartJpg(

@@ -359,7 +359,7 @@
     <string name="add_new_venue">Add New Venue</string>
     <string name="edit_venue_configuration">Edit Venue Configuration</string>
     <string name="venue_all">ALL</string>
-    <string name="venue_both">BOTH</string>
+    <string name="venue_both">ALL</string>
 
     <!-- Temporary Guest List -->
     <string name="temp_guest_artist_label">Artist / Group</string>
@@ -749,6 +749,17 @@
     <string name="camera_error">Camera Error</string>
     <string name="enter_id_manually">Enter ID Manually</string>
     <string name="add_nfc_card">Add NFC card</string>
+    <string name="add_profile_photo">Add photo</string>
+    <string name="change_profile_photo">Change photo</string>
+    <string name="remove_profile_photo">Remove photo</string>
+    <string name="remove_profile_photo_confirm">Remove this profile photo?</string>
+    <string name="share_profile_photo">Share</string>
+    <string name="download_profile_photo">Download</string>
+    <string name="profile_photo_saved_downloads">Photo saved to Downloads</string>
+    <string name="profile_photo_export_failed">Could not export the photo</string>
+    <string name="profile_photo_cd">Profile photo</string>
+    <string name="profile_photo_too_large">That image is too large (max 2 MB after compression).</string>
+    <string name="profile_photo_upload_failed">The profile photo could not be uploaded. The person was saved without a photo.</string>
     <string name="add_nfc_card_uid_title">Add NFC card UID</string>
     <string name="enter_uid_manually">Enter UID manually</string>
     <string name="read_uid_with_phone_nfc">Read UID with phone (NFC)</string>

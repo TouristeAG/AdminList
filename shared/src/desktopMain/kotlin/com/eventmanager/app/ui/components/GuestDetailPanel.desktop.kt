@@ -14,6 +14,8 @@ import androidx.compose.ui.unit.dp
 import com.eventmanager.app.data.models.AccountTransfer
 import com.eventmanager.app.data.models.Guest
 import com.eventmanager.app.data.models.VenueEntity
+import com.eventmanager.app.data.remote.hasStoredProfilePhoto
+import com.eventmanager.app.data.remote.resolvedProfilePhotoPath
 import com.eventmanager.app.data.sync.settingsManagerFor
 import com.eventmanager.app.data.utils.DateTimeUtils
 import com.eventmanager.app.platform.LocalPlatformContext
@@ -39,6 +41,7 @@ actual fun GuestDetailPanel(
     onManualAccountAdjust: ((Double, String) -> Unit)?,
     viewModel: EventManagerViewModel?
 ) {
+    val guest = rememberLiveGuest(guest, viewModel)
     val platformContext = LocalPlatformContext.current
     val settingsManager = remember(platformContext) { settingsManagerFor(platformContext) }
     var showNfcDialog by remember { mutableStateOf(false) }
@@ -76,8 +79,19 @@ actual fun GuestDetailPanel(
                 Row(
                     Modifier.fillMaxWidth().padding(16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    ProfilePhotoHeaderAvatar(
+                        name = guest.name,
+                        photoUrl = guest.profilePhotoUrl,
+                        photoPath = guest.resolvedProfilePhotoPath(),
+                        size = 56.dp,
+                        canExport = !readOnly,
+                        canManage = !readOnly && (rememberProfilePhotosUploadEnabled(viewModel)) && !guest.isTemporaryGuest,
+                        onUpload = { bytes -> viewModel?.uploadProfilePhotoForGuest(guest, bytes) },
+                        onRemove = { viewModel?.removeProfilePhotoForGuest(guest) },
+                    )
+                    Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         if (guest.isTemporaryGuest) {
                             AssistChip(
@@ -190,6 +204,16 @@ actual fun GuestDetailPanel(
                                     Text(stringResource(Res.string.qr_code))
                                 }
                             }
+                            val pickPhoto = rememberProfilePhotoPicker { bytes ->
+                                viewModel?.uploadProfilePhotoForGuest(guest, bytes)
+                            }
+                            ProfilePhotoActionButtons(
+                                hasPhoto = guest.hasStoredProfilePhoto(),
+                                enabled = rememberProfilePhotosUploadEnabled(viewModel),
+                                onAddOrChange = pickPhoto,
+                                onRemove = { viewModel?.removeProfilePhotoForGuest(guest) },
+                                sideBySide = true,
+                            )
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                             OutlinedButton(onClick = { onEdit(guest) }, modifier = Modifier.weight(1f)) {

@@ -359,7 +359,7 @@
     <string name="add_new_venue">Ajouter novus lieu</string>
     <string name="edit_venue_configuration">Modifier configuration ex lieu</string>
     <string name="venue_all">TOUS</string>
-    <string name="venue_both">DEUX</string>
+    <string name="venue_both">TOUS</string>
 
     <!-- Temporary Guest List -->
     <string name="temp_guest_artist_label">Artiste / Groupe</string>
@@ -744,6 +744,17 @@
     <string name="camera_error">Camera error</string>
     <string name="enter_id_manually">Entrer l\'ID manu</string>
     <string name="add_nfc_card">Ajouter carte NFC</string>
+    <string name="add_profile_photo">Photographemma addere</string>
+    <string name="change_profile_photo">Photographemma mutare</string>
+    <string name="remove_profile_photo">Photographemma removere</string>
+    <string name="remove_profile_photo_confirm">Hoc photographemma profili removere?</string>
+    <string name="share_profile_photo">Communicare</string>
+    <string name="download_profile_photo">Deponere</string>
+    <string name="profile_photo_saved_downloads">Photographema in Downloadings depositum</string>
+    <string name="profile_photo_export_failed">Photographema exportari non potuit</string>
+    <string name="profile_photo_cd">Photographemma profili</string>
+    <string name="profile_photo_too_large">Imago nimis magna est (max. 2 MB post compressionem).</string>
+    <string name="profile_photo_upload_failed">Photographemma profili mitti non potuit. Persona sine imagine servata est.</string>
     <string name="add_nfc_card_uid_title">Ajouter l\'UID carte NFC</string>
     <string name="enter_uid_manually">Entrer l\'UID manu</string>
     <string name="read_uid_with_phone_nfc">Read the\'UID cum telephono (NFC)</string>
