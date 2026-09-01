@@ -131,7 +131,6 @@ kotlin {
                 implementation(libs.webcam.capture.driver.native)
                 implementation(libs.poi.ooxml)
                 implementation(libs.zxing.javase)
-                implementation("com.google.oauth-client:google-oauth-client-jetty:1.36.0")
                 // Align gRPC with google-api-client (1.68.x). firebase-java-sdk pulls 1.52.1;
                 // leaving grpc-core at 1.52.1 while grpc-api resolves to 1.68.2 causes
                 // ClassNotFoundException: io.grpc.InternalGlobalInterceptors and hangs migration.
@@ -140,6 +139,8 @@ kotlin {
                 implementation(libs.grpc.stub)
                 implementation(libs.grpc.api)
                 implementation(libs.grpc.core)
+                implementation(libs.grpc.context)
+                implementation(libs.grpc.util)
             }
         }
         val commonTest by getting {

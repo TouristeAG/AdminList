@@ -31,6 +31,7 @@ fun PosFlow(
     volunteers: List<Volunteer>,
     guests: List<Guest>,
     onBack: () -> Unit,
+    onFactoryResetComplete: () -> Unit = {},
 ) {
     val platformContext = LocalPlatformContext.current
     val settingsManager = remember(platformContext) { settingsManagerFor(platformContext) }
@@ -71,7 +72,8 @@ fun PosFlow(
         if (showSettings) {
             PosSettingsScreen(
                 viewModel = viewModel,
-                onBack = { showSettings = false }
+                onBack = { showSettings = false },
+                onFactoryResetComplete = onFactoryResetComplete,
             )
         } else {
             PosScreen(

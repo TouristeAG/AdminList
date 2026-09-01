@@ -4,5 +4,11 @@
 <dict>
     <key>com.apple.security.device.camera</key>
     <true/>
+    <!-- Google Sign-In: Identity Toolkit probe + OAuth token exchange + Firestore sync -->
+    <key>com.apple.security.network.client</key>
+    <true/>
+    <!-- LocalServerReceiver (http://localhost:8889/Callback) for Desktop Google OAuth -->
+    <key>com.apple.security.network.server</key>
+    <true/>
 </dict>
 </plist>

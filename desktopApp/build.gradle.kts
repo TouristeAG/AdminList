@@ -57,9 +57,9 @@ compose.desktop {
             // (e.g. an open NoctuList-*.exe holding build/compose/binaries/main-release/exe).
             outputBaseDir.set(project.layout.buildDirectory.dir("compose/packaged"))
             jvmArgs("-Dapple.awt.application.appearance=system")
-            // jlink-trimmed runtime: JNA (jnasmartcardio / WinSCard) needs Unsafe;
-            // PC/SC API may come from the JDK module rather than only the shaded jar.
-            modules("jdk.unsupported", "java.smartcardio")
+            // Full JDK runtime in installers (DMG / MSI / EXE / Deb / AppImage).
+            // jlink module trimming breaks GitLive Firestore gRPC in packaged apps; dev :run uses the full JDK.
+            includeAllModules = true
             val packageFormats = buildList {
                 add(TargetFormat.Dmg)
                 add(TargetFormat.Msi)

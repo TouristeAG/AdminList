@@ -32,6 +32,7 @@ import com.eventmanager.app.data.sync.ServiceAccountKeyInfo
 import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.data.sync.settingsManagerFor
 import com.eventmanager.app.ui.components.AppInformationPanel
+import com.eventmanager.app.ui.components.FactoryResetSettingsSection
 import com.eventmanager.app.ui.components.AppUpdateFlowDialog
 import com.eventmanager.app.ui.components.BackgroundAnimationSettingsSection
 import com.eventmanager.app.ui.components.UpdateSourcesDialog
@@ -129,6 +130,7 @@ actual fun SettingsScreen(
     var settingsSheet by remember { mutableStateOf(settingsManager.getSettingsSheet()) }
     var syncInterval by remember { mutableStateOf(settingsManager.getSyncInterval()) }
     var uploadStatus by remember { mutableStateOf<String?>(null) }
+    var firebaseSignInFeedback by remember { mutableStateOf<String?>(null) }
     var migrationWizard by remember { mutableStateOf<com.eventmanager.app.data.remote.MigrationDirection?>(null) }
     var gmailLoading by remember { mutableStateOf(false) }
     var gmailSignedIn by remember { mutableStateOf(gmailAuth.isSignedIn) }
@@ -193,6 +195,7 @@ actual fun SettingsScreen(
             add(DesktopSettingsNavItem(DesktopSettingsNav.ExternalReader, stringResource(Res.string.settings_category_external_reader), Icons.Default.Nfc))
             add(DesktopSettingsNavItem(DesktopSettingsNav.Announcements, stringResource(Res.string.settings_category_announcements), Icons.Default.Campaign))
             add(DesktopSettingsNavItem(DesktopSettingsNav.Localization, stringResource(Res.string.settings_category_localization), Icons.Default.Language))
+            add(DesktopSettingsNavItem(DesktopSettingsNav.About, stringResource(Res.string.app_info_title), Icons.Default.Info))
         }
     }
     var selectedSection by remember(variant) {
@@ -390,8 +393,10 @@ actual fun SettingsScreen(
                     onOrgIdCommitted = viewModel::provisionFirebaseOrg,
                     onSignIn = {
                         scope.launch {
+                            firebaseSignInFeedback = null
                             when (val result = com.eventmanager.app.data.remote.createFirebaseAuthService(platformContext).signInWithGoogle()) {
                                 is com.eventmanager.app.data.remote.FirebaseAuthResult.Success -> {
+                                    firebaseSignInFeedback = null
                                     settingsManager.setFirebaseAuthEmail(result.email.orEmpty())
                                     val org = settingsManager.getFirebaseOrgId()
                                     if (org.isNotBlank() && result.uid.isNotBlank()) {
@@ -409,7 +414,7 @@ actual fun SettingsScreen(
                                     }
                                 }
                                 is com.eventmanager.app.data.remote.FirebaseAuthResult.Error -> {
-                                    // Surface via uploadStatus-style feedback when Auth SDK is missing
+                                    firebaseSignInFeedback = result.message
                                     uploadStatus = result.message
                                 }
                             }
@@ -471,6 +476,7 @@ actual fun SettingsScreen(
                             }.onFailure { uploadStatus = it.message }
                         }
                     },
+                    signInFeedback = firebaseSignInFeedback,
                 )
             }
 
@@ -756,21 +762,8 @@ actual fun SettingsScreen(
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(Res.string.clear_app_cache))
                 }
-                OutlinedButton(
-                    onClick = { showFactoryResetDialog = true },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error,
-                    ),
-                ) {
-                    Icon(Icons.Default.Restore, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(Res.string.factory_reset_title))
-                }
-                Text(
-                    text = stringResource(Res.string.factory_reset_description),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                FactoryResetSettingsSection(
+                    onResetClick = { showFactoryResetDialog = true },
                 )
             }
 
@@ -1446,6 +1439,12 @@ actual fun SettingsScreen(
                     stringResource(Res.string.desktop_app_icon_unavailable),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (variant == SettingsScreenVariant.BilleterieBasic || variant == SettingsScreenVariant.PosBasic) {
+                Spacer(Modifier.height(24.dp))
+                FactoryResetSettingsSection(
+                    onResetClick = { showFactoryResetDialog = true },
                 )
             }
         }

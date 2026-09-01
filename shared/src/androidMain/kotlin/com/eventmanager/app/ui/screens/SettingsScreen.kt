@@ -80,6 +80,7 @@ import com.eventmanager.app.data.models.Guest
 import com.eventmanager.app.data.models.Volunteer
 import com.eventmanager.app.ui.viewmodel.EventManagerViewModel
 import com.eventmanager.app.ui.platform.AppAppearanceState
+import com.eventmanager.app.ui.components.FactoryResetSettingsSection
 import com.eventmanager.app.ui.components.BackgroundAnimationSettingsSection
 import com.eventmanager.app.ui.components.BackgroundAnimationSettingsTarget
 import com.eventmanager.app.ui.components.ColorThemePicker
@@ -4186,21 +4187,8 @@ actual fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            OutlinedButton(
-                onClick = { showFactoryResetDialog = true },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.error,
-                ),
-            ) {
-                Icon(Icons.Default.Restore, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(context.getString(R.string.factory_reset_title))
-            }
-            Text(
-                text = context.getString(R.string.factory_reset_description),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            FactoryResetSettingsSection(
+                onResetClick = { showFactoryResetDialog = true },
             )
         }
         
@@ -4449,6 +4437,13 @@ actual fun SettingsScreen(
                     )
                 }
             }
+        }
+
+        if (variant == SettingsScreenVariant.BilleterieBasic || variant == SettingsScreenVariant.PosBasic) {
+            Spacer(modifier = Modifier.height(24.dp))
+            FactoryResetSettingsSection(
+                onResetClick = { showFactoryResetDialog = true },
+            )
         }
     }
 

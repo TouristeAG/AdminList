@@ -115,6 +115,7 @@ actual fun AppRootContent(
             var wizardAuthEmail by remember {
                 mutableStateOf(settingsManager.getFirebaseAuthEmail().ifBlank { null })
             }
+            var wizardSignInFeedback by remember { mutableStateOf<String?>(null) }
             SetupWizardScreen(
                 platformContext = platformContext,
                 onSetupComplete = {
@@ -125,17 +126,22 @@ actual fun AppRootContent(
                 },
                 onThemeModeChanged = onThemeModeChanged,
                 firebaseAuthEmail = wizardAuthEmail,
+                firebaseSignInFeedback = wizardSignInFeedback,
                 onRequestFirebaseSignIn = {
                     wizardScope.launch {
+                        wizardSignInFeedback = null
                         when (val result = com.eventmanager.app.data.remote
                             .createFirebaseAuthService(platformContext)
                             .signInWithGoogle()
                         ) {
                             is com.eventmanager.app.data.remote.FirebaseAuthResult.Success -> {
+                                wizardSignInFeedback = null
                                 wizardAuthEmail = result.email
                                 settingsManager.setFirebaseAuthEmail(result.email.orEmpty())
                             }
-                            is com.eventmanager.app.data.remote.FirebaseAuthResult.Error -> Unit
+                            is com.eventmanager.app.data.remote.FirebaseAuthResult.Error -> {
+                                wizardSignInFeedback = result.message
+                            }
                         }
                     }
                 },
@@ -414,6 +420,12 @@ actual fun AppRootContent(
                         volunteers = volunteers,
                         guests = guests,
                         onBack = { showPos = false; showWelcome = true },
+                        onFactoryResetComplete = {
+                            showPos = false
+                            showWelcome = false
+                            showTicketCheck = false
+                            showSetupWizard = true
+                        },
                     )
                 } else if (showTicketCheck) {
                     DesktopBilleterieFlow(
@@ -428,7 +440,12 @@ actual fun AppRootContent(
                         onExit = {
                             showTicketCheck = false
                             showWelcome = true
-                        }
+                        },
+                        onFactoryResetComplete = {
+                            showTicketCheck = false
+                            showWelcome = false
+                            showSetupWizard = true
+                        },
                     )
                 } else {
                     LaunchedEffect(selectedTab) {
@@ -846,7 +863,8 @@ private fun DesktopBilleterieFlow(
     settingsManager: SettingsManager,
     backgroundAnimationStyle: String,
     backgroundAnimationOpacity: Float,
-    onExit: () -> Unit
+    onExit: () -> Unit,
+    onFactoryResetComplete: () -> Unit,
 ) {
     val nav = LocalDesktopNavigation.current
         ?: error("DesktopNavigationHolder must be provided above AppRootContent on desktop")
@@ -886,7 +904,11 @@ private fun DesktopBilleterieFlow(
         when (section) {
             BilleterieSection.Home.name -> {
                 if (showBilleterieSettings) {
-                    BilleterieSettingsScreen(viewModel = viewModel, onBack = { showBilleterieSettings = false })
+                    BilleterieSettingsScreen(
+                        viewModel = viewModel,
+                        onBack = { showBilleterieSettings = false },
+                        onFactoryResetComplete = onFactoryResetComplete,
+                    )
                 } else {
                     BilleterieHomeScreen(
                         guests = guests,
@@ -923,6 +945,7 @@ private fun DesktopBilleterieFlow(
                     volunteers = volunteers,
                     guests = guests,
                     onBack = { section = BilleterieSection.Home.name },
+                    onFactoryResetComplete = onFactoryResetComplete,
                 )
             }
             else -> {

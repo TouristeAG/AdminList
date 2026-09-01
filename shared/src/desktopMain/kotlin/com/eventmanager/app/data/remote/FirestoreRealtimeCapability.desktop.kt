@@ -1,7 +1,11 @@
 package com.eventmanager.app.data.remote
 
 actual object FirestoreRealtimeCapability {
-    // Start listeners when SDK is up; keep a 30s pull as Desktop safety net (PR2 spike).
+    // Same as before REST workarounds — GitLive snapshot listeners with 30s pull safety net.
     actual fun preferSnapshotListeners(): Boolean = true
     actual fun alsoRunPullFallback(): Boolean = true
+    actual fun periodicPullIntervalMs(): Long? = null
+    actual fun listenerPollIntervalMs(): Long? = null
+    actual fun pullFallbackIntervalMs(): Long? = null
+    actual fun deferStartupPullToBackgroundJob(): Boolean = false
 }

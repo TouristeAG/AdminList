@@ -57,11 +57,27 @@ actual object FirebaseBootstrap {
             lastFailure = null
             true
         }.getOrElse { e ->
-            lastFailure = e.message?.takeIf { it.isNotBlank() }
-                ?: e::class.simpleName
-                ?: "Firebase.initialize failed"
+            lastFailure = formatFirebaseInitFailure(e)
             false
         }
+    }
+
+    private fun formatFirebaseInitFailure(error: Throwable): String {
+        val root = generateSequence(error) { it.cause }.last()
+        val chain = generateSequence(error) { it.cause }.mapNotNull { it.message }.joinToString(" → ")
+        if (root is ClassNotFoundException && root.message?.contains("ManagementFactory") == true ||
+            chain.contains("ManagementFactory", ignoreCase = true)
+        ) {
+            return "Firebase desktop runtime is missing the java.management module (FirebaseInitProvider). " +
+                "Rebuild and reinstall the latest NoctuList desktop installer (DMG / MSI / EXE / Deb / AppImage)."
+        }
+        if (root is ExceptionInInitializerError || error is ExceptionInInitializerError) {
+            val detail = root.message?.takeIf { it.isNotBlank() } ?: root::class.simpleName.orEmpty()
+            return "Could not initialize Firebase for desktop ($detail). Reinstall the latest app build."
+        }
+        return error.message?.takeIf { it.isNotBlank() }
+            ?: error::class.simpleName
+            ?: "Firebase.initialize failed"
     }
 
     actual fun isInitialized(): Boolean = runCatching {

@@ -38,6 +38,7 @@ import com.eventmanager.app.data.remote.MultiOrgMerge
 import com.eventmanager.app.data.remote.PersistIdentityDedupe
 import com.eventmanager.app.data.remote.VolunteerBenefitGuestMerge
 import com.eventmanager.app.data.remote.FirebaseSyncStatus
+import com.eventmanager.app.data.remote.FirestoreRealtimeCapability
 import com.eventmanager.app.data.remote.InstitutionBackendAnnouncement
 import com.eventmanager.app.data.remote.RemoteBackendFactory
 import com.eventmanager.app.data.remote.SyncCoordinator
@@ -937,7 +938,9 @@ class EventManagerViewModel(
                             else -> Unit
                         }
                         syncCoordinator?.startBackgroundRemoteSync(viewModelScope)
-                        syncCoordinator?.performStartupSync()
+                        if (FirestoreRealtimeCapability.deferStartupPullToBackgroundJob()) {
+                            syncCoordinator?.performStartupSync()
+                        }
                         restartSheetsMirrorSchedule()
                         refreshFirebaseSyncStatus()
                         withContext(Dispatchers.Main) { refreshAllData() }

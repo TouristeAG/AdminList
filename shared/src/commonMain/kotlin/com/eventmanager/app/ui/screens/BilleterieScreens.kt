@@ -260,7 +260,11 @@ fun BilleterieHomeScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BilleterieSettingsScreen(viewModel: EventManagerViewModel, onBack: () -> Unit) {
+fun BilleterieSettingsScreen(
+    viewModel: EventManagerViewModel,
+    onBack: () -> Unit,
+    onFactoryResetComplete: () -> Unit = {},
+) {
     val platformContext = LocalPlatformContext.current
     val settingsManager = remember(platformContext) { settingsManagerFor(platformContext) }
     val billeterieBackgroundStyle = rememberBilleterieBackgroundAnimationStyle(settingsManager)
@@ -287,6 +291,7 @@ fun BilleterieSettingsScreen(viewModel: EventManagerViewModel, onBack: () -> Uni
         SettingsScreen(
             viewModel = viewModel,
             variant = SettingsScreenVariant.BilleterieBasic,
+            onFactoryResetComplete = onFactoryResetComplete,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
@@ -296,7 +301,11 @@ fun BilleterieSettingsScreen(viewModel: EventManagerViewModel, onBack: () -> Uni
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PosSettingsScreen(viewModel: EventManagerViewModel, onBack: () -> Unit) {
+fun PosSettingsScreen(
+    viewModel: EventManagerViewModel,
+    onBack: () -> Unit,
+    onFactoryResetComplete: () -> Unit = {},
+) {
     val platformContext = LocalPlatformContext.current
     val settingsManager = remember(platformContext) { settingsManagerFor(platformContext) }
     val posBackgroundStyle = rememberPosBackgroundAnimationStyle(settingsManager)
@@ -323,6 +332,7 @@ fun PosSettingsScreen(viewModel: EventManagerViewModel, onBack: () -> Unit) {
         SettingsScreen(
             viewModel = viewModel,
             variant = SettingsScreenVariant.PosBasic,
+            onFactoryResetComplete = onFactoryResetComplete,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),

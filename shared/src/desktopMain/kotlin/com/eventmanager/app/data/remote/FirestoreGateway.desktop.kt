@@ -4,8 +4,8 @@ import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.platform.PlatformContext
 
 /**
- * Desktop: always [GitLiveFirestoreGateway] (lazy availability).
- * [DesktopFirebaseSpike] / [FirestoreRealtimeCapability] still control pull fallback.
+ * Desktop: GitLive Firestore (full JRE in installers via includeAllModules).
+ * REST helpers remain for Auth / Storage; Firestore sync matches ./gradlew :desktopApp:run.
  */
 actual fun createFirestoreGateway(
     platformContext: PlatformContext?,

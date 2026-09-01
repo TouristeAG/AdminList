@@ -426,6 +426,7 @@ fun SetupWizardScreen(
             firstSyncRunning = false
             if (result is SyncResult.Success) {
                 firstSyncDone = true
+                settingsManager.markSkipNextStartupSync()
             } else {
                 firstSyncError = (result as? SyncResult.Error)?.message ?: "Sync failed"
             }

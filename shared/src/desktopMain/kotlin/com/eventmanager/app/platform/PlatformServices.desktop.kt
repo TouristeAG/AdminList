@@ -3,8 +3,6 @@ package com.eventmanager.app.platform
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.eventmanager.app.data.database.EventManagerDatabase
-import java.awt.Desktop
-import java.net.URI
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 
@@ -21,9 +19,7 @@ actual fun createDatabase(context: PlatformContext): EventManagerDatabase {
 }
 
 actual fun openUrl(url: String) {
-    if (Desktop.isDesktopSupported()) {
-        Desktop.getDesktop().browse(URI(url))
-    }
+    runCatching { openExternalBrowser(url) }
 }
 
 actual fun vibrateShort(context: PlatformContext) {

@@ -3,8 +3,8 @@ package com.eventmanager.app.data.remote
 import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.platform.PlatformContext
 import com.eventmanager.app.platform.appDataDir
+import com.eventmanager.app.platform.openExternalBrowser
 import com.google.api.client.auth.oauth2.Credential
-import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow
 import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets
 import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse
@@ -14,10 +14,8 @@ import com.google.api.client.json.gson.GsonFactory
 import com.google.api.client.util.store.FileDataStoreFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.awt.Desktop
 import java.io.File
 import java.io.StringReader
-import java.net.URI
 
 /**
  * Desktop Google OAuth → GitLive Firebase Auth.
@@ -90,12 +88,15 @@ class DesktopFirebaseAuthService(
             // Always interactive for Firebase — stored refresh tokens do not yield id_token.
             runCatching { flow.credentialDataStore?.delete("firebase-user") }
 
-            val (receiver, redirectUri) = openLocalOAuthReceiver()
-                ?: return@withContext FirebaseAuthResult.Error(
-                    "Address already in use: could not start the local OAuth callback server. " +
-                        "Close any other NoctuList / Google Sign-In window still waiting, " +
-                        "or quit leftover Java processes using ports 8888–9090, then try again.",
+            val receiver = DesktopOAuthLoopbackReceiver()
+            val redirectUri = try {
+                receiver.start()
+            } catch (e: Exception) {
+                return@withContext FirebaseAuthResult.Error(
+                    e.message ?: "Could not start the local OAuth callback server (ports 8889–9090). " +
+                        "Close any other NoctuList window still waiting for Google Sign-In, then retry.",
                 )
+            }
             val idToken: String?
             val credential: Credential
             try {
@@ -103,20 +104,38 @@ class DesktopFirebaseAuthService(
                     .setRedirectUri(redirectUri)
                     .set("prompt", "consent")
                     .build()
-                if (Desktop.isDesktopSupported()) {
-                    Desktop.getDesktop().browse(URI(authUrl))
-                }
-                val code = receiver.waitForCode()
-                val tokenResponse: GoogleTokenResponse = flow.newTokenRequest(code)
-                    .setRedirectUri(redirectUri)
-                    .execute()
-                idToken = tokenResponse.idToken
-                credential = flow.createAndStoreCredential(tokenResponse, "firebase-user")
-                if (!idToken.isNullOrBlank()) {
-                    writeOwnerOnlyText(idTokenFile, idToken)
+                runCatching { openExternalBrowser(authUrl) }
+                    .getOrElse { browserError ->
+                        return@withContext FirebaseAuthResult.Error(
+                            "Could not open the system browser for Google Sign-In (${browserError.message}). " +
+                                "Copy this URL into Safari/Chrome, complete sign-in, then return to NoctuList:\n$authUrl",
+                        )
+                    }
+                when (val loopback = receiver.waitForResult()) {
+                    is DesktopLoopbackOAuthResult.Success -> {
+                        val tokenResponse: GoogleTokenResponse = flow.newTokenRequest(loopback.code)
+                            .setRedirectUri(redirectUri)
+                            .execute()
+                        idToken = tokenResponse.idToken
+                        credential = flow.createAndStoreCredential(tokenResponse, "firebase-user")
+                        if (!idToken.isNullOrBlank()) {
+                            writeOwnerOnlyText(idTokenFile, idToken)
+                        }
+                    }
+                    is DesktopLoopbackOAuthResult.OAuthError -> {
+                        val detail = loopback.description?.takeIf { it.isNotBlank() } ?: loopback.error
+                        return@withContext FirebaseAuthResult.Error("Google Sign-In failed: $detail")
+                    }
+                    DesktopLoopbackOAuthResult.TimedOut -> {
+                        return@withContext FirebaseAuthResult.Error(
+                            "Google Sign-In timed out. Complete sign-in in the browser, then try again.",
+                        )
+                    }
+                    DesktopLoopbackOAuthResult.Cancelled -> {
+                        return@withContext FirebaseAuthResult.Error("Google Sign-In cancelled.")
+                    }
                 }
             } catch (e: Exception) {
-                runCatching { receiver.stop() }
                 val msg = e.message.orEmpty()
                 if (msg.contains("redirect_uri_mismatch", ignoreCase = true) ||
                     msg.contains("redirect_uri", ignoreCase = true)
@@ -194,21 +213,6 @@ class DesktopFirebaseAuthService(
         val payload = jsonFactory.fromString(response.parseAsString(), Map::class.java) as Map<String, Any>
         payload["email"] as? String
     }.getOrNull()
-
-    /**
-     * Prefer fixed localhost ports (same as Gmail OAuth), then ephemeral `0`.
-     * Avoids BindException when a previous Sign-In left 8889 occupied.
-     */
-    private fun openLocalOAuthReceiver(): Pair<LocalServerReceiver, String>? {
-        for (port in listOf(8889, 8888, 8765, 9090, 0)) {
-            val opened = runCatching {
-                val receiver = LocalServerReceiver.Builder().setPort(port).build()
-                receiver to receiver.redirectUri
-            }.getOrNull()
-            if (opened != null) return opened
-        }
-        return null
-    }
 
     /**
      * Institution Web OAuth client (not developer Gmail JSON).

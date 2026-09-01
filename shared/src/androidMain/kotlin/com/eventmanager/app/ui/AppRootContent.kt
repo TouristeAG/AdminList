@@ -648,6 +648,11 @@ actual fun AppRootContent(
                     showPos = false
                     showWelcome = true
                 },
+                onFactoryResetComplete = {
+                    showPos = false
+                    showWelcome = false
+                    showSetupWizard = true
+                },
             )
         } else if (showTicketCheck) {
             var billeterieSection by rememberSaveable { mutableStateOf("home") }
@@ -705,7 +710,13 @@ actual fun AppRootContent(
                         if (showBilleterieSettings) {
                             BilleterieSettingsScreen(
                                 viewModel = viewModel,
-                                onBack = { showBilleterieSettings = false }
+                                onBack = { showBilleterieSettings = false },
+                                onFactoryResetComplete = {
+                                    showBilleterieSettings = false
+                                    showTicketCheck = false
+                                    showWelcome = false
+                                    showSetupWizard = true
+                                },
                             )
                         } else {
                             BilleterieHomeScreen(
@@ -735,6 +746,12 @@ actual fun AppRootContent(
                             volunteers = volunteers,
                             guests = guests,
                             onBack = { billeterieSection = "home" },
+                            onFactoryResetComplete = {
+                                showBilleterieSettings = false
+                                showTicketCheck = false
+                                showWelcome = false
+                                showSetupWizard = true
+                            },
                         )
                     }
                     "scanner" -> {

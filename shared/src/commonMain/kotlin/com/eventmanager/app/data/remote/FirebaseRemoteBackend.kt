@@ -14,9 +14,12 @@ import com.eventmanager.app.data.sync.SyncResult
 import com.eventmanager.app.data.security.crypto.SensitiveFieldCodec
 import com.eventmanager.app.platform.PlatformContext
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job as CoroutineJob
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Firebase-mode remote backend. Uses Firestore when available; queues writes otherwise.
@@ -95,7 +98,7 @@ class FirebaseRemoteBackend(
         if (orgIds.isEmpty()) return
         listenerJob = scope.launch {
             firestoreGateway.setServerReachabilityListener { notifySyncStatusChanged() }
-            flushQueue()
+            withContext(Dispatchers.IO) { flushQueue() }
             val available = firestoreGateway.isAvailable()
             if (!available) {
                 listenersActive = false
@@ -109,22 +112,33 @@ class FirebaseRemoteBackend(
                 firestoreGateway.startOrgListeners(orgIds) { change ->
                     applyRemoteChange(change)
                 }
+                if (FirestoreRealtimeCapability.alsoRunPullFallback()) {
+                    val fallbackInterval = FirestoreRealtimeCapability.pullFallbackIntervalMs() ?: 30_000L
+                    kotlinx.coroutines.delay(fallbackInterval)
+                    while (isActive) {
+                        withContext(Dispatchers.IO) {
+                            flushQueue()
+                            pullAll()
+                        }
+                        kotlinx.coroutines.delay(fallbackInterval)
+                    }
+                }
             } else {
                 listenersActive = false
                 notifySyncStatusChanged()
-            }
-
-            if (FirestoreRealtimeCapability.alsoRunPullFallback() ||
-                !FirestoreRealtimeCapability.preferSnapshotListeners()
-            ) {
-                if (listenersActive) {
-                    // Listeners already hydrating; keep pull as a safety net, not a second full download.
-                    kotlinx.coroutines.delay(30_000)
-                }
-                while (true) {
-                    flushQueue()
-                    pullAll()
-                    kotlinx.coroutines.delay(30_000)
+                val minInterval = FirestoreRealtimeCapability.periodicPullIntervalMs()
+                if (minInterval != null && minInterval > 0) {
+                    val settingsInterval = settingsManager.getSyncInterval().coerceAtLeast(1) * 60_000L
+                    val interval = maxOf(minInterval, settingsInterval)
+                    // Startup / wizard already run performFullSyncAwait — don't hammer REST immediately.
+                    kotlinx.coroutines.delay(interval)
+                    while (isActive) {
+                        withContext(Dispatchers.IO) {
+                            flushQueue()
+                            pullAll()
+                        }
+                        kotlinx.coroutines.delay(interval)
+                    }
                 }
             }
         }

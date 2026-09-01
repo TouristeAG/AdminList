@@ -3,10 +3,11 @@ package com.eventmanager.app.data.sync
 import com.eventmanager.app.platform.PlatformContext
 import com.eventmanager.app.platform.PlatformFileManager
 import com.eventmanager.app.platform.appDataDir
+import com.eventmanager.app.data.remote.DesktopLoopbackOAuthResult
+import com.eventmanager.app.data.remote.DesktopOAuthLoopbackReceiver
+import com.eventmanager.app.platform.openExternalBrowser
 import com.google.api.client.auth.oauth2.AuthorizationCodeFlow
 import com.google.api.client.auth.oauth2.Credential
-import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp
-import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow
 import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
@@ -174,20 +175,42 @@ class DesktopGmailAuth(private val context: PlatformContext) {
             return null
         }
 
-        val ports = listOf(8888, 8765, 9090, 0)
-        var lastException: Exception? = null
-        for (port in ports) {
-            try {
-                val receiver = LocalServerReceiver.Builder().setPort(port).build()
-                return AuthorizationCodeInstalledApp(flow, receiver).authorize("user")
-            } catch (e: Exception) {
-                lastException = e
-                AppLogger.w("DesktopGmailAuth", "OAuth local receiver failed on port $port: ${e.message}")
+        val receiver = DesktopOAuthLoopbackReceiver(
+            ports = listOf(8888, 8765, 9090, 8889),
+        )
+        return try {
+            val redirectUri = receiver.start()
+            val authUrl = flow.newAuthorizationUrl()
+                .setRedirectUri(redirectUri)
+                .build()
+            openExternalBrowser(authUrl)
+            when (val loopback = receiver.waitForResult()) {
+                is DesktopLoopbackOAuthResult.Success -> {
+                    val tokenResponse = flow.newTokenRequest(loopback.code)
+                        .setRedirectUri(redirectUri)
+                        .execute()
+                    flow.createAndStoreCredential(tokenResponse, "user")
+                }
+                is DesktopLoopbackOAuthResult.OAuthError -> {
+                    lastSignInError = loopback.description ?: loopback.error
+                    null
+                }
+                DesktopLoopbackOAuthResult.TimedOut -> {
+                    lastSignInError = "authorization_timed_out"
+                    null
+                }
+                DesktopLoopbackOAuthResult.Cancelled -> {
+                    lastSignInError = "authorization_cancelled"
+                    null
+                }
             }
+        } catch (e: Exception) {
+            lastSignInError = e.message ?: "authorization_failed"
+            AppLogger.w("DesktopGmailAuth", "OAuth local receiver failed: ${e.message}")
+            null
+        } finally {
+            receiver.stop()
         }
-
-        lastSignInError = lastException?.message ?: "authorization_failed"
-        return null
     }
 
     private fun buildServiceAccountInitializer(userEmail: String): HttpRequestInitializer? = runCatching {
