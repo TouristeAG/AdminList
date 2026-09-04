@@ -2794,7 +2794,9 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
     private val INSTITUTION_SETTINGS_HEADERS = listOf("Key", "Value", "Last Modified")
 
     // Institution Settings Operations
-    suspend fun syncInstitutionSettingsToSheets(rows: List<InstitutionSettingRow>) = withContext(Dispatchers.IO) {
+    suspend fun syncInstitutionSettingsToSheets(allRows: List<InstitutionSettingRow>) = withContext(Dispatchers.IO) {
+        // Firebase-only settings stay device-local on Sheets; this is the single write choke point.
+        val rows = allRows.filter { InstitutionSettingsKeys.isSyncedToSheets(it.key) }
         try {
             if (sheetsService == null) {
                 initializeSheetsService()
@@ -2856,7 +2858,10 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
 
                     val values = response.getValues() ?: emptyList()
                     val skippedRows = mutableListOf<Pair<Int, Int>>()
-                    val knownKeys = InstitutionSettingsKeys.ALL.toSet()
+                    // Mirrors the write filter: a key an older build left on the sheet is ignored.
+                    val knownKeys = InstitutionSettingsKeys.ALL
+                        .filter { InstitutionSettingsKeys.isSyncedToSheets(it) }
+                        .toSet()
                     val rows = values.mapIndexedNotNull { index, row ->
                         if (row.isNotEmpty()) {
                             try {

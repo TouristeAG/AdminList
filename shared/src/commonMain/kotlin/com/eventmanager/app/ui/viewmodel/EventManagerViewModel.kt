@@ -2706,7 +2706,10 @@ class EventManagerViewModel(
         viewModelScope.launch {
             try {
                 if (rejectIfCrudSoftLocked("updating sales items")) return@launch
-                val tagged = item.copy(firebaseOrgId = tagEntityOrgId(item.firebaseOrgId))
+                val tagged = item.copy(
+                    firebaseOrgId = tagEntityOrgId(item.firebaseOrgId),
+                    lastModified = nextSalesSheetItemStamp(item.id),
+                )
                 repository.updateSalesSheetItem(tagged)
                 syncCoordinator?.afterSalesItemSaved(tagged) ?: twoWaySyncService?.backupSalesSheetItemsToSheets()
                 println("Successfully updated sales sheet item: ${tagged.name}")
@@ -2750,11 +2753,21 @@ class EventManagerViewModel(
         }
     }
 
+    /**
+     * Remote products are last-write-wins on `lastModified`, so an edit that reuses the stored
+     * timestamp is discarded by every other device. Always move the stamp forward, and stay ahead
+     * of the stored value even when the device clock is behind the one that wrote it.
+     */
+    private suspend fun nextSalesSheetItemStamp(id: Long): Long {
+        val stored = repository.getSalesSheetItemById(id)?.lastModified ?: 0L
+        return maxOf(System.currentTimeMillis(), stored + 1)
+    }
+
     fun updateSalesSheetItemStatus(id: Long, isActive: Boolean) {
         viewModelScope.launch {
             try {
                 if (rejectIfCrudSoftLocked("updating sales item status")) return@launch
-                repository.updateSalesSheetItemStatus(id, isActive)
+                repository.updateSalesSheetItemStatus(id, isActive, nextSalesSheetItemStamp(id))
                 val item = repository.getAllSalesSheetItems().first().find { it.id == id }
                 if (item != null) {
                     syncCoordinator?.afterSalesItemSaved(item) ?: twoWaySyncService?.backupSalesSheetItemsToSheets()

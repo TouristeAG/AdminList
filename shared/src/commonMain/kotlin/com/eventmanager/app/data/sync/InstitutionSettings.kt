@@ -112,6 +112,17 @@ object InstitutionSettingsKeys {
         ANNOUNCEMENTS_NON_ADMIN_SEND_ENABLED,
         POS_SUBCATEGORIES,
     ) + BACKEND_KEYS + SHEETS_MIRROR_KEYS
+
+    /**
+     * Settings that exist only on the Firebase backend. They are still synced between Firebase
+     * devices, but never written to (nor read back from) the Sheets Settings tab: a Sheets
+     * round-trip would blank them out for an organization that switches backends.
+     */
+    val FIREBASE_ONLY_KEYS: Set<String> = setOf(
+        POS_SUBCATEGORIES,
+    )
+
+    fun isSyncedToSheets(key: String): Boolean = key !in FIREBASE_ONLY_KEYS
 }
 
 data class InstitutionSettingRow(

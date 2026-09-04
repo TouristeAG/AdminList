@@ -546,7 +546,7 @@ private fun SalesSheetItemEditorDialog(
                                     emoji = emoji.trim(),
                                     availableVenues = PosVenueScope.formatVenueList(venuesToSave),
                                     isActive = initial?.isActive ?: true,
-                                    lastModified = initial?.lastModified ?: System.currentTimeMillis(),
+                                    lastModified = System.currentTimeMillis(),
                                 )
                             )
                         },

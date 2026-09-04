@@ -40,6 +40,27 @@ class TwoWaySyncService(
     
     // Global mutex to serialize Google Sheets operations across pages/features
     private val sheetsOpMutex = Mutex()
+
+    /**
+     * Downloads sales items and re-attaches the sub-category this device has on file.
+     *
+     * The Sales tab has no sub-category column — on the Sheets backend sub-categories are
+     * device-local — so a row coming back from Sheets carries an empty one and would blank out
+     * the local assignment as soon as any other field changes.
+     */
+    private suspend fun downloadSalesSheetItemsKeepingLocalSubcategories(): List<SalesSheetItem> {
+        val remote = googleSheetsService.syncSalesSheetItemsFromSheets()
+        if (remote.isEmpty()) return remote
+        val localSubcategories = repository.getAllSalesSheetItems().first()
+            .filter { it.subcategory.isNotBlank() }
+            .associate { it.name.trim().lowercase() to it.subcategory }
+        if (localSubcategories.isEmpty()) return remote
+        return remote.map { item ->
+            localSubcategories[item.name.trim().lowercase()]
+                ?.let { item.copy(subcategory = it) }
+                ?: item
+        }
+    }
     
     /**
      * BACKUP MODE: Upload entire local dataset to Google Sheets
@@ -76,7 +97,7 @@ class TwoWaySyncService(
                     val gDef = async { try { googleSheetsService.syncGuestsFromSheets() } catch (_: Exception) { emptyList() } }
                     val vDef = async { try { googleSheetsService.syncVolunteersFromSheets() } catch (_: Exception) { emptyList() } }
                     val vnDef = async { try { googleSheetsService.syncVenuesFromSheets() } catch (_: Exception) { emptyList() } }
-                    val siDef = async { try { googleSheetsService.syncSalesSheetItemsFromSheets() } catch (_: Exception) { emptyList() } }
+                    val siDef = async { try { downloadSalesSheetItemsKeepingLocalSubcategories() } catch (_: Exception) { emptyList() } }
                     Quint(jtcDef.await(), gDef.await(), vDef.await(), vnDef.await(), siDef.await())
                 }
             } catch (e: Exception) {
@@ -210,7 +231,7 @@ class TwoWaySyncService(
                 val guestsDeferred = async { googleSheetsService.syncGuestsFromSheets() }
                 val volunteersDeferred = async { googleSheetsService.syncVolunteersFromSheets() }
                 val venuesDeferred = async { googleSheetsService.syncVenuesFromSheets() }
-                val salesSheetItemsDeferred = async { googleSheetsService.syncSalesSheetItemsFromSheets() }
+                val salesSheetItemsDeferred = async { downloadSalesSheetItemsKeepingLocalSubcategories() }
                 
                 // Await all parallel downloads
                 val jobTypeConfigs = jobTypeConfigsDeferred.await()
@@ -441,7 +462,7 @@ class TwoWaySyncService(
                 val guestsDeferred = async { googleSheetsService.syncGuestsFromSheets() }
                 val volunteersDeferred = async { googleSheetsService.syncVolunteersFromSheets() }
                 val venuesDeferred = async { googleSheetsService.syncVenuesFromSheets() }
-                val salesItemsDeferred = async { googleSheetsService.syncSalesSheetItemsFromSheets() }
+                val salesItemsDeferred = async { downloadSalesSheetItemsKeepingLocalSubcategories() }
                 
                 Quint(
                     jobTypeConfigsDeferred.await(),
@@ -1046,7 +1067,7 @@ class TwoWaySyncService(
     suspend fun syncSalesSheetItemsOnly() = withContext(Dispatchers.IO) {
         sheetsOpMutex.withLock {
         try {
-            val remoteItems = googleSheetsService.syncSalesSheetItemsFromSheets()
+            val remoteItems = downloadSalesSheetItemsKeepingLocalSubcategories()
             repository.clearAllSalesSheetItems()
             if (remoteItems.isNotEmpty()) {
                 repository.insertSalesSheetItemsAll(remoteItems)
@@ -1066,7 +1087,7 @@ class TwoWaySyncService(
         try {
             println("🔄 Starting differential sales sheet item sync from Google Sheets...")
 
-            val remoteItems = googleSheetsService.syncSalesSheetItemsFromSheets()
+            val remoteItems = downloadSalesSheetItemsKeepingLocalSubcategories()
             println("📥 Downloaded ${remoteItems.size} sales sheet items from sheets")
 
             val mainItems = repository.getAllSalesSheetItems().first()
@@ -1515,7 +1536,7 @@ class TwoWaySyncService(
             println("📊 Retrieved ${items.size} sales sheet items from repository for backup")
 
             val remoteItems = try {
-                googleSheetsService.syncSalesSheetItemsFromSheets()
+                downloadSalesSheetItemsKeepingLocalSubcategories()
             } catch (e: Exception) {
                 println("⚠️ Could not read remote sales sheet items for merge, uploading local only: ${e.message}")
                 emptyList()

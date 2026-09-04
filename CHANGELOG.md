@@ -4,6 +4,23 @@ All notable changes to NoctuList are documented here. Version numbers follow [Se
 
 ---
 
+## 2.1.1 — 2026-09-04
+
+Patch release focused on sales catalogue sync reliability.
+
+### Sync & sales items
+
+- **Sales item edits now propagate across devices.** Saving a product or toggling active/inactive always advances `lastModified` (and stays ahead of the stored stamp if the device clock is behind), so last-write-wins sync no longer discards legitimate edits.
+- **Sheets downloads keep local product sub-categories.** The Sales tab has no sub-category column; re-attaching the device-local assignment prevents a sync from blanking it out whenever any other field changes.
+- **Firebase-only institution settings stay off Sheets.** Write and read paths filter keys that are not meant for the Sheets contract, so local-only settings are neither uploaded nor overwritten from stale sheet rows.
+
+### Upgrade notes
+
+- **Version code:** 28 (`2.1.1`). Minimum supported code remains **27** (2.1.0) — devices on 2.1.0 get an optional update.
+- **Publishing:** tag the release `2.1.1`, attach platform artifacts, then update the public update manifest (`version.json` on the AdminList mirror if used).
+
+---
+
 ## 2.1.0 — 2026-09-04
 
 Bug-fix and UI polish release on top of the 2.0 Firebase stack.

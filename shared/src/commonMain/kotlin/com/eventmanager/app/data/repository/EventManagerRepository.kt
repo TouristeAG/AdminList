@@ -385,7 +385,8 @@ class EventManagerRepository(
     suspend fun insertSalesSheetItem(item: SalesSheetItem): Long = salesSheetItemDao.insertSalesSheetItem(item)
     suspend fun updateSalesSheetItem(item: SalesSheetItem) = salesSheetItemDao.updateSalesSheetItem(item)
     suspend fun deleteSalesSheetItem(item: SalesSheetItem) = salesSheetItemDao.deleteSalesSheetItem(item)
-    suspend fun updateSalesSheetItemStatus(id: Long, isActive: Boolean) = salesSheetItemDao.updateSalesSheetItemStatus(id, isActive)
+    suspend fun updateSalesSheetItemStatus(id: Long, isActive: Boolean, lastModified: Long) =
+        salesSheetItemDao.updateSalesSheetItemStatus(id, isActive, lastModified)
     suspend fun clearAllSalesSheetItems() = salesSheetItemDao.deleteAllSalesSheetItems()
 
     // Batch sales sheet item operations for optimized sync

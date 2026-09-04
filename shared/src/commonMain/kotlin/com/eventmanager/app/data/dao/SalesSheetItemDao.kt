@@ -44,8 +44,8 @@ interface SalesSheetItemDao {
     @Delete
     suspend fun deleteSalesSheetItemsAll(items: List<SalesSheetItem>)
 
-    @Query("UPDATE sales_sheet_items SET isActive = :isActive WHERE id = :id")
-    suspend fun updateSalesSheetItemStatus(id: Long, isActive: Boolean)
+    @Query("UPDATE sales_sheet_items SET isActive = :isActive, lastModified = :lastModified WHERE id = :id")
+    suspend fun updateSalesSheetItemStatus(id: Long, isActive: Boolean, lastModified: Long)
 
     @Query("DELETE FROM sales_sheet_items")
     suspend fun deleteAllSalesSheetItems()
