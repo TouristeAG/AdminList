@@ -27,9 +27,9 @@ jobs:
       fail-fast: false        # build both arches even if one fails
       matrix:
         include:
-          - runner: macos-13  # GitHub-hosted Intel (x86_64) runner
+          - runner: macos-15-intel  # GitHub-hosted Intel (x86_64) — last supported Intel runner
             arch: x86_64
-          - runner: macos-14  # GitHub-hosted Apple Silicon (arm64 / M1) runner
+          - runner: macos-15        # GitHub-hosted Apple Silicon (arm64 / M1+)
             arch: arm64
 
     runs-on: ${{ matrix.runner }}
