@@ -29,7 +29,10 @@ import androidx.compose.ui.unit.dp
 import com.eventmanager.app.data.models.Guest
 import com.eventmanager.app.data.models.Volunteer
 import com.eventmanager.app.data.security.LocalAdminAccessResult
+import com.eventmanager.app.data.security.isSuspiciousMissingAdminAfterSync
+import com.eventmanager.app.data.security.memberRosterCount
 import com.eventmanager.app.data.security.profileBelongsToAdminOrg
+import com.eventmanager.app.data.security.shouldOfferFirstAdminSetupAfterSync
 import com.eventmanager.app.data.sync.settingsManagerFor
 import com.eventmanager.app.platform.PlatformContext
 import com.eventmanager.app.platform.PlatformBackHandler
@@ -49,6 +52,8 @@ import org.jetbrains.compose.resources.stringResource
 sealed class AuthState {
     data object Syncing : AuthState()
     data object Ready : AuthState()
+    /** Members loaded but no admin — likely incomplete sync; do not offer admin creation. */
+    data object IncompleteRoster : AuthState()
     data class SyncFailed(val message: String) : AuthState()
     data class AccessGranted(val name: String) : AuthState()
     data class AccessDenied(val name: String) : AuthState()
@@ -101,6 +106,7 @@ fun AdminAuthScreen(
     val syncError by viewModel.syncError.collectAsState()
     val venues by viewModel.venues.collectAsState()
     val hasRoster = volunteers.isNotEmpty() || guests.isNotEmpty()
+    val rosterMemberCount = memberRosterCount(guests, volunteers)
 
     var authState by remember {
         mutableStateOf(
@@ -109,11 +115,15 @@ fun AdminAuthScreen(
     }
     var showQRScanner by remember { mutableStateOf(false) }
     var showNoAdminRecovery by remember { mutableStateOf(false) }
-    var userDismissedRecovery by remember { mutableStateOf(false) }
 
     val hasLocalAdmin = remember(guests, volunteers, viewModel) {
         viewModel.institutionHasLocalAdminForActiveOrg(guests, volunteers)
     }
+
+    val suspiciousMissingAdmin = adminGateSyncSucceeded == true &&
+        isSuspiciousMissingAdminAfterSync(true, hasLocalAdmin, rosterMemberCount)
+    val canOfferEmptyInstitutionRecovery = adminGateSyncSucceeded == true &&
+        shouldOfferFirstAdminSetupAfterSync(true, hasLocalAdmin, rosterMemberCount)
 
     val activeOrgId = remember(viewModel) { viewModel.resolveAdminAuthTargetOrgId() }
     val strictMultiOrg = remember(viewModel) { viewModel.isFirebaseStrictMultiOrgMode() }
@@ -164,21 +174,11 @@ fun AdminAuthScreen(
     }
 
     val gateReady = authState is AuthState.Ready ||
+        authState is AuthState.IncompleteRoster ||
         authState is AuthState.AccessDenied ||
         authState is AuthState.NotFound ||
         authState is AuthState.Error
-    val canScanNfc = gateReady && !showNoAdminRecovery
-
-    LaunchedEffect(hasLocalAdmin, hasRoster, adminGateSyncSucceeded) {
-        val ready = hasLocalAdmin || hasRoster || adminGateSyncSucceeded == true
-        if (!ready) return@LaunchedEffect
-        if (!hasLocalAdmin && !userDismissedRecovery) {
-            showNoAdminRecovery = true
-        }
-        if (hasLocalAdmin && !showNoAdminRecovery) {
-            userDismissedRecovery = false
-        }
-    }
+    val canScanNfc = gateReady && hasLocalAdmin && !showNoAdminRecovery
 
     NfcUidListenerEffect(
         platformContext = platformContext,
@@ -186,16 +186,19 @@ fun AdminAuthScreen(
         onUidRead = ::resolveUidMatch
     )
 
-    LaunchedEffect(isSyncing, adminGateSyncSucceeded, hasLocalAdmin, hasRoster) {
+    LaunchedEffect(isSyncing, adminGateSyncSucceeded, hasLocalAdmin, rosterMemberCount) {
         authState = when {
             authState is AuthState.AccessGranted ||
                 authState is AuthState.AccessDenied ||
                 authState is AuthState.NotFound ||
                 authState is AuthState.Error -> authState
-            hasLocalAdmin || hasRoster || adminGateSyncSucceeded == true -> AuthState.Ready
+            hasLocalAdmin -> AuthState.Ready
             adminGateSyncSucceeded == false -> AuthState.SyncFailed(
                 syncError ?: "Sync failed"
             )
+            adminGateSyncSucceeded == null || isSyncing -> AuthState.Syncing
+            suspiciousMissingAdmin -> AuthState.IncompleteRoster
+            canOfferEmptyInstitutionRecovery -> AuthState.Ready
             else -> AuthState.Syncing
         }
     }
@@ -256,16 +259,19 @@ fun AdminAuthScreen(
             ) { state ->
                 when (state) {
                     AuthState.Syncing -> AdminAuthSyncingPanel(modifier = Modifier.fillMaxWidth())
+                    AuthState.IncompleteRoster -> AdminAuthIncompleteRosterPanel(
+                        modifier = Modifier.fillMaxWidth(),
+                        onRetry = { viewModel.retryAdminGateSync() },
+                    )
                     AuthState.Ready -> if (hasLocalAdmin) {
                         AdminAuthReadyPanel(modifier = Modifier.fillMaxWidth())
-                    } else {
+                    } else if (canOfferEmptyInstitutionRecovery) {
                         AdminAuthNoAdminPanel(
                             modifier = Modifier.fillMaxWidth(),
-                            onCreateAdmin = {
-                                userDismissedRecovery = false
-                                showNoAdminRecovery = true
-                            },
+                            onCreateAdmin = { showNoAdminRecovery = true },
                         )
+                    } else {
+                        AdminAuthSyncingPanel(modifier = Modifier.fillMaxWidth())
                     }
                     is AuthState.SyncFailed -> AdminAuthResultPanel(
                         icon = Icons.Default.CloudOff,
@@ -369,8 +375,12 @@ fun AdminAuthScreen(
         NoAdminRecoveryDialog(
             platformContext = platformContext,
             venues = venues,
-            onCreateAdminGuest = { guest, cb -> viewModel.createAdminGuest(guest, cb) },
-            onCreateAdminVolunteer = { volunteer, cb -> viewModel.createAdminVolunteer(volunteer, cb) },
+            onCreateAdminGuest = { guest, cb ->
+                viewModel.createAdminGuest(guest, forceRecovery = true, onResult = cb)
+            },
+            onCreateAdminVolunteer = { volunteer, cb ->
+                viewModel.createAdminVolunteer(volunteer, forceRecovery = true, onResult = cb)
+            },
             onUpdateAdminGuest = { guest, cb ->
                 viewModel.updateGuest(guest)
                 cb(true, guest, null)
@@ -386,14 +396,8 @@ fun AdminAuthScreen(
                     uid = uid,
                 )
             },
-            onComplete = {
-                userDismissedRecovery = false
-                showNoAdminRecovery = false
-            },
-            onDismiss = {
-                userDismissedRecovery = true
-                showNoAdminRecovery = false
-            },
+            onComplete = { showNoAdminRecovery = false },
+            onDismiss = { showNoAdminRecovery = false },
         )
     }
 
@@ -635,6 +639,52 @@ private fun AdminAuthSyncStepRow(
             }
             SyncStepVisualState.Pending -> {
                 Spacer(Modifier.size(18.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun AdminAuthIncompleteRosterPanel(
+    modifier: Modifier = Modifier,
+    onRetry: () -> Unit,
+) {
+    val scheme = MaterialTheme.colorScheme
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = scheme.surfaceContainerLow),
+        border = BorderStroke(1.dp, scheme.outlineVariant.copy(alpha = 0.45f)),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Icon(
+                Icons.Default.CloudSync,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = scheme.primary,
+            )
+            Text(
+                text = stringResource(Res.string.admin_auth_incomplete_roster_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = stringResource(Res.string.admin_auth_incomplete_roster_message),
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+                color = scheme.onSurfaceVariant,
+            )
+            Button(onClick = onRetry, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(Res.string.admin_precheck_sync_retry))
             }
         }
     }

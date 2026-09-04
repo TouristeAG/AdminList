@@ -22,8 +22,6 @@ import androidx.lifecycle.LifecycleEventObserver
 import com.eventmanager.app.data.sync.FileManager
 import com.eventmanager.app.platform.AndroidFragmentActivityProvider
 import com.eventmanager.app.platform.PlatformContext
-import com.eventmanager.app.platform.recreateActivity
-import com.eventmanager.app.ui.platform.AppAppearanceState
 import com.eventmanager.app.resources.Res
 import com.eventmanager.app.resources.*
 import com.eventmanager.app.ui.components.ResolutionScaleSlider
@@ -113,21 +111,6 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
 }
 
 actual fun supportsResolutionScaleStep(): Boolean = true
-
-actual fun applyLocaleOrThemeChange(platformContext: PlatformContext) {
-    applyLocaleChange(platformContext)
-}
-
-actual fun applyLocaleChange(platformContext: PlatformContext) {
-    val settingsManager = com.eventmanager.app.data.sync.settingsManagerFor(platformContext)
-    AppAppearanceState.notifyLocaleChanged(settingsManager.getLanguage())
-}
-
-actual fun applyThemeAppearanceChange(platformContext: PlatformContext) {
-    val settingsManager = com.eventmanager.app.data.sync.settingsManagerFor(platformContext)
-    AppAppearanceState.notifyThemeAppearanceChanged(settingsManager.getThemeMode())
-    recreateActivity(platformContext)
-}
 
 @Composable
 actual fun ServiceAccountKeyUploadButton(

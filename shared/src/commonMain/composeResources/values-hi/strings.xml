@@ -500,11 +500,11 @@
     <string name="step_3_title">सेवा खाता बनाएँ</string>
     <string name="step_3_description">IAM &amp; Admin > Service Accounts में एक सेवा खाता बनाएँ। JSON कुंजी फ़ाइल डाउनलोड करें।</string>
     <string name="step_4_title">ऐप में कुंजी जोड़ें</string>
-    <string name="step_4_description">सेटिंग्स में \'अपलोड कुंजी फ़ाइल\' बटन का उपयोग करें, या मैन्युअल रूप से JSON फ़ाइल को ऐप/src/main/assets/ में \'service_account_key.json\' के रूप में रखें।</string>
+    <string name="step_4_description">सेटिंग्स में 'अपलोड कुंजी फ़ाइल' बटन का उपयोग करें, या मैन्युअल रूप से JSON फ़ाइल को ऐप/src/main/assets/ में 'service_account_key.json' के रूप में रखें।</string>
     <string name="step_5_title">Google स्प्रेडशीट बनाएं</string>
     <string name="step_5_description">एक नई Google स्प्रेडशीट बनाएं और URL से उसकी आईडी कॉपी करें।</string>
     <string name="step_6_title">आवश्यक शीट बनाएं</string>
-    <string name="step_6_description">शीट बनाएं: \'अतिथि सूची\', \'स्वयंसेवक\', \'शिफ्ट\', \'शिफ्ट प्रकार\', \'स्वयंसेवक अतिथि सूची\', \'स्थान\' और \'अस्थायी अतिथि सूची\' (\'अस्थायी अतिथि सूची\' में तिथियों को YYYY-MM-DD प्रारूप का उपयोग करना होगा)।</string>
+    <string name="step_6_description">शीट बनाएं: 'अतिथि सूची', 'स्वयंसेवक', 'शिफ्ट', 'शिफ्ट प्रकार', 'स्वयंसेवक अतिथि सूची', 'स्थान' और 'अस्थायी अतिथि सूची' ('अस्थायी अतिथि सूची' में तिथियों को YYYY-MM-DD प्रारूप का उपयोग करना होगा)।</string>
     <string name="step_7_title">शीट हेडर सेट करें</string>
     <string name="step_7_description">प्रत्येक शीट में हेडर जोड़ें. ऐप उन्हें स्वचालित रूप से बनाएगा, लेकिन यदि आवश्यक हो तो आप उन्हें मैन्युअल रूप से सेट कर सकते हैं।</string>
     <string name="step_8_title">सेवा खाते के साथ साझा करें</string>
@@ -636,7 +636,7 @@
     <string name="admin_auth_description">अपनी व्यवस्थापक पहुंच सत्यापित करने के लिए अपना बैज या क्यूआर कोड स्कैन करें</string>
     <string name="admin_auth_syncing">Google शीट से डेटा लोड हो रहा है…</string>
     <string name="admin_auth_syncing_title">व्यवस्थापक पहुंच तैयार की जा रही है</string>
-    <string name="admin_auth_syncing_subtitle">हम\'Google शीट के साथ पुन: समन्वयित किया जा रहा है ताकि आपके बैज या क्यूआर कोड को सटीक रूप से सत्यापित किया जा सके।</string>
+    <string name="admin_auth_syncing_subtitle">हम'Google शीट के साथ पुन: समन्वयित किया जा रहा है ताकि आपके बैज या क्यूआर कोड को सटीक रूप से सत्यापित किया जा सके।</string>
     <string name="admin_auth_sync_wait_hint">अभी तक स्कैन न करें - सिंक पूरा होने पर प्रमाणीकरण अनलॉक हो जाएगा</string>
     <string name="admin_auth_sync_step_sheet">स्प्रेडशीट संरचना की जाँच करना</string>
     <string name="admin_auth_sync_step_download">नवीनतम अतिथि और स्वयंसेवक डेटा डाउनलोड करना</string>
@@ -686,7 +686,7 @@
     <string name="ticket_check_coming_soon">यह सुविधा जल्द ही आने वाली है</string>
     <string name="ticket_check_description">अतिथि सूची तक त्वरित पहुंच और दरवाजे पर स्कैनर।</string>
     <string name="billeterie_stat_permanent_guests">स्थायी अतिथि</string>
-    <string name="billeterie_stat_temporary_guests_today">अस्थायी मेहमान (आज)</string>
+    <string name="billeterie_stat_temporary_guests_today">अस्थायी मेहमान</string>
     <string name="billeterie_stat_volunteers_on_list">सूची में स्वयंसेवक</string>
     <string name="billeterie_stat_total_without_invites">सूची में (+1 को छोड़कर)</string>
     <string name="billeterie_button_guest_list">अतिथि सूची</string>
@@ -960,11 +960,11 @@
     <string name="volunteer_id">स्वयंसेवक आईडी</string>
     <string name="find_volunteer">स्वयंसेवक खोजें</string>
     <string name="please_enter_valid_volunteer_id">कृपया एक वैध स्वयंसेवक आईडी दर्ज करें</string>
-    <string name="volunteer_id_not_found">आईडी के साथ स्वयंसेवक\'%1$s\' नहीं मिला</string>
+    <string name="volunteer_id_not_found">आईडी के साथ स्वयंसेवक'%1$s' नहीं मिला</string>
     <string name="available_volunteers">उपलब्ध स्वयंसेवक:</string>
     <string name="error_processing_qr_code">क्यूआर कोड को संसाधित करने में त्रुटि: %1$s</string>
     <string name="invalid_qr_code_format">अमान्य QR कोड प्रारूप: %1$s</string>
-    <string name="volunteer_not_found">स्वयंसेवक \'%1$s\' (पहचान: %2$s) डेटाबेस में नहीं मिला. कृपया जांचें कि क्या स्वयंसेवक डेटा Google शीट से समन्वयित किया गया है।</string>
+    <string name="volunteer_not_found">स्वयंसेवक '%1$s' (पहचान: %2$s) डेटाबेस में नहीं मिला. कृपया जांचें कि क्या स्वयंसेवक डेटा Google शीट से समन्वयित किया गया है।</string>
     <string name="qr_code_for_volunteer">स्वयंसेवक के लिए क्यूआर कोड: %1$s</string>
     <string name="qr_code_subject">स्वयंसेवक क्यूआर कोड - %1$s</string>
     <string name="share_qr_code">QR कोड साझा करें</string>
@@ -978,7 +978,7 @@
     <string name="qr_code_subject_guest">अतिथि क्यूआर कोड - %1$s</string>
     <string name="scan_guest_qr_code">अतिथि क्यूआर कोड स्कैन करें</string>
     <string name="invalid_guest_qr_code">अमान्य क्यूआर कोड. यह कोई अतिथि QR कोड नहीं है.</string>
-    <string name="guest_not_found">अतिथि \'%1$s\'डेटाबेस में नहीं मिला.</string>
+    <string name="guest_not_found">अतिथि '%1$s'डेटाबेस में नहीं मिला.</string>
     <string name="enter_guest_name_manually">अतिथि का नाम मैन्युअल रूप से दर्ज करें:</string>
     <string name="manual_guest_input">अतिथि का नाम दर्ज करें</string>
     <string name="find_guest">अतिथि खोजें</string>
@@ -1459,7 +1459,7 @@
     <string name="firebase_web_client_id_label">वेब क्लाइंट ID</string>
     <string name="firebase_web_client_id_hint">संस्था OAuth 2.0 Web client ID (Firebase Google Sign-In)। डेवलपर Gmail Desktop OAuth JSON नहीं।</string>
     <string name="firebase_web_client_secret_label">वेब क्लाइंट गुप्त</string>
-    <string name="firebase_web_client_secret_hint">संस्था Web client secret (Desktop + Android)। अधिकृत redirect URI (JavaScript origins नहीं): Desktop — http://localhost:8889/Callback (और :8888, :8765, :9090)। Android — com.eventmanager.app:/firebaseoauth2callback (SHA-1 नहीं)।</string>
+    <string name="firebase_web_client_secret_hint">संस्था Web client secret (Desktop + Android)। अधिकृत redirect URI (JavaScript origins नहीं): http://localhost:8889/Callback (और :8888, :8765, :9090)। Desktop और Android के लिए एक ही सूची।</string>
     <string name="firebase_step_signin_title">3. Google साइन-इन</string>
     <string name="firebase_step_signin_body">इस उपकरण को अधिकृत करें। पहला एडमिन खाता संगठन एडमिन बन जाता है।</string>
     <string name="firebase_sign_in">Google से साइन इन करें</string>
@@ -1476,27 +1476,27 @@
     <string name="firebase_config_paste_hint">Firebase Console web SDK config (apiKey, appId, projectId) चिपकाएँ। केवल एडमिन को चाहिए।</string>
     <string name="firebase_config_paste_apply">चिपकाई गई config लागू करें</string>
     <string name="firebase_join_qr_title">अन्य उपकरण आमंत्रित करें (QR)</string>
-    <string name="firebase_join_qr_body">इस QR को केवल अपनी टीम के साथ साझा करें (इसमें Google Sign-In क्रेडेंशियल शामिल हैं)। अन्य उपकरण Setup → Join में स्कैन करें — और कुछ टाइप न करें।</string>
+    <string name="firebase_join_qr_body">इस QR को केवल अपनी टीम के साथ साझा करें। इसमें प्रोजेक्ट कॉन्फ़िग, Google Sign-In और आमंत्रण कोड हैं — एक स्कैन पर्याप्त है।</string>
     <string name="firebase_join_error_oauth_missing">इस जॉइन कोड में Google Sign-In क्रेडेंशियल नहीं हैं। अपने एडमिन से नया QR माँगें (Settings → Firebase sync)।</string>
     <string name="firebase_join_qr_need_config">जॉइन QR बनाने के लिए पहले org ID और प्रोजेक्ट विकल्प भरें।</string>
     <string name="firebase_join_copy_code">कॉन्फ़िग कोड कॉपी करें</string>
     <string name="firebase_join_code_copied">कॉन्फ़िग कोड कॉपी हुआ</string>
     <string name="firebase_join_scan_title">इस संगठन से जुड़ें</string>
-    <string name="firebase_join_scan_body">एडमिन QR स्कैन करें, या नीचे दोनों कोड दर्ज करें। वे अलग कोड हैं।</string>
+    <string name="firebase_join_scan_body">एडमिन QR स्कैन करें (अनुशंसित), या कॉन्फ़िग कोड पेस्ट करें। पूरा कोड पहले से आमंत्रण शामिल करता है।</string>
     <string name="firebase_join_scan">QR स्कैन करें</string>
     <string name="firebase_join_paste_label">कॉन्फ़िग कोड</string>
     <string name="firebase_join_paste_code">कोड लागू करें</string>
-    <string name="firebase_join_received">कॉन्फ़िग प्राप्त — ज़रूरत हो तो आमंत्रण कोड दर्ज करें, फिर साइन इन करें।</string>
+    <string name="firebase_join_received">कॉन्फ़िग प्राप्त — शामिल होने के लिए Google से साइन इन करें।</string>
     <string name="firebase_join_wizard_option">मौजूदा संगठन से जुड़ें</string>
-    <string name="firebase_join_wizard_option_body">QR स्कैन करें, या कॉन्फ़िग कोड और आमंत्रण कोड दर्ज करें।</string>
+    <string name="firebase_join_wizard_option_body">एडमिन QR स्कैन करें या कॉन्फ़िग कोड पेस्ट करें (आमंत्रण सहित)।</string>
     <string name="firebase_join_config_code_label">कॉन्फ़िग कोड</string>
-    <string name="firebase_join_config_code_hint">noctulist-fb से शुरू होने वाला लंबा कोड — QR जैसा ही।</string>
-    <string name="firebase_join_invite_code_label">आमंत्रण कोड</string>
-    <string name="firebase_join_invite_code_hint">एडमिन का 8 अक्षर का छोटा कोड। QR में नहीं है।</string>
+    <string name="firebase_join_config_code_hint">noctulist-fb से शुरू लंबा कोड — QR जैसा ही (आमंत्रण सहित)।</string>
+    <string name="firebase_join_invite_code_label">आमंत्रण कोड (वैकल्पिक)</string>
+    <string name="firebase_join_invite_code_hint">केवल पुराने QR के लिए जो इसे छोड़ते हैं। पूर्ण कोड में पहले से है।</string>
     <string name="firebase_join_invite_copy">आमंत्रण कोड कॉपी करें</string>
     <string name="firebase_join_invite_copied">आमंत्रण कोड कॉपी हुआ</string>
-    <string name="firebase_join_invite_admin_body">यह छोटा कोड अलग से दें — यह QR में नहीं है।</string>
-    <string name="firebase_join_or_enter_codes">या दोनों कोड हाथ से दर्ज करें</string>
+    <string name="firebase_join_invite_admin_body">QR और कॉन्फ़िग कोड में भी शामिल। यहाँ सत्यापन या अलग साझा करने के लिए दिखाया गया है।</string>
+    <string name="firebase_join_or_enter_codes">या कॉन्फ़िग कोड पेस्ट करें</string>
     <string name="firebase_create_new_option">नया Firebase सेटअप करें (एडमिन)</string>
     <string name="firebase_project_configured_hidden">Firebase प्रोजेक्ट कॉन्फ़िगर (विवरण छिपे)</string>
     <string name="firebase_project_secrets_restricted">प्रोजेक्ट रहस्य तभी दिखते हैं जब आप स्थानीय एडमिन और Firebase संगठन एडमिन दोनों हों। ऐसे Google खाते से साइन इन करें जिसका Firebase एडमिन रोल हो।</string>
@@ -1565,6 +1565,8 @@
     <string name="firebase_tutorial_copy_rules">firestore.rules क्लिपबोर्ड पर कॉपी करें</string>
     <string name="firebase_tutorial_copy_rules_done">कॉपी हुआ — Firestore → Rules में चिपकाएँ, फिर Publish</string>
     <string name="firebase_tutorial_copy_rules_error">नियम लोड नहीं हो सके — प्रोजेक्ट में firebase/firestore.rules खोलें</string>
+    <string name="firebase_tutorial_copy_redirect_uris">localhost redirect URI कॉपी करें</string>
+    <string name="firebase_tutorial_copy_redirect_uris_done">कॉपी हुआ — प्रत्येक URI Authorized redirect URIs में चिपकाएँ, फिर Save</string>
     <string name="firebase_tutorial_storage_optional_title">वैकल्पिक: प्रोफ़ाइल फ़ोटो (Firebase Storage)</string>
     <string name="firebase_tutorial_storage_optional_body">मुफ़्त Spark प्लान पर रहने के लिए इसे छोड़ दें। Storage सक्षम करने के लिए सशुल्क Blaze प्लान लग सकता है।\n\nप्रोफ़ाइल फ़ोटो के लिए:\n1. Firebase Console → Build → Storage → Get started (वही प्रोजेक्ट)।\n2. Storage → Rules (URL में /storage/rules होना चाहिए — Firestore नहीं)।\n3. NoctuList storage नियम चिपकाएँ (नीचे बटन) → Publish।\n4. NoctuList सेटिंग्स → Firebase में «प्रोफ़ाइल फ़ोटो सक्षम करें» चालू करें (संगठन के सभी डिवाइसों पर लागू होता है)।\n\nबाद में भी कर सकते हैं। Storage के बिना ऐप पूरी तरह चलती है।</string>
     <string name="firebase_tutorial_copy_storage_rules">storage.rules क्लिपबोर्ड पर कॉपी करें</string>
@@ -1617,19 +1619,7 @@ C) Web client secret (Desktop आवश्यक)
 → Save, लगभग एक मिनट प्रतीक्षा, फिर Sign-In पुनः प्रयास।
 
 Android उपकरण → चरण 6। केवल Desktop → चरण 7।</string>
-    <string name="firebase_tutorial_fb_step6_title">6. Android (वैकल्पिक)</string>
-    <string name="firebase_tutorial_fb_step6_body">केवल Desktop हो तो छोड़ें।
-1. Firebase Console → Project settings → Add app → Android।
-2. Package name ठीक: com.eventmanager.app
-3. अपना debug SHA-1 जोड़ें (Google Sign-In के लिए आवश्यक):
-   macOS/Linux:
-   keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android
-   Windows:
-   keytool -list -v -keystore %USERPROFILE%\\.android\\debug.keystore -alias androiddebugkey -storepass android -keypass android
-4. वैकल्पिक: google-services.json app/google-services.json में डाउनलोड करें।
-5. उपकरण पर, चरण 5 का Web client ID उपयोग करें (Android Sign-In को चाहिए)। Secret केवल Desktop।
 
-Sign-In विफल हो: package + SHA-1, Web client ID, Google provider सक्षम, फिर Sign out / Sign in।</string>
     <string name="firebase_tutorial_cloud_step1_title">1. Cloud प्रोजेक्ट खोलें</string>
     <string name="firebase_tutorial_cloud_step1_body">1. https://console.cloud.google.com खोलें
 2. ऊपर की पट्टी → project picker → संस्था प्रोजेक्ट (Sheets वाला यदि पहले से)।
@@ -1675,20 +1665,15 @@ D) Application ID (appId)
 • यदि नहीं: Add app → Web एक बार, nickname «NoctuList», Hosting छोड़ें; config snippet से appId कॉपी।
 • या पूरी Firebase web config NoctuList में चिपकाएँ।
 
-Android → चरण 6। केवल Desktop → चरण 7।</string>
-    <string name="firebase_tutorial_cloud_step6_title">6. Android Sign-In (SHA-1 नहीं)</string>
-    <string name="firebase_tutorial_cloud_step6_body">Android Desktop जैसा Web OAuth client उपयोग करता है — Android OAuth client या SHA-1 fingerprint की ज़रूरत नहीं।
-1. Cloud Console → Credentials → आपका Web application client (चरण 4)।
-2. Authorized redirect URIs में ठीक जोड़ें: com.eventmanager.app:/firebaseoauth2callback
-3. फ़ोन/टैबलेट पर NoctuList में: Web client ID + secret (चरण 5) चिपकाएँ, फिर Sign in with Google (ब्राउज़र खुलता है)।
-4. वैकल्पिक: Firebase → Add Android app / google-services.json Sign-In के लिए आवश्यक नहीं।</string>
-    <string name="firebase_tutorial_step7_title">7. NoctuList भरें, फिर माइग्रेट / कनेक्ट</string>
+चरण 6 जारी रखें।</string>
+
+    <string name="firebase_tutorial_step7_title">6. NoctuList भरें, फिर माइग्रेट / कनेक्ट</string>
     <string name="firebase_tutorial_step7_body">एडमिन Firebase sync या माइग्रेशन संवाद में:
 • Organization ID — छोटा साझा नाम (उदाहरण: noctulist-club)। हर उपकरण पर समान।
 • Project ID, Application ID, API key, Web client ID, Desktop पर Web client secret।
 • या web config + Web client ID/secret भरें, फिर अन्य उपकरणों के लिए join QR।
 Google से साइन इन (पहला एडमिन org admin बनता है)। सफल Sign-In के बाद ही Sheets से स्विच करते समय माइग्रेशन शुरू करें। साथी QR / follow से जुड़ें — secrets दोबारा न टाइप करें।</string>
-    <string name="firebase_tutorial_step8_title">8. सेटअप के बाद</string>
+    <string name="firebase_tutorial_step8_title">7. सेटअप के बाद</string>
     <string name="firebase_tutorial_step8_body">Firestore में orgs/{yourOrgId}/… (guests, members, metadata, आदि) दिखना चाहिए। POS, द्वार और दूसरे उपकरण की पुष्टि तक Sheets बैकअप रखें। बिलिंग: परीक्षण में मुफ़्त Spark / free tier पर रहें; कोटा पार होने पर ही अपग्रेड।</string>
     <string name="migration_wizard_to_firebase_title">Firebase पर स्विच करें</string>
     <string name="migration_wizard_to_sheets_title">Google Sheets पर स्विच करें</string>
@@ -2188,11 +2173,11 @@ USB रीडर प्लग इन करें या ब्लूटूथ A
     <string name="rate_limit_read_value">प्रति प्रोजेक्ट 300 प्रति मिनट</string>
     <string name="rate_limit_retry_sync">पुनः समन्वयन का प्रयास करें</string>
     <string name="rate_limit_tips_body">• चरम उपयोग के दौरान ऑटो-सिंक के बजाय मैन्युअल सिंक का उपयोग करें
-• यदि आप कम बार सिंक करते हैं\'बार-बार सीमा पार कर रहे हैं
+• यदि आप कम बार सिंक करते हैं'बार-बार सीमा पार कर रहे हैं
 • कोटा उपयोग के लिए अपने Google क्लाउड कंसोल की जाँच करें</string>
     <string name="rate_limit_tips_title">युक्तियाँ:</string>
     <string name="rate_limit_too_many_requests">बहुत सारे अनुरोध</string>
-    <string name="rate_limit_wait_message">आप\'हम Google शीट API दर सीमा तक पहुंच गए हैं। कृपया दोबारा प्रयास करने से पहले 1-2 मिनट प्रतीक्षा करें।</string>
+    <string name="rate_limit_wait_message">आप'हम Google शीट API दर सीमा तक पहुंच गए हैं। कृपया दोबारा प्रयास करने से पहले 1-2 मिनट प्रतीक्षा करें।</string>
     <string name="rate_limit_what_to_do">क्या करें:</string>
     <string name="rate_limit_write_requests">अनुरोध लिखें</string>
     <string name="rate_limit_write_value">प्रति प्रोजेक्ट 300 प्रति मिनट</string>

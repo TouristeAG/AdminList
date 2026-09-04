@@ -114,14 +114,16 @@ In Admin → Sync (Firebase) or Setup wizard → “Set up new Firebase”:
 1. Paste web config **or** fill fields (secrets masked by default).
 2. Enter institution **Web client ID** + **Web client secret** (required on Desktop and Android).
 3. Set **Org ID**, Sign in with Google.
-4. Show / copy the **join QR** (includes project options + Web client credentials for Desktop peers).
+4. Show / copy the **join QR** (includes project options + Web client credentials + invitation code).
 5. Sheets→Firebase migration dual-announces options so peers can follow without retyping.
+6. If the invitation code is missing on the admin device, use **Create invitation code** in Settings before sharing the QR.
 
 Gmail OAuth stays in Email settings (developer Desktop JSON) — never put that file in the join QR.
 
 ## Other devices (join)
 
-- **New install** → Setup → Firebase → **Join existing institution (QR)** → Sign-In only.
+- **New install** → Setup → Firebase → **Join existing institution (QR)** → Sign-In only. One full v1 scan is enough.
+- Older v2 QRs omit the OAuth secret and/or invitation — those need manual entry and often cause “Permission denied” on first sync.
 - **Already on Sheets** after migration → follow dialog applies options silently → Sign-In → Connect.
 
 Treat the join QR as a physical deployment secret.
@@ -188,6 +190,11 @@ Hardened expectations (post–GDPR audit remediations):
 - Member `role` must be one of `admin` | `door` | `pos`; first bootstrap self-create is **admin**
   only while `metadata/config` does not exist; later invites require an existing admin.
 - `transfers` stay **append-only** (no update/delete via admin catch-all).
+- **Institution settings** (`orgs/{orgId}/institutionSettings/*` — currency, email templates,
+  purchase credit buffer, profile photos flag, Sheets mirror, etc.) are **writable only by
+  Firebase org admins** (`members.role == admin`). Local admins and POS `member` devices can
+  still **read** them. Republish rules after this change; the catch-all write path must also
+  exclude `institutionSettings`.
 
 ### Erasure and portability limits
 

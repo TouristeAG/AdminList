@@ -1,8 +1,10 @@
 package com.eventmanager.app.data.sync
 
+import com.eventmanager.app.data.utils.AppTimeZone
 import com.eventmanager.app.platform.PlatformContext
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
 
 /**
  * Utility for date/time formatting that respects user settings
@@ -23,7 +25,9 @@ object DateFormatUtils {
         val cache = formatterCache.get()
             ?: mutableMapOf<String, SimpleDateFormat>().also { formatterCache.set(it) }
         return cache.getOrPut(pattern) {
-            SimpleDateFormat(pattern, Locale.getDefault())
+            SimpleDateFormat(pattern, Locale.getDefault()).apply {
+                timeZone = AppTimeZone.java
+            }
         }
     }
     

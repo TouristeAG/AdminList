@@ -7,6 +7,7 @@ import org.jetbrains.compose.resources.stringResource
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
@@ -442,35 +443,38 @@ data class VenueOption(
  */
 @Composable
 fun generateVenueOptions(venues: List<VenueEntity>): List<VenueOption> {
-    val platformContext = LocalPlatformContext.current
-    val activeVenues = venues.filter { it.isActive }
-    
-    val options = mutableListOf<VenueOption>()
-    
     val allOptionText = stringResource(Res.string.venue_all)
-    
-    options.add(VenueOption(
-        venue = Venue.BOTH,
-        displayName = allOptionText,
-        isAllOption = true
-    ))
-    
-    // Add individual venue options
-    activeVenues.forEach { venueEntity ->
-        // Use the flexible venue mapping function
-        val venueEnum = mapVenueNameToEnum(venueEntity.name, activeVenues)
-        
-        val displayName = venueEntity.name.replace("_", " ")
-        
+
+    // Memoized: the body is pure, so rebuilding the list on every recomposition was wasted work.
+    // A stable list identity also keeps downstream remember() keys from invalidating.
+    return remember(venues, allOptionText) {
+        val activeVenues = venues.filter { it.isActive }
+
+        val options = mutableListOf<VenueOption>()
+
         options.add(VenueOption(
-            venue = venueEnum,
-            displayName = displayName,
-            isAllOption = false,
-            venueEntityId = venueEntity.id
+            venue = Venue.BOTH,
+            displayName = allOptionText,
+            isAllOption = true
         ))
+
+        // Add individual venue options
+        activeVenues.forEach { venueEntity ->
+            // Use the flexible venue mapping function
+            val venueEnum = mapVenueNameToEnum(venueEntity.name, activeVenues)
+
+            val displayName = venueEntity.name.replace("_", " ")
+
+            options.add(VenueOption(
+                venue = venueEnum,
+                displayName = displayName,
+                isAllOption = false,
+                venueEntityId = venueEntity.id
+            ))
+        }
+
+        options
     }
-    
-    return options
 }
 
 /**
@@ -586,34 +590,37 @@ fun getVenueDisplayString(venueName: String?, venues: List<VenueEntity>): String
  */
 @Composable
 fun generateVenueFilterOptions(venues: List<VenueEntity>): List<VenueOption> {
-    val platformContext = LocalPlatformContext.current
-    val activeVenues = venues.filter { it.isActive }
-
-    val options = mutableListOf<VenueOption>()
-
     val allOptionText = stringResource(Res.string.venue_all)
 
-    options.add(VenueOption(
-        venue = Venue.BOTH,
-        displayName = allOptionText,
-        isAllOption = true
-    ))
+    // Memoized: the body is pure, so rebuilding the list on every recomposition was wasted work.
+    // A stable list identity also keeps downstream remember() keys from invalidating.
+    return remember(venues, allOptionText) {
+        val activeVenues = venues.filter { it.isActive }
 
-    // Add individual venue options
-    activeVenues.forEach { venueEntity ->
-        // Use the flexible venue mapping function
-        val venueEnum = mapVenueNameToEnum(venueEntity.name, venues)
+        val options = mutableListOf<VenueOption>()
 
         options.add(VenueOption(
-            venue = venueEnum,
-            displayName = venueEntity.name.replace("_", " "),
-            isAllOption = false,
-            venueEntityId = venueEntity.id,
-            venueName = venueEntity.name
+            venue = Venue.BOTH,
+            displayName = allOptionText,
+            isAllOption = true
         ))
-    }
 
-    return options
+        // Add individual venue options
+        activeVenues.forEach { venueEntity ->
+            // Use the flexible venue mapping function
+            val venueEnum = mapVenueNameToEnum(venueEntity.name, venues)
+
+            options.add(VenueOption(
+                venue = venueEnum,
+                displayName = venueEntity.name.replace("_", " "),
+                isAllOption = false,
+                venueEntityId = venueEntity.id,
+                venueName = venueEntity.name
+            ))
+        }
+
+        options
+    }
 }
 
 /**

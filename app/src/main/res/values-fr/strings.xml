@@ -353,7 +353,7 @@
     <string name="ticket_check_coming_soon">Cette fonctionnalité arrive bientôt</string>
     <string name="ticket_check_description">Accès rapide à la liste des invité·e·s et au scanner à l\'entrée.</string>
     <string name="billeterie_stat_permanent_guests">Invité·e·s permanents</string>
-    <string name="billeterie_stat_temporary_guests_today">Invité·e·s temporaires (aujourd\'hui)</string>
+    <string name="billeterie_stat_temporary_guests_today">Invité·e·s temporaires</string>
     <string name="billeterie_stat_volunteers_on_list">Bénévoles sur la liste</string>
     <string name="billeterie_stat_total_without_invites">Sur la liste (sans +1)</string>
     <string name="billeterie_button_guest_list">Guest List</string>
@@ -1171,6 +1171,7 @@
     <string name="settings_category_sync">Synchronisation &amp; Données</string>
     <string name="settings_category_appearance">Apparence &amp; Affichage</string>
     <string name="settings_category_localization">Localisation</string>
+    <string name="institution_settings_firebase_admin_only">Les paramètres d’institution synchronisés (devise, e-mails, tampon de crédit, photos, miroir) ne peuvent être modifiés que par un admin Firebase de l’organisation.</string>
     <string name="settings_category_animations">Animations &amp; Effets</string>
     <string name="settings_category_developer">Développeur &amp; Débogage</string>
     <string name="settings_category_maintenance">Maintenance</string>

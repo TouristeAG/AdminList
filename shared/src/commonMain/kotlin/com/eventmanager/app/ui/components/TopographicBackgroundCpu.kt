@@ -36,12 +36,17 @@ internal fun TopographicBackgroundCpu(
         val maxHeight = constraints.maxHeight.toFloat()
         val renderer = remember(lineColors, config) { TopographicCpuRenderer(config) }
 
+        val pauseMotion = LocalPauseBackgroundMotion.current
         var time by remember { mutableFloatStateOf(0f) }
         var frameTick by remember { mutableIntStateOf(0) }
         var buckets by remember { mutableStateOf<Array<ArrayList<Offset>>?>(null) }
 
-        LaunchedEffect(lineColors, config, maxWidth, maxHeight, animationMultiplier) {
+        LaunchedEffect(lineColors, config, maxWidth, maxHeight, animationMultiplier, pauseMotion) {
             while (isActive) {
+                if (pauseMotion) {
+                    delay(50)
+                    continue
+                }
                 if (maxWidth <= 0f || maxHeight <= 0f) {
                     delay(16)
                     continue

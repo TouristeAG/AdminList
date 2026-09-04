@@ -1,5 +1,6 @@
 package com.eventmanager.app.data.sync
 
+import com.eventmanager.app.data.remote.FirebaseAuthBridge
 import com.eventmanager.app.data.repository.EventManagerRepository
 import com.eventmanager.app.platform.PlatformFileManager
 import kotlinx.coroutines.Dispatchers
@@ -16,6 +17,9 @@ object FactoryReset {
         fileManager: PlatformFileManager,
     ) {
         withContext(Dispatchers.IO) {
+            // The Firebase SDK persists its session outside our preference storage, so without
+            // this the app restarts signed in to an org it no longer has any settings for.
+            runCatching { FirebaseAuthBridge.signOut() }
             runCatching { repository.clearAllData() }
             runCatching { fileManager.getServiceAccountFile()?.delete() }
             runCatching { fileManager.getGmailOAuthClientFile()?.delete() }

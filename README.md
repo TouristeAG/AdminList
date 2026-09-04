@@ -66,7 +66,7 @@ In-app updates check `version.json` against the published release manifest.
 
 | Path | When to use |
 |------|-------------|
-| **Join an organization** | Another device is already set up. Scan the admin QR **or** paste the long configuration code (`noctulist-fb:…`) **and** the short 8-character invitation code (not in the QR). Sign in with Google. |
+| **Join an organization** | Another device is already set up. Scan the admin QR **or** paste the long configuration code (`noctulist-fb:1:…`). A full code includes project config, Google Sign-In credentials, and the invitation code — one scan is enough. Sign in with Google. |
 | **Create with Firebase** | New institution, recommended. Org ID → Firebase/Cloud project (in-app tutorial) → Google Sign-In. First admin can then invite other devices. |
 | **Create with Google Sheets** | Spreadsheet-based sync. Cloud project → service account JSON → spreadsheet ID → share the sheet as **Editor** with the service account. |
 

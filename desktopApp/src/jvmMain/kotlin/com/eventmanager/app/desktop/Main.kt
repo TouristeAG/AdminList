@@ -6,6 +6,7 @@ import androidx.compose.ui.window.MenuBar
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
+import com.eventmanager.app.data.utils.AppTimeZone
 import com.eventmanager.app.data.sync.FileAppLogger
 import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.platform.createAppStorage
@@ -20,6 +21,7 @@ private val isMacOs: Boolean =
     System.getProperty("os.name").orEmpty().contains("mac", ignoreCase = true)
 
 fun main() {
+    AppTimeZone.installAsJvmDefault()
     DesktopWindowAppearance.initBeforeUiToolkit()
     DesktopWebcamSupport.ensureInitialized()
     application {

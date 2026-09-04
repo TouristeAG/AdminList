@@ -65,6 +65,7 @@ fun FirebaseSheetsMirrorSettingsSection(
     onMirrorExport: suspend () -> Unit,
     onMirrorSettingsChanged: () -> Unit = {},
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
     var mirrorEnabled by remember { mutableStateOf(settingsManager.isSheetsMirrorEnabled()) }
     var mirrorSpreadsheetId by remember { mutableStateOf(settingsManager.getSheetsMirrorSpreadsheetId()) }
@@ -132,6 +133,7 @@ fun FirebaseSheetsMirrorSettingsSection(
             Switch(
                 checked = mirrorEnabled,
                 onCheckedChange = { persistMirrorToggle(it) },
+                enabled = enabled,
             )
         }
 
@@ -140,7 +142,7 @@ fun FirebaseSheetsMirrorSettingsSection(
                 modifier = Modifier.padding(vertical = 4.dp),
                 color = MaterialTheme.colorScheme.outlineVariant,
             )
-            TextButton(onClick = { drawerExpanded = !drawerExpanded }) {
+            TextButton(onClick = { drawerExpanded = !drawerExpanded }, enabled = enabled) {
                 Text(
                     if (drawerExpanded) {
                         stringResource(Res.string.firebase_section_hide)
@@ -169,12 +171,14 @@ fun FirebaseSheetsMirrorSettingsSection(
                         value = mirrorSpreadsheetId,
                         onValueChange = { mirrorSpreadsheetId = it },
                         label = stringResource(Res.string.sheets_mirror_spreadsheet_id_label),
+                        enabled = enabled,
                     )
                     MirrorCompactField(
                         value = mirrorInterval,
                         onValueChange = { mirrorInterval = it },
                         label = stringResource(Res.string.sheets_mirror_interval_label),
                         supporting = stringResource(Res.string.sheets_mirror_interval_hint),
+                        enabled = enabled,
                     )
 
                     if (platformContext != null) {
@@ -215,51 +219,61 @@ fun FirebaseSheetsMirrorSettingsSection(
                         value = guestListSheet,
                         onValueChange = { guestListSheet = it },
                         label = stringResource(Res.string.guest_list_sheet_label),
+                        enabled = enabled,
                     )
                     MirrorCompactField(
                         value = volunteerSheet,
                         onValueChange = { volunteerSheet = it },
                         label = stringResource(Res.string.volunteer_sheet_label),
+                        enabled = enabled,
                     )
                     MirrorCompactField(
                         value = jobsSheet,
                         onValueChange = { jobsSheet = it },
                         label = stringResource(Res.string.shifts_sheet_label),
+                        enabled = enabled,
                     )
                     MirrorCompactField(
                         value = jobTypesSheet,
                         onValueChange = { jobTypesSheet = it },
                         label = stringResource(Res.string.shift_types_sheet_label),
+                        enabled = enabled,
                     )
                     MirrorCompactField(
                         value = venuesSheet,
                         onValueChange = { venuesSheet = it },
                         label = stringResource(Res.string.venues_sheet_label),
+                        enabled = enabled,
                     )
                     MirrorCompactField(
                         value = salesItemsSheet,
                         onValueChange = { salesItemsSheet = it },
                         label = stringResource(Res.string.sales_items_sheet_label),
+                        enabled = enabled,
                     )
                     MirrorCompactField(
                         value = transfersSheet,
                         onValueChange = { transfersSheet = it },
                         label = stringResource(Res.string.transfers_sheet_label),
+                        enabled = enabled,
                     )
                     MirrorCompactField(
                         value = tempGuestListSheet,
                         onValueChange = { tempGuestListSheet = it },
                         label = stringResource(Res.string.temp_guest_list_sheet_label),
+                        enabled = enabled,
                     )
                     MirrorCompactField(
                         value = settingsSheet,
                         onValueChange = { settingsSheet = it },
                         label = stringResource(Res.string.settings_sheet_label),
+                        enabled = enabled,
                     )
 
                     OutlinedButton(
                         onClick = { saveMirrorSheetsConfig() },
                         modifier = Modifier.fillMaxWidth(),
+                        enabled = enabled,
                     ) {
                         Text(
                             stringResource(Res.string.save_sheets_config),
@@ -289,7 +303,7 @@ fun FirebaseSheetsMirrorSettingsSection(
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = serviceAccountReady && mirrorSpreadsheetId.isNotBlank(),
+                        enabled = enabled && serviceAccountReady && mirrorSpreadsheetId.isNotBlank(),
                     ) {
                         Text(
                             stringResource(Res.string.sheets_mirror_export_now),
@@ -308,6 +322,7 @@ private fun MirrorCompactField(
     onValueChange: (String) -> Unit,
     label: String,
     supporting: String? = null,
+    enabled: Boolean = true,
 ) {
     OutlinedTextField(
         value = value,
@@ -321,5 +336,6 @@ private fun MirrorCompactField(
         modifier = Modifier.fillMaxWidth(),
         singleLine = true,
         textStyle = MaterialTheme.typography.bodySmall,
+        enabled = enabled,
     )
 }

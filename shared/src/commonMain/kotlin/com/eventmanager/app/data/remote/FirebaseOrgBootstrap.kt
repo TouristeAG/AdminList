@@ -1,12 +1,33 @@
 package com.eventmanager.app.data.remote
 
 import com.eventmanager.app.data.sync.SettingsManager
+import kotlin.coroutines.cancellation.CancellationException
 
 sealed class FirebaseOrgRepairResult {
     data class Ok(val orgId: String) : FirebaseOrgRepairResult()
     data class Recovered(val orgId: String, val previousOrgId: String) : FirebaseOrgRepairResult()
     data object NotSignedIn : FirebaseOrgRepairResult()
     data object NoOrgsConfigured : FirebaseOrgRepairResult()
+
+    /** Org is configured but the server refused membership — [message] is user-facing. */
+    data class Blocked(val orgId: String, val message: String) : FirebaseOrgRepairResult()
+}
+
+/**
+ * What a caller is allowed to do when the signed-in user is not a member yet.
+ */
+enum class OrgBootstrapIntent {
+    /**
+     * Startup, org switch, multi-org pull. Joins with the stored invitation code at most —
+     * never creates an organization, so a stale local state cannot rewrite an existing org.
+     */
+    ENSURE_MEMBERSHIP,
+
+    /**
+     * Explicit admin action (setup wizard "create", org ID field commit). May create the org
+     * and become its first admin, which Firestore rules only permit when no config exists.
+     */
+    CREATE_IF_MISSING,
 }
 
 /**
@@ -25,12 +46,23 @@ object FirebaseOrgBootstrap {
         gateway.readMemberRole(orgId.trim(), uid.trim()) != null
 
     /**
-     * Creates `members/{uid}` + `metadata/config` when the org does not exist yet.
+     * Makes sure the signed-in user has a `members/{uid}` document in [orgId].
+     *
+     * Membership is probed against the server first, because "no member doc", "read refused" and
+     * "cannot reach Firestore" need opposite reactions. Re-joining an org the account already
+     * belongs to is a plain re-write of its own member doc; attempting an admin bootstrap there
+     * is what produced the permanent `PERMISSION_DENIED` after a factory reset.
+     *
+     * [signedInUid] / [signedInEmail] let a sign-in callback pass the identity it just obtained,
+     * before the platform auth cache has caught up.
      */
     suspend fun ensureOrgBootstrappedIfNeeded(
         gateway: FirestoreGateway,
         settings: SettingsManager,
         orgId: String,
+        intent: OrgBootstrapIntent = OrgBootstrapIntent.ENSURE_MEMBERSHIP,
+        signedInUid: String? = null,
+        signedInEmail: String? = null,
     ) {
         val trimmed = orgId.trim()
         if (!isValidOrgId(trimmed)) {
@@ -41,41 +73,94 @@ object FirebaseOrgBootstrap {
                 "Firestore is unavailable — check Firebase project options",
             )
         }
-        val uid = FirebaseAuthBridge.currentUserId()?.trim().orEmpty()
+        val uid = signedInUid?.trim()?.takeIf { it.isNotBlank() }
+            ?: FirebaseAuthBridge.currentUserId()?.trim().orEmpty()
         if (uid.isBlank()) {
             throw IllegalStateException(
                 "Sign in with Google before using organization \"$trimmed\"",
             )
         }
-        if (isMember(gateway, trimmed, uid)) return
 
-        val email = FirebaseAuthBridge.currentUserEmail()
+        val probe = gateway.probeMembership(trimmed, uid)
+        if (probe is MembershipProbe.Member) {
+            // Already a member: nothing to write, and the invitation code is no longer needed.
+            forgetInvitationCodeAfterJoin(settings, trimmed)
+            return
+        }
+        if (probe is MembershipProbe.Unavailable) {
+            // Offline or timed out. Writing here would guess at the remote state.
+            println("Firebase org $trimmed: membership unknown (offline) — skipping bootstrap")
+            return
+        }
+
+        val email = signedInEmail?.trim()?.takeIf { it.isNotBlank() }
+            ?: FirebaseAuthBridge.currentUserEmail()
             ?: settings.getFirebaseAuthEmail().takeIf { it.isNotBlank() }
-        try {
-            val code = MemberRoleAdmin.bootstrapOrgAdmin(
-                gateway = gateway,
-                orgId = trimmed,
-                uid = uid,
-                email = email,
-                allowedEmailDomains = emptyList(),
-            )
-            if (settings.getFirebaseOrgId().trim() == trimmed) {
-                settings.setFirebaseBootstrapCode(code)
-            }
-        } catch (e: Exception) {
-            val detail = e.message?.takeIf { it.isNotBlank() }
-                ?: "Missing or insufficient permissions"
+        val invitationCode = settings.getFirebaseBootstrapCode().trim()
+
+        // Nothing to try: without an invitation code only an explicit "create" may write.
+        if (invitationCode.isBlank() && intent != OrgBootstrapIntent.CREATE_IF_MISSING) {
             throw IllegalStateException(
-                "Cannot create or access organization \"$trimmed\": $detail",
+                firebaseMemberWriteDenialMessage(trimmed, probe, hasInvitationCode = false),
+            )
+        }
+
+        try {
+            if (invitationCode.isNotBlank()) {
+                MemberRoleAdmin.joinOrgAsMember(
+                    gateway = gateway,
+                    orgId = trimmed,
+                    uid = uid,
+                    email = email,
+                    bootstrapCode = invitationCode,
+                    allowedEmailDomains = settings.getAllowedEmailDomains(),
+                )
+            } else {
+                val code = MemberRoleAdmin.bootstrapOrgAdmin(
+                    gateway = gateway,
+                    orgId = trimmed,
+                    uid = uid,
+                    email = email,
+                    allowedEmailDomains = settings.getAllowedEmailDomains(),
+                )
+                if (settings.getFirebaseOrgId().trim() == trimmed) {
+                    settings.setFirebaseBootstrapCode(code)
+                }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            if (isFirestorePermissionDenied(e)) {
+                throw IllegalStateException(
+                    firebaseMemberWriteDenialMessage(
+                        trimmed,
+                        probe,
+                        hasInvitationCode = invitationCode.isNotBlank(),
+                    ),
+                    e,
+                )
+            }
+            val detail = e.message?.takeIf { it.isNotBlank() } ?: "unknown error"
+            throw IllegalStateException(
+                "Cannot join organization \"$trimmed\": $detail",
                 e,
             )
         }
 
-        if (!isMember(gateway, trimmed, uid)) {
-            throw IllegalStateException(
-                "Organization \"$trimmed\" is still not accessible after bootstrap. " +
-                    "Publish firestore.rules and sign in with the correct Google account.",
-            )
+        if (gateway.probeMembership(trimmed, uid) is MembershipProbe.Member) {
+            forgetInvitationCodeAfterJoin(settings, trimmed)
+        }
+    }
+
+    /**
+     * Drops the plaintext org invitation code once membership is confirmed by the server.
+     * A joined member device has no use for it, and it is the secret that lets a device join.
+     */
+    private fun forgetInvitationCodeAfterJoin(settings: SettingsManager, orgId: String) {
+        if (settings.getFirebaseBootstrapCode().isBlank()) return
+        // Admin devices keep it: they need it to render the join QR for the rest of the team.
+        if (settings.isFirebaseJoinImported() && settings.getFirebaseOrgId().trim() == orgId) {
+            settings.setFirebaseBootstrapCode("")
         }
     }
 
@@ -87,7 +172,12 @@ object FirebaseOrgBootstrap {
         settings: SettingsManager,
         orgId: String,
     ) {
-        ensureOrgBootstrappedIfNeeded(gateway, settings, orgId)
+        ensureOrgBootstrappedIfNeeded(
+            gateway,
+            settings,
+            orgId,
+            intent = OrgBootstrapIntent.CREATE_IF_MISSING,
+        )
     }
 
     /**
@@ -111,8 +201,18 @@ object FirebaseOrgBootstrap {
 
         val active = settings.getFirebaseOrgId().trim()
         if (active.isNotBlank()) {
-            runCatching { ensureOrgBootstrappedIfNeeded(gateway, settings, active) }
-            return FirebaseOrgRepairResult.Ok(active)
+            val failure = runCatching {
+                ensureOrgBootstrappedIfNeeded(gateway, settings, active)
+            }.exceptionOrNull()
+            if (failure is CancellationException) throw failure
+            return when {
+                failure != null -> FirebaseOrgRepairResult.Blocked(
+                    active,
+                    failure.message?.takeIf { it.isNotBlank() }
+                        ?: "Organization \"$active\" is not accessible with this account.",
+                )
+                else -> FirebaseOrgRepairResult.Ok(active)
+            }
         }
 
         if (configured.isEmpty()) {
@@ -121,7 +221,7 @@ object FirebaseOrgBootstrap {
 
         for (orgId in configured) {
             runCatching { ensureOrgBootstrappedIfNeeded(gateway, settings, orgId) }
-            if (isMember(gateway, orgId, uid)) {
+            if (gateway.probeMembership(orgId, uid) is MembershipProbe.Member) {
                 settings.setFirebaseOrgId(orgId)
                 return FirebaseOrgRepairResult.Recovered(orgId, "")
             }

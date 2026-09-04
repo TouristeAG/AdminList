@@ -628,6 +628,13 @@
     <string name="start_admin">Start Admin</string>
     <string name="admin_mode">Admin</string>
     <string name="ticket_check_mode">Ticketing</string>
+    <string name="startup_splash_opening">Opening NoctuList…</string>
+    <string name="startup_splash_syncing">Syncing your event data…</string>
+    <string name="startup_splash_preparing">Preparing Billetterie, POS and Admin…</string>
+    <string name="welcome_desktop_tagline">Pick a workspace to get started</string>
+    <string name="welcome_ticketing_hint">Scan tickets and manage door entry</string>
+    <string name="welcome_pos_hint">Take sales at the register</string>
+    <string name="welcome_admin_sync_ready">Admin access ready</string>
     <string name="welcome_background_sync_content_description">Syncing with Google Sheets to verify admin access</string>
 
     <!-- Admin Auth Screen -->
@@ -635,7 +642,7 @@
     <string name="admin_auth_description">Scan your badge or QR code to verify your admin access</string>
     <string name="admin_auth_syncing">Loading data from Google Sheets…</string>
     <string name="admin_auth_syncing_title">Preparing admin access</string>
-    <string name="admin_auth_syncing_subtitle">We\'re syncing with Google Sheets so your badge or QR code can be verified accurately.</string>
+    <string name="admin_auth_syncing_subtitle">We're syncing with Google Sheets so your badge or QR code can be verified accurately.</string>
     <string name="admin_auth_sync_wait_hint">Do not scan yet — authentication will unlock when sync completes</string>
     <string name="admin_auth_sync_step_sheet">Checking spreadsheet structure</string>
     <string name="admin_auth_sync_step_download">Downloading latest guest and volunteer data</string>
@@ -645,6 +652,8 @@
     <string name="admin_precheck_sync_failed_title">Could not prepare admin access</string>
     <string name="admin_precheck_sync_failed_message">The sheet could not be repaired or synced. Check your connection and spreadsheet settings, then try again.</string>
     <string name="admin_precheck_sync_retry">Retry</string>
+    <string name="admin_auth_incomplete_roster_title">Member list still loading</string>
+    <string name="admin_auth_incomplete_roster_message">Members were found but no administrator is visible yet. This usually means sync is incomplete. Retry sync before creating a new administrator.</string>
     <string name="admin_auth_ready">Hold your NFC badge near the device or scan your QR code</string>
     <string name="admin_auth_scan_qr">Scan QR Code</string>
     <string name="admin_auth_granted">Welcome, %1$s! Admin access granted</string>
@@ -685,9 +694,14 @@
     <string name="ticket_check_coming_soon">This feature is coming soon</string>
     <string name="ticket_check_description">Quick access to the guest list and scanner at the door.</string>
     <string name="billeterie_stat_permanent_guests">Permanent guests</string>
-    <string name="billeterie_stat_temporary_guests_today">Temporary guests (today)</string>
+    <string name="billeterie_stat_temporary_guests_today">Temporary guests</string>
     <string name="billeterie_stat_volunteers_on_list">Volunteers on list</string>
     <string name="billeterie_stat_total_without_invites">On list (excl. +1s)</string>
+    <string name="billeterie_desktop_back">Home</string>
+    <string name="billeterie_desktop_actions_label">Quick actions</string>
+    <string name="billeterie_desktop_overview_label">Tonight's overview</string>
+    <string name="billeterie_desktop_guest_list_hint">Browse, search, and manage entries</string>
+    <string name="billeterie_desktop_scanner_hint">Validate tickets and benefits at the door</string>
     <string name="billeterie_button_guest_list">Guest list</string>
     <string name="billeterie_button_scanner">Scanner</string>
 
@@ -1441,6 +1455,7 @@
     <string name="firebase_settings_section_devices">Other devices</string>
     <string name="firebase_settings_section_access">Access &amp; team</string>
     <string name="firebase_settings_section_optional">Optional</string>
+    <string name="institution_settings_firebase_admin_only">Synced institution settings (currency, emails, credit buffer, photos, mirror) can only be changed by a Firebase org admin.</string>
     <string name="firebase_status_ready">Ready — signed in and connected</string>
     <string name="firebase_status_need_sign_in">Almost ready — sign in with Google</string>
     <string name="firebase_status_need_config">Setup incomplete — fill the fields below</string>
@@ -1457,7 +1472,7 @@
     <string name="firebase_web_client_id_label">Web client ID</string>
     <string name="firebase_web_client_id_hint">Institution OAuth 2.0 Web client ID (Firebase Google Sign-In). Not the developer Gmail Desktop OAuth JSON.</string>
     <string name="firebase_web_client_secret_label">Web client secret</string>
-    <string name="firebase_web_client_secret_hint">Institution Web client secret (Desktop + Android). Authorized redirect URIs (not JavaScript origins): http://localhost:8889/Callback (and :8888, :8765, :9090). Same list for Desktop and Android — no SHA-1.</string>
+    <string name="firebase_web_client_secret_hint">Institution Web client secret (Desktop + Android). Authorized redirect URIs (not JavaScript origins): http://localhost:8889/Callback (and :8888, :8765, :9090). Same list for Desktop and Android.</string>
     <string name="firebase_step_signin_title">3. Google Sign-In</string>
     <string name="firebase_step_signin_body">Authorize this device. The first admin account becomes an organization admin.</string>
     <string name="firebase_sign_in">Sign in with Google</string>
@@ -1474,27 +1489,31 @@
     <string name="firebase_config_paste_hint">Paste the Firebase Console web SDK config (apiKey, appId, projectId). Only admins need this.</string>
     <string name="firebase_config_paste_apply">Apply pasted config</string>
     <string name="firebase_join_qr_title">Invite other devices (QR)</string>
-    <string name="firebase_join_qr_body">Share this QR only with your team (it includes Google Sign-In credentials). Other devices scan it in Setup → Join — nothing else to type.</string>
+    <string name="firebase_join_qr_body">Share this QR only with your team. It includes project config, Google Sign-In credentials, and the invitation code — one scan is enough.</string>
     <string name="firebase_join_error_oauth_missing">This join code is missing Google Sign-In credentials. Ask your admin for a new QR from their device (Settings → Firebase sync).</string>
-    <string name="firebase_join_qr_need_config">Fill org ID and project options first to generate a join QR.</string>
+    <string name="firebase_join_error_invite_missing">This join code is missing the invitation code. Ask your admin for a new full QR, or enter the 8-character invitation code below.</string>
+    <string name="firebase_join_qr_need_config">Fill org ID, project options, and OAuth credentials first to generate a join QR.</string>
     <string name="firebase_join_copy_code">Copy configuration code</string>
     <string name="firebase_join_code_copied">Configuration code copied</string>
     <string name="firebase_join_scan_title">Join this organization</string>
-    <string name="firebase_join_scan_body">Scan the admin QR, or enter both codes below. They are two different codes.</string>
+    <string name="firebase_join_scan_body">Scan the admin QR (preferred), or paste the configuration code. A full code includes the invitation — no second code needed.</string>
     <string name="firebase_join_scan">Scan join QR</string>
     <string name="firebase_join_paste_label">Configuration code</string>
-    <string name="firebase_join_paste_code">Apply codes</string>
-    <string name="firebase_join_received">Configuration received — enter the invitation code if needed, then sign in.</string>
+    <string name="firebase_join_paste_code">Apply code</string>
+    <string name="firebase_join_received">Configuration received — sign in with Google to finish joining.</string>
     <string name="firebase_join_wizard_option">Join existing organization</string>
-    <string name="firebase_join_wizard_option_body">Scan the QR or enter the configuration code and the invitation code.</string>
+    <string name="firebase_join_wizard_option_body">Scan the admin QR or paste the configuration code (includes invitation).</string>
     <string name="firebase_join_config_code_label">Configuration code</string>
-    <string name="firebase_join_config_code_hint">Long code starting with noctulist-fb — same content as the QR.</string>
-    <string name="firebase_join_invite_code_label">Invitation code</string>
-    <string name="firebase_join_invite_code_hint">Short 8-character code from your admin. It is not in the QR.</string>
+    <string name="firebase_join_config_code_hint">Long code starting with noctulist-fb — same content as the QR (includes invitation).</string>
+    <string name="firebase_join_invite_code_label">Invitation code (optional)</string>
+    <string name="firebase_join_invite_code_hint">Only needed for older QRs that omit it. Full codes already include this.</string>
     <string name="firebase_join_invite_copy">Copy invitation code</string>
     <string name="firebase_join_invite_copied">Invitation code copied</string>
-    <string name="firebase_join_invite_admin_body">Give this short code separately — it is not in the QR.</string>
-    <string name="firebase_join_or_enter_codes">Or enter the two codes by hand</string>
+    <string name="firebase_join_invite_admin_body">Also embedded in the QR and configuration code above. Shown here so you can verify or share separately if needed.</string>
+    <string name="firebase_join_invite_missing_body">No invitation code on this device. Create one to enable the join QR (required for other devices to sync).</string>
+    <string name="firebase_join_invite_create">Create invitation code</string>
+    <string name="firebase_join_invite_rotate">Rotate invitation code</string>
+    <string name="firebase_join_or_enter_codes">Or paste the configuration code</string>
     <string name="firebase_create_new_option">Set up new Firebase (admin)</string>
     <string name="firebase_project_configured_hidden">Firebase project configured (details hidden)</string>
     <string name="firebase_project_secrets_restricted">Project secrets are visible only if you are a local admin and a Firebase organization admin. Sign in with a Google account that has the Firebase admin role.</string>
@@ -1564,6 +1583,8 @@
     <string name="firebase_tutorial_copy_rules">Copy firestore.rules to clipboard</string>
     <string name="firebase_tutorial_copy_rules_done">Copied — paste into Firestore → Rules, then Publish</string>
     <string name="firebase_tutorial_copy_rules_error">Could not load rules — open firebase/firestore.rules in the project instead</string>
+    <string name="firebase_tutorial_copy_redirect_uris">Copy localhost redirect URIs</string>
+    <string name="firebase_tutorial_copy_redirect_uris_done">Copied — paste each URI under Authorized redirect URIs, then Save</string>
     <string name="firebase_tutorial_storage_optional_title">Optional: profile photos (Firebase Storage)</string>
     <string name="firebase_tutorial_storage_optional_body">Skip this to stay on the free Spark plan. Enabling Storage can require a paid Blaze plan.\n\nIf you want profile photos:\n1. Firebase Console → Build → Storage → Get started (same project).\n2. Storage → Rules (URL must contain /storage/rules — not Firestore).\n3. Paste the NoctuList storage rules (button below) → Publish.\n4. In NoctuList Settings → Firebase, turn on “Enable profile photos” (every device in the organization gets it).\n\nYou can do this later. The app works fully without Storage.</string>
     <string name="firebase_tutorial_copy_storage_rules">Copy storage.rules to clipboard</string>
@@ -1580,15 +1601,13 @@
     <string name="firebase_tutorial_fb_step4_body">1. Firebase Console → Build → Authentication → Get started (if needed).\n2. Sign-in method → Google → Enable → Save.\n3. On that screen, note the Web client ID Firebase shows for the Google provider — this is the institution Web client (not Gmail Desktop).\n4. If Firebase creates a Web OAuth client automatically, keep it. Do not replace it with the developer Gmail OAuth JSON.</string>
     <string name="firebase_tutorial_fb_step5_title">5. Copy values into NoctuList</string>
     <string name="firebase_tutorial_fb_step5_body">Keep this list open.\n\nA) Web config (easiest)\n• Project settings (gear) → General → Your apps → Web app.\n• If none: Add app → Web (&lt;/&gt;), nickname “NoctuList”, skip Hosting.\n• Open Config / SDK snippet and copy apiKey, appId, projectId — or paste the whole snippet into NoctuList “Paste Firebase web config”.\n\nB) Web client ID\n• Authentication → Sign-in method → Google → Web client ID\n  OR Project settings → General → Your apps / OAuth section\n  OR Cloud Console → APIs &amp; Services → Credentials → OAuth 2.0 Client IDs → type Web application.\n• Paste into NoctuList → Web client ID.\n\nC) Web client secret (Desktop + Android)\n• Open https://console.cloud.google.com → same project → APIs &amp; Services → Credentials.\n• Open the same Web application client as above.\n• Copy Client secret → NoctuList → Web client secret.\n• NOT under “Authorized JavaScript origins” (origins cannot have /Callback).
-Scroll to “Authorized redirect URIs” and add ALL of these exactly:
+Scroll to “Authorized redirect URIs” and add ALL of these exactly (copy button below):
   http://localhost:8889/Callback
   http://localhost:8888/Callback
   http://localhost:8765/Callback
   http://localhost:9090/Callback
 Optional origins (no path): http://localhost:8889 etc.
-→ Save, wait about one minute, then retry Sign-In.\n\nAndroid devices → step 6. Desktop-only → step 7.</string>
-    <string name="firebase_tutorial_fb_step6_title">6. Android Sign-In (phones/tablets)</string>
-    <string name="firebase_tutorial_fb_step6_body">Skip if Desktop-only.\n\nDo not add an Android app or SHA-1 in Firebase.\n\nNoctuList Android uses the same Web OAuth client and localhost redirect URIs as Desktop (step 5):\n1. On the device, paste Web client ID and Web client secret (join QR includes both).\n2. Tap Sign in with Google — Chrome opens briefly, then NoctuList completes sign-in.\n\nIf Sign-In fails: confirm localhost Callback URIs from step 5, Web client ID + secret, and that Google provider is enabled.</string>
+→ Save, wait about one minute, then retry Sign-In.\n\nContinue with step 6.</string>
 
     <string name="firebase_tutorial_cloud_step1_title">1. Open the Cloud project</string>
     <string name="firebase_tutorial_cloud_step1_body">1. Open https://console.cloud.google.com\n2. Top bar → project picker → select the institution project (the one for Sheets if you already use Sheets).\n3. Confirm Project ID (project name chip or IAM &amp; Admin → Settings). You will paste it into NoctuList.\n\nLink Firebase once if needed: https://console.firebase.google.com → Add project → “Use an existing Google Cloud project” → this same project. Do not create a brand-new empty project.</string>
@@ -1598,7 +1617,7 @@ Optional origins (no path): http://localhost:8889 etc.
     <string name="firebase_tutorial_cloud_step3_body">Cloud Console → Firestore → Rules (URL must contain firestore and rules — not Realtime Database).\nPaste the NoctuList rules (button below) → Publish.\nIf there is no Rules editor in Cloud UI: Firebase Console → Build → Firestore → Rules → paste → Publish.</string>
     <string name="firebase_tutorial_cloud_step4_title">4. Enable Google Sign-In + Web OAuth client</string>
     <string name="firebase_tutorial_cloud_step4_body">A) Firebase Auth (required once)\n1. console.firebase.google.com → same project → Authentication → Sign-in method → Google → Enable → Save.\n\nB) Institution Web OAuth client (not Gmail Desktop)\n1. Cloud Console → APIs &amp; Services → Credentials.\n2. Under OAuth 2.0 Client IDs, open (or create) a client of type Web application used by Firebase Auth.\n3. Do not use the developer Gmail Desktop JSON client for this.\n4. NOT under “Authorized JavaScript origins” (origins cannot have /Callback).
-Scroll to “Authorized redirect URIs” and add ALL of these exactly:
+Scroll to “Authorized redirect URIs” and add ALL of these exactly (copy button below):
   http://localhost:8889/Callback
   http://localhost:8888/Callback
   http://localhost:8765/Callback
@@ -1606,13 +1625,11 @@ Scroll to “Authorized redirect URIs” and add ALL of these exactly:
 Optional origins (no path): http://localhost:8889 etc.
 → Save, wait about one minute, then retry Sign-In.\n5. Copy Client ID and Client secret for step 5.</string>
     <string name="firebase_tutorial_cloud_step5_title">5. Copy values into NoctuList</string>
-    <string name="firebase_tutorial_cloud_step5_body">A) Project ID — Cloud project picker / IAM &amp; Admin → Settings.\n\nB) API key — Credentials → API keys (existing Browser key, or Create credentials → API key once).\n\nC) Web client ID + secret — Credentials → OAuth 2.0 Client IDs → Web application (step 4). Paste both into NoctuList (secret = Desktop Sign-In).\n\nD) Application ID (appId)\n• Firebase Console → Project settings → General → Your apps → Web.\n• If none: Add app → Web once, nickname “NoctuList”, skip Hosting; copy appId from the config snippet.\n• Or paste the whole Firebase web config into NoctuList.\n\nAndroid → step 6. Desktop-only → step 7.</string>
-    <string name="firebase_tutorial_cloud_step6_title">6. Android Sign-In (phones/tablets)</string>
-    <string name="firebase_tutorial_cloud_step6_body">Skip if Desktop-only.\n\nDo not register an Android app or SHA-1 in Firebase.\n\n1. Confirm step 4 added the localhost Callback redirect URIs.\n2. On the device: Web client ID + secret from step 5.\n3. Sign in with Google in NoctuList (Chrome tab, same flow as Desktop).</string>
+    <string name="firebase_tutorial_cloud_step5_body">A) Project ID — Cloud project picker / IAM &amp; Admin → Settings.\n\nB) API key — Credentials → API keys (existing Browser key, or Create credentials → API key once).\n\nC) Web client ID + secret — Credentials → OAuth 2.0 Client IDs → Web application (step 4). Paste both into NoctuList (secret = Desktop Sign-In).\n\nD) Application ID (appId)\n• Firebase Console → Project settings → General → Your apps → Web.\n• If none: Add app → Web once, nickname “NoctuList”, skip Hosting; copy appId from the config snippet.\n• Or paste the whole Firebase web config into NoctuList.\n\nContinue with step 6.</string>
 
-    <string name="firebase_tutorial_step7_title">7. Fill NoctuList, then migrate / connect</string>
+    <string name="firebase_tutorial_step7_title">6. Fill NoctuList, then migrate / connect</string>
     <string name="firebase_tutorial_step7_body">In Admin Firebase sync or the migration dialog:\n• Organization ID — short shared name (example: noctulist-club). Same on every device.\n• Project ID, Application ID, API key, Web client ID, and Web client secret (Desktop and Android).\n• Or paste web config + fill Web client ID/secret, then use the join QR for other devices.\nSign in with Google (first admin becomes org admin). Only after Sign-In succeeds, start migration if switching from Sheets. Peers join via QR / follow — they should not retype secrets.</string>
-    <string name="firebase_tutorial_step8_title">8. After setup</string>
+    <string name="firebase_tutorial_step8_title">7. After setup</string>
     <string name="firebase_tutorial_step8_body">In Firestore you should see orgs/{yourOrgId}/… (guests, members, metadata, etc.). Keep Sheets as backup until POS, door and a second device are verified. Billing: stay on the free Spark / free tier while testing; upgrade only if you exceed quotas.</string>
     <string name="migration_wizard_to_firebase_title">Switch to Firebase</string>
     <string name="migration_wizard_to_sheets_title">Switch to Google Sheets</string>
@@ -2109,11 +2126,11 @@ Place a card on the reader and test again to read a UID.</string>
     <string name="rate_limit_read_value">300 per minute per project</string>
     <string name="rate_limit_retry_sync">Retry Sync</string>
     <string name="rate_limit_tips_body">• Use manual sync instead of auto-sync during peak usage
-• Sync less frequently if you\'re hitting limits often
+• Sync less frequently if you're hitting limits often
 • Check your Google Cloud Console for quota usage</string>
     <string name="rate_limit_tips_title">Tips:</string>
     <string name="rate_limit_too_many_requests">Too Many Requests</string>
-    <string name="rate_limit_wait_message">You\'ve hit the Google Sheets API rate limit. Please wait 1-2 minutes before trying again.</string>
+    <string name="rate_limit_wait_message">You've hit the Google Sheets API rate limit. Please wait 1-2 minutes before trying again.</string>
     <string name="rate_limit_what_to_do">What to do:</string>
     <string name="rate_limit_write_requests">Write requests</string>
     <string name="rate_limit_write_value">300 per minute per project</string>

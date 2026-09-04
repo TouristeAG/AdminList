@@ -1,12 +1,17 @@
 package com.eventmanager.app.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material3.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.eventmanager.app.data.sync.SettingsManager
@@ -64,23 +69,22 @@ fun DashboardClockCard(
         offsetValueText
     )
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isPhone) {
-                MaterialTheme.colorScheme.primaryContainer
-            } else {
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.92f)
-            }
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isPhone) 0.dp else 4.dp)
+    val shape = RoundedCornerShape(if (isPhone) 12.dp else 16.dp)
+    val contentPadding = if (isPhone) 16.dp else 20.dp
+
+    // Single flat container — Material Card elevation/tonal layers read as a nested box on Desktop.
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(MaterialTheme.colorScheme.primaryContainer),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(if (isPhone) 16.dp else 20.dp),
+                .padding(contentPadding),
             verticalAlignment = Alignment.Top,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Icon(
                 Icons.Default.Schedule,
@@ -107,12 +111,12 @@ fun DashboardClockCard(
                 Text(
                     text = effectiveToday.format(dateFormatter),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f),
                 )
                 Text(
                     text = calculationTimeInfo,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
                 )
             }
         }

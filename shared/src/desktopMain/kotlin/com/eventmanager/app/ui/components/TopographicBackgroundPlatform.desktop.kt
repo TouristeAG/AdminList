@@ -1,21 +1,20 @@
 package com.eventmanager.app.ui.components
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ShaderBrush
 import com.eventmanager.app.data.sync.AppLogger
+import kotlinx.coroutines.isActive
 import org.jetbrains.skia.RuntimeEffect
 import org.jetbrains.skia.RuntimeShaderBuilder
 
@@ -57,19 +56,29 @@ internal actual fun TopographicBackgroundPlatform(
         )
     }
 
-    val infinite = rememberInfiniteTransition(label = "topographic_shader")
-    val time by infinite.animateFloat(
-        initialValue = 0f,
-        targetValue = 3600f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(
-                durationMillis = topographicAnimationDurationMillis(config, animationMultiplier),
-                easing = LinearEasing,
-            ),
-            repeatMode = RepeatMode.Restart,
-        ),
-        label = "topographic_time",
-    )
+    val pauseMotion = LocalPauseBackgroundMotion.current
+    val durationMs = remember(config, animationMultiplier) {
+        topographicAnimationDurationMillis(config, animationMultiplier).toFloat().coerceAtLeast(1f)
+    }
+    var time by remember { mutableFloatStateOf(0f) }
+
+    // Drive time from frames only while motion is allowed. Pausing stops invalidation so a parent
+    // graphicsLayer can reuse its offscreen buffer during space entrances.
+    LaunchedEffect(pauseMotion, durationMs) {
+        if (pauseMotion) return@LaunchedEffect
+        val timeAtResume = time
+        val startNs = withFrameNanos { it }
+        // Time stays derived from (now - startNs), so throttling the writes cannot drift.
+        var lastEmitNs = startNs - BackgroundFrameIntervalNanos
+        while (isActive) {
+            withFrameNanos { now ->
+                if (now - lastEmitNs < BackgroundFrameIntervalNanos) return@withFrameNanos
+                lastEmitNs = now
+                val elapsedMs = (now - startNs) / 1_000_000f
+                time = (timeAtResume + (elapsedMs / durationMs) * 3600f) % 3600f
+            }
+        }
+    }
 
     Canvas(modifier = modifier.fillMaxSize()) {
         if (size.minDimension <= 0f) return@Canvas

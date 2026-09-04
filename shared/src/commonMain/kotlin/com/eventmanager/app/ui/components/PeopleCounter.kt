@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -57,7 +58,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -66,6 +69,7 @@ import com.eventmanager.app.data.remote.BackendType
 import com.eventmanager.app.data.sync.DateFormatUtils
 import com.eventmanager.app.data.sync.settingsManagerFor
 import com.eventmanager.app.platform.LocalPlatformContext
+import com.eventmanager.app.platform.PlatformContext
 import com.eventmanager.app.platform.vibrateShort
 import com.eventmanager.app.resources.Res
 import com.eventmanager.app.resources.*
@@ -83,6 +87,7 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun PeopleCounter(
     isPhone: Boolean = true,
+    useDesktopLayout: Boolean = false,
     modifier: Modifier = Modifier,
     viewModel: EventManagerViewModel
 ) {
@@ -175,14 +180,8 @@ fun PeopleCounter(
     val count = selectedVenue?.peopleCounterCount ?: 0
     val sheetMod = selectedVenue?.peopleCounterLastModified ?: 0L
 
-    var sheetClockTick by remember { mutableStateOf(0) }
-    LaunchedEffect(sheetMod) {
-        if (sheetMod <= 0L) return@LaunchedEffect
-        while (true) {
-            delay(1000L)
-            sheetClockTick++
-        }
-    }
+    // The 1 s tick that refreshes the "synced N ago" line lives in [PeopleCounterSyncLine] so it
+    // only invalidates that leaf instead of recomposing this whole composable every second.
 
     val resetCountAnim = remember { Animatable(0f) }
     var isResetCountAnimation by remember { mutableStateOf(false) }
@@ -257,9 +256,91 @@ fun PeopleCounter(
 
     val scheme = MaterialTheme.colorScheme
 
+    val cardCorner = when {
+        useDesktopLayout -> 18.dp
+        isPhone -> 26.dp
+        else -> 30.dp
+    }
+    val cardPadding = when {
+        useDesktopLayout -> 12.dp
+        isPhone -> 18.dp
+        else -> 22.dp
+    }
+    val chipIconSize = if (useDesktopLayout) 12.dp else 18.dp
+    val headerIconBoxSize = when {
+        useDesktopLayout -> 0.dp
+        isPhone -> 48.dp
+        else -> 56.dp
+    }
+    val headerIconSize = when {
+        useDesktopLayout -> 0.dp
+        isPhone -> 28.dp
+        else -> 32.dp
+    }
+    val headerIconCorner = when {
+        useDesktopLayout -> 10.dp
+        isPhone -> 14.dp
+        else -> 16.dp
+    }
+    val titleStyle = when {
+        useDesktopLayout -> MaterialTheme.typography.titleSmall
+        isPhone -> MaterialTheme.typography.headlineSmall
+        else -> MaterialTheme.typography.headlineMedium
+    }
+    val hintStyle = if (useDesktopLayout) MaterialTheme.typography.labelSmall else MaterialTheme.typography.bodySmall
+    val countOuterPaddingV = when {
+        useDesktopLayout -> 2.dp
+        isPhone -> 12.dp
+        else -> 16.dp
+    }
+    val countInnerPadding = when {
+        useDesktopLayout -> 14.dp
+        isPhone -> 24.dp
+        else -> 32.dp
+    }
+    val countCorner = when {
+        useDesktopLayout -> 12.dp
+        isPhone -> 16.dp
+        else -> 20.dp
+    }
+    val countTextStyle = when {
+        useDesktopLayout -> MaterialTheme.typography.displaySmall
+        isPhone -> MaterialTheme.typography.displayLarge
+        else -> MaterialTheme.typography.displayMedium
+    }
+    val syncTextStyle = when {
+        useDesktopLayout -> MaterialTheme.typography.labelSmall
+        isPhone -> MaterialTheme.typography.labelSmall
+        else -> MaterialTheme.typography.labelMedium
+    }
+    val syncTextColor = if (useDesktopLayout) scheme.onSurfaceVariant else scheme.primary
+    val controlButtonHeight = when {
+        useDesktopLayout -> 56.dp
+        isPhone -> 56.dp
+        else -> 64.dp
+    }
+    val controlButtonIconSize = when {
+        useDesktopLayout -> 26.dp
+        isPhone -> 24.dp
+        else -> 28.dp
+    }
+    val controlButtonCorner = when {
+        useDesktopLayout -> 14.dp
+        isPhone -> 14.dp
+        else -> 16.dp
+    }
+    val resetButtonHeight = when {
+        useDesktopLayout -> 40.dp
+        isPhone -> 48.dp
+        else -> 56.dp
+    }
+    val resetIconSize = if (useDesktopLayout) 18.dp else 20.dp
+
     Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(if (isPhone) 26.dp else 30.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .then(if (useDesktopLayout) Modifier.fillMaxHeight() else Modifier),
+        shape = RoundedCornerShape(cardCorner),
         colors = CardDefaults.cardColors(
             containerColor = scheme.surfaceContainerLow
         ),
@@ -275,120 +356,205 @@ fun PeopleCounter(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(if (isPhone) 18.dp else 22.dp)
+                .padding(cardPadding)
+                .then(if (useDesktopLayout) Modifier.fillMaxHeight() else Modifier)
         ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(bottom = if (isPhone) 6.dp else 8.dp)
-            ) {
-                activeVenues.forEach { v ->
-                    FilterChip(
-                        selected = v.id == selectedVenueId,
-                        onClick = { viewModel.setPeopleCounterSelectedVenueId(v.id) },
-                        label = {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            ) {
-                                if (viewModel.isFirebaseAllOrgsMode() && v.firebaseOrgId.isNotBlank()) {
-                                    OrgColorDot(orgId = v.firebaseOrgId, viewModel = viewModel, size = 8.dp)
-                                }
-                                Text(
-                                    v.name,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    style = MaterialTheme.typography.labelLarge
-                                )
-                            }
-                        },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.LocationOn,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
+            if (useDesktopLayout) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        activeVenues.forEach { v ->
+                            FilterChip(
+                                selected = v.id == selectedVenueId,
+                                onClick = { viewModel.setPeopleCounterSelectedVenueId(v.id) },
+                                label = {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    ) {
+                                        if (viewModel.isFirebaseAllOrgsMode() && v.firebaseOrgId.isNotBlank()) {
+                                            OrgColorDot(
+                                                orgId = v.firebaseOrgId,
+                                                viewModel = viewModel,
+                                                size = 6.dp,
+                                            )
+                                        }
+                                        Text(
+                                            v.name,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            style = MaterialTheme.typography.labelMedium,
+                                        )
+                                    }
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.LocationOn,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(chipIconSize),
+                                    )
+                                },
                             )
                         }
-                    )
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Text(
+                            text = peopleCounterPriority,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = scheme.onSurfaceVariant,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Box(
+                            modifier = Modifier
+                                .scale(0.72f)
+                                .wrapContentSize(Alignment.Center),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Switch(
+                                checked = priority,
+                                onCheckedChange = { viewModel.setPeopleCounterPriority(it) },
+                                interactionSource = prioritySwitchInteraction,
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = scheme.onPrimary,
+                                    checkedTrackColor = scheme.primary,
+                                    uncheckedThumbColor = scheme.outline,
+                                    uncheckedTrackColor = scheme.surfaceContainerHighest,
+                                    uncheckedBorderColor = scheme.outline.copy(alpha = 0.6f),
+                                ),
+                            )
+                        }
+                    }
                 }
-            }
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = if (isPhone) 10.dp else 14.dp)
-            ) {
-                Box(
+            } else {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
-                        .size(if (isPhone) 48.dp else 56.dp)
-                        .background(
-                            brush = Brush.linearGradient(
-                                colors = listOf(
-                                    scheme.primaryContainer,
-                                    scheme.secondaryContainer.copy(alpha = 0.85f)
-                                )
-                            ),
-                            shape = RoundedCornerShape(if (isPhone) 14.dp else 16.dp)
-                        ),
-                    contentAlignment = Alignment.Center
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(bottom = if (isPhone) 6.dp else 8.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Group,
-                        contentDescription = null,
-                        modifier = Modifier.size(if (isPhone) 28.dp else 32.dp),
-                        tint = scheme.primary
-                    )
+                    activeVenues.forEach { v ->
+                        FilterChip(
+                            selected = v.id == selectedVenueId,
+                            onClick = { viewModel.setPeopleCounterSelectedVenueId(v.id) },
+                            label = {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                ) {
+                                    if (viewModel.isFirebaseAllOrgsMode() && v.firebaseOrgId.isNotBlank()) {
+                                        OrgColorDot(orgId = v.firebaseOrgId, viewModel = viewModel, size = 8.dp)
+                                    }
+                                    Text(
+                                        v.name,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        style = MaterialTheme.typography.labelLarge
+                                    )
+                                }
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.LocationOn,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(chipIconSize)
+                                )
+                            }
+                        )
+                    }
                 }
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = peopleCounterTitle,
-                        style = if (isPhone) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = scheme.onSurface
-                    )
-                    Text(
-                        text = peopleCounterHint,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = scheme.onSurfaceVariant
-                    )
-                }
+
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    modifier = Modifier.padding(start = 2.dp)
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = if (isPhone) 10.dp else 14.dp)
                 ) {
-                    Text(
-                        text = peopleCounterPriority,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = scheme.onSurfaceVariant,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.widthIn(max = if (isPhone) 100.dp else 120.dp)
-                    )
                     Box(
                         modifier = Modifier
-                            .scale(0.78f)
-                            .wrapContentSize(Alignment.Center),
+                            .size(headerIconBoxSize)
+                            .background(
+                                brush = Brush.linearGradient(
+                                    colors = listOf(
+                                        scheme.primaryContainer,
+                                        scheme.secondaryContainer.copy(alpha = 0.85f)
+                                    )
+                                ),
+                                shape = RoundedCornerShape(headerIconCorner)
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
-                        Switch(
-                            checked = priority,
-                            onCheckedChange = { viewModel.setPeopleCounterPriority(it) },
-                            interactionSource = prioritySwitchInteraction,
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = scheme.onPrimary,
-                                checkedTrackColor = scheme.primary,
-                                uncheckedThumbColor = scheme.outline,
-                                uncheckedTrackColor = scheme.surfaceContainerHighest,
-                                uncheckedBorderColor = scheme.outline.copy(alpha = 0.6f)
-                            )
+                        Icon(
+                            imageVector = Icons.Default.Group,
+                            contentDescription = null,
+                            modifier = Modifier.size(headerIconSize),
+                            tint = scheme.primary
                         )
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = peopleCounterTitle,
+                            style = titleStyle,
+                            fontWeight = FontWeight.Bold,
+                            color = scheme.onSurface
+                        )
+                        Text(
+                            text = peopleCounterHint,
+                            style = hintStyle,
+                            color = scheme.onSurfaceVariant
+                        )
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.padding(start = 2.dp)
+                    ) {
+                        Text(
+                            text = peopleCounterPriority,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = scheme.onSurfaceVariant,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.widthIn(max = if (isPhone) 100.dp else 120.dp)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .scale(0.78f)
+                                .wrapContentSize(Alignment.Center),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Switch(
+                                checked = priority,
+                                onCheckedChange = { viewModel.setPeopleCounterPriority(it) },
+                                interactionSource = prioritySwitchInteraction,
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = scheme.onPrimary,
+                                    checkedTrackColor = scheme.primary,
+                                    uncheckedThumbColor = scheme.outline,
+                                    uncheckedTrackColor = scheme.surfaceContainerHighest,
+                                    uncheckedBorderColor = scheme.outline.copy(alpha = 0.6f)
+                                )
+                            )
+                        }
                     }
                 }
             }
@@ -440,14 +606,184 @@ fun PeopleCounter(
                     style = MaterialTheme.typography.bodyMedium,
                     color = scheme.onSurfaceVariant
                 )
+            } else if (useDesktopLayout) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                ) {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = countOuterPaddingV)
+                            .alpha(if (canEdit) 1f else 0.55f),
+                        color = scheme.primaryContainer.copy(alpha = 0.55f),
+                        shape = RoundedCornerShape(countCorner),
+                        tonalElevation = 1.dp,
+                        border = BorderStroke(
+                            1.5.dp,
+                            scheme.outline.copy(alpha = 0.35f),
+                        ),
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .defaultMinSize(minHeight = 76.dp)
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = displayedCount.toString(),
+                                style = countTextStyle,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = if (canEdit) scheme.primary else scheme.onSurfaceVariant,
+                                modifier = Modifier.scale(scale),
+                            )
+                            Surface(
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .size(34.dp)
+                                    .alpha(if (canEdit) 1f else 0.45f)
+                                    .pointerInput(canEdit, selectedVenue) {
+                                        if (!canEdit || selectedVenue == null) return@pointerInput
+                                        detectTapGestures(
+                                            onPress = {
+                                                isResetting = true
+                                                tryAwaitRelease()
+                                                isResetting = false
+                                            },
+                                        )
+                                    }
+                                    .scale(resetScale),
+                                shape = RoundedCornerShape(10.dp),
+                                color = scheme.surface.copy(alpha = 0.92f),
+                                tonalElevation = 1.dp,
+                                border = BorderStroke(1.dp, scheme.outline.copy(alpha = 0.28f)),
+                            ) {
+                                Box(modifier = Modifier.fillMaxSize()) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxHeight()
+                                            .fillMaxWidth(animatedResetProgress)
+                                            .background(scheme.primaryContainer.copy(alpha = 0.65f)),
+                                    )
+                                    Icon(
+                                        imageVector = Icons.Default.RestartAlt,
+                                        contentDescription = peopleCounterReset,
+                                        modifier = Modifier
+                                            .align(Alignment.Center)
+                                            .size(18.dp),
+                                        tint = scheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    if (sheetMod > 0L) {
+                        PeopleCounterSyncLine(
+                            platformContext = platformContext,
+                            sheetMod = sheetMod,
+                            label = peopleCounterSheetSynced,
+                            style = syncTextStyle,
+                            color = syncTextColor,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 4.dp)
+                                .clickable { viewModel.resyncPeopleCounterLastUpdatedLine() },
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Surface(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(controlButtonHeight)
+                                .alpha(if (canEdit) 1f else 0.45f)
+                                .combinedClickable(
+                                    onClick = {
+                                        if (!canEdit || selectedVenue == null) return@combinedClickable
+                                        if (count > 0) {
+                                            lastAction = "decrement"
+                                            vibrateShort(platformContext)
+                                            viewModel.adjustPeopleCounterCount(selectedVenue.id, -1)
+                                        }
+                                    },
+                                    onLongClick = {
+                                        if (!canEdit || selectedVenue == null) return@combinedClickable
+                                        if (count >= 10) {
+                                            lastAction = "decrement"
+                                            vibrateShort(platformContext)
+                                            viewModel.adjustPeopleCounterCount(selectedVenue.id, -10)
+                                        }
+                                    },
+                                )
+                                .scale(minusScale),
+                            shape = RoundedCornerShape(controlButtonCorner),
+                            color = scheme.secondaryContainer,
+                            tonalElevation = 2.dp,
+                            shadowElevation = 2.dp,
+                        ) {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Remove,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(controlButtonIconSize),
+                                    tint = scheme.onSecondaryContainer,
+                                )
+                            }
+                        }
+
+                        Surface(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(controlButtonHeight)
+                                .alpha(if (canEdit) 1f else 0.45f)
+                                .combinedClickable(
+                                    onClick = {
+                                        if (!canEdit || selectedVenue == null) return@combinedClickable
+                                        lastAction = "increment"
+                                        vibrateShort(platformContext)
+                                        viewModel.adjustPeopleCounterCount(selectedVenue.id, 1)
+                                    },
+                                    onLongClick = {
+                                        if (!canEdit || selectedVenue == null) return@combinedClickable
+                                        lastAction = "increment"
+                                        vibrateShort(platformContext)
+                                        viewModel.adjustPeopleCounterCount(selectedVenue.id, 10)
+                                    },
+                                )
+                                .scale(plusScale),
+                            shape = RoundedCornerShape(controlButtonCorner),
+                            color = scheme.primary,
+                            tonalElevation = 2.dp,
+                            shadowElevation = 2.dp,
+                        ) {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(controlButtonIconSize),
+                                    tint = scheme.onPrimary,
+                                )
+                            }
+                        }
+                    }
+                }
             } else {
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = if (isPhone) 12.dp else 16.dp)
+                        .padding(vertical = countOuterPaddingV)
                         .alpha(if (canEdit) 1f else 0.55f),
                     color = scheme.primaryContainer.copy(alpha = 0.55f),
-                    shape = RoundedCornerShape(if (isPhone) 16.dp else 20.dp),
+                    shape = RoundedCornerShape(countCorner),
                     tonalElevation = 1.dp,
                     border = BorderStroke(
                         1.5.dp,
@@ -457,12 +793,12 @@ fun PeopleCounter(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(if (isPhone) 24.dp else 32.dp),
+                            .padding(countInnerPadding),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = displayedCount.toString(),
-                            style = if (isPhone) MaterialTheme.typography.displayLarge else MaterialTheme.typography.displayMedium,
+                            style = countTextStyle,
                             fontWeight = FontWeight.ExtraBold,
                             color = if (canEdit) scheme.primary else scheme.onSurfaceVariant,
                             modifier = Modifier.scale(scale)
@@ -470,35 +806,33 @@ fun PeopleCounter(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(if (isPhone) 8.dp else 12.dp))
+                Spacer(modifier = Modifier.height(if (useDesktopLayout) 4.dp else if (isPhone) 8.dp else 12.dp))
 
                 if (sheetMod > 0L) {
-                    val formatted = remember(sheetMod, sheetClockTick) {
-                        DateFormatUtils.formatRelativeSinceSync(platformContext, sheetMod)
-                    }
-                    Text(
-                        text = "$peopleCounterSheetSynced: $formatted",
-                        style = if (isPhone) MaterialTheme.typography.labelSmall else MaterialTheme.typography.labelMedium,
-                        color = scheme.primary,
+                    PeopleCounterSyncLine(
+                        platformContext = platformContext,
+                        sheetMod = sheetMod,
+                        label = peopleCounterSheetSynced,
+                        style = syncTextStyle,
+                        color = syncTextColor,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = if (isPhone) 8.dp else 12.dp)
+                            .padding(horizontal = if (useDesktopLayout) 4.dp else if (isPhone) 8.dp else 12.dp)
                             .clickable { viewModel.resyncPeopleCounterLastUpdatedLine() },
-                        textAlign = TextAlign.Center
                     )
                 }
 
-                Spacer(modifier = Modifier.height(if (isPhone) 16.dp else 20.dp))
+                Spacer(modifier = Modifier.height(if (useDesktopLayout) 6.dp else if (isPhone) 16.dp else 20.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(if (isPhone) 12.dp else 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(if (useDesktopLayout) 10.dp else if (isPhone) 12.dp else 16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Surface(
                         modifier = Modifier
                             .weight(1f)
-                            .height(if (isPhone) 56.dp else 64.dp)
+                            .height(controlButtonHeight)
                             .alpha(if (canEdit) 1f else 0.45f)
                             .combinedClickable(
                                 onClick = {
@@ -519,7 +853,7 @@ fun PeopleCounter(
                                 }
                             )
                             .scale(minusScale),
-                        shape = RoundedCornerShape(if (isPhone) 14.dp else 16.dp),
+                        shape = RoundedCornerShape(controlButtonCorner),
                         color = scheme.secondaryContainer,
                         tonalElevation = 2.dp,
                         shadowElevation = 2.dp
@@ -531,7 +865,7 @@ fun PeopleCounter(
                             Icon(
                                 imageVector = Icons.Default.Remove,
                                 contentDescription = null,
-                                modifier = Modifier.size(if (isPhone) 24.dp else 28.dp),
+                                modifier = Modifier.size(controlButtonIconSize),
                                 tint = scheme.onSecondaryContainer
                             )
                         }
@@ -540,7 +874,7 @@ fun PeopleCounter(
                     Surface(
                         modifier = Modifier
                             .weight(1f)
-                            .height(if (isPhone) 56.dp else 64.dp)
+                            .height(controlButtonHeight)
                             .alpha(if (canEdit) 1f else 0.45f)
                             .combinedClickable(
                                 onClick = {
@@ -557,7 +891,7 @@ fun PeopleCounter(
                                 }
                             )
                             .scale(plusScale),
-                        shape = RoundedCornerShape(if (isPhone) 14.dp else 16.dp),
+                        shape = RoundedCornerShape(controlButtonCorner),
                         color = scheme.primary,
                         tonalElevation = 2.dp,
                         shadowElevation = 2.dp
@@ -569,7 +903,7 @@ fun PeopleCounter(
                             Icon(
                                 imageVector = Icons.Default.Add,
                                 contentDescription = null,
-                                modifier = Modifier.size(if (isPhone) 24.dp else 28.dp),
+                                modifier = Modifier.size(controlButtonIconSize),
                                 tint = scheme.onPrimary
                             )
                         }
@@ -581,7 +915,7 @@ fun PeopleCounter(
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(if (isPhone) 48.dp else 56.dp)
+                        .height(resetButtonHeight)
                         .alpha(if (canEdit) 1f else 0.45f)
                         .pointerInput(canEdit, selectedVenue) {
                             if (!canEdit || selectedVenue == null) return@pointerInput
@@ -620,14 +954,17 @@ fun PeopleCounter(
                             Icon(
                                 imageVector = Icons.Default.RestartAlt,
                                 contentDescription = null,
-                                modifier = Modifier.size(20.dp),
+                                modifier = Modifier.size(resetIconSize),
                                 tint = scheme.onSurfaceVariant
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = peopleCounterReset,
+                                style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold,
-                                color = scheme.onSurfaceVariant
+                                color = scheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                             )
                         }
                     }
@@ -635,6 +972,41 @@ fun PeopleCounter(
             }
         }
     }
+}
+
+/**
+ * "Synced N ago" readout. Owns its own 1 s tick so the relative label refreshes without
+ * recomposing the surrounding [PeopleCounter] every second.
+ */
+@Composable
+private fun PeopleCounterSyncLine(
+    platformContext: PlatformContext,
+    sheetMod: Long,
+    label: String,
+    style: TextStyle,
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
+    var tick by remember { mutableStateOf(0) }
+    LaunchedEffect(sheetMod) {
+        if (sheetMod <= 0L) return@LaunchedEffect
+        while (true) {
+            delay(1000L)
+            tick++
+        }
+    }
+    val formatted = remember(sheetMod, tick) {
+        DateFormatUtils.formatRelativeSinceSync(platformContext, sheetMod)
+    }
+    Text(
+        text = "$label: $formatted",
+        style = style,
+        color = color,
+        modifier = modifier,
+        textAlign = TextAlign.Center,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
 }
 
 @Composable

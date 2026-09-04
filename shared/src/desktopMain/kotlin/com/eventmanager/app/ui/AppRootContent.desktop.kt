@@ -1,13 +1,35 @@
 package com.eventmanager.app.ui
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -19,10 +41,22 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -46,16 +80,21 @@ import com.eventmanager.app.ui.components.BackgroundAnimationStyle
 import com.eventmanager.app.ui.desktop.AdminNavLayout
 import com.eventmanager.app.ui.platform.AppAppearanceState
 import com.eventmanager.app.ui.desktop.DesktopAdminShell
+import com.eventmanager.app.ui.desktop.DesktopDramaticSpaceEntrance
 import com.eventmanager.app.ui.desktop.DesktopNavigationHooks
+import com.eventmanager.app.ui.desktop.DesktopPopupWarmup
+import com.eventmanager.app.ui.desktop.DesktopSpaceEntrance
 import com.eventmanager.app.ui.desktop.LocalDesktopNavigation
 import com.eventmanager.app.ui.navigation.AdminTab
 import com.eventmanager.app.ui.navigation.BilleterieSection
 import com.eventmanager.app.ui.screens.*
+import com.eventmanager.app.ui.transitions.DeferredUntilSpaceEntranceSettled
 import com.eventmanager.app.ui.viewmodel.EventManagerViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.Font
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,6 +104,7 @@ actual fun AppRootContent(
     onThemeModeChanged: (String) -> Unit
 ) {
     CompositionLocalProvider(LocalPlatformContext provides platformContext) {
+        DesktopPopupWarmup()
         val settingsManager = remember(platformContext) { SettingsManager(createAppStorage(platformContext)) }
         val skipStartupSync = remember { settingsManager.consumeSkipNextStartupSync() }
         val uiRefreshNonce by AppAppearanceState::refreshNonce
@@ -72,6 +112,7 @@ actual fun AppRootContent(
         val backgroundAnimationOpacity = uiRefreshNonce.let { settingsManager.getBackgroundAnimationOpacity() }
         val billeterieBackgroundAnimationStyle = uiRefreshNonce.let { settingsManager.getBilleterieBackgroundAnimationStyle() }
         val billeterieBackgroundAnimationOpacity = uiRefreshNonce.let { settingsManager.getBilleterieBackgroundAnimationOpacity() }
+        val pageAnimationsEnabled = settingsManager.isPageAnimationsEnabled()
 
         var adminNavLayout by remember {
             mutableStateOf(AdminNavLayout.fromString(settingsManager.getDesktopAdminNavLayout()))
@@ -150,14 +191,16 @@ actual fun AppRootContent(
         }
 
         var databaseReady by remember { mutableStateOf(false) }
+        var startupReady by remember { mutableStateOf(false) }
+        var startupStep by remember { mutableStateOf(StartupSplashStep.Opening) }
         LaunchedEffect(platformContext) {
             withContext(Dispatchers.IO) { createDatabase(platformContext) }
             databaseReady = true
         }
 
-        if (!databaseReady) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-            return@CompositionLocalProvider
+        if (!databaseReady || !startupReady) {
+            AppStartupSplash(step = if (databaseReady) startupStep else StartupSplashStep.Opening)
+            if (!databaseReady) return@CompositionLocalProvider
         }
 
         val db = remember { createDatabase(platformContext) }
@@ -183,34 +226,36 @@ actual fun AppRootContent(
         var adminPrecheckComplete by remember { mutableStateOf(false) }
         var adminPrecheckSucceeded by remember { mutableStateOf(false) }
 
-        val adminCheckGuests by viewModel.guests.collectAsState()
-        val adminCheckVolunteers by viewModel.volunteers.collectAsState()
-
-        LaunchedEffect(Unit) {
-            if (skipStartupSync) {
-                adminPrecheckSucceeded = true
-                adminPrecheckComplete = true
-                return@LaunchedEffect
-            }
+        LaunchedEffect(databaseReady) {
+            if (!databaseReady) return@LaunchedEffect
+            val minSplashMs = 800L
+            val splashStart = elapsedRealtimeMs()
             try {
-                val result = viewModel.performFullSyncAwait(suppressSyncErrorDialog = true)
-                adminPrecheckSucceeded = result.isSuccess
-                if (adminPrecheckSucceeded) delay(250)
+                if (skipStartupSync) {
+                    startupStep = StartupSplashStep.Preparing
+                    viewModel.warmupWorkspacesAfterGate()
+                    showAdminSetup = viewModel.evaluateLocalAdminSetupNeed()
+                    adminPrecheckSucceeded = true
+                } else {
+                    startupStep = StartupSplashStep.Syncing
+                    val gate = viewModel.evaluateAdminSetupGate()
+                    adminPrecheckSucceeded = gate.syncSucceeded
+                    showAdminSetup = gate.shouldOfferFirstAdminSetup
+                    startupStep = StartupSplashStep.Preparing
+                    viewModel.warmupWorkspacesAfterGate()
+                }
             } catch (_: Exception) {
                 adminPrecheckSucceeded = false
             }
+            val remaining = minSplashMs - (elapsedRealtimeMs() - splashStart)
+            if (remaining > 0) delay(remaining)
             adminPrecheckComplete = true
+            adminCheckDone = true
+            startupReady = true
         }
 
-        LaunchedEffect(adminPrecheckComplete, adminPrecheckSucceeded, adminCheckGuests, adminCheckVolunteers) {
-            if (!adminPrecheckComplete || adminCheckDone) return@LaunchedEffect
-            if (!adminPrecheckSucceeded) {
-                adminCheckDone = true
-                return@LaunchedEffect
-            }
-            val hasAdmin = adminCheckGuests.any { it.isAdmin } || adminCheckVolunteers.any { it.isAdmin }
-            showAdminSetup = !hasAdmin
-            adminCheckDone = true
+        if (!startupReady) {
+            return@CompositionLocalProvider
         }
 
         val followScope = rememberCoroutineScope()
@@ -221,8 +266,8 @@ actual fun AppRootContent(
                 AdminSetupScreen(
                     platformContext = platformContext,
                     venues = adminSetupVenues,
-                    onCreateAdminGuest = { guest, cb -> viewModel.createAdminGuest(guest, cb) },
-                    onCreateAdminVolunteer = { vol, cb -> viewModel.createAdminVolunteer(vol, cb) },
+                    onCreateAdminGuest = { guest, cb -> viewModel.createAdminGuest(guest, onResult = cb) },
+                    onCreateAdminVolunteer = { vol, cb -> viewModel.createAdminVolunteer(vol, onResult = cb) },
                     onAssignNfcUid = { adminType, entityId, uid ->
                         viewModel.assignNfcUidToAdmin(
                             isGuest = adminType == AdminType.GUEST,
@@ -235,59 +280,69 @@ actual fun AppRootContent(
                 )
             }
             showWelcome -> {
-                Box(
-                    Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.surface)
+                DesktopDramaticSpaceEntrance(
+                    enabled = pageAnimationsEnabled,
+                    space = DesktopSpaceEntrance.Welcome,
                 ) {
-                    AppBackgroundAnimation(
-                        style = backgroundAnimationStyle,
-                        opacity = backgroundAnimationOpacity,
-                        settingsManager = settingsManager,
-                        isDesktop = true,
-                    )
-                    DesktopWelcomeScreen(
-                        viewModel = viewModel,
-                        onAdminSelected = {
-                            if (viewModel.isFirebaseAllOrgsMode()) {
-                                showAdminOrgPicker = true
-                            } else {
-                                viewModel.prepareForAdminAuthentication()
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.surface)
+                    ) {
+                        AppBackgroundAnimation(
+                            style = backgroundAnimationStyle,
+                            opacity = backgroundAnimationOpacity,
+                            settingsManager = settingsManager,
+                            isDesktop = true,
+                        )
+                        DesktopWelcomeScreen(
+                            viewModel = viewModel,
+                            onAdminSelected = {
+                                if (viewModel.isFirebaseAllOrgsMode()) {
+                                    showAdminOrgPicker = true
+                                } else {
+                                    viewModel.prepareForAdminAuthentication()
+                                    showWelcome = false
+                                    showAdminAuth = true
+                                }
+                            },
+                            onTicketCheckSelected = {
                                 showWelcome = false
-                                showAdminAuth = true
-                            }
-                        },
-                        onTicketCheckSelected = {
-                            showWelcome = false
-                            showTicketCheck = true
-                        },
-                        onPosSelected = {
-                            showWelcome = false
-                            showPos = true
-                        },
-                        showAdminAccessSyncIndicator = !adminPrecheckComplete
-                    )
+                                showTicketCheck = true
+                            },
+                            onPosSelected = {
+                                showWelcome = false
+                                showPos = true
+                            },
+                            showAdminAccessSyncIndicator = !adminPrecheckComplete
+                        )
+                    }
                 }
             }
             showAdminAuth -> {
-                AdminAuthRoute(
-                    platformContext = platformContext,
-                    viewModel = viewModel,
-                    onAuthSuccess = {
-                        viewModel.onAdminAuthSuccess()
-                        showAdminAuth = false
-                    },
-                    onBack = {
-                        if (viewModel.isAdminOrgReauthPending()) {
-                            viewModel.cancelAdminOrgSwitchReauth {
-                                showAdminAuth = false
-                            }
-                        } else {
+                DesktopDramaticSpaceEntrance(
+                    enabled = pageAnimationsEnabled,
+                    space = DesktopSpaceEntrance.Admin,
+                ) {
+                    AdminAuthRoute(
+                        platformContext = platformContext,
+                        viewModel = viewModel,
+                        onAuthSuccess = {
+                            viewModel.onAdminAuthSuccess()
                             showAdminAuth = false
-                            showWelcome = true
-                        }
-                    },
-                )
+                        },
+                        onBack = {
+                            if (viewModel.isAdminOrgReauthPending()) {
+                                viewModel.cancelAdminOrgSwitchReauth {
+                                    showAdminAuth = false
+                                }
+                            } else {
+                                showAdminAuth = false
+                                showWelcome = true
+                            }
+                        },
+                    )
+                }
             }
             else -> {
                 val guests by viewModel.guests.collectAsState()
@@ -355,13 +410,6 @@ actual fun AppRootContent(
                 LaunchedEffect(updateCheckResult) {
                     if (updateCheckResult is UpdateCheckResult.UpdateAvailable) showUpdateDialog = true
                 }
-                LaunchedEffect(Unit) {
-                    if (skipStartupSync) return@LaunchedEffect
-                    delay(1200)
-                    // Avoid stacking another full sync on top of admin-gate prep right after welcome.
-                    if (showAdminAuth) return@LaunchedEffect
-                    withContext(Dispatchers.IO) { viewModel.performFullSync() }
-                }
                 LaunchedEffect(syncError) {
                     if (syncError != null && isDeviceTimeError(syncError)) {
                         showDeviceTimeErrorDialog = true
@@ -413,41 +461,70 @@ actual fun AppRootContent(
                 }
 
                 if (showPos) {
-                    val salesItems by viewModel.salesSheetItems.collectAsState()
-                    PosFlow(
-                        viewModel = viewModel,
-                        salesItems = salesItems,
-                        volunteers = volunteers,
-                        guests = guests,
-                        onBack = { showPos = false; showWelcome = true },
-                        onFactoryResetComplete = {
-                            showPos = false
-                            showWelcome = false
-                            showTicketCheck = false
-                            showSetupWizard = true
-                        },
-                    )
+                    DesktopDramaticSpaceEntrance(
+                        enabled = pageAnimationsEnabled,
+                        space = DesktopSpaceEntrance.Pos,
+                    ) {
+                        if (!skipStartupSync) {
+                            DeferredUntilSpaceEntranceSettled {
+                                withContext(Dispatchers.IO) { viewModel.performAutomaticFullSyncIfNeeded() }
+                            }
+                        }
+                        val salesItems by viewModel.salesSheetItems.collectAsState()
+                        PosFlow(
+                            viewModel = viewModel,
+                            salesItems = salesItems,
+                            volunteers = volunteers,
+                            guests = guests,
+                            onBack = { showPos = false; showWelcome = true },
+                            onFactoryResetComplete = {
+                                showPos = false
+                                showWelcome = false
+                                showTicketCheck = false
+                                showSetupWizard = true
+                            },
+                        )
+                    }
                 } else if (showTicketCheck) {
-                    DesktopBilleterieFlow(
-                        viewModel = viewModel,
-                        guests = guests,
-                        volunteers = volunteers,
-                        jobs = jobs,
-                        jobTypeConfigs = jobTypeConfigs,
-                        settingsManager = settingsManager,
-                        backgroundAnimationStyle = billeterieBackgroundAnimationStyle,
-                        backgroundAnimationOpacity = billeterieBackgroundAnimationOpacity,
-                        onExit = {
-                            showTicketCheck = false
-                            showWelcome = true
-                        },
-                        onFactoryResetComplete = {
-                            showTicketCheck = false
-                            showWelcome = false
-                            showSetupWizard = true
-                        },
-                    )
+                    DesktopDramaticSpaceEntrance(
+                        enabled = pageAnimationsEnabled,
+                        space = DesktopSpaceEntrance.Billeterie,
+                    ) {
+                        if (!skipStartupSync) {
+                            DeferredUntilSpaceEntranceSettled {
+                                withContext(Dispatchers.IO) { viewModel.performAutomaticFullSyncIfNeeded() }
+                            }
+                        }
+                        DesktopBilleterieFlow(
+                            viewModel = viewModel,
+                            guests = guests,
+                            volunteers = volunteers,
+                            jobs = jobs,
+                            jobTypeConfigs = jobTypeConfigs,
+                            settingsManager = settingsManager,
+                            backgroundAnimationStyle = billeterieBackgroundAnimationStyle,
+                            backgroundAnimationOpacity = billeterieBackgroundAnimationOpacity,
+                            onExit = {
+                                showTicketCheck = false
+                                showWelcome = true
+                            },
+                            onFactoryResetComplete = {
+                                showTicketCheck = false
+                                showWelcome = false
+                                showSetupWizard = true
+                            },
+                        )
+                    }
                 } else {
+                    DesktopDramaticSpaceEntrance(
+                        enabled = pageAnimationsEnabled,
+                        space = DesktopSpaceEntrance.Admin,
+                    ) {
+                    if (!skipStartupSync) {
+                        DeferredUntilSpaceEntranceSettled {
+                            withContext(Dispatchers.IO) { viewModel.performAutomaticFullSyncIfNeeded() }
+                        }
+                    }
                     LaunchedEffect(selectedTab) {
                         if (selectedTab == previousTab) return@LaunchedEffect
                         delay(250)
@@ -620,6 +697,7 @@ actual fun AppRootContent(
                                 onSync = { touchAdminSession(); viewModel.performDifferentialFullSync() },
                             )
                         }
+                    }
                     }
                 }
 
@@ -801,54 +879,228 @@ private fun DesktopWelcomeScreen(
     onPosSelected: () -> Unit,
     showAdminAccessSyncIndicator: Boolean
 ) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-    ) {
+    val appName = stringResource(Res.string.app_name)
+
+    Box(modifier = Modifier.fillMaxSize()) {
         FirebaseOrgSwitcher(
             viewModel = viewModel,
             placement = FirebaseOrgSwitcherPlacement.WelcomeTopEnd,
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(16.dp),
+                .padding(20.dp),
         )
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
-        ) {
-        WelcomeForegroundPanel(modifier = Modifier.fillMaxWidth(0.46f)) {
-            WelcomeTitleText("NoctuList")
-            if (showAdminAccessSyncIndicator) {
-                Spacer(Modifier.height(20.dp))
-                AdminStartupSyncBanner(Modifier.fillMaxWidth())
-            }
-            Spacer(Modifier.height(28.dp))
-            WelcomePrimaryButton(
-                onClick = onAdminSelected,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Icon(Icons.Default.Lock, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(Res.string.start_admin))
-            }
-            Spacer(Modifier.height(12.dp))
-            WelcomeSecondaryButton(
-                onClick = onTicketCheckSelected,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Icon(Icons.Default.ConfirmationNumber, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(Res.string.ticket_check_mode))
-            }
-            Spacer(Modifier.height(12.dp))
-            WelcomeSecondaryButton(
-                onClick = onPosSelected,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Icon(Icons.Default.PointOfSale, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(Res.string.pos_welcome_button))
-            }
+
+        WideWelcomeContent(
+            appName = appName,
+            onAdminSelected = onAdminSelected,
+            onTicketCheckSelected = onTicketCheckSelected,
+            onPosSelected = onPosSelected,
+            hoverEnabled = true,
+            syncSlot = {
+                DesktopWelcomeAdminSyncSlot(
+                    syncing = showAdminAccessSyncIndicator,
+                    modifier = Modifier
+                        .widthIn(max = 560.dp)
+                        .fillMaxWidth(),
+                )
+            },
+        )
+    }
+}
+
+@Composable
+private fun DesktopWelcomeAdminSyncSlot(
+    syncing: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    var bannerVisible by remember { mutableStateOf(syncing) }
+    var showSuccess by remember { mutableStateOf(false) }
+
+    LaunchedEffect(syncing) {
+        if (syncing) {
+            showSuccess = false
+            bannerVisible = true
+        } else if (bannerVisible) {
+            showSuccess = true
+            delay(900)
+            bannerVisible = false
+            delay(420)
+            showSuccess = false
         }
+    }
+
+    AnimatedVisibility(
+        visible = bannerVisible,
+        enter = fadeIn(animationSpec = tween(280)) +
+            expandVertically(
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMediumLow,
+                ),
+                expandFrom = Alignment.Top,
+            ) +
+            scaleIn(
+                initialScale = 0.88f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMediumLow,
+                ),
+            ),
+        exit = fadeOut(animationSpec = tween(280)) +
+            shrinkVertically(
+                animationSpec = spring(
+                    dampingRatio = 0.82f,
+                    stiffness = Spring.StiffnessMedium,
+                ),
+                shrinkTowards = Alignment.Top,
+            ) +
+            scaleOut(
+                targetScale = 0.82f,
+                animationSpec = tween(320),
+            ) +
+            slideOutVertically(
+                animationSpec = tween(320),
+                targetOffsetY = { -it / 3 },
+            ),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Spacer(Modifier.height(24.dp))
+            DesktopWelcomeAdminSyncBanner(
+                showSuccess = showSuccess,
+                modifier = modifier,
+            )
+        }
+    }
+}
+
+@Composable
+private fun DesktopWelcomeAdminSyncBanner(
+    showSuccess: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(18.dp)
+
+    val wobble = rememberInfiniteTransition(label = "welcomeSyncWobble")
+    val successScale by animateFloatAsState(
+        targetValue = if (showSuccess) 1f else 0.7f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMediumLow,
+        ),
+        label = "welcomeSyncSuccessScale",
+    )
+
+    Box(
+        modifier = modifier
+            .shadow(
+                elevation = 2.dp,
+                shape = shape,
+                clip = false,
+                ambientColor = colorScheme.primary.copy(alpha = 0.08f),
+                spotColor = colorScheme.primary.copy(alpha = 0.12f),
+            )
+            .clip(shape)
+            .background(
+                if (showSuccess) {
+                    colorScheme.tertiaryContainer.copy(alpha = 0.92f)
+                } else {
+                    colorScheme.surfaceContainerLow
+                },
+            )
+            .border(
+                width = 1.dp,
+                color = if (showSuccess) {
+                    colorScheme.tertiary.copy(alpha = 0.35f)
+                } else {
+                    colorScheme.outlineVariant.copy(alpha = 0.4f)
+                },
+                shape = shape,
+            ),
+    ) {
+        AnimatedContent(
+            targetState = showSuccess,
+            transitionSpec = {
+                (
+                    fadeIn(tween(220)) +
+                        scaleIn(
+                            initialScale = 0.86f,
+                            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+                        ) +
+                        slideInVertically { it / 4 }
+                    ) togetherWith (
+                    fadeOut(tween(160)) +
+                        scaleOut(targetScale = 0.92f) +
+                        slideOutVertically { -it / 5 }
+                    ) using SizeTransform(clip = false)
+            },
+            label = "welcomeSyncBannerContent",
+        ) { success ->
+            Row(
+                modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                if (success) {
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .scale(successScale)
+                            .clip(CircleShape)
+                            .background(colorScheme.tertiary.copy(alpha = 0.2f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = colorScheme.tertiary,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
+                    Text(
+                        text = stringResource(Res.string.welcome_admin_sync_ready),
+                        style = MaterialTheme.typography.titleSmall.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 0.6.sp,
+                        ),
+                        color = colorScheme.onTertiaryContainer,
+                    )
+                } else {
+                    val pulseScale by wobble.animateFloat(
+                        initialValue = 0.92f,
+                        targetValue = 1.08f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(700),
+                            repeatMode = RepeatMode.Reverse,
+                        ),
+                        label = "welcomeSyncPulseScale",
+                    )
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .size(22.dp)
+                            .scale(pulseScale),
+                        strokeWidth = 2.5.dp,
+                        color = colorScheme.primary,
+                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            text = stringResource(Res.string.admin_auth_syncing_title),
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                letterSpacing = 0.4.sp,
+                            ),
+                        )
+                        Text(
+                            text = stringResource(Res.string.admin_precheck_sync_loading),
+                            style = MaterialTheme.typography.bodySmall.copy(letterSpacing = 0.2.sp),
+                            color = colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -871,10 +1123,8 @@ private fun DesktopBilleterieFlow(
     var section by nav::billeterieSection
     var showBilleterieSettings by nav::showBilleterieSettings
     var scannerReturnSection by rememberSaveable { mutableStateOf(BilleterieSection.Home.name) }
-    val dashboardScrollState = rememberScrollState(0)
 
-    LaunchedEffect(Unit) {
-        delay(250)
+    DeferredUntilSpaceEntranceSettled {
         viewModel.updateSyncInterval()
         viewModel.syncGuestsWithTargetedUpdates()
         if (settingsManager.isPeopleCounterVisible()) {
@@ -910,11 +1160,9 @@ private fun DesktopBilleterieFlow(
                         onFactoryResetComplete = onFactoryResetComplete,
                     )
                 } else {
-                    BilleterieHomeScreen(
+                    DesktopBilleterieHomeScreen(
                         guests = guests,
-                        repository = viewModel.repository,
                         viewModel = viewModel,
-                        dashboardScrollState = dashboardScrollState,
                         onBack = onExit,
                         onOpenGuestList = { section = BilleterieSection.GuestList.name },
                         onOpenScanner = {
@@ -922,7 +1170,7 @@ private fun DesktopBilleterieFlow(
                             section = BilleterieSection.Scanner.name
                         },
                         onOpenPos = { section = BilleterieSection.Pos.name },
-                        onOpenSettings = { showBilleterieSettings = true }
+                        onOpenSettings = { showBilleterieSettings = true },
                     )
                 }
             }

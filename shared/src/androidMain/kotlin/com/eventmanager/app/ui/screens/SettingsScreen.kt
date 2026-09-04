@@ -546,6 +546,7 @@ private fun EmailSettingsContent(
     settingsManager: SettingsManager,
     context: android.content.Context,
     onSyncedSettingChanged: () -> Unit = {},
+    editable: Boolean = true,
 ) {
     // Cache string resources to avoid repeated lookups
     val strings = remember {
@@ -643,6 +644,7 @@ private fun EmailSettingsContent(
     var saveJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     
     fun debouncedSave(block: suspend () -> Unit) {
+        if (!editable) return
         saveJob?.cancel()
         saveJob = coroutineScope.launch {
             kotlinx.coroutines.delay(500) // 500ms debounce
@@ -655,6 +657,7 @@ private fun EmailSettingsContent(
     val logoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
+        if (!editable) return@rememberLauncherForActivityResult
         uri?.let { selectedUri ->
             try {
                 context.contentResolver.takePersistableUriPermission(
@@ -684,6 +687,13 @@ private fun EmailSettingsContent(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        if (!editable) {
+            Text(
+                text = context.getString(R.string.institution_settings_firebase_admin_only),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
         
         HorizontalDivider()
         
@@ -727,6 +737,7 @@ private fun EmailSettingsContent(
                 },
                 includeQr = volunteerIncludeQr,
                 onIncludeQrChange = {
+                    if (!editable) return@VolunteerEmailFields
                     volunteerIncludeQr = it
                     settingsManager.setEmailIncludeQrEnabled(it)
                     onSyncedSettingChanged()
@@ -736,7 +747,8 @@ private fun EmailSettingsContent(
                     volunteerContentAfter = it
                     debouncedSave { settingsManager.saveEmailContentAfter(it) }
                 },
-                strings = strings
+                strings = strings,
+                enabled = editable,
             )
         } else {
             // Guest Email Settings
@@ -753,6 +765,7 @@ private fun EmailSettingsContent(
                 },
                 includeQr = guestIncludeQr,
                 onIncludeQrChange = {
+                    if (!editable) return@GuestEmailFields
                     guestIncludeQr = it
                     settingsManager.setGuestEmailIncludeQrEnabled(it)
                     onSyncedSettingChanged()
@@ -762,7 +775,8 @@ private fun EmailSettingsContent(
                     guestContentAfter = it
                     debouncedSave { settingsManager.saveGuestEmailContentAfter(it) }
                 },
-                strings = strings
+                strings = strings,
+                enabled = editable,
             )
         }
         
@@ -792,6 +806,7 @@ private fun EmailSettingsContent(
             modifier = Modifier.fillMaxWidth(),
             minLines = 2,
             maxLines = 4,
+            enabled = editable,
             leadingIcon = { Icon(Icons.Default.Create, contentDescription = null) }
         )
 
@@ -806,6 +821,7 @@ private fun EmailSettingsContent(
             supportingText = { Text(strings.associationNameDescription) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+            enabled = editable,
             leadingIcon = { Icon(Icons.Default.Business, contentDescription = null) }
         )
         
@@ -831,9 +847,11 @@ private fun EmailSettingsContent(
             Switch(
                 checked = emailIncludeDigitalWalletPass,
                 onCheckedChange = {
+                    if (!editable) return@Switch
                     emailIncludeDigitalWalletPass = it
                     settingsManager.setEmailIncludeDigitalWalletPassEnabled(it)
-                }
+                },
+                enabled = editable,
             )
         }
 
@@ -859,9 +877,11 @@ private fun EmailSettingsContent(
             Switch(
                 checked = emailIncludeLogo,
                 onCheckedChange = {
+                    if (!editable) return@Switch
                     emailIncludeLogo = it
                     settingsManager.setEmailIncludeLogoEnabled(it)
-                }
+                },
+                enabled = editable,
             )
         }
         
@@ -984,6 +1004,7 @@ private fun EmailSettingsContent(
         // Reset to Defaults Button - resets current tab only
         OutlinedButton(
             onClick = {
+                if (!editable) return@OutlinedButton
                 if (selectedTabIndex == 0) {
                     // Reset volunteer settings
                     volunteerSubject = strings.subjectDefault
@@ -1014,7 +1035,8 @@ private fun EmailSettingsContent(
                     }
                 }
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = editable,
         ) {
             Icon(Icons.Default.Refresh, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
@@ -1036,7 +1058,8 @@ private fun VolunteerEmailFields(
     onIncludeQrChange: (Boolean) -> Unit,
     contentAfter: String,
     onContentAfterChange: (String) -> Unit,
-    strings: EmailSettingsStrings
+    strings: EmailSettingsStrings,
+    enabled: Boolean = true,
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -1049,6 +1072,7 @@ private fun VolunteerEmailFields(
             placeholder = { Text(strings.subjectHint) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+            enabled = enabled,
             leadingIcon = { Icon(Icons.AutoMirrored.Filled.Subject, contentDescription = null) }
         )
         
@@ -1061,6 +1085,7 @@ private fun VolunteerEmailFields(
             modifier = Modifier.fillMaxWidth(),
             minLines = 3,
             maxLines = 6,
+            enabled = enabled,
             leadingIcon = { Icon(Icons.Default.TextFields, contentDescription = null) }
         )
         
@@ -1083,7 +1108,8 @@ private fun VolunteerEmailFields(
             }
             Switch(
                 checked = includeQr,
-                onCheckedChange = onIncludeQrChange
+                onCheckedChange = onIncludeQrChange,
+                enabled = enabled,
             )
         }
         
@@ -1096,6 +1122,7 @@ private fun VolunteerEmailFields(
             modifier = Modifier.fillMaxWidth(),
             minLines = 2,
             maxLines = 4,
+            enabled = enabled,
             leadingIcon = { Icon(Icons.Default.TextFields, contentDescription = null) }
         )
     }
@@ -1114,7 +1141,8 @@ private fun GuestEmailFields(
     onIncludeQrChange: (Boolean) -> Unit,
     contentAfter: String,
     onContentAfterChange: (String) -> Unit,
-    strings: EmailSettingsStrings
+    strings: EmailSettingsStrings,
+    enabled: Boolean = true,
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -1127,6 +1155,7 @@ private fun GuestEmailFields(
             placeholder = { Text(strings.subjectHint) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+            enabled = enabled,
             leadingIcon = { Icon(Icons.AutoMirrored.Filled.Subject, contentDescription = null) }
         )
         
@@ -1139,6 +1168,7 @@ private fun GuestEmailFields(
             modifier = Modifier.fillMaxWidth(),
             minLines = 3,
             maxLines = 6,
+            enabled = enabled,
             leadingIcon = { Icon(Icons.Default.TextFields, contentDescription = null) }
         )
         
@@ -1161,7 +1191,8 @@ private fun GuestEmailFields(
             }
             Switch(
                 checked = includeQr,
-                onCheckedChange = onIncludeQrChange
+                onCheckedChange = onIncludeQrChange,
+                enabled = enabled,
             )
         }
         
@@ -1174,6 +1205,7 @@ private fun GuestEmailFields(
             modifier = Modifier.fillMaxWidth(),
             minLines = 2,
             maxLines = 4,
+            enabled = enabled,
             leadingIcon = { Icon(Icons.Default.TextFields, contentDescription = null) }
         )
     }
@@ -1522,6 +1554,19 @@ actual fun SettingsScreen(
     var firebaseAuthEmail by remember { mutableStateOf(settingsManager.getFirebaseAuthEmail()) }
     var firebaseSignInFeedback by remember { mutableStateOf<String?>(null) }
     var allowedEmailDomains by remember { mutableStateOf(settingsManager.getAllowedEmailDomains()) }
+    var isFirebaseOrgAdmin by remember { mutableStateOf(false) }
+    LaunchedEffect(firebaseAuthEmail, settingsManager.getFirebaseOrgId()) {
+        isFirebaseOrgAdmin = com.eventmanager.app.data.remote.FirebaseOrgAdminAccess
+            .currentUserIsOrgAdmin(platformContext, settingsManager)
+    }
+    val canEditInstitutionSettings = com.eventmanager.app.data.security.canEditSyncedInstitutionSettings(
+        backendType = settingsManager.getBackendType(),
+        isFirebaseOrgAdmin = isFirebaseOrgAdmin,
+    )
+    val canEditBilleterieSendSetting = com.eventmanager.app.data.security.canEditAnnouncementsNonAdminSendSetting(
+        backendType = settingsManager.getBackendType(),
+        isFirebaseOrgAdmin = isFirebaseOrgAdmin,
+    )
     val firebaseAuthService = remember {
         com.eventmanager.app.data.remote.createFirebaseAuthService(platformContext)
             as? com.eventmanager.app.data.remote.AndroidFirebaseAuthService
@@ -1555,13 +1600,18 @@ actual fun SettingsScreen(
                             platformContext,
                             settingsManager,
                         )
-                        com.eventmanager.app.data.remote.FirebaseMemberSignIn.afterGoogleSignIn(
-                            gateway = gateway,
-                            settings = settingsManager,
-                            uid = result.uid,
-                            email = result.email,
-                            joinWithBootstrapCode = settingsManager.getFirebaseBootstrapCode().isNotBlank(),
-                        )
+                        runCatching {
+                            com.eventmanager.app.data.remote.FirebaseMemberSignIn.afterGoogleSignIn(
+                                gateway = gateway,
+                                settings = settingsManager,
+                                uid = result.uid,
+                                email = result.email,
+                                joinWithBootstrapCode = settingsManager.getFirebaseBootstrapCode().isNotBlank(),
+                            )
+                        }.onFailure { e ->
+                            firebaseSignInFeedback = e.message
+                            uploadStatus = e.message
+                        }
                     }
                     uploadStatus = "Firebase signed in as ${result.email ?: result.uid}"
                     pendingMigrationSignInResult?.invoke(result)
@@ -1613,6 +1663,7 @@ actual fun SettingsScreen(
     val syncStatusMessage by viewModel.syncStatusMessage.collectAsState()
     val showSyncStatusDialog by viewModel.showSyncStatusDialog.collectAsState()
     val profilePhotosEnabled by viewModel.profilePhotosUploadEnabled.collectAsState()
+    val billeterieSendEnabled by viewModel.announcementsBilleterieSendEnabled.collectAsState()
     
     // Check if JSON key file exists on first load
     LaunchedEffect(Unit) {
@@ -1664,6 +1715,32 @@ actual fun SettingsScreen(
                 isDesktop = false,
                 target = BackgroundAnimationSettingsTarget.Billeterie,
             )
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Start,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                var pageAnimationsEnabled by remember { mutableStateOf(settingsManager.isPageAnimationsEnabled()) }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = context.getString(R.string.page_animations_title),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = context.getString(R.string.page_animations_description),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = pageAnimationsEnabled,
+                    onCheckedChange = {
+                        pageAnimationsEnabled = it
+                        settingsManager.setPageAnimationsEnabled(it)
+                    }
+                )
+            }
             Spacer(modifier = Modifier.height(24.dp))
         }
 
@@ -1673,6 +1750,55 @@ actual fun SettingsScreen(
                 isDesktop = false,
                 target = BackgroundAnimationSettingsTarget.Pos,
             )
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Start,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                var pageAnimationsEnabled by remember { mutableStateOf(settingsManager.isPageAnimationsEnabled()) }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = context.getString(R.string.page_animations_title),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = context.getString(R.string.page_animations_description),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = pageAnimationsEnabled,
+                    onCheckedChange = {
+                        pageAnimationsEnabled = it
+                        settingsManager.setPageAnimationsEnabled(it)
+                    }
+                )
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        if (variant == SettingsScreenVariant.BilleterieBasic || variant == SettingsScreenVariant.PosBasic) {
+            ExpandableSettingsCategory(
+                title = context.getString(R.string.settings_category_announcements),
+                icon = Icons.Default.Campaign,
+                isExpanded = showAnnouncementsSettings,
+                onToggleExpanded = {
+                    showAnnouncementsSettings = !showAnnouncementsSettings
+                    settingsManager.setCategoryAnnouncementsExpanded(showAnnouncementsSettings)
+                },
+            ) {
+                val announcementsVenues by viewModel.venues.collectAsState()
+                val activeAnnouncementsVenues = remember(announcementsVenues) {
+                    announcementsVenues.filter { it.isActive }
+                }
+                com.eventmanager.app.ui.components.AnnouncementsSettingsContent(
+                    settingsManager = settingsManager,
+                    activeVenues = activeAnnouncementsVenues,
+                    mode = com.eventmanager.app.ui.components.AnnouncementsSettingsMode.Standard,
+                )
+            }
             Spacer(modifier = Modifier.height(24.dp))
         }
 
@@ -2268,7 +2394,8 @@ actual fun SettingsScreen(
             EmailSettingsContent(
                 settingsManager = settingsManager,
                 context = context,
-                onSyncedSettingChanged = { viewModel.backupInstitutionSettingsToSheets() }
+                onSyncedSettingChanged = { viewModel.backupInstitutionSettingsToSheets() },
+                editable = canEditInstitutionSettings,
             )
         }
 
@@ -2963,183 +3090,22 @@ actual fun SettingsScreen(
         ) {
             val announcementsVenues by viewModel.venues.collectAsState()
             val activeAnnouncementsVenues = remember(announcementsVenues) { announcementsVenues.filter { it.isActive } }
-
-            Text(
-                text = context.getString(R.string.announcements_reception_title).uppercase(),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+            com.eventmanager.app.ui.components.AnnouncementsSettingsContent(
+                settingsManager = settingsManager,
+                activeVenues = activeAnnouncementsVenues,
+                mode = if (variant == SettingsScreenVariant.Full) {
+                    com.eventmanager.app.ui.components.AnnouncementsSettingsMode.Admin
+                } else {
+                    com.eventmanager.app.ui.components.AnnouncementsSettingsMode.Standard
+                },
+                billeterieSendEnabled = billeterieSendEnabled,
+                canEditBilleterieSend = canEditBilleterieSendSetting,
+                onBilleterieSendEnabledChange = if (variant == SettingsScreenVariant.Full) {
+                    { enabled -> viewModel.setAnnouncementsBilleterieSendEnabled(enabled) }
+                } else {
+                    null
+                },
             )
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Start,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                var receptionEnabled by remember { mutableStateOf(settingsManager.isAnnouncementsReceptionEnabled()) }
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = context.getString(R.string.announcements_reception_title),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        text = context.getString(R.string.announcements_reception_description),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Switch(
-                    checked = receptionEnabled,
-                    onCheckedChange = {
-                        receptionEnabled = it
-                        settingsManager.setAnnouncementsReceptionEnabled(it)
-                    }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = context.getString(R.string.announcements_tracked_venues_title),
-                style = MaterialTheme.typography.titleMedium
-            )
-            Text(
-                text = context.getString(R.string.announcements_tracked_venues_description),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            var trackedVenueIds by remember { mutableStateOf(settingsManager.getAnnouncementsTrackedVenueIds()) }
-            val allTracked = trackedVenueIds.isEmpty()
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Checkbox(
-                    checked = allTracked,
-                    onCheckedChange = {
-                        trackedVenueIds = emptySet()
-                        settingsManager.setAnnouncementsTrackedVenueIds(emptySet())
-                    }
-                )
-                Text(
-                    text = context.getString(R.string.announcements_tracked_venues_all),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-
-            activeAnnouncementsVenues.forEach { venue ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    val venueIdStr = venue.id.toString()
-                    val isChecked = allTracked || trackedVenueIds.contains(venueIdStr)
-                    Checkbox(
-                        checked = isChecked,
-                        onCheckedChange = { checked ->
-                            val newSet = if (allTracked) {
-                                if (checked) emptySet()
-                                else activeAnnouncementsVenues.map { it.id.toString() }.toSet() - venueIdStr
-                            } else {
-                                if (checked) trackedVenueIds + venueIdStr
-                                else trackedVenueIds - venueIdStr
-                            }
-                            val finalSet = if (newSet.size == activeAnnouncementsVenues.size) emptySet() else newSet
-                            trackedVenueIds = finalSet
-                            settingsManager.setAnnouncementsTrackedVenueIds(finalSet)
-                        }
-                    )
-                    Text(text = venue.name, style = MaterialTheme.typography.bodyMedium)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = context.getString(R.string.announcements_validity_title),
-                style = MaterialTheme.typography.titleMedium
-            )
-            Text(
-                text = context.getString(R.string.announcements_validity_description),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            var validityMinutes by remember { mutableStateOf(settingsManager.getAnnouncementsValidityMinutes()) }
-            var validityDropdownExpanded by remember { mutableStateOf(false) }
-            val validityOptions = listOf(
-                15 to context.getString(R.string.announcements_validity_15min),
-                30 to context.getString(R.string.announcements_validity_30min),
-                60 to context.getString(R.string.announcements_validity_1h),
-                120 to context.getString(R.string.announcements_validity_2h),
-                240 to context.getString(R.string.announcements_validity_4h)
-            )
-
-            Box {
-                OutlinedButton(onClick = { validityDropdownExpanded = true }) {
-                    Text(validityOptions.firstOrNull { it.first == validityMinutes }?.second ?: "${validityMinutes}min")
-                }
-                DropdownMenu(
-                    expanded = validityDropdownExpanded,
-                    onDismissRequest = { validityDropdownExpanded = false }
-                ) {
-                    validityOptions.forEach { (minutes, label) ->
-                        DropdownMenuItem(
-                            text = { Text(label) },
-                            onClick = {
-                                validityMinutes = minutes
-                                settingsManager.setAnnouncementsValidityMinutes(minutes)
-                                validityDropdownExpanded = false
-                            }
-                        )
-                    }
-                }
-            }
-
-            if (variant == SettingsScreenVariant.Full) {
-                Spacer(modifier = Modifier.height(20.dp))
-                HorizontalDivider()
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text(
-                    text = context.getString(R.string.announcement_send_title).uppercase(),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Start,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    var nonAdminSendEnabled by remember { mutableStateOf(settingsManager.isAnnouncementsNonAdminSendEnabled()) }
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = context.getString(R.string.announcements_non_admin_send_title),
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Text(
-                            text = context.getString(R.string.announcements_non_admin_send_description),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Switch(
-                        checked = nonAdminSendEnabled,
-                        onCheckedChange = {
-                            nonAdminSendEnabled = it
-                            settingsManager.setAnnouncementsNonAdminSendEnabled(it)
-                        }
-                    )
-                }
-            }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -3246,6 +3212,15 @@ actual fun SettingsScreen(
             
             Spacer(modifier = Modifier.height(16.dp))
 
+            if (!canEditInstitutionSettings) {
+                Text(
+                    text = context.getString(R.string.institution_settings_firebase_admin_only),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
             var selectedCurrency by remember { mutableStateOf(settingsManager.getCurrencyCode()) }
             var showCurrencyMenu by remember { mutableStateOf(false) }
             Column(modifier = Modifier.fillMaxWidth()) {
@@ -3261,7 +3236,8 @@ actual fun SettingsScreen(
                 Spacer(modifier = Modifier.height(8.dp))
                 Box(modifier = Modifier.fillMaxWidth()) {
                     OutlinedButton(
-                        onClick = { showCurrencyMenu = true },
+                        onClick = { if (canEditInstitutionSettings) showCurrencyMenu = true },
+                        enabled = canEditInstitutionSettings,
                         modifier = Modifier.fillMaxWidth(),
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
                     ) {
@@ -3312,6 +3288,7 @@ actual fun SettingsScreen(
                     OutlinedTextField(
                         value = purchaseBufferText,
                         onValueChange = { newValue ->
+                            if (!canEditInstitutionSettings) return@OutlinedTextField
                             if (newValue.isEmpty() || newValue.matches(Regex("^\\d*\\.?\\d*$"))) {
                                 purchaseBufferText = newValue
                                 val amount = newValue.toDoubleOrNull() ?: 0.0
@@ -3322,6 +3299,7 @@ actual fun SettingsScreen(
                         label = { Text(context.getString(R.string.amount_label)) },
                         suffix = { Text(selectedCurrency) },
                         singleLine = true,
+                        enabled = canEditInstitutionSettings,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
@@ -3494,13 +3472,14 @@ actual fun SettingsScreen(
                 ) {
                     IconButton(
                         onClick = {
+                            if (!canEditInstitutionSettings) return@IconButton
                             if (dateChangeOffsetHours > -12) {
                                 dateChangeOffsetHours--
                                 settingsManager.saveDateChangeOffsetHours(dateChangeOffsetHours)
                                 viewModel.backupInstitutionSettingsToSheets()
                             }
                         },
-                        enabled = dateChangeOffsetHours > -12
+                        enabled = canEditInstitutionSettings && dateChangeOffsetHours > -12
                     ) {
                         Icon(
                             Icons.Default.Remove,
@@ -3523,13 +3502,14 @@ actual fun SettingsScreen(
                     
                     IconButton(
                         onClick = {
+                            if (!canEditInstitutionSettings) return@IconButton
                             if (dateChangeOffsetHours < 12) {
                                 dateChangeOffsetHours++
                                 settingsManager.saveDateChangeOffsetHours(dateChangeOffsetHours)
                                 viewModel.backupInstitutionSettingsToSheets()
                             }
                         },
-                        enabled = dateChangeOffsetHours < 12
+                        enabled = canEditInstitutionSettings && dateChangeOffsetHours < 12
                     ) {
                         Icon(
                             Icons.Default.Add,

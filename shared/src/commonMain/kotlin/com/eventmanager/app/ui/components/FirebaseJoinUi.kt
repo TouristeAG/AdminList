@@ -16,6 +16,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -40,11 +41,15 @@ import com.eventmanager.app.resources.firebase_join_config_code_hint
 import com.eventmanager.app.resources.firebase_join_config_code_label
 import com.eventmanager.app.resources.firebase_join_copy_code
 import com.eventmanager.app.resources.firebase_join_error_oauth_missing
+import com.eventmanager.app.resources.firebase_join_error_invite_missing
 import com.eventmanager.app.resources.firebase_join_invite_admin_body
 import com.eventmanager.app.resources.firebase_join_invite_code_hint
 import com.eventmanager.app.resources.firebase_join_invite_code_label
 import com.eventmanager.app.resources.firebase_join_invite_copied
 import com.eventmanager.app.resources.firebase_join_invite_copy
+import com.eventmanager.app.resources.firebase_join_invite_create
+import com.eventmanager.app.resources.firebase_join_invite_missing_body
+import com.eventmanager.app.resources.firebase_join_invite_rotate
 import com.eventmanager.app.resources.firebase_join_or_enter_codes
 import com.eventmanager.app.resources.firebase_join_paste_code
 import com.eventmanager.app.resources.firebase_join_qr_body
@@ -67,6 +72,7 @@ import com.eventmanager.app.resources.firebase_hide_project
 import com.eventmanager.app.resources.firebase_web_client_id_label
 import com.eventmanager.app.resources.firebase_web_client_secret_label
 import com.eventmanager.app.utils.QRCodeUtils
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -287,12 +293,27 @@ fun FirebaseAdminJoinQrCard(
     webClientSecret: String,
     bootstrapCode: String = "",
     allowProjectSecrets: Boolean = true,
+    onBootstrapCodeChange: (String) -> Unit = {},
+    onRotateBootstrapCode: (suspend () -> String)? = null,
 ) {
     val clipboard = LocalClipboardManager.current
+    val scope = rememberCoroutineScope()
     var copiedHint by remember { mutableStateOf(false) }
     var copiedInvite by remember { mutableStateOf(false) }
+    var rotating by remember { mutableStateOf(false) }
+    var rotateError by remember { mutableStateOf<String?>(null) }
+    var revealInvite by remember { mutableStateOf(false) }
 
-    val payload = remember(allowProjectSecrets, orgId, projectId, applicationId, apiKey, webClientId, webClientSecret) {
+    val payload = remember(
+        allowProjectSecrets,
+        orgId,
+        projectId,
+        applicationId,
+        apiKey,
+        webClientId,
+        webClientSecret,
+        bootstrapCode,
+    ) {
         if (!allowProjectSecrets) return@remember null
         FirebaseJoinPayload(
             orgId = orgId.trim(),
@@ -301,8 +322,10 @@ fun FirebaseAdminJoinQrCard(
             apiKey = apiKey.trim(),
             webClientId = webClientId.trim(),
             webClientSecret = webClientSecret.trim(),
+            bootstrapCode = bootstrapCode.trim(),
         ).takeIf {
-            it.isComplete() && firebaseOAuthCredentialsReady(webClientId.trim(), webClientSecret.trim())
+            it.hasJoinSecrets() &&
+                firebaseOAuthCredentialsReady(webClientId.trim(), webClientSecret.trim())
         }
     }
     val encoded = remember(payload) {
@@ -321,6 +344,40 @@ fun FirebaseAdminJoinQrCard(
         },
     ) {
         if (!allowProjectSecrets) {
+            return@GuidedStepCard
+        }
+        if (bootstrapCode.isBlank()) {
+            Text(
+                stringResource(Res.string.firebase_join_invite_missing_body),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (onRotateBootstrapCode != null) {
+                Button(
+                    onClick = {
+                        rotating = true
+                        rotateError = null
+                        scope.launch {
+                            runCatching { onRotateBootstrapCode() }
+                                .onSuccess { code ->
+                                    onBootstrapCodeChange(code)
+                                    rotating = false
+                                }
+                                .onFailure { e ->
+                                    rotateError = e.message ?: "Failed to create invitation code"
+                                    rotating = false
+                                }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !rotating,
+                ) {
+                    Text(stringResource(Res.string.firebase_join_invite_create))
+                }
+            }
+            rotateError?.let {
+                Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            }
             return@GuidedStepCard
         }
         if (encoded == null || qrBitmap == null) {
@@ -351,34 +408,68 @@ fun FirebaseAdminJoinQrCard(
                     color = MaterialTheme.colorScheme.primary,
                 )
             }
-            if (bootstrapCode.isNotBlank()) {
+            Text(
+                stringResource(Res.string.firebase_join_invite_admin_body),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            // Hidden by default: anyone reading this code over the admin's shoulder can join.
+            TextButton(onClick = { revealInvite = !revealInvite }) {
                 Text(
-                    stringResource(Res.string.firebase_join_invite_admin_body),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    stringResource(
+                        if (revealInvite) Res.string.firebase_hide_secrets
+                        else Res.string.firebase_reveal_secrets,
+                    ),
                 )
+            }
+            if (revealInvite) {
                 Text(
                     bootstrapCode,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary,
                 )
-                OutlinedButton(
+            }
+            OutlinedButton(
+                onClick = {
+                    clipboard.setText(AnnotatedString(bootstrapCode))
+                    copiedInvite = true
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(Res.string.firebase_join_invite_copy))
+            }
+            if (copiedInvite) {
+                Text(
+                    stringResource(Res.string.firebase_join_invite_copied),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+            if (onRotateBootstrapCode != null) {
+                TextButton(
                     onClick = {
-                        clipboard.setText(AnnotatedString(bootstrapCode))
-                        copiedInvite = true
+                        rotating = true
+                        rotateError = null
+                        scope.launch {
+                            runCatching { onRotateBootstrapCode() }
+                                .onSuccess { code ->
+                                    onBootstrapCodeChange(code)
+                                    rotating = false
+                                }
+                                .onFailure { e ->
+                                    rotateError = e.message ?: "Failed to rotate invitation code"
+                                    rotating = false
+                                }
+                        }
                     },
-                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !rotating,
                 ) {
-                    Text(stringResource(Res.string.firebase_join_invite_copy))
+                    Text(stringResource(Res.string.firebase_join_invite_rotate))
                 }
-                if (copiedInvite) {
-                    Text(
-                        stringResource(Res.string.firebase_join_invite_copied),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
+            }
+            rotateError?.let {
+                Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
             }
         }
     }
@@ -402,6 +493,7 @@ fun FirebaseAdminConfigAndJoinQrSection(
     onWebClientSecretChange: (String) -> Unit,
     onAppliedFromPaste: () -> Unit = {},
 ) {
+    var bootstrapCode by remember { mutableStateOf(settingsManager.getFirebaseBootstrapCode()) }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         FirebaseAdminProjectConfigCard(
             settingsManager = settingsManager,
@@ -424,13 +516,22 @@ fun FirebaseAdminConfigAndJoinQrSection(
             apiKey = apiKey,
             webClientId = webClientId,
             webClientSecret = webClientSecret,
-            bootstrapCode = settingsManager.getFirebaseBootstrapCode(),
+            bootstrapCode = bootstrapCode,
+            onBootstrapCodeChange = { code ->
+                bootstrapCode = code
+                settingsManager.setFirebaseBootstrapCode(code)
+            },
         )
     }
 }
 
 /**
  * Join / follow: scan or paste join code; never shows apiKey fields.
+ * Full v1 codes already include OAuth secret + invitation — one paste/scan is enough.
+ *
+ * Once the configuration has been imported (QR scan or pasted join code) nothing is echoed back:
+ * a member has no use for the org invitation code, and it is the one secret that lets any device
+ * join. Values the user typed themselves stay visible — they already know them.
  */
 @Composable
 fun FirebaseJoinImportSection(
@@ -438,18 +539,28 @@ fun FirebaseJoinImportSection(
     onJoined: (orgId: String) -> Unit,
     onRequestScan: (() -> Unit)? = null,
     joinError: String? = null,
+    configImported: Boolean = settingsManager.isFirebaseJoinImported(),
 ) {
     var pasteCode by remember { mutableStateOf("") }
-    var bootstrapCode by remember { mutableStateOf(settingsManager.getFirebaseBootstrapCode()) }
+    // Deliberately not seeded from storage: an imported invitation code never reaches the UI.
+    var manualInviteCode by remember { mutableStateOf("") }
+    // Keyed so a scan handled by the host screen also collapses the fields here.
+    var imported by remember(configImported) { mutableStateOf(configImported) }
+    var showManualEntry by remember { mutableStateOf(false) }
     var localError by remember { mutableStateOf<String?>(null) }
     val error = joinError ?: localError
     val incompleteOAuthMsg = stringResource(Res.string.firebase_join_error_oauth_missing)
+    val incompleteInviteMsg = stringResource(Res.string.firebase_join_error_invite_missing)
 
     fun applyRaw(raw: String) {
         FirebaseJoinCodec.decode(raw).fold(
             onSuccess = { payload ->
                 settingsManager.applyFirebaseJoinPayload(payload)
-                settingsManager.setFirebaseBootstrapCode(bootstrapCode)
+                // Prefer invitation from the QR/config code; only fall back to the manual field.
+                val invite = payload.bootstrapCode.trim().ifBlank { manualInviteCode.trim() }
+                if (invite.isNotBlank()) {
+                    settingsManager.setFirebaseBootstrapCode(invite)
+                }
                 if (!firebaseOAuthCredentialsReady(
                         settingsManager.getFirebaseWebClientId(),
                         settingsManager.getFirebaseWebClientSecret(),
@@ -458,8 +569,15 @@ fun FirebaseJoinImportSection(
                     localError = incompleteOAuthMsg
                     return@fold
                 }
+                if (settingsManager.getFirebaseBootstrapCode().isBlank()) {
+                    localError = incompleteInviteMsg
+                    return@fold
+                }
                 localError = null
                 pasteCode = ""
+                manualInviteCode = ""
+                imported = true
+                showManualEntry = false
                 onJoined(payload.orgId)
             },
             onFailure = { e ->
@@ -476,6 +594,17 @@ fun FirebaseJoinImportSection(
             Button(onClick = onRequestScan, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(Res.string.firebase_join_scan))
             }
+        }
+        if (imported && !showManualEntry) {
+            FirebaseConfigReceivedBanner(orgId = settingsManager.getFirebaseOrgId())
+            error?.let {
+                Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            }
+            // Escape hatch when the imported config turned out to be incomplete.
+            TextButton(onClick = { showManualEntry = true }) {
+                Text(stringResource(Res.string.firebase_join_or_enter_codes))
+            }
+            return@GuidedStepCard
         }
         Text(
             stringResource(Res.string.firebase_join_or_enter_codes),
@@ -496,9 +625,9 @@ fun FirebaseJoinImportSection(
             minLines = 2,
         )
         OutlinedTextField(
-            value = bootstrapCode,
+            value = manualInviteCode,
             onValueChange = {
-                bootstrapCode = it
+                manualInviteCode = it
                 settingsManager.setFirebaseBootstrapCode(it)
                 localError = null
             },
@@ -512,7 +641,7 @@ fun FirebaseJoinImportSection(
         OutlinedButton(
             onClick = { applyRaw(pasteCode) },
             modifier = Modifier.fillMaxWidth(),
-            enabled = pasteCode.isNotBlank() && bootstrapCode.isNotBlank(),
+            enabled = pasteCode.isNotBlank(),
         ) {
             Text(stringResource(Res.string.firebase_join_paste_code))
         }

@@ -1,9 +1,12 @@
 package com.eventmanager.app.ui.screens
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -42,6 +45,7 @@ import com.eventmanager.app.data.remote.MultiOrgMerge
 import com.eventmanager.app.data.remote.resolvedProfilePhotoPath
 import com.eventmanager.app.ui.utils.GuestListDefaultZoneId
 import com.eventmanager.app.ui.components.OrgColorDot
+import com.eventmanager.app.ui.utils.VenueOption
 import com.eventmanager.app.ui.utils.generateVenueFilterOptions
 import com.eventmanager.app.ui.utils.getVenueDisplayString
 import com.eventmanager.app.ui.utils.rememberGuestListEffectiveToday
@@ -51,7 +55,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 actual fun GuestListScreen(
     guests: List<Guest>,
@@ -68,7 +72,7 @@ actual fun GuestListScreen(
     onConfirmEntry: ((Job, Int) -> Unit)?,
     @Suppress("UNUSED_PARAMETER") isSyncing: Boolean,
     @Suppress("UNUSED_PARAMETER") lastSyncTime: Long,
-    @Suppress("UNUSED_PARAMETER") scrollBehavior: String,
+    scrollBehavior: String,
     readOnly: Boolean,
     searchFocusTick: Int,
     viewModel: EventManagerViewModel?
@@ -158,113 +162,152 @@ actual fun GuestListScreen(
         refreshTemporaryGuestsLatest()
     }
 
-    Column(Modifier.fillMaxSize().padding(16.dp)) {
-        if (!readOnly) {
-            Text(
-                text = stringResource(Res.string.guest_list_title),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = stringResource(Res.string.guest_list_description),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.height(12.dp))
-        }
+    val pagePadding = 16.dp
+    val itemSpacing = 8.dp
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            venueFilterOptions.forEach { venueOption ->
-                FilterChip(
-                    onClick = {
-                        selectedVenueName = if (selectedVenueName == venueOption.venueName) null else venueOption.venueName
-                    },
-                    label = { Text(venueOption.displayName) },
-                    selected = selectedVenueName == venueOption.venueName,
-                    leadingIcon = {
-                        Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(16.dp))
+    val guestListItems: LazyListScope.() -> Unit = {
+        items(filteredGuests, key = { it.id }) { guest ->
+            GuestListRow(
+                guest = guest,
+                venues = venues,
+                readOnly = readOnly,
+                onClick = {
+                    if (guest.isVolunteerBenefit && guest.volunteerId != null) {
+                        volunteersMap[guest.volunteerId]?.let { showVolunteerBenefits = it }
+                    } else {
+                        showGuestDetail = guest
                     }
-                )
-            }
+                },
+                onEdit = { showEditDialog = guest },
+                onDelete = { guestToDelete = guest },
+                viewModel = viewModel,
+            )
         }
+    }
 
-        Spacer(Modifier.height(8.dp))
-
-        SearchBarWithFilter(
-            searchText = searchQuery,
-            onSearchTextChange = { searchQuery = it },
-            placeholder = stringResource(Res.string.search_guests_placeholder),
-            filterOptions = guestFilterOptions,
-            selectedFilter = selectedFilter,
-            onFilterChange = { selectedFilter = it },
-            requestFocusTrigger = searchFocusTick
-        )
-
-        Spacer(Modifier.height(8.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "${stringResource(Res.string.guests_count)}: ${filteredGuests.size}",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
+    when (scrollBehavior) {
+        SettingsManager.HEADER_PINNED -> {
+            Column(Modifier.fillMaxSize().padding(pagePadding)) {
+                GuestListHeaderSection(readOnly = readOnly)
+                GuestListVenueChipsRow(
+                    venueFilterOptions = venueFilterOptions,
+                    selectedVenueName = selectedVenueName,
+                    onVenueSelected = { selectedVenueName = it },
                 )
-                Text(
-                    text = "${stringResource(Res.string.invitations_count)}: $totalInvitations",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                Spacer(Modifier.height(itemSpacing))
+                GuestListFilterBar(
+                    searchQuery = searchQuery,
+                    onSearchQueryChange = { searchQuery = it },
+                    guestFilterOptions = guestFilterOptions,
+                    selectedFilter = selectedFilter,
+                    onFilterChange = { selectedFilter = it },
+                    searchFocusTick = searchFocusTick,
                 )
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                OutlinedButton(
-                    onClick = {
+                Spacer(Modifier.height(itemSpacing))
+                GuestListStatsRow(
+                    filteredGuestCount = filteredGuests.size,
+                    totalInvitations = totalInvitations,
+                    readOnly = readOnly,
+                    onOpenTimeline = {
                         onRefreshTemporaryGuests()
                         showTemporaryGuestsTimeline = true
-                    }
+                    },
+                    onAddGuest = { showAddDialog = true },
+                )
+                Spacer(Modifier.height(itemSpacing))
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(itemSpacing),
+                    modifier = Modifier.weight(1f),
                 ) {
-                    Icon(Icons.Default.History, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(stringResource(Res.string.temp_guest_timeline_button))
-                }
-                if (!readOnly) {
-                    FilledTonalButton(onClick = { showAddDialog = true }) {
-                        Icon(Icons.Default.Add, contentDescription = null)
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(Res.string.add_guest))
-                    }
+                    guestListItems()
                 }
             }
         }
-
-        Spacer(Modifier.height(8.dp))
-
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f)) {
-            items(filteredGuests, key = { it.id }) { guest ->
-                GuestListRow(
-                    guest = guest,
-                    venues = venues,
-                    readOnly = readOnly,
-                    onClick = {
-                        if (guest.isVolunteerBenefit && guest.volunteerId != null) {
-                            volunteersMap[guest.volunteerId]?.let { showVolunteerBenefits = it }
-                        } else {
-                            showGuestDetail = guest
-                        }
-                    },
-                    onEdit = { showEditDialog = guest },
-                    onDelete = { guestToDelete = guest },
-                    viewModel = viewModel,
-                )
+        SettingsManager.STICKY_FILTERS -> {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(pagePadding),
+                verticalArrangement = Arrangement.spacedBy(itemSpacing),
+            ) {
+                item(key = "header") {
+                    GuestListHeaderSection(readOnly = readOnly)
+                }
+                item(key = "venue_filters") {
+                    GuestListVenueChipsRow(
+                        venueFilterOptions = venueFilterOptions,
+                        selectedVenueName = selectedVenueName,
+                        onVenueSelected = { selectedVenueName = it },
+                    )
+                }
+                stickyHeader(key = "sticky_filters") {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surface)
+                            .padding(bottom = itemSpacing),
+                    ) {
+                        GuestListFilterBar(
+                            searchQuery = searchQuery,
+                            onSearchQueryChange = { searchQuery = it },
+                            guestFilterOptions = guestFilterOptions,
+                            selectedFilter = selectedFilter,
+                            onFilterChange = { selectedFilter = it },
+                            searchFocusTick = searchFocusTick,
+                        )
+                    }
+                }
+                item(key = "stats") {
+                    GuestListStatsRow(
+                        filteredGuestCount = filteredGuests.size,
+                        totalInvitations = totalInvitations,
+                        readOnly = readOnly,
+                        onOpenTimeline = {
+                            onRefreshTemporaryGuests()
+                            showTemporaryGuestsTimeline = true
+                        },
+                        onAddGuest = { showAddDialog = true },
+                    )
+                }
+                guestListItems()
+            }
+        }
+        else -> {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(pagePadding),
+                verticalArrangement = Arrangement.spacedBy(itemSpacing),
+            ) {
+                item(key = "header") {
+                    GuestListHeaderSection(readOnly = readOnly)
+                }
+                item(key = "venue_filters") {
+                    GuestListVenueChipsRow(
+                        venueFilterOptions = venueFilterOptions,
+                        selectedVenueName = selectedVenueName,
+                        onVenueSelected = { selectedVenueName = it },
+                    )
+                }
+                item(key = "filters") {
+                    GuestListFilterBar(
+                        searchQuery = searchQuery,
+                        onSearchQueryChange = { searchQuery = it },
+                        guestFilterOptions = guestFilterOptions,
+                        selectedFilter = selectedFilter,
+                        onFilterChange = { selectedFilter = it },
+                        searchFocusTick = searchFocusTick,
+                    )
+                }
+                item(key = "stats") {
+                    GuestListStatsRow(
+                        filteredGuestCount = filteredGuests.size,
+                        totalInvitations = totalInvitations,
+                        readOnly = readOnly,
+                        onOpenTimeline = {
+                            onRefreshTemporaryGuests()
+                            showTemporaryGuestsTimeline = true
+                        },
+                        onAddGuest = { showAddDialog = true },
+                    )
+                }
+                guestListItems()
             }
         }
     }
@@ -390,6 +433,115 @@ actual fun GuestListScreen(
                 viewModel = viewModel,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 400.dp, max = 700.dp)
             )
+        }
+    }
+}
+
+@Composable
+private fun GuestListHeaderSection(readOnly: Boolean) {
+    if (!readOnly) {
+        Text(
+            text = stringResource(Res.string.guest_list_title),
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = stringResource(Res.string.guest_list_description),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(12.dp))
+    }
+}
+
+@Composable
+private fun GuestListVenueChipsRow(
+    venueFilterOptions: List<VenueOption>,
+    selectedVenueName: String?,
+    onVenueSelected: (String?) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        venueFilterOptions.forEach { venueOption ->
+            FilterChip(
+                onClick = {
+                    onVenueSelected(
+                        if (selectedVenueName == venueOption.venueName) null else venueOption.venueName,
+                    )
+                },
+                label = { Text(venueOption.displayName) },
+                selected = selectedVenueName == venueOption.venueName,
+                leadingIcon = {
+                    Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(16.dp))
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun GuestListFilterBar(
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    guestFilterOptions: List<String>,
+    selectedFilter: String?,
+    onFilterChange: (String?) -> Unit,
+    searchFocusTick: Int,
+) {
+    SearchBarWithFilter(
+        searchText = searchQuery,
+        onSearchTextChange = onSearchQueryChange,
+        placeholder = stringResource(Res.string.search_guests_placeholder),
+        filterOptions = guestFilterOptions,
+        selectedFilter = selectedFilter,
+        onFilterChange = onFilterChange,
+        requestFocusTrigger = searchFocusTick,
+    )
+}
+
+@Composable
+private fun GuestListStatsRow(
+    filteredGuestCount: Int,
+    totalInvitations: Int,
+    readOnly: Boolean,
+    onOpenTimeline: () -> Unit,
+    onAddGuest: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = "${stringResource(Res.string.guests_count)}: $filteredGuestCount",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = "${stringResource(Res.string.invitations_count)}: $totalInvitations",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            OutlinedButton(onClick = onOpenTimeline) {
+                Icon(Icons.Default.History, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(stringResource(Res.string.temp_guest_timeline_button))
+            }
+            if (!readOnly) {
+                FilledTonalButton(onClick = onAddGuest) {
+                    Icon(Icons.Default.Add, contentDescription = null)
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(Res.string.add_guest))
+                }
+            }
         }
     }
 }

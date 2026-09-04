@@ -294,6 +294,40 @@ internal class DesktopFirestoreGateway(
     override suspend fun isOrgAccessibleOnServer(orgId: String, uid: String): Boolean =
         readMemberRoleFromServer(orgId, uid) != null
 
+    override suspend fun probeMembership(orgId: String, uid: String): MembershipProbe =
+        withContext(Dispatchers.IO) {
+            if (orgId.isBlank() || uid.isBlank() || isFirebaseOrgAllSentinel(orgId)) {
+                return@withContext MembershipProbe.Unavailable
+            }
+            if (transport != Transport.REST && gitlive.isAvailable()) {
+                val fromGitLive = withTimeoutOrNull(READ_TIMEOUT_MS) {
+                    gitlive.probeMembership(orgId, uid)
+                }
+                if (fromGitLive != null && fromGitLive != MembershipProbe.Unavailable) {
+                    noteServerReachable(true)
+                    return@withContext fromGitLive
+                }
+            }
+            val client = rest ?: return@withContext MembershipProbe.Unavailable
+            markRestFallback("probeMembership")
+            try {
+                val data = client.getDocument(orgId, "members", uid)
+                noteServerReachable(true)
+                when {
+                    data == null -> MembershipProbe.Absent
+                    else -> MembershipProbe.Member(
+                        data["role"]?.toString()?.trim()?.ifBlank { null }
+                            ?: MemberRole.MEMBER.storageValue(),
+                    )
+                }
+            } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (isFirestorePermissionDenied(e)) MembershipProbe.Denied
+                else MembershipProbe.Unavailable
+            }
+        }
+
     override suspend fun listMembers(orgId: String): List<FirebaseTeamMemberListing> =
         withContext(Dispatchers.IO) {
             if (orgId.isBlank() || isFirebaseOrgAllSentinel(orgId)) return@withContext emptyList()

@@ -287,6 +287,35 @@ class GitLiveFirestoreGateway(
     override suspend fun isOrgAccessibleOnServer(orgId: String, uid: String): Boolean =
         readMemberRole(orgId, uid, fromServer = true) != null
 
+    override suspend fun probeMembership(orgId: String, uid: String): MembershipProbe {
+        val firestore = db() ?: return MembershipProbe.Unavailable
+        if (orgId.isBlank() || uid.isBlank() || isFirebaseOrgAllSentinel(orgId)) {
+            return MembershipProbe.Unavailable
+        }
+        return try {
+            val snap = firestore.collection("orgs").document(orgId)
+                .collection("members").document(uid).get(source = Source.SERVER)
+            noteServerReachability(true)
+            when {
+                !snap.exists -> MembershipProbe.Absent
+                // A member doc with no readable role still proves membership.
+                else -> MembershipProbe.Member(
+                    memberRecordFromSnapshot(snap).role ?: MemberRole.MEMBER.storageValue(),
+                )
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            if (isFirestorePermissionDenied(e)) {
+                println("Firebase membership probe denied for $orgId/$uid: ${e.message}")
+                MembershipProbe.Denied
+            } else {
+                println("Firebase membership probe unavailable for $orgId/$uid: ${e.message}")
+                MembershipProbe.Unavailable
+            }
+        }
+    }
+
     override suspend fun listMembers(orgId: String): List<FirebaseTeamMemberListing> {
         val firestore = db() ?: error("Firestore is not initialized")
         if (orgId.isBlank() || isFirebaseOrgAllSentinel(orgId)) return emptyList()

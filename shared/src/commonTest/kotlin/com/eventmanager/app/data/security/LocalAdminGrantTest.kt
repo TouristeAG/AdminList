@@ -37,6 +37,21 @@ class LocalAdminGrantTest {
     }
 
     @Test
+    fun syncedInstitutionSettingsEditableOnSheetsOrFirebaseAdmin() {
+        assertTrue(canEditSyncedInstitutionSettings(BackendType.SHEETS, isFirebaseOrgAdmin = false))
+        assertTrue(canEditSyncedInstitutionSettings(BackendType.FIREBASE, isFirebaseOrgAdmin = true))
+        assertFalse(canEditSyncedInstitutionSettings(BackendType.FIREBASE, isFirebaseOrgAdmin = false))
+    }
+
+    @Test
+    fun billeterieAnnouncementSendEditableOnlyByFirebaseOrgAdmin() {
+        assertFalse(canEditAnnouncementsNonAdminSendSetting(BackendType.SHEETS, isFirebaseOrgAdmin = true))
+        assertFalse(canEditAnnouncementsNonAdminSendSetting(BackendType.SHEETS, isFirebaseOrgAdmin = false))
+        assertTrue(canEditAnnouncementsNonAdminSendSetting(BackendType.FIREBASE, isFirebaseOrgAdmin = true))
+        assertFalse(canEditAnnouncementsNonAdminSendSetting(BackendType.FIREBASE, isFirebaseOrgAdmin = false))
+    }
+
+    @Test
     fun sectionHiddenOnSheetsAndReadOnly() {
         val guest = Guest(name = "Ada", invitations = 1, venueName = "Groove")
         assertFalse(
@@ -137,5 +152,20 @@ class LocalAdminGrantTest {
         assertTrue(institutionHasLocalAdminInOrg(listOf(adminA), listOf(adminB), "org-a", strictMultiOrg = true))
         assertFalse(institutionHasLocalAdminInOrg(listOf(adminA), emptyList(), "org-b", strictMultiOrg = true))
         assertTrue(institutionHasLocalAdminInOrg(listOf(adminA), listOf(adminB), "org-b", strictMultiOrg = true))
+    }
+
+    @Test
+    fun shouldOfferFirstAdminSetupOnlyForEmptyRosterAfterSync() {
+        assertTrue(shouldOfferFirstAdminSetupAfterSync(syncSucceeded = true, hasLocalAdmin = false, memberCount = 0))
+        assertFalse(shouldOfferFirstAdminSetupAfterSync(syncSucceeded = true, hasLocalAdmin = false, memberCount = 3))
+        assertFalse(shouldOfferFirstAdminSetupAfterSync(syncSucceeded = true, hasLocalAdmin = true, memberCount = 0))
+        assertFalse(shouldOfferFirstAdminSetupAfterSync(syncSucceeded = false, hasLocalAdmin = false, memberCount = 0))
+    }
+
+    @Test
+    fun suspiciousMissingAdminWhenMembersPresentWithoutAdmin() {
+        assertTrue(isSuspiciousMissingAdminAfterSync(syncSucceeded = true, hasLocalAdmin = false, memberCount = 2))
+        assertFalse(isSuspiciousMissingAdminAfterSync(syncSucceeded = true, hasLocalAdmin = true, memberCount = 2))
+        assertFalse(isSuspiciousMissingAdminAfterSync(syncSucceeded = true, hasLocalAdmin = false, memberCount = 0))
     }
 }

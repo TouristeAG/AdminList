@@ -27,7 +27,7 @@ internal actual object GraphExportBridge {
         val timestamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.getDefault())
             .format(java.util.Date())
         val file = File(context.cacheDir, "${fileNamePrefix}_${timestamp}.xlsx")
-        val workbook = org.apache.poi.xssf.usermodel.XSSFWorkbook()
+        val workbook = GraphExportAndroid.createXssfWorkbook()
         val sheet = workbook.createSheet(sheetName.take(31))
         val titleRow = sheet.createRow(0)
         val titleCell = titleRow.createCell(0)

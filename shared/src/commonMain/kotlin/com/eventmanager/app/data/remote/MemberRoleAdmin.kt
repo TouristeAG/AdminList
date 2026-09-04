@@ -26,9 +26,10 @@ object MemberRoleAdmin {
         }
         val memberData = mutableMapOf<String, Any?>(
             "role" to role.storageValue(),
-            "email" to email,
             "updatedAt" to System.currentTimeMillis(),
         )
+        // A null email would erase the stored one on a merge write.
+        email?.trim()?.takeIf { it.isNotBlank() }?.let { memberData["email"] = it }
         bootstrapCode?.takeIf { it.isNotBlank() }?.let {
             memberData["bootstrapCode"] = BootstrapCodeHash.hash(it)
         }
@@ -82,11 +83,8 @@ object MemberRoleAdmin {
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            val raw = e.message.orEmpty()
-            println("Firebase team: assign failed: $raw")
-            if (raw.contains("PERMISSION", ignoreCase = true) ||
-                raw.contains("permission-denied", ignoreCase = true)
-            ) {
+            println("Firebase team: assign failed: ${e.message}")
+            if (isFirestorePermissionDenied(e)) {
                 error("PERMISSION")
             }
             throw e
@@ -152,8 +150,40 @@ object MemberRoleAdmin {
             orgId,
             "metadata",
             "config",
-            buildMetadataConfig(orgId, domains, bootstrapCode = null),
+            buildMetadataConfig(
+                orgId,
+                domains,
+                bootstrapCode = null,
+                // Explicit admin edit: an empty list must really clear the allowlist.
+                publishAllowedEmailDomains = true,
+            ),
         )
+    }
+
+    /**
+     * Create or rotate the org invitation code and publish its hash to `metadata/config`.
+     * Returns the new plaintext code (store locally / embed in join QR).
+     * Uses the same hashing path as [bootstrapOrgAdmin] so joins keep working.
+     */
+    suspend fun rotateBootstrapCode(
+        gateway: FirestoreGateway,
+        orgId: String,
+        allowedEmailDomains: List<String> = emptyList(),
+    ): String {
+        if (orgId.isBlank()) error("NO_ORG")
+        val code = generateBootstrapCode()
+        gateway.upsertDocument(
+            orgId,
+            "metadata",
+            "config",
+            buildMetadataConfig(
+                orgId,
+                allowedEmailDomains,
+                // Same double-hash convention as bootstrapOrgAdmin → upsertMember.
+                bootstrapCode = BootstrapCodeHash.hash(code),
+            ),
+        )
+        return code
     }
 
     fun generateBootstrapCode(): String {
@@ -161,18 +191,27 @@ object MemberRoleAdmin {
         return (1..8).map { alphabet[Random.nextInt(alphabet.length)] }.joinToString("")
     }
 
+    /**
+     * @param publishAllowedEmailDomains when false the key is omitted entirely, so the merge write
+     * leaves the org's existing allowlist alone. Only an explicit admin edit may clear it —
+     * a bootstrap or a code rotation must never silently open the org to every domain.
+     */
     private fun buildMetadataConfig(
         orgId: String,
         allowedEmailDomains: List<String>,
         bootstrapCode: String?,
+        publishAllowedEmailDomains: Boolean = allowedEmailDomains.isNotEmpty(),
     ): Map<String, Any?> {
         val map = mutableMapOf<String, Any?>(
             "backendType" to BackendType.FIREBASE.name,
             "schemaVersion" to 1,
             "firebaseOrgId" to orgId,
-            "allowedEmailDomains" to FirebaseEmailDomainPolicy.domainsToFirestoreMap(allowedEmailDomains),
-            "allowedEmailDomainsUpdatedAt" to System.currentTimeMillis(),
         )
+        if (publishAllowedEmailDomains) {
+            map["allowedEmailDomains"] =
+                FirebaseEmailDomainPolicy.domainsToFirestoreMap(allowedEmailDomains)
+            map["allowedEmailDomainsUpdatedAt"] = System.currentTimeMillis()
+        }
         if (bootstrapCode != null) {
             map["createdAt"] = System.currentTimeMillis()
             map["bootstrapCodeHash"] = BootstrapCodeHash.hash(bootstrapCode)

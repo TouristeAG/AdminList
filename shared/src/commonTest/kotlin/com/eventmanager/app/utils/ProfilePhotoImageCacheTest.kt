@@ -14,4 +14,15 @@ class ProfilePhotoImageCacheTest {
         assertEquals(a, b)
         assertNotEquals(a, c)
     }
+
+    @Test
+    fun revisionState_isIndependentPerCacheId() {
+        val a = ProfilePhotoImageCache.revisionState("https://example.com/a.jpg")
+        val aAgain = ProfilePhotoImageCache.revisionState("https://example.com/a.jpg")
+        val b = ProfilePhotoImageCache.revisionState("https://example.com/b.jpg")
+        assertEquals(a, aAgain)
+        assertNotEquals(a, b)
+        assertEquals(0L, a.value)
+        assertEquals(0L, b.value)
+    }
 }

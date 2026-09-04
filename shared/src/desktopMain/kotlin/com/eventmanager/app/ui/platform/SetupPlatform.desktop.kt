@@ -17,50 +17,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.unit.dp
 import com.eventmanager.app.data.sync.DesktopGmailAuth
-import com.eventmanager.app.data.sync.SettingsManager
-import com.eventmanager.app.platform.createAppStorage
-import com.eventmanager.app.ui.platform.AppAppearanceState
 import com.eventmanager.app.platform.PlatformContext
 import com.eventmanager.app.platform.PlatformFileManager
 import com.eventmanager.app.resources.Res
 import com.eventmanager.app.resources.*
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
 
-@Composable
-actual fun NfcUidListenerEffect(
-    platformContext: PlatformContext,
-    enabled: Boolean,
-    onUidRead: (String) -> Unit,
-    onScanStatus: (String?) -> Unit,
-) {
-    ExternalCardReaderUidEffect(
-        platformContext = platformContext,
-        enabled = enabled,
-        onUidRead = onUidRead,
-        onScanStatus = onScanStatus,
-    )
-}
-
 actual fun supportsResolutionScaleStep(): Boolean = false
-
-actual fun applyLocaleOrThemeChange(platformContext: PlatformContext) {
-    applyLocaleChange(platformContext)
-}
-
-actual fun applyLocaleChange(platformContext: PlatformContext) {
-    val settingsManager = SettingsManager(createAppStorage(platformContext))
-    AppAppearanceState.notifyLocaleChanged(settingsManager.getLanguage())
-}
-
-actual fun applyThemeAppearanceChange(platformContext: PlatformContext) {
-    val settingsManager = SettingsManager(createAppStorage(platformContext))
-    AppAppearanceState.notifyThemeAppearanceChanged(settingsManager.getThemeMode())
-}
 
 @Composable
 actual fun ServiceAccountKeyUploadButton(

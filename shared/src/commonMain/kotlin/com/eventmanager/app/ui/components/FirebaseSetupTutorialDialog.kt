@@ -26,9 +26,13 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.eventmanager.app.data.remote.FirestoreRulesClipboardContent
+import com.eventmanager.app.data.remote.InstitutionGoogleWebOAuth
+import com.eventmanager.app.data.remote.NOCTULIST_FIRESTORE_RULES_VERSION
 import com.eventmanager.app.data.remote.StorageRulesClipboardContent
 import com.eventmanager.app.resources.Res
 import com.eventmanager.app.resources.firebase_tutorial_close
+import com.eventmanager.app.resources.firebase_tutorial_copy_redirect_uris
+import com.eventmanager.app.resources.firebase_tutorial_copy_redirect_uris_done
 import com.eventmanager.app.resources.firebase_tutorial_copy_rules
 import com.eventmanager.app.resources.firebase_tutorial_copy_rules_done
 import com.eventmanager.app.resources.firebase_tutorial_copy_rules_error
@@ -54,8 +58,6 @@ import com.eventmanager.app.resources.firebase_tutorial_cloud_step4_body
 import com.eventmanager.app.resources.firebase_tutorial_cloud_step4_title
 import com.eventmanager.app.resources.firebase_tutorial_cloud_step5_body
 import com.eventmanager.app.resources.firebase_tutorial_cloud_step5_title
-import com.eventmanager.app.resources.firebase_tutorial_cloud_step6_body
-import com.eventmanager.app.resources.firebase_tutorial_cloud_step6_title
 import com.eventmanager.app.resources.firebase_tutorial_fb_step1_body
 import com.eventmanager.app.resources.firebase_tutorial_fb_step1_title
 import com.eventmanager.app.resources.firebase_tutorial_fb_step2_body
@@ -66,8 +68,6 @@ import com.eventmanager.app.resources.firebase_tutorial_fb_step4_body
 import com.eventmanager.app.resources.firebase_tutorial_fb_step4_title
 import com.eventmanager.app.resources.firebase_tutorial_fb_step5_body
 import com.eventmanager.app.resources.firebase_tutorial_fb_step5_title
-import com.eventmanager.app.resources.firebase_tutorial_fb_step6_body
-import com.eventmanager.app.resources.firebase_tutorial_fb_step6_title
 import com.eventmanager.app.resources.firebase_tutorial_step7_body
 import com.eventmanager.app.resources.firebase_tutorial_step7_title
 import com.eventmanager.app.resources.firebase_tutorial_step8_body
@@ -92,6 +92,7 @@ fun FirebaseSetupTutorialDialog(
     var storageRulesText by remember { mutableStateOf<String?>(null) }
     var firestoreCopyStatus by remember { mutableStateOf<CopyStatus>(CopyStatus.Idle) }
     var storageCopyStatus by remember { mutableStateOf<CopyStatus>(CopyStatus.Idle) }
+    var redirectUrisCopyStatus by remember { mutableStateOf<CopyStatus>(CopyStatus.Idle) }
     var method by remember { mutableStateOf(TutorialConsoleMethod.Firebase) }
 
     LaunchedEffect(Unit) {
@@ -111,8 +112,6 @@ fun FirebaseSetupTutorialDialog(
                 stringResource(Res.string.firebase_tutorial_fb_step4_body),
             stringResource(Res.string.firebase_tutorial_fb_step5_title) to
                 stringResource(Res.string.firebase_tutorial_fb_step5_body),
-            stringResource(Res.string.firebase_tutorial_fb_step6_title) to
-                stringResource(Res.string.firebase_tutorial_fb_step6_body),
             stringResource(Res.string.firebase_tutorial_step7_title) to
                 stringResource(Res.string.firebase_tutorial_step7_body),
             stringResource(Res.string.firebase_tutorial_step8_title) to
@@ -129,8 +128,6 @@ fun FirebaseSetupTutorialDialog(
                 stringResource(Res.string.firebase_tutorial_cloud_step4_body),
             stringResource(Res.string.firebase_tutorial_cloud_step5_title) to
                 stringResource(Res.string.firebase_tutorial_cloud_step5_body),
-            stringResource(Res.string.firebase_tutorial_cloud_step6_title) to
-                stringResource(Res.string.firebase_tutorial_cloud_step6_body),
             stringResource(Res.string.firebase_tutorial_step7_title) to
                 stringResource(Res.string.firebase_tutorial_step7_body),
             stringResource(Res.string.firebase_tutorial_step8_title) to
@@ -140,6 +137,11 @@ fun FirebaseSetupTutorialDialog(
 
     // Rules copy button sits after step 3 (index 2) in both guides.
     val rulesStepIndex = 2
+    // Localhost redirect URIs: Firebase guide step 5 (index 4), Cloud guide step 4 (index 3).
+    val redirectUrisStepIndex = when (method) {
+        TutorialConsoleMethod.Firebase -> 4
+        TutorialConsoleMethod.Cloud -> 3
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -214,6 +216,14 @@ fun FirebaseSetupTutorialDialog(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         if (index == rulesStepIndex) {
+                            // Stale published rules are the usual cause of PERMISSION_DENIED, so
+                            // name the revision this build expects.
+                            Text(
+                                "firestore.rules v$NOCTULIST_FIRESTORE_RULES_VERSION",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
                             OutlinedButton(
                                 onClick = {
                                     scope.launch {
@@ -239,6 +249,28 @@ fun FirebaseSetupTutorialDialog(
                                             stringResource(Res.string.firebase_tutorial_copy_rules_error)
                                         CopyStatus.Idle ->
                                             stringResource(Res.string.firebase_tutorial_copy_rules)
+                                    },
+                                )
+                            }
+                        }
+                        if (index == redirectUrisStepIndex) {
+                            OutlinedButton(
+                                onClick = {
+                                    clipboard.setText(
+                                        AnnotatedString(
+                                            InstitutionGoogleWebOAuth.loopbackRedirectUrisClipboardText(),
+                                        ),
+                                    )
+                                    redirectUrisCopyStatus = CopyStatus.Done
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(
+                                    when (redirectUrisCopyStatus) {
+                                        CopyStatus.Done ->
+                                            stringResource(Res.string.firebase_tutorial_copy_redirect_uris_done)
+                                        else ->
+                                            stringResource(Res.string.firebase_tutorial_copy_redirect_uris)
                                     },
                                 )
                             }

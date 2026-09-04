@@ -547,7 +547,7 @@
     <string name="ticket_check_coming_soon">Esta función estará disponible pronto</string>
     <string name="ticket_check_description">Acceso rápido a la lista de invitados y al escáner en la entrada.</string>
     <string name="billeterie_stat_permanent_guests">Invitados permanentes</string>
-    <string name="billeterie_stat_temporary_guests_today">Invitados temporales (hoy)</string>
+    <string name="billeterie_stat_temporary_guests_today">Invitados temporales</string>
     <string name="billeterie_stat_volunteers_on_list">Voluntarios en la lista</string>
     <string name="billeterie_stat_total_without_invites">En la lista (sin +1)</string>
     <string name="billeterie_button_guest_list">Lista de invitados</string>

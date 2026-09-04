@@ -52,6 +52,11 @@
 # Keep Apache POI classes
 -keep class org.apache.poi.** { *; }
 
+# Woodstox StAX impl — referenced by name via System properties for XLSX export
+-keep class com.ctc.wstx.** { *; }
+-keep class org.codehaus.stax2.** { *; }
+-keep class javax.xml.stream.** { *; }
+
 # Ignore missing classes that POI references but don't exist on Android
 # These are desktop-only classes (AWT, JAXB, BouncyCastle, etc.)
 -dontwarn java.awt.**
@@ -82,8 +87,10 @@
 # Google Play Services classes - not used (app uses service account auth, not user auth)
 -dontwarn com.google.android.gms.**
 
-# Ignore missing service classes referenced by POI
+# Ignore missing service classes referenced by POI / Woodstox
 -dontwarn org.codehaus.stax2.validation.XMLValidationSchemaFactory
+-dontwarn com.ctc.wstx.**
+-dontwarn org.codehaus.stax2.**
 
 # Keep Vico chart library
 -keep class com.patrykandpatrick.vico.** { *; }

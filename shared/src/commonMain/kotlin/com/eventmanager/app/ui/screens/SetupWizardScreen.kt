@@ -258,6 +258,7 @@ fun SetupWizardScreen(
     var firebaseApiKey by remember { mutableStateOf(settingsManager.getFirebaseApiKey()) }
     var firebaseWebClientId by remember { mutableStateOf(settingsManager.getFirebaseWebClientId()) }
     var firebaseWebClientSecret by remember { mutableStateOf(settingsManager.getFirebaseWebClientSecret()) }
+    var firebaseJoinImported by remember { mutableStateOf(settingsManager.isFirebaseJoinImported()) }
     var authEmail by remember {
         mutableStateOf(firebaseAuthEmail ?: settingsManager.getFirebaseAuthEmail().ifBlank { null })
     }
@@ -290,6 +291,7 @@ fun SetupWizardScreen(
         firebaseApiKey = settingsManager.getFirebaseApiKey()
         firebaseWebClientId = settingsManager.getFirebaseWebClientId()
         firebaseWebClientSecret = settingsManager.getFirebaseWebClientSecret()
+        firebaseJoinImported = settingsManager.isFirebaseJoinImported()
     }
 
     fun firebaseProjectReady(): Boolean =
@@ -344,54 +346,73 @@ fun SetupWizardScreen(
                                             settingsManager,
                                         )
                                         val activeOrgId = settingsManager.getFirebaseOrgId().trim()
-                                        if (selectedPath == SetupPath.JOIN) {
-                                            val invite = settingsManager.getFirebaseBootstrapCode()
-                                            if (invite.isNotBlank()) {
-                                                com.eventmanager.app.data.remote.MemberRoleAdmin.joinOrgAsMember(
-                                                    gateway = gateway,
-                                                    orgId = activeOrgId,
-                                                    uid = authResult.uid,
-                                                    email = authResult.email,
-                                                    bootstrapCode = invite,
-                                                    allowedEmailDomains = settingsManager.getAllowedEmailDomains(),
-                                                )
+                                        val membershipError: SyncResult.Error? = when (selectedPath) {
+                                            SetupPath.JOIN -> {
+                                                val invite = settingsManager.getFirebaseBootstrapCode()
+                                                if (invite.isBlank()) {
+                                                    SyncResult.Error(
+                                                        "Invitation code missing — scan a full join QR from Settings, or enter the 8-character invitation code",
+                                                    )
+                                                } else {
+                                                    // Shared path: already-a-member is a no-op, and
+                                                    // refusals come back with an actionable message.
+                                                    runCatching {
+                                                        FirebaseOrgBootstrap.ensureOrgBootstrappedIfNeeded(
+                                                            gateway = gateway,
+                                                            settings = settingsManager,
+                                                            orgId = activeOrgId,
+                                                            intent = com.eventmanager.app.data.remote
+                                                                .OrgBootstrapIntent.ENSURE_MEMBERSHIP,
+                                                            signedInUid = authResult.uid,
+                                                            signedInEmail = authResult.email,
+                                                        )
+                                                    }.exceptionOrNull()?.let { e ->
+                                                        SyncResult.Error(e.message ?: "Failed to join organization")
+                                                    }
+                                                }
                                             }
-                                        } else {
-                                            val bootstrapCode = com.eventmanager.app.data.remote.MemberRoleAdmin
-                                                .bootstrapOrgAdmin(
-                                                    gateway = gateway,
-                                                    orgId = activeOrgId,
-                                                    uid = authResult.uid,
-                                                    email = authResult.email,
-                                                    allowedEmailDomains = settingsManager.getAllowedEmailDomains(),
-                                                )
-                                            settingsManager.setFirebaseBootstrapCode(bootstrapCode)
+                                            else -> {
+                                                val bootstrapCode = com.eventmanager.app.data.remote.MemberRoleAdmin
+                                                    .bootstrapOrgAdmin(
+                                                        gateway = gateway,
+                                                        orgId = activeOrgId,
+                                                        uid = authResult.uid,
+                                                        email = authResult.email,
+                                                        allowedEmailDomains = settingsManager.getAllowedEmailDomains(),
+                                                    )
+                                                settingsManager.setFirebaseBootstrapCode(bootstrapCode)
+                                                null
+                                            }
                                         }
-                                        settingsManager.applyLocalInstitutionBackendAnnouncement(
-                                            com.eventmanager.app.data.remote.InstitutionBackendAnnouncement(
-                                                backendType = BackendType.FIREBASE,
-                                                migrationId = "",
-                                                migratedAt = System.currentTimeMillis(),
-                                                firebaseOrgId = activeOrgId,
+                                        if (membershipError != null) {
+                                            membershipError
+                                        } else {
+                                            settingsManager.applyLocalInstitutionBackendAnnouncement(
+                                                com.eventmanager.app.data.remote.InstitutionBackendAnnouncement(
+                                                    backendType = BackendType.FIREBASE,
+                                                    migrationId = "",
+                                                    migratedAt = System.currentTimeMillis(),
+                                                    firebaseOrgId = activeOrgId,
+                                                )
                                             )
-                                        )
-                                        val db = createDatabase(platformContext)
-                                        val repository = EventManagerRepository(
-                                            db.guestDao(), db.volunteerDao(), db.jobDao(),
-                                            db.jobTypeConfigDao(), db.venueDao(), db.salesSheetItemDao(),
-                                            db.accountTransferDao()
-                                        )
-                                        val ledger = com.eventmanager.app.data.remote.FirebaseLedgerService(
-                                            repository, settingsManager, gateway,
-                                        )
-                                        val firebase = com.eventmanager.app.data.remote.FirebaseRemoteBackend(
-                                            platformContext = platformContext,
-                                            repository = repository,
-                                            settingsManager = settingsManager,
-                                            firestoreGateway = gateway,
-                                            ledgerService = ledger,
-                                        )
-                                        firebase.performStartupSync()
+                                            val db = createDatabase(platformContext)
+                                            val repository = EventManagerRepository(
+                                                db.guestDao(), db.volunteerDao(), db.jobDao(),
+                                                db.jobTypeConfigDao(), db.venueDao(), db.salesSheetItemDao(),
+                                                db.accountTransferDao()
+                                            )
+                                            val ledger = com.eventmanager.app.data.remote.FirebaseLedgerService(
+                                                repository, settingsManager, gateway,
+                                            )
+                                            val firebase = com.eventmanager.app.data.remote.FirebaseRemoteBackend(
+                                                platformContext = platformContext,
+                                                repository = repository,
+                                                settingsManager = settingsManager,
+                                                firestoreGateway = gateway,
+                                                ledgerService = ledger,
+                                            )
+                                            firebase.performStartupSync()
+                                        }
                                     }
                                 }
                             }
@@ -489,7 +510,10 @@ fun SetupWizardScreen(
                                 },
                                 enabled = when (currentStep) {
                                     SetupStep.CHOOSE_PATH -> selectedPath != null
-                                    SetupStep.JOIN_ORG -> firebaseProjectReady() && firebaseOrgReady() && firebaseOAuthReady()
+                                    SetupStep.JOIN_ORG -> firebaseProjectReady() &&
+                                        firebaseOrgReady() &&
+                                        firebaseOAuthReady() &&
+                                        settingsManager.getFirebaseBootstrapCode().isNotBlank()
                                     SetupStep.FIREBASE_ORG -> firebaseOrgReady()
                                     SetupStep.FIREBASE_PROJECT -> firebaseProjectReady() && firebaseOAuthReady()
                                     SetupStep.FIREBASE_SIGN_IN -> firebaseAuthReady()
@@ -616,6 +640,7 @@ fun SetupWizardScreen(
                                             firebaseConfiguredOrgs.firstOrNull { it.orgId.isNotBlank() }?.orgId.orEmpty()
                                         },
                                         projectReady = firebaseProjectReady(),
+                                        configImported = firebaseJoinImported,
                                         onRequestScan = { showJoinScan = true },
                                         onJoined = { reloadFirebaseFromSettings() },
                                     )
@@ -976,6 +1001,7 @@ private fun JoinOrgPage(
     settingsManager: SettingsManager,
     orgId: String,
     projectReady: Boolean,
+    configImported: Boolean,
     onRequestScan: () -> Unit,
     onJoined: () -> Unit,
 ) {
@@ -984,8 +1010,10 @@ private fun JoinOrgPage(
             settingsManager = settingsManager,
             onJoined = { onJoined() },
             onRequestScan = onRequestScan,
+            configImported = configImported,
         )
-        if (projectReady) {
+        // The import section already confirms an imported config; avoid a second banner.
+        if (projectReady && !configImported) {
             FirebaseConfigReceivedBanner(orgId = orgId)
         }
     }

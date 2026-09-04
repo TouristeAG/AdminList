@@ -43,6 +43,7 @@ import com.eventmanager.app.resources.firebase_settings_intro
 import com.eventmanager.app.resources.firebase_settings_section_access
 import com.eventmanager.app.resources.firebase_settings_section_devices
 import com.eventmanager.app.resources.firebase_settings_section_optional
+import com.eventmanager.app.resources.institution_settings_firebase_admin_only
 import com.eventmanager.app.resources.firebase_status_need_config
 import com.eventmanager.app.resources.firebase_status_need_sign_in
 import com.eventmanager.app.resources.firebase_status_ready
@@ -138,6 +139,9 @@ fun FirebaseSyncSettingsSection(
         projectConfigured = projectReady,
         oauthCredentialsReady = firebaseOAuthCredentialsReady(webClientId, webClientSecret),
     )
+    var bootstrapCode by remember(settingsManager) {
+        mutableStateOf(settingsManager?.getFirebaseBootstrapCode().orEmpty())
+    }
 
     val statusTitle = when {
         ready -> stringResource(Res.string.firebase_status_ready)
@@ -218,15 +222,45 @@ fun FirebaseSyncSettingsSection(
                 apiKey = apiKey,
                 webClientId = webClientId,
                 webClientSecret = webClientSecret,
-                bootstrapCode = settingsManager.getFirebaseBootstrapCode(),
+                bootstrapCode = bootstrapCode,
                 allowProjectSecrets = isFirebaseOrgAdmin,
+                onBootstrapCodeChange = { code ->
+                    bootstrapCode = code
+                    settingsManager.setFirebaseBootstrapCode(code)
+                },
+                onRotateBootstrapCode = if (isFirebaseOrgAdmin && platformContext != null) {
+                    {
+                        val org = settingsManager.resolveWritableFirebaseOrgId()
+                        val gateway = com.eventmanager.app.data.remote.createFirestoreGateway(
+                            platformContext,
+                            settingsManager,
+                        )
+                        val code = com.eventmanager.app.data.remote.MemberRoleAdmin.rotateBootstrapCode(
+                            gateway = gateway,
+                            orgId = org,
+                            allowedEmailDomains = settingsManager.getAllowedEmailDomains(),
+                        )
+                        settingsManager.setFirebaseBootstrapCode(code)
+                        code
+                    }
+                } else {
+                    null
+                },
             )
         }
 
         FirebaseSettingsSectionHeader(stringResource(Res.string.firebase_settings_section_access))
+        if (!isFirebaseOrgAdmin && authReady) {
+            Text(
+                stringResource(Res.string.institution_settings_firebase_admin_only),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         FirebaseAllowedEmailDomainsSection(
             domains = allowedEmailDomains,
             onDomainsChange = onAllowedEmailDomainsChange,
+            enabled = isFirebaseOrgAdmin,
         )
 
         if (settingsManager != null) {
@@ -257,6 +291,7 @@ fun FirebaseSyncSettingsSection(
                         onCheckedChange = { enabled ->
                             onProfilePhotosEnabledChange(enabled)
                         },
+                        enabled = isFirebaseOrgAdmin,
                     )
                 }
             }
@@ -265,6 +300,7 @@ fun FirebaseSyncSettingsSection(
                 platformContext = platformContext,
                 onMirrorExport = onMirrorExport,
                 onMirrorSettingsChanged = onMirrorSettingsChanged,
+                enabled = isFirebaseOrgAdmin,
             )
         }
 

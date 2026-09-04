@@ -32,6 +32,7 @@ import org.jetbrains.compose.resources.stringResource
 fun FirebaseAllowedEmailDomainsSection(
     domains: List<String>,
     onDomainsChange: (List<String>) -> Unit,
+    enabled: Boolean = true,
 ) {
     var draft by remember { mutableStateOf("") }
     GuidedStepCard(
@@ -52,7 +53,10 @@ fun FirebaseAllowedEmailDomainsSection(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text("@$domain", style = MaterialTheme.typography.bodyMedium)
-                    TextButton(onClick = { onDomainsChange(domains.filterNot { it == domain }) }) {
+                    TextButton(
+                        onClick = { onDomainsChange(domains.filterNot { it == domain }) },
+                        enabled = enabled,
+                    ) {
                         Text(stringResource(Res.string.firebase_email_domains_remove))
                     }
                 }
@@ -65,6 +69,7 @@ fun FirebaseAllowedEmailDomainsSection(
             supportingText = { Text(stringResource(Res.string.firebase_email_domains_hint)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+            enabled = enabled,
         )
         OutlinedButton(
             onClick = {
@@ -78,7 +83,7 @@ fun FirebaseAllowedEmailDomainsSection(
                 draft = ""
             },
             modifier = Modifier.fillMaxWidth(),
-            enabled = draft.isNotBlank(),
+            enabled = enabled && draft.isNotBlank(),
         ) {
             Text(stringResource(Res.string.firebase_email_domains_add))
         }

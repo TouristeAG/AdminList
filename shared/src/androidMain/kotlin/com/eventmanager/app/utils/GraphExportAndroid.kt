@@ -60,8 +60,8 @@ internal object GraphExportAndroid {
         
         // Format export date
         val exportDate = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
-        
-        val workbook: Workbook = XSSFWorkbook()
+
+        val workbook: Workbook = createXssfWorkbook()
         val table = buildGraphExportTable(series)
         val includeTrend = series.size == 1 && series.first().trendPoints.isNotEmpty()
         val lastDataColumn = table.seriesNames.size + if (includeTrend) 1 else 0
@@ -611,6 +611,19 @@ internal object GraphExportAndroid {
         }
         
         return file
+    }
+
+    /**
+     * POI may throw [java.lang.Error] (e.g. FactoryConfigurationError) when StAX is misconfigured.
+     * Wrap as Exception so coroutine export catch blocks can recover without killing the process.
+     */
+    internal fun createXssfWorkbook(): XSSFWorkbook {
+        PoiAndroidInit.ensureStaxFactories()
+        return try {
+            XSSFWorkbook()
+        } catch (t: Throwable) {
+            throw IllegalStateException("Failed to create XLSX workbook: ${t.message}", t)
+        }
     }
 }
 

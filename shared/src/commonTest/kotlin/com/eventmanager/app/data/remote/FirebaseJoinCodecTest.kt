@@ -15,6 +15,7 @@ class FirebaseJoinCodecTest {
             apiKey = "AIzaSyDemoKey",
             webClientId = "123-abc.apps.googleusercontent.com",
             webClientSecret = "GOCSPX-demo-secret",
+            bootstrapCode = "AB12CD34",
         )
         val encoded = FirebaseJoinCodec.encode(payload)
         assertTrue(encoded.startsWith("noctulist-fb:1:"))
@@ -63,7 +64,7 @@ class FirebaseJoinCodecTest {
     }
 
     @Test
-    fun encodeIncludesOAuthSecretForTeamQr() {
+    fun encodeIncludesOAuthSecretAndInviteForTeamQr() {
         val payload = FirebaseJoinPayload(
             orgId = "club-demo",
             projectId = "my-project",
@@ -71,15 +72,18 @@ class FirebaseJoinCodecTest {
             apiKey = "AIzaSyDemoKey",
             webClientId = "123-abc.apps.googleusercontent.com",
             webClientSecret = "GOCSPX-demo-secret",
+            bootstrapCode = "XY9K2M7P",
         )
+        assertTrue(payload.hasJoinSecrets())
         val encoded = FirebaseJoinCodec.encode(payload)
         assertTrue(encoded.startsWith("noctulist-fb:1:"))
         val decoded = FirebaseJoinCodec.decode(encoded).getOrThrow()
         assertEquals("GOCSPX-demo-secret", decoded.webClientSecret)
+        assertEquals("XY9K2M7P", decoded.bootstrapCode)
     }
 
     @Test
-    fun encodePublicOmitsSecret() {
+    fun encodePublicOmitsSecretAndInvite() {
         val payload = FirebaseJoinPayload(
             orgId = "club-demo",
             projectId = "my-project",
@@ -87,13 +91,16 @@ class FirebaseJoinCodecTest {
             apiKey = "AIzaSyDemoKey",
             webClientId = "123-abc.apps.googleusercontent.com",
             webClientSecret = "GOCSPX-demo-secret",
+            bootstrapCode = "XY9K2M7P",
         )
         val encoded = FirebaseJoinCodec.encodePublic(payload.toPublicPayload())
         assertTrue(encoded.startsWith("noctulist-fb:2:"))
         assertFalse(encoded.contains("GOCSPX"))
         val decoded = FirebaseJoinCodec.decode(encoded).getOrThrow()
         assertEquals("", decoded.webClientSecret)
+        assertEquals("", decoded.bootstrapCode)
         assertEquals("club-demo", decoded.orgId)
+        assertFalse(decoded.hasJoinSecrets())
     }
 
     @Test

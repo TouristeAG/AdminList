@@ -161,6 +161,11 @@ class SyncCoordinator(
     suspend fun snapshotFirebaseSyncStatus(): FirebaseSyncStatus =
         firebaseBackend?.buildSyncStatus() ?: FirebaseSyncStatus.offline()
 
+    /** True when Firestore snapshot listeners are delivering server-confirmed updates. */
+    fun isFirebaseLiveListenerSyncActive(): Boolean =
+        settingsManager.getBackendType() == BackendType.FIREBASE &&
+            (firebaseBackend?.isLiveListenerSyncActive() == true)
+
     suspend fun flushFirebasePendingWritesForOrg(orgId: String) {
         firebaseBackend?.flushPendingWritesForOrg(orgId)
     }

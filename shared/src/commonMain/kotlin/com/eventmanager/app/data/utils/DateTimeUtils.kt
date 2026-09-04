@@ -5,9 +5,8 @@ import java.util.*
 import java.util.Calendar
 
 object DateTimeUtils {
-    
-    // Geneva timezone
-    private val GENEVA_TIMEZONE = TimeZone.getTimeZone("Europe/Zurich")
+
+    private val GENEVA_TIMEZONE: TimeZone = AppTimeZone.java
     
     /**
      * Gets the current date and time in Geneva timezone
@@ -120,7 +119,7 @@ object DateTimeUtils {
      * Shift-linked benefits apply only while evaluation time is in [[getStartOfDayWithOffset], [getEndOfDayWithOffset]].
      */
     fun getStartOfDayWithOffset(timestamp: Long, offsetHours: Int): Long {
-        val calendar = Calendar.getInstance()
+        val calendar = Calendar.getInstance(GENEVA_TIMEZONE)
         calendar.timeInMillis = timestamp
         calendar.set(Calendar.HOUR_OF_DAY, 0)
         calendar.set(Calendar.MINUTE, 0)
@@ -139,7 +138,7 @@ object DateTimeUtils {
      * @return Calendar instance set to the end of day with offset applied
      */
     fun getEndOfDayWithOffset(timestamp: Long, offsetHours: Int): Calendar {
-        val calendar = Calendar.getInstance()
+        val calendar = Calendar.getInstance(GENEVA_TIMEZONE)
         calendar.timeInMillis = timestamp
         calendar.set(Calendar.HOUR_OF_DAY, 0)
         calendar.set(Calendar.MINUTE, 0)
@@ -164,7 +163,7 @@ object DateTimeUtils {
      * @return Timestamp of the start of month with offset applied
      */
     fun getStartOfMonthWithOffset(timestamp: Long, offsetHours: Int): Long {
-        val calendar = Calendar.getInstance()
+        val calendar = Calendar.getInstance(GENEVA_TIMEZONE)
         calendar.timeInMillis = timestamp
         calendar.set(Calendar.DAY_OF_MONTH, 1)
         calendar.set(Calendar.HOUR_OF_DAY, 0)
@@ -183,7 +182,7 @@ object DateTimeUtils {
      * @return Timestamp of the end of month with offset applied
      */
     fun getEndOfMonthWithOffset(timestamp: Long, offsetHours: Int): Long {
-        val calendar = Calendar.getInstance()
+        val calendar = Calendar.getInstance(GENEVA_TIMEZONE)
         calendar.timeInMillis = timestamp
         calendar.set(Calendar.DAY_OF_MONTH, 1)
         calendar.add(Calendar.MONTH, 1)

@@ -6,6 +6,7 @@ import com.eventmanager.app.platform.PlatformFileManager
 import java.io.File
 import java.security.MessageDigest
 import java.util.LinkedHashMap
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,16 +25,26 @@ enum class ProfilePhotoDisplayQuality {
  *
  * Avatars persist only a tiny JPEG. Full-size bytes are downloaded when the photo is
  * opened fullscreen, then reused from disk on later enlargements.
+ *
+ * Revisions are per cache id so a put/evict only invalidates that photo's observers.
  */
 object ProfilePhotoImageCache {
     private const val DIR = "profile_photos"
     private const val MEMORY_LIMIT = 96
     private val mutex = Mutex()
-    private val _revision = MutableStateFlow(0L)
-    val revision: StateFlow<Long> = _revision.asStateFlow()
+    private val revisionFlows = ConcurrentHashMap<String, MutableStateFlow<Long>>()
+    private val blankRevision: StateFlow<Long> = MutableStateFlow(0L).asStateFlow()
     private val memory = object : LinkedHashMap<String, ByteArray>(MEMORY_LIMIT, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, ByteArray>?): Boolean =
             size > MEMORY_LIMIT
+    }
+
+    /** Per-key revision; only collectors for this [cacheId] see bumps. */
+    fun revisionState(cacheId: String): StateFlow<Long> {
+        val trimmed = cacheId.trim()
+        if (trimmed.isBlank()) return blankRevision
+        val key = cacheKey(trimmed)
+        return revisionFlows.getOrPut(key) { MutableStateFlow(0L) }
     }
 
     suspend fun load(
@@ -75,7 +86,7 @@ object ProfilePhotoImageCache {
         withContext(Dispatchers.IO) {
             mutex.withLock {
                 keys.forEach { storeDownloaded(platformContext, it, jpegBytes) }
-                bumpRevisionLocked()
+                bumpRevisionLocked(keys)
             }
         }
     }
@@ -92,12 +103,18 @@ object ProfilePhotoImageCache {
                 runCatching { fileFor(dir, trimmed, ProfilePhotoDisplayQuality.Thumbnail).delete() }
                 runCatching { fileFor(dir, trimmed, ProfilePhotoDisplayQuality.Full).delete() }
             }
-            bumpRevisionLocked()
+            bumpRevisionLocked(listOf(trimmed))
         }
     }
 
-    private fun bumpRevisionLocked() {
-        _revision.value = _revision.value + 1L
+    private fun bumpRevisionLocked(cacheIds: Collection<String>) {
+        for (id in cacheIds) {
+            val trimmed = id.trim()
+            if (trimmed.isBlank()) continue
+            val key = cacheKey(trimmed)
+            val flow = revisionFlows.getOrPut(key) { MutableStateFlow(0L) }
+            flow.value = flow.value + 1L
+        }
     }
 
     private fun cachedBytes(

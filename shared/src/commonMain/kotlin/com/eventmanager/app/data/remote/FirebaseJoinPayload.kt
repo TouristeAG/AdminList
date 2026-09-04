@@ -11,11 +11,13 @@ import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * Compact join payload for QR / clipboard: `noctulist-fb:1:<base64url(json)>`.
- * Contains institution Firebase options (web config + Web OAuth client). Treat as a physical
- * deployment secret; do not post publicly.
+ * Full team join secret: Firebase web config + Web OAuth client + invitation (bootstrap) code.
+ * Treat as a physical deployment secret; do not post publicly. One scan should configure a device.
  *
  * [webClientSecret] is the institution Firebase **Web** OAuth client secret (Desktop code
  * exchange). It is unrelated to the developer-owned Gmail Desktop OAuth JSON.
+ *
+ * [bootstrapCode] is the short org invitation code required to create the Firestore member doc.
  */
 @Serializable
 data class FirebaseJoinPayload(
@@ -25,7 +27,7 @@ data class FirebaseJoinPayload(
     val apiKey: String,
     val webClientId: String = "",
     val webClientSecret: String = "",
-    /** Shown to admin only — required when a device joins the org (not in public QR). */
+    /** Org invitation code — embedded in v1 QR so one scan is enough. */
     val bootstrapCode: String = "",
 ) {
     fun isComplete(): Boolean =
@@ -34,7 +36,13 @@ data class FirebaseJoinPayload(
             applicationId.isNotBlank() &&
             apiKey.isNotBlank()
 
-    /** Public join QR: project config without OAuth secret (legacy v2 — cannot sign in on Android). */
+    fun hasJoinSecrets(): Boolean =
+        isComplete() &&
+            webClientId.isNotBlank() &&
+            webClientSecret.isNotBlank() &&
+            bootstrapCode.isNotBlank()
+
+    /** Legacy v2 public slice (no OAuth secret / invite) — decode-only compatibility. */
     fun toPublicPayload(): FirebaseJoinPublicPayload = FirebaseJoinPublicPayload(
         orgId = orgId,
         projectId = projectId,
@@ -44,7 +52,7 @@ data class FirebaseJoinPayload(
     )
 }
 
-/** Version-2 join payload — safe to print on QR (no client secret). */
+/** Legacy version-2 join payload (no client secret / invite). Still decoded for old QRs. */
 @Serializable
 data class FirebaseJoinPublicPayload(
     val orgId: String,
@@ -62,7 +70,9 @@ data class FirebaseJoinPublicPayload(
 
 object FirebaseJoinCodec {
     const val PREFIX = "noctulist-fb"
+    /** Full join: project + OAuth secret + invitation code. */
     const val VERSION = 1
+    /** Legacy public QR without secrets — still accepted on decode. */
     const val PUBLIC_VERSION = 2
 
     private val json = Json {
@@ -79,7 +89,9 @@ object FirebaseJoinCodec {
         return "$PREFIX:$VERSION:$b64"
     }
 
-    /** QR / clipboard for team devices — no OAuth client secret. */
+    /**
+     * Legacy encoder kept for tests / old tooling. Prefer [encode] for team devices.
+     */
     @OptIn(ExperimentalEncodingApi::class)
     fun encodePublic(payload: FirebaseJoinPublicPayload): String {
         require(payload.isComplete()) { "Firebase join payload incomplete" }

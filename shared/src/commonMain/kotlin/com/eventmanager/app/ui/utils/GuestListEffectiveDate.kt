@@ -9,12 +9,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.eventmanager.app.data.utils.AppTimeZone
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import kotlinx.coroutines.delay
 
-val GuestListDefaultZoneId: ZoneId = ZoneId.of("Europe/Zurich")
+val GuestListDefaultZoneId: ZoneId = AppTimeZone.zoneId
 
 @Composable
 fun rememberGuestListEffectiveToday(

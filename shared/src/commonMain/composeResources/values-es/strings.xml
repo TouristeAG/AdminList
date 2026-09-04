@@ -565,7 +565,7 @@
     <string name="ticket_check_coming_soon">Esta función estará disponible pronto</string>
     <string name="ticket_check_description">Acceso rápido a la lista de invitados y al escáner en la entrada.</string>
     <string name="billeterie_stat_permanent_guests">Invitados permanentes</string>
-    <string name="billeterie_stat_temporary_guests_today">Invitados temporales (hoy)</string>
+    <string name="billeterie_stat_temporary_guests_today">Invitados temporales</string>
     <string name="billeterie_stat_volunteers_on_list">Voluntarios en la lista</string>
     <string name="billeterie_stat_total_without_invites">En la lista (sin +1)</string>
     <string name="billeterie_button_guest_list">Lista de invitados</string>
@@ -1338,7 +1338,7 @@
     <string name="firebase_web_client_id_label">ID de cliente Web</string>
     <string name="firebase_web_client_id_hint">ID de cliente OAuth 2.0 Web de la institución (inicio de sesión Firebase). No el JSON OAuth Gmail Desktop del desarrollador.</string>
     <string name="firebase_web_client_secret_label">Secreto del cliente Web</string>
-    <string name="firebase_web_client_secret_hint">Secreto del cliente Web de la institución (Escritorio + Android). URI de redirección autorizadas (no orígenes JavaScript): Escritorio — http://localhost:8889/Callback (y :8888, :8765, :9090). Android — com.eventmanager.app:/firebaseoauth2callback (sin SHA-1).</string>
+    <string name="firebase_web_client_secret_hint">Secreto del cliente Web de la institución (Escritorio + Android). URI de redirección autorizadas (no orígenes JavaScript): http://localhost:8889/Callback (y :8888, :8765, :9090). Misma lista para Escritorio y Android.</string>
     <string name="firebase_step_signin_title">3. Inicio de sesión con Google</string>
     <string name="firebase_step_signin_body">Autorice este dispositivo. La primera cuenta de administrador se convierte en administrador de la organización.</string>
     <string name="firebase_sign_in">Iniciar sesión con Google</string>
@@ -1355,27 +1355,27 @@
     <string name="firebase_config_paste_hint">Pegue la configuración SDK web de Firebase Console (apiKey, appId, projectId). Solo los administradores la necesitan.</string>
     <string name="firebase_config_paste_apply">Aplicar configuración pegada</string>
     <string name="firebase_join_qr_title">Invitar otros dispositivos (QR)</string>
-    <string name="firebase_join_qr_body">Comparta este QR solo con su equipo (incluye credenciales Google Sign-In). Otros dispositivos lo escanean en Configuración → Unirse — nada más que escribir.</string>
+    <string name="firebase_join_qr_body">Comparta este QR solo con su equipo. Incluye config del proyecto, credenciales Google Sign-In y el código de invitación: un escaneo basta.</string>
     <string name="firebase_join_error_oauth_missing">Este código no incluye credenciales Google Sign-In. Pida un QR nuevo a su admin (Ajustes → Sync Firebase).</string>
     <string name="firebase_join_qr_need_config">Complete el ID de org y las opciones del proyecto para generar el QR de unión.</string>
     <string name="firebase_join_copy_code">Copiar código de configuración</string>
     <string name="firebase_join_code_copied">Código de configuración copiado</string>
     <string name="firebase_join_scan_title">Unirse a esta organización</string>
-    <string name="firebase_join_scan_body">Escanee el QR del administrador o introduzca ambos códigos. No son el mismo código.</string>
+    <string name="firebase_join_scan_body">Escanee el QR del administrador (recomendado) o pegue el código de configuración. Un código completo ya incluye la invitación.</string>
     <string name="firebase_join_scan">Escanear QR</string>
     <string name="firebase_join_paste_label">Código de configuración</string>
-    <string name="firebase_join_paste_code">Aplicar códigos</string>
-    <string name="firebase_join_received">Configuración recibida — introduzca el código de invitación si hace falta y luego inicie sesión.</string>
+    <string name="firebase_join_paste_code">Aplicar código</string>
+    <string name="firebase_join_received">Configuración recibida: inicie sesión con Google para terminar.</string>
     <string name="firebase_join_wizard_option">Unirse a una organización</string>
-    <string name="firebase_join_wizard_option_body">Escanee el QR o introduzca el código de configuración y el de invitación.</string>
+    <string name="firebase_join_wizard_option_body">Escanee el QR o pegue el código de configuración (incluye la invitación).</string>
     <string name="firebase_join_config_code_label">Código de configuración</string>
-    <string name="firebase_join_config_code_hint">Código largo que empieza por noctulist-fb — el mismo contenido que el QR.</string>
-    <string name="firebase_join_invite_code_label">Código de invitación</string>
-    <string name="firebase_join_invite_code_hint">Código corto de 8 caracteres del administrador. No está en el QR.</string>
+    <string name="firebase_join_config_code_hint">Código largo que empieza por noctulist-fb — el mismo contenido que el QR (incluye la invitación).</string>
+    <string name="firebase_join_invite_code_label">Código de invitación (opcional)</string>
+    <string name="firebase_join_invite_code_hint">Solo para QR antiguos que lo omiten. Los códigos completos ya lo incluyen.</string>
     <string name="firebase_join_invite_copy">Copiar código de invitación</string>
     <string name="firebase_join_invite_copied">Código de invitación copiado</string>
-    <string name="firebase_join_invite_admin_body">Entregue este código corto por separado: no está en el QR.</string>
-    <string name="firebase_join_or_enter_codes">O introduzca los dos códigos a mano</string>
+    <string name="firebase_join_invite_admin_body">También está en el QR y el código de configuración. Se muestra aquí para verificar o compartir por separado si hace falta.</string>
+    <string name="firebase_join_or_enter_codes">O pegue el código de configuración</string>
     <string name="firebase_create_new_option">Configurar Firebase nuevo (administrador)</string>
     <string name="firebase_project_configured_hidden">Proyecto Firebase configurado (detalles ocultos)</string>
     <string name="firebase_project_secrets_restricted">Los secretos del proyecto solo son visibles si es admin local y admin Firebase de la organización. Inicie sesión con una cuenta Google que tenga el rol admin de Firebase.</string>
@@ -1444,6 +1444,8 @@
     <string name="firebase_tutorial_copy_rules">Copiar firestore.rules al portapapeles</string>
     <string name="firebase_tutorial_copy_rules_done">Copiado — pegue en Firestore → Rules y luego Publique</string>
     <string name="firebase_tutorial_copy_rules_error">No se pudieron cargar las reglas — abra firebase/firestore.rules en el proyecto</string>
+    <string name="firebase_tutorial_copy_redirect_uris">Copiar URI localhost de redirección</string>
+    <string name="firebase_tutorial_copy_redirect_uris_done">Copiado — pegue cada URI en Authorized redirect URIs y guarde</string>
     <string name="firebase_tutorial_storage_optional_title">Opcional: fotos de perfil (Firebase Storage)</string>
     <string name="firebase_tutorial_storage_optional_body">Omítalo para permanecer en el plan gratuito Spark. Activar Storage puede exigir el plan Blaze (de pago).\n\nSi desea fotos de perfil:\n1. Firebase Console → Build → Storage → Get started (mismo proyecto).\n2. Storage → Rules (la URL debe contener /storage/rules — no Firestore).\n3. Pegue las reglas Storage de NoctuList (botón abajo) → Publish.\n4. En NoctuList Ajustes → Firebase, active «Activar fotos de perfil» (se activa en todos los dispositivos de la organización).\n\nPuede hacerlo más tarde. La app funciona por completo sin Storage.</string>
     <string name="firebase_tutorial_copy_storage_rules">Copiar storage.rules al portapapeles</string>
@@ -1495,20 +1497,8 @@ Desplácese hasta «Authorized redirect URIs» y añada TODAS estas exactamente:
 Orígenes opcionales (sin ruta): http://localhost:8889 etc.
 → Guarde, espere un minuto aproximadamente y vuelva a intentar el inicio de sesión.
 
-Dispositivos Android → paso 6. Solo escritorio → paso 7.</string>
-    <string name="firebase_tutorial_fb_step6_title">6. Android (opcional)</string>
-    <string name="firebase_tutorial_fb_step6_body">Omita si solo usa escritorio.
-1. Firebase Console → Configuración del proyecto → Añadir app → Android.
-2. Nombre del paquete exactamente: com.eventmanager.app
-3. Añada su SHA-1 de depuración (necesario para Google Sign-In):
-   macOS/Linux:
-   keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android
-   Windows:
-   keytool -list -v -keystore %USERPROFILE%\\.android\\debug.keystore -alias androiddebugkey -storepass android -keypass android
-4. Opcionalmente descargue google-services.json en app/google-services.json.
-5. En el dispositivo, use siempre el Web client ID del paso 5 (Android Sign-In lo necesita). El secreto es solo para Escritorio.
+Continúe con el paso 6.</string>
 
-Si falla el inicio de sesión: paquete + SHA-1, Web client ID, proveedor Google activado, luego Cerrar sesión / Iniciar sesión.</string>
     <string name="firebase_tutorial_cloud_step1_title">1. Abrir el proyecto Cloud</string>
     <string name="firebase_tutorial_cloud_step1_body">1. Abra https://console.cloud.google.com
 2. Barra superior → selector de proyecto → seleccione el proyecto de la institución (el de Sheets si ya lo usa).
@@ -1554,20 +1544,15 @@ D) Application ID (appId)
 • Si no hay ninguna: Añadir app → Web una vez, apodo «NoctuList», omitir Hosting; copie appId del fragmento de configuración.
 • O pegue toda la configuración web de Firebase en NoctuList.
 
-Android → paso 6. Solo escritorio → paso 7.</string>
-    <string name="firebase_tutorial_cloud_step6_title">6. Inicio de sesión Android (sin SHA-1)</string>
-    <string name="firebase_tutorial_cloud_step6_body">Android usa el mismo cliente OAuth Web que Escritorio — NO necesita un cliente OAuth Android ni huella SHA-1.
-1. Cloud Console → Credentials → su cliente Web application (paso 4).
-2. En Authorized redirect URIs, añada exactamente: com.eventmanager.app:/firebaseoauth2callback
-3. En NoctuList en el teléfono/tableta: pegue Web client ID + secreto (paso 5) y pulse Iniciar sesión con Google (se abre el navegador).
-4. Opcional: Firebase → Añadir app Android / google-services.json no es necesario para el inicio de sesión.</string>
-    <string name="firebase_tutorial_step7_title">7. Completar NoctuList y migrar / conectar</string>
+Continúe con el paso 6.</string>
+
+    <string name="firebase_tutorial_step7_title">6. Completar NoctuList y migrar / conectar</string>
     <string name="firebase_tutorial_step7_body">En Sincronización Firebase de administrador o el diálogo de migración:
 • ID de organización — nombre corto compartido (ejemplo: noctulist-club). Igual en cada dispositivo.
 • Project ID, Application ID, clave API, Web client ID y en Escritorio el secreto del cliente Web.
 • O pegue la configuración web + complete Web client ID/secreto, luego use el QR de unión para otros dispositivos.
 Inicie sesión con Google (el primer administrador se convierte en admin de la org). Solo tras un inicio de sesión correcto, inicie la migración si cambia desde Sheets. Los demás se unen vía QR / follow — no deben volver a escribir secretos.</string>
-    <string name="firebase_tutorial_step8_title">8. Tras la configuración</string>
+    <string name="firebase_tutorial_step8_title">7. Tras la configuración</string>
     <string name="firebase_tutorial_step8_body">En Firestore debería ver orgs/{suOrgId}/… (guests, members, metadata, etc.). Mantenga Sheets como copia de seguridad hasta verificar TPV, puerta y un segundo dispositivo. Facturación: permanezca en el plan gratuito Spark mientras prueba; actualice solo si supera las cuotas.</string>
     <string name="migration_wizard_to_firebase_title">Cambiar a Firebase</string>
     <string name="migration_wizard_to_sheets_title">Cambiar a Google Sheets</string>

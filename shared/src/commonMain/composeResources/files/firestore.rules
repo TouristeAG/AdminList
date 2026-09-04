@@ -1,4 +1,7 @@
 rules_version = '2';
+// NoctuList Firestore rules — NOCTULIST_RULES_VERSION = 4
+// Republish this exact file in Firebase Console → Firestore → Rules after every app update,
+// otherwise members that already exist cannot re-join their organization.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -23,6 +26,8 @@ service cloud.firestore {
     function emailDomainAllowed(orgId) {
       return !exists(configPath(orgId))
         || !('allowedEmailDomains' in get(configPath(orgId)).data)
+        // A non-map value would make keys() below an evaluation error, which denies every write.
+        || !(get(configPath(orgId)).data.allowedEmailDomains is map)
         || get(configPath(orgId)).data.allowedEmailDomains.keys().size() == 0
         || (
           authEmailDomain().size() > 0
@@ -82,28 +87,46 @@ service cloud.firestore {
 
     match /orgs/{orgId}/metadata/{docId} {
       allow read: if isMember(orgId);
+      // Only the first admin (who already created their own member doc) may seed the config.
       allow create: if isSignedIn()
-        && !exists(configPath(orgId));
+        && !exists(configPath(orgId))
+        && exists(memberPath(orgId));
       allow update: if isOrgAdmin(orgId);
     }
 
     match /orgs/{orgId}/members/{uid} {
-      allow read: if isMember(orgId);
+      // Reading your own doc is always allowed so a device can tell "not a member" from
+      // "denied" — otherwise it cannot decide between bootstrapping and joining.
+      allow get: if isSignedIn()
+        && (request.auth.uid == uid || isMember(orgId));
+      allow list: if isMember(orgId);
       allow create: if isSignedIn()
         && emailDomainAllowed(orgId)
         && isValidMemberRole(request.resource.data.role)
         && (
+          // First admin of a brand-new org only: once metadata/config exists nobody can
+          // self-promote to admin, even without an existing member doc.
           (request.auth.uid == uid
             && request.resource.data.role == 'admin'
-            && !exists(memberPath(orgId)))
+            && !exists(configPath(orgId)))
           || (request.auth.uid == uid
             && legacyMemberRole(request.resource.data.role)
             && configBootstrapSecret(orgId).size() > 0
             && request.resource.data.bootstrapCode == configBootstrapSecret(orgId))
           || isOrgAdmin(orgId)
         );
-      allow update: if isOrgAdmin(orgId)
-        && isValidMemberRole(request.resource.data.role);
+      allow update: if isValidMemberRole(request.resource.data.role)
+        && (
+          isOrgAdmin(orgId)
+          // Idempotent re-join: an existing member may refresh its own doc (same role)
+          // after a factory reset or a re-install. Without this every re-join is denied,
+          // because set(merge: true) on an existing doc is an update, not a create.
+          || (request.auth.uid == uid
+            && emailDomainAllowed(orgId)
+            && request.resource.data.role == resource.data.role
+            && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['email', 'updatedAt', 'json', 'bootstrapCode']))
+        );
       allow delete: if isOrgAdmin(orgId);
     }
 
@@ -159,7 +182,7 @@ service cloud.firestore {
 
     match /orgs/{orgId}/institutionSettings/{key} {
       allow read: if isMember(orgId);
-      allow write: if isMember(orgId);
+      allow write: if isOrgAdmin(orgId);
     }
 
     match /orgs/{orgId}/{document=**} {
@@ -167,7 +190,8 @@ service cloud.firestore {
       allow write: if isMember(orgId)
         && document[0] != 'transfers'
         && document[0] != 'members'
-        && document[0] != 'metadata';
+        && document[0] != 'metadata'
+        && document[0] != 'institutionSettings';
     }
   }
 }

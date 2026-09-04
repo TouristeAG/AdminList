@@ -8,4 +8,9 @@ class InstitutionSettingsKeysTest {
     fun profilePhotosEnabledIsSyncedAcrossOrgDevices() {
         assertTrue(InstitutionSettingsKeys.PROFILE_PHOTOS_ENABLED in InstitutionSettingsKeys.ALL)
     }
+
+    @Test
+    fun announcementsBilleterieSendIsSyncedAcrossOrgDevices() {
+        assertTrue(InstitutionSettingsKeys.ANNOUNCEMENTS_NON_ADMIN_SEND_ENABLED in InstitutionSettingsKeys.ALL)
+    }
 }

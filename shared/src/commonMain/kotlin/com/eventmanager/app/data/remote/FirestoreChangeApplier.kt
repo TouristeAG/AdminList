@@ -347,9 +347,12 @@ object FirestoreChangeApplier {
             ?: existing?.lastModified
             ?: 1L
         val remotePcm = longOf(data["peopleCounterLastModified"]) ?: 0L
+        val remoteAnnouncementSentAt = longOf(data["announcementSentAt"]) ?: 0L
         val venueRemoteNewer = existing == null || remoteLm > existing.lastModified
         val counterRemoteNewer = existing == null || remotePcm > existing.peopleCounterLastModified
-        if (existing != null && !venueRemoteNewer && !counterRemoteNewer) {
+        val announcementRemoteNewer = existing == null ||
+            (remoteAnnouncementSentAt > 0L && remoteAnnouncementSentAt > existing.announcementSentAt)
+        if (existing != null && !venueRemoteNewer && !counterRemoteNewer && !announcementRemoteNewer) {
             healDuplicateVenues(repository, docId, orgId, existing.id)
             return
         }
@@ -368,15 +371,23 @@ object FirestoreChangeApplier {
             remoteLastModified = longOf(data["peopleCounterLastModified"]),
         )
         if (existing != null && !venueRemoteNewer) {
-            repository.updateVenue(
-                existing.copy(
-                    peopleCounterCount = mergedCounter.count,
-                    peopleCounterWriterDeviceId = mergedCounter.writerDeviceId,
-                    peopleCounterWriterAccountEmail = mergedCounter.writerAccountEmail,
-                    peopleCounterLastModified = mergedCounter.lastModified,
-                    firebaseOrgId = orgId,
-                )
+            var updated = existing.copy(
+                peopleCounterCount = mergedCounter.count,
+                peopleCounterWriterDeviceId = mergedCounter.writerDeviceId,
+                peopleCounterWriterAccountEmail = mergedCounter.writerAccountEmail,
+                peopleCounterLastModified = mergedCounter.lastModified,
+                firebaseOrgId = orgId,
             )
+            if (announcementRemoteNewer) {
+                updated = updated.copy(
+                    announcementTitle = stringOf(data["announcementTitle"]) ?: existing.announcementTitle,
+                    announcementMessage = stringOf(data["announcementMessage"]) ?: existing.announcementMessage,
+                    announcementSentAt = remoteAnnouncementSentAt,
+                    announcementSenderDeviceId = stringOf(data["announcementSenderDeviceId"])
+                        ?: existing.announcementSenderDeviceId,
+                )
+            }
+            repository.updateVenue(updated)
             healDuplicateVenues(repository, docId, orgId, existing.id)
             return
         }

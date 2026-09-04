@@ -14,6 +14,7 @@ import com.eventmanager.app.platform.PlatformBackHandler
 import com.eventmanager.app.platform.isDesktop
 import com.eventmanager.app.ui.components.AppBackgroundAnimation
 import com.eventmanager.app.ui.platform.AppAppearanceState
+import com.eventmanager.app.ui.transitions.DeferredUntilSpaceEntranceSettled
 import com.eventmanager.app.ui.viewmodel.EventManagerViewModel
 
 fun performPosFlowExit(
@@ -52,7 +53,7 @@ fun PosFlow(
         }
     }
 
-    LaunchedEffect(Unit) {
+    DeferredUntilSpaceEntranceSettled {
         viewModel.bootstrapPosSession()
     }
 

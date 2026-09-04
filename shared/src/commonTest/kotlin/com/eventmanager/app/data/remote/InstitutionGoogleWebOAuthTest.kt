@@ -33,6 +33,18 @@ class InstitutionGoogleWebOAuthTest {
     }
 
     @Test
+    fun loopbackRedirectUrisClipboardText_listsAllPorts() {
+        val text = InstitutionGoogleWebOAuth.loopbackRedirectUrisClipboardText()
+        InstitutionGoogleWebOAuth.LOOPBACK_REDIRECT_URIS.forEach { uri ->
+            assertTrue(text.contains(uri), "missing $uri")
+        }
+        assertEquals(
+            InstitutionGoogleWebOAuth.LOOPBACK_REDIRECT_URIS.size,
+            text.lines().size,
+        )
+    }
+
+    @Test
     fun buildAuthorizationUrl_includesAccountPickerWhenRequested() {
         val redirect = InstitutionGoogleWebOAuth.loopbackRedirectUri(8889)
         val url = InstitutionGoogleWebOAuth.buildAuthorizationUrl(

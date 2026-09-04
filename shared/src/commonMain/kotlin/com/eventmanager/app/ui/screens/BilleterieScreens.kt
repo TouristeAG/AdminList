@@ -31,6 +31,7 @@ import com.eventmanager.app.ui.components.StatCardV2
 import com.eventmanager.app.ui.components.SyncStatusPill
 import com.eventmanager.app.ui.components.BackgroundAnimationStyle
 import com.eventmanager.app.ui.components.DashboardClockCard
+import com.eventmanager.app.ui.components.SendAnnouncementButton
 import com.eventmanager.app.ui.components.billeterieBackgroundAwareContainerColor
 import com.eventmanager.app.ui.components.billeterieBackgroundAwareTopAppBarColors
 import com.eventmanager.app.ui.components.posBackgroundAwareContainerColor
@@ -63,6 +64,7 @@ fun BilleterieHomeScreen(
         zone = guestListZone,
         offsetHours = dateChangeOffsetHours
     )
+    val announcementsSendEnabled by viewModel.announcementsBilleterieSendEnabled.collectAsState()
 
     LaunchedEffect(isPeopleCounterVisible) {
         if (isPeopleCounterVisible) {
@@ -253,6 +255,13 @@ fun BilleterieHomeScreen(
 
             if (isPeopleCounterVisible) {
                 PeopleCounter(isPhone = isPhone, viewModel = viewModel)
+            }
+
+            if (announcementsSendEnabled) {
+                SendAnnouncementButton(
+                    isPhone = isPhone,
+                    onClick = { viewModel.openSendAnnouncementDialog() },
+                )
             }
         }
     }

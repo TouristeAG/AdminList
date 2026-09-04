@@ -33,18 +33,16 @@ object FirebaseMemberSignIn {
                 settings.setFirebaseBootstrapCode(code)
             }
             joinWithBootstrapCode -> {
-                val code = settings.getFirebaseBootstrapCode()
-                if (code.isBlank()) return
-                runCatching {
-                    MemberRoleAdmin.joinOrgAsMember(
-                        gateway = gateway,
-                        orgId = orgId,
-                        uid = uid,
-                        email = email,
-                        bootstrapCode = code,
-                        allowedEmailDomains = domains,
-                    )
-                }
+                // Goes through the shared path so an account that is already a member is a
+                // no-op instead of a refused re-write, and refusals get an actionable message.
+                FirebaseOrgBootstrap.ensureOrgBootstrappedIfNeeded(
+                    gateway = gateway,
+                    settings = settings,
+                    orgId = orgId,
+                    intent = OrgBootstrapIntent.ENSURE_MEMBERSHIP,
+                    signedInUid = uid,
+                    signedInEmail = email,
+                )
             }
         }
     }

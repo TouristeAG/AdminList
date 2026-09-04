@@ -206,7 +206,7 @@ actual fun GuestListScreen(
         filteredGuests.sumOf { it.invitations }
     }
     
-    // Generate venue filter options (composable function, cannot use remember)
+    // Generate venue filter options (memoized inside on venues + locale)
     val venueFilterOptions = generateVenueFilterOptions(venues)
 
     // Keep temporary guests in sync when entering/re-entering this screen

@@ -176,7 +176,11 @@ fun ProfileRemoteImage(
     if (url.isBlank() && storagePath.isBlank()) return
     val platformContext = LocalPlatformContext.current
     var bytes by remember { mutableStateOf<ByteArray?>(null) }
-    val cacheRevision by ProfilePhotoImageCache.revision.collectAsState()
+    val cacheId = remember(url, storagePath) {
+        url.trim().ifBlank { storagePath.trim() }
+    }
+    val revisionFlow = remember(cacheId) { ProfilePhotoImageCache.revisionState(cacheId) }
+    val cacheRevision by revisionFlow.collectAsState()
     LaunchedEffect(url, storagePath, quality, cacheRevision) {
         bytes = ProfilePhotoImageCache.load(platformContext, url, quality, storagePath)
     }

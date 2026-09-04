@@ -65,6 +65,29 @@ fun profileBelongsToAdminOrg(
 fun institutionHasLocalAdmin(guests: List<Guest>, volunteers: List<Volunteer>): Boolean =
     guests.any { it.isAdmin } || volunteers.any { it.isAdmin }
 
+/** Member count used for admin-setup security gates (guests + volunteers). */
+fun memberRosterCount(guests: List<Guest>, volunteers: List<Volunteer>): Int =
+    guests.size + volunteers.size
+
+/**
+ * Safe to offer first-admin setup only when sync succeeded, no admin is visible,
+ * and the roster is provably empty (brand-new institution).
+ */
+fun shouldOfferFirstAdminSetupAfterSync(
+    syncSucceeded: Boolean,
+    hasLocalAdmin: Boolean,
+    memberCount: Int,
+): Boolean = syncSucceeded && !hasLocalAdmin && memberCount == 0
+
+/**
+ * Members are present locally but none is admin — usually incomplete sync, not a missing admin.
+ */
+fun isSuspiciousMissingAdminAfterSync(
+    syncSucceeded: Boolean,
+    hasLocalAdmin: Boolean,
+    memberCount: Int,
+): Boolean = syncSucceeded && !hasLocalAdmin && memberCount > 0
+
 fun institutionHasLocalAdminInOrg(
     guests: List<Guest>,
     volunteers: List<Volunteer>,
@@ -113,3 +136,18 @@ fun canRevealFirebaseProjectSecrets(
 
 fun firebaseOAuthCredentialsReady(webClientId: String, webClientSecret: String): Boolean =
     webClientId.isNotBlank() && webClientSecret.isNotBlank()
+
+/**
+ * Synced institution settings (currency, emails, buffer, photos flag, …) may be written to
+ * Firestore only by Firebase org admins. Sheets mode keeps local-admin editing.
+ */
+fun canEditSyncedInstitutionSettings(
+    backendType: BackendType,
+    isFirebaseOrgAdmin: Boolean,
+): Boolean = backendType != BackendType.FIREBASE || isFirebaseOrgAdmin
+
+/** Billeterie announcement send is an institution-wide flag; only Firebase org admins may change it. */
+fun canEditAnnouncementsNonAdminSendSetting(
+    backendType: BackendType,
+    isFirebaseOrgAdmin: Boolean,
+): Boolean = backendType == BackendType.FIREBASE && isFirebaseOrgAdmin

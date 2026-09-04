@@ -547,7 +547,7 @@
     <string name="ticket_check_coming_soon">此功能即將推出</string>
     <string name="ticket_check_description">在入口快速開啟賓客名單與掃描。</string>
     <string name="billeterie_stat_permanent_guests">常駐賓客</string>
-    <string name="billeterie_stat_temporary_guests_today">臨時賓客（今日）</string>
+    <string name="billeterie_stat_temporary_guests_today">臨時賓客</string>
     <string name="billeterie_stat_volunteers_on_list">名單上的志工</string>
     <string name="billeterie_stat_total_without_invites">名單人數（不含+1）</string>
     <string name="billeterie_button_guest_list">賓客名單</string>

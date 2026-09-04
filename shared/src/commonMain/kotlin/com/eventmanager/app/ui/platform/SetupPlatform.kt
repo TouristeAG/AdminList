@@ -2,17 +2,27 @@ package com.eventmanager.app.ui.platform
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.eventmanager.app.data.sync.settingsManagerFor
 import com.eventmanager.app.platform.PlatformContext
 
 expect fun supportsResolutionScaleStep(): Boolean
 
-expect fun applyLocaleOrThemeChange(platformContext: PlatformContext)
+fun applyLocaleOrThemeChange(platformContext: PlatformContext) {
+    applyLocaleChange(platformContext)
+}
 
-/** Updates UI language without resetting navigation (desktop). */
-expect fun applyLocaleChange(platformContext: PlatformContext)
+fun applyLocaleChange(platformContext: PlatformContext) {
+    val settingsManager = settingsManagerFor(platformContext)
+    AppAppearanceState.notifyLocaleChanged(settingsManager.getLanguage())
+}
 
-/** Updates light/dark mode or color palette without resetting navigation (desktop). */
-expect fun applyThemeAppearanceChange(platformContext: PlatformContext)
+fun applyThemeAppearanceChange(platformContext: PlatformContext) {
+    val settingsManager = settingsManagerFor(platformContext)
+    AppAppearanceState.notifyThemeAppearanceChanged(settingsManager.getThemeMode())
+    afterThemeAppearanceChange(platformContext)
+}
+
+internal expect fun afterThemeAppearanceChange(platformContext: PlatformContext)
 
 @Composable
 expect fun ServiceAccountKeyUploadButton(

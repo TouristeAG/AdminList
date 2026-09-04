@@ -137,12 +137,17 @@ import com.eventmanager.app.ui.screens.BilleterieScannerScreen
 import com.eventmanager.app.ui.screens.BilleterieSettingsScreen
 import com.eventmanager.app.ui.screens.PosAccountingReportScreen
 import com.eventmanager.app.ui.screens.PosFlow
+import com.eventmanager.app.ui.screens.WideBilleterieHomeScreen
+import com.eventmanager.app.ui.screens.WideWelcomeContent
 import com.eventmanager.app.ui.screens.performPosFlowExit
 import com.eventmanager.app.ui.screens.SalesSheetItemManagementScreen
 import com.eventmanager.app.ui.screens.VenueManagementScreen
 import com.eventmanager.app.ui.screens.VolunteerScreen
 import com.eventmanager.app.ui.theme.EventManagerTheme
 import com.eventmanager.app.ui.theme.ThemeMode
+import com.eventmanager.app.ui.transitions.DeferredUntilSpaceEntranceSettled
+import com.eventmanager.app.ui.transitions.DramaticSpaceEntrance
+import com.eventmanager.app.ui.transitions.SpaceEntrance
 import com.eventmanager.app.ui.viewmodel.EventManagerViewModel
 import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.data.sync.settingsManagerFor
@@ -163,7 +168,10 @@ import com.eventmanager.app.ui.components.PrideAnimation
 import com.eventmanager.app.ui.components.BeerAnimation
 import com.eventmanager.app.R
 import androidx.compose.ui.text.style.TextAlign
+import com.eventmanager.app.ui.components.AppStartupSplash
+import com.eventmanager.app.ui.components.StartupSplashStep
 import com.eventmanager.app.ui.components.StatsGraphsPanel
+import com.eventmanager.app.platform.elapsedRealtimeMs
 import java.util.Calendar
 import com.eventmanager.app.ui.components.SyncErrorDialog
 import android.content.Intent
@@ -282,17 +290,7 @@ actual fun AppRootContent(
         }
 
         if (database == null) {
-            Surface(
-                modifier = Modifier.fillMaxSize(),
-                color = MaterialTheme.colorScheme.background
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
-            }
+            AppStartupSplash(step = StartupSplashStep.Opening)
         } else {
             val db = database!!
             val repository = remember(db) {
@@ -321,48 +319,39 @@ actual fun AppRootContent(
             var adminCheckDone by rememberSaveable { mutableStateOf(false) }
             var adminPrecheckComplete by remember { mutableStateOf(false) }
             var adminPrecheckSucceeded by remember { mutableStateOf(false) }
+            var startupReady by remember { mutableStateOf(false) }
+            var startupStep by remember { mutableStateOf(StartupSplashStep.Syncing) }
 
-            val adminCheckGuests by viewModel.guests.collectAsState()
-            val adminCheckVolunteers by viewModel.volunteers.collectAsState()
-
-            // Full sync in the background (no launch blocking UI). Only after it finishes
-            // successfully do we decide whether to show first-admin setup — avoids the old race
-            // where performFullSync() returned immediately while Room was still empty.
-            LaunchedEffect(Unit) {
-                if (skipStartupSync) {
-                    adminPrecheckSucceeded = true
-                    adminPrecheckComplete = true
-                    return@LaunchedEffect
-                }
+            LaunchedEffect(db) {
+                val minSplashMs = 800L
+                val splashStart = elapsedRealtimeMs()
                 try {
-                    val result = viewModel.performFullSyncAwait(suppressSyncErrorDialog = true)
-                    adminPrecheckSucceeded = result.isSuccess
-                    if (adminPrecheckSucceeded) {
-                        delay(250)
+                    if (skipStartupSync) {
+                        startupStep = StartupSplashStep.Preparing
+                        viewModel.warmupWorkspacesAfterGate()
+                        showAdminSetup = viewModel.evaluateLocalAdminSetupNeed()
+                        adminPrecheckSucceeded = true
+                    } else {
+                        startupStep = StartupSplashStep.Syncing
+                        val gate = viewModel.evaluateAdminSetupGate()
+                        adminPrecheckSucceeded = gate.syncSucceeded
+                        showAdminSetup = gate.shouldOfferFirstAdminSetup
+                        startupStep = StartupSplashStep.Preparing
+                        viewModel.warmupWorkspacesAfterGate()
                     }
                 } catch (_: Exception) {
                     adminPrecheckSucceeded = false
                 }
+                val remaining = minSplashMs - (elapsedRealtimeMs() - splashStart)
+                if (remaining > 0) delay(remaining)
                 adminPrecheckComplete = true
+                adminCheckDone = true
+                startupReady = true
             }
 
-            // After background precheck: open first-admin setup only if sync succeeded and
-            // Sheets have no admin. If sync failed, do not offer the wizard (unsafe on empty data).
-            LaunchedEffect(
-                adminPrecheckComplete,
-                adminPrecheckSucceeded,
-                adminCheckGuests,
-                adminCheckVolunteers
-            ) {
-                if (!adminPrecheckComplete || adminCheckDone) return@LaunchedEffect
-                if (!adminPrecheckSucceeded) {
-                    adminCheckDone = true
-                    return@LaunchedEffect
-                }
-                val hasAdmin = adminCheckGuests.any { it.isAdmin } ||
-                    adminCheckVolunteers.any { it.isAdmin }
-                showAdminSetup = !hasAdmin
-                adminCheckDone = true
+            if (!startupReady) {
+                AppStartupSplash(step = startupStep)
+                return
             }
 
             val appSettingsManager = remember(platformContext) {
@@ -408,8 +397,8 @@ actual fun AppRootContent(
                 AdminSetupScreen(
                     platformContext = platformContext,
                     venues = adminSetupVenues,
-                    onCreateAdminGuest = { guest, cb -> viewModel.createAdminGuest(guest, cb) },
-                    onCreateAdminVolunteer = { vol, cb -> viewModel.createAdminVolunteer(vol, cb) },
+                    onCreateAdminGuest = { guest, cb -> viewModel.createAdminGuest(guest, onResult = cb) },
+                    onCreateAdminVolunteer = { vol, cb -> viewModel.createAdminVolunteer(vol, onResult = cb) },
                     onAssignNfcUid = { adminType, entityId, uid ->
                         viewModel.assignNfcUidToAdmin(
                             isGuest = adminType == AdminType.GUEST,
@@ -422,47 +411,57 @@ actual fun AppRootContent(
                 )
                 }
                 showWelcome -> {
-                WelcomeScreen(
-                    onAdminSelected = {
-                        if (viewModel.isFirebaseAllOrgsMode()) {
-                            showAdminOrgPicker = true
-                        } else {
-                            viewModel.prepareForAdminAuthentication()
-                            showWelcome = false
-                            showAdminAuth = true
-                        }
-                    },
-                    onTicketCheckSelected = {
-                        showWelcome = false
-                        showTicketCheck = true
-                    },
-                    onPosSelected = {
-                        showWelcome = false
-                        showPos = true
-                    },
-                    showAdminAccessSyncIndicator = !adminPrecheckComplete,
-                    viewModel = viewModel,
-                )
-                }
-                showAdminAuth -> {
-                    AdminAuthRoute(
-                        platformContext = platformContext,
-                        viewModel = viewModel,
-                        onAuthSuccess = {
-                            viewModel.onAdminAuthSuccess()
-                            showAdminAuth = false
-                        },
-                        onBack = {
-                            if (viewModel.isAdminOrgReauthPending()) {
-                                viewModel.cancelAdminOrgSwitchReauth {
-                                    showAdminAuth = false
-                                }
+                DramaticSpaceEntrance(
+                    enabled = pageAnimationsEnabled,
+                    space = SpaceEntrance.Welcome,
+                ) {
+                    WelcomeScreen(
+                        onAdminSelected = {
+                            if (viewModel.isFirebaseAllOrgsMode()) {
+                                showAdminOrgPicker = true
                             } else {
-                                showAdminAuth = false
-                                showWelcome = true
+                                viewModel.prepareForAdminAuthentication()
+                                showWelcome = false
+                                showAdminAuth = true
                             }
                         },
+                        onTicketCheckSelected = {
+                            showWelcome = false
+                            showTicketCheck = true
+                        },
+                        onPosSelected = {
+                            showWelcome = false
+                            showPos = true
+                        },
+                        showAdminAccessSyncIndicator = !adminPrecheckComplete,
+                        viewModel = viewModel,
                     )
+                }
+                }
+                showAdminAuth -> {
+                    DramaticSpaceEntrance(
+                        enabled = pageAnimationsEnabled,
+                        space = SpaceEntrance.Admin,
+                    ) {
+                        AdminAuthRoute(
+                            platformContext = platformContext,
+                            viewModel = viewModel,
+                            onAuthSuccess = {
+                                viewModel.onAdminAuthSuccess()
+                                showAdminAuth = false
+                            },
+                            onBack = {
+                                if (viewModel.isAdminOrgReauthPending()) {
+                                    viewModel.cancelAdminOrgSwitchReauth {
+                                        showAdminAuth = false
+                                    }
+                                } else {
+                                    showAdminAuth = false
+                                    showWelcome = true
+                                }
+                            },
+                        )
+                    }
                 }
                 else -> {
 
@@ -617,59 +616,74 @@ actual fun AppRootContent(
                 showDeviceTimeErrorDialog.value = true
             }
         }
-        
-        // On app launch: defer sync to allow UI to render first, preventing ANR
-        // Use Dispatchers.IO to ensure sync runs on background thread
-        LaunchedEffect(Unit) {
-            if (skipStartupSync) return@LaunchedEffect
-            // Give the window time to gain focus and run a few frames before heavy IO/network
-            // (reduces "Input dispatching timed out" ANRs on slow tablets after cold start).
-            kotlinx.coroutines.delay(1200)
-
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                println("App started - triggering initial download-only full sync...")
-                try {
-                    viewModel.performFullSync()
-                } catch (e: Exception) {
-                    println("❌ Sync error: ${e.message}")
-                    e.printStackTrace()
-                }
-            }
-        }
 
         if (showPos) {
-            val salesItems by viewModel.salesSheetItems.collectAsState()
-            PosFlow(
-                viewModel = viewModel,
-                salesItems = salesItems,
-                volunteers = volunteers,
-                guests = guests,
-                onBack = {
-                    showPos = false
-                    showWelcome = true
-                },
-                onFactoryResetComplete = {
-                    showPos = false
-                    showWelcome = false
-                    showSetupWizard = true
-                },
-            )
+            DramaticSpaceEntrance(
+                enabled = pageAnimationsEnabled,
+                space = SpaceEntrance.Pos,
+            ) {
+                if (!skipStartupSync) {
+                    DeferredUntilSpaceEntranceSettled {
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                            println("App started - triggering initial download-only full sync...")
+                            try {
+                                viewModel.performAutomaticFullSyncIfNeeded()
+                            } catch (e: Exception) {
+                                println("❌ Sync error: ${e.message}")
+                                e.printStackTrace()
+                            }
+                        }
+                    }
+                }
+                val salesItems by viewModel.salesSheetItems.collectAsState()
+                PosFlow(
+                    viewModel = viewModel,
+                    salesItems = salesItems,
+                    volunteers = volunteers,
+                    guests = guests,
+                    onBack = {
+                        showPos = false
+                        showWelcome = true
+                    },
+                    onFactoryResetComplete = {
+                        showPos = false
+                        showWelcome = false
+                        showSetupWizard = true
+                    },
+                )
+            }
         } else if (showTicketCheck) {
+            DramaticSpaceEntrance(
+                enabled = pageAnimationsEnabled,
+                space = SpaceEntrance.Billeterie,
+            ) {
+            if (!skipStartupSync) {
+                DeferredUntilSpaceEntranceSettled {
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        println("App started - triggering initial download-only full sync...")
+                        try {
+                            viewModel.performAutomaticFullSyncIfNeeded()
+                        } catch (e: Exception) {
+                            println("❌ Sync error: ${e.message}")
+                            e.printStackTrace()
+                        }
+                    }
+                }
+            }
             var billeterieSection by rememberSaveable { mutableStateOf("home") }
             var billeterieScannerReturnSection by rememberSaveable { mutableStateOf("home") }
             var showBilleterieSettings by rememberSaveable { mutableStateOf(false) }
             val billeterieDashboardScrollState = rememberScrollState(0)
             val billeterieListContext = LocalContext.current
+            val useWideBilleterieHome = isLargeTablet()
 
-            LaunchedEffect(showTicketCheck) {
-                if (showTicketCheck) {
-                    kotlinx.coroutines.delay(250)
-                    // Same background auto-sync as admin (interval from Settings); ensure loop is running after Billeterie entry.
-                    viewModel.updateSyncInterval()
-                    viewModel.syncGuestsWithTargetedUpdates()
-                    if (settingsManager.isPeopleCounterVisible()) {
-                        viewModel.refreshVenuesForPeopleCounterQuietly()
-                    }
+            DeferredUntilSpaceEntranceSettled(key = showTicketCheck) {
+                if (!showTicketCheck) return@DeferredUntilSpaceEntranceSettled
+                // Same background auto-sync as admin (interval from Settings); ensure loop is running after Billeterie entry.
+                viewModel.updateSyncInterval()
+                viewModel.syncGuestsWithTargetedUpdates()
+                if (settingsManager.isPeopleCounterVisible()) {
+                    viewModel.refreshVenuesForPeopleCounterQuietly()
                 }
             }
 
@@ -717,6 +731,23 @@ actual fun AppRootContent(
                                     showWelcome = false
                                     showSetupWizard = true
                                 },
+                            )
+                        } else if (useWideBilleterieHome) {
+                            WideBilleterieHomeScreen(
+                                guests = guests,
+                                viewModel = viewModel,
+                                onBack = {
+                                    showTicketCheck = false
+                                    showWelcome = true
+                                },
+                                onOpenGuestList = { billeterieSection = "guests" },
+                                onOpenScanner = {
+                                    billeterieScannerReturnSection = "home"
+                                    billeterieSection = "scanner"
+                                },
+                                onOpenPos = { billeterieSection = "pos" },
+                                onOpenSettings = { showBilleterieSettings = true },
+                                hoverEnabled = false,
                             )
                         } else {
                             BilleterieHomeScreen(
@@ -845,7 +876,25 @@ actual fun AppRootContent(
                         .padding(bottom = 8.dp, end = 8.dp)
                 )
             }
+            }
         } else {
+        DramaticSpaceEntrance(
+            enabled = pageAnimationsEnabled,
+            space = SpaceEntrance.Admin,
+        ) {
+        if (!skipStartupSync) {
+            DeferredUntilSpaceEntranceSettled {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    println("App started - triggering initial download-only full sync...")
+                    try {
+                        viewModel.performAutomaticFullSyncIfNeeded()
+                    } catch (e: Exception) {
+                        println("❌ Sync error: ${e.message}")
+                        e.printStackTrace()
+                    }
+                }
+            }
+        }
         // Defer sync operations on tab switch to allow instant UI response
         // OPTIMIZED: Syncs are triggered 250ms after tab change to ensure animation completes first
         LaunchedEffect(selectedTab) {
@@ -1426,6 +1475,7 @@ if (pageAnimationsEnabled) {
                     )
                 }
             }
+        }
         }
         }
 
@@ -2597,6 +2647,7 @@ fun WelcomeScreen(
     val backgroundAnimationStyle = uiRefreshNonce.let { settingsManager.getBackgroundAnimationStyle() }
     val backgroundAnimationOpacity = uiRefreshNonce.let { settingsManager.getBackgroundAnimationOpacity() }
     val colorScheme = MaterialTheme.colorScheme
+    val useWideWelcome = isLargeTablet()
 
     BackHandler {
         (context as? Activity)?.finish()
@@ -2619,6 +2670,67 @@ fun WelcomeScreen(
     val month = calendar.get(Calendar.MONTH)
     val day = calendar.get(Calendar.DAY_OF_MONTH)
     val isPrideDay = month == Calendar.JUNE && day == 28 && settingsManager.isSeasonalFunEnabled()
+
+    if (useWideWelcome) {
+        Scaffold { innerPadding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .background(if (isPrideDay) Color.White else colorScheme.surface),
+            ) {
+                AppBackgroundAnimation(
+                    style = backgroundAnimationStyle,
+                    opacity = backgroundAnimationOpacity,
+                    settingsManager = settingsManager,
+                )
+                if (isPrideDay) {
+                    PrideAnimation(enabled = true)
+                }
+
+                WideWelcomeContent(
+                    appName = context.getString(R.string.app_name),
+                    onAdminSelected = {
+                        performStrongHaptic(vibrator)
+                        onAdminSelected()
+                    },
+                    onTicketCheckSelected = {
+                        performStrongHaptic(vibrator)
+                        onTicketCheckSelected()
+                    },
+                    onPosSelected = {
+                        performStrongHaptic(vibrator)
+                        onPosSelected()
+                    },
+                    hoverEnabled = false,
+                    syncSlot = {
+                        if (showAdminAccessSyncIndicator) {
+                            Column(
+                                modifier = Modifier
+                                    .widthIn(max = 560.dp)
+                                    .fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                Spacer(Modifier.height(24.dp))
+                                AdminStartupSyncBanner(modifier = Modifier.fillMaxWidth())
+                            }
+                        }
+                    },
+                )
+
+                if (viewModel != null) {
+                    FirebaseOrgSwitcher(
+                        viewModel = viewModel,
+                        placement = FirebaseOrgSwitcherPlacement.WelcomeTopEnd,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(20.dp),
+                    )
+                }
+            }
+        }
+        return
+    }
     
     Scaffold { innerPadding ->
         Box(

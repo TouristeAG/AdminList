@@ -183,6 +183,7 @@ class SettingsManager(private val storage: AppStorage) {
         private const val KEY_FIREBASE_LAST_SINGLE_ORG_ID = "firebase_last_single_org_id"
         private const val KEY_FIREBASE_CONFIGURED_ORGS = "firebase_configured_orgs"
         private const val KEY_FIREBASE_BOOTSTRAP_CODE = "firebase_bootstrap_code"
+        private const val KEY_FIREBASE_JOIN_IMPORTED = "firebase_join_imported"
         private const val KEY_FIREBASE_AUTH_EMAIL = "firebase_auth_email"
         private const val KEY_FIREBASE_API_KEY = "firebase_api_key"
         private const val KEY_FIREBASE_APPLICATION_ID = "firebase_application_id"
@@ -411,9 +412,18 @@ class SettingsManager(private val storage: AppStorage) {
         setFirebaseOrgId(trimmed)
     }
 
-    /** One-time org join code (admin shares verbally; not embedded in public QR). */
+    /** Org invitation code — stored locally; also embedded in full v1 join QR. */
     fun getFirebaseBootstrapCode(): String = storage.getString(KEY_FIREBASE_BOOTSTRAP_CODE, "") ?: ""
     fun setFirebaseBootstrapCode(code: String) = storage.putString(KEY_FIREBASE_BOOTSTRAP_CODE, code.trim())
+
+    /**
+     * True when the Firebase config came from a scanned QR / pasted join code rather than typed
+     * fields. Join UIs must not echo those values back: the member never needs to see them, and
+     * the invitation code is what lets any device join the organization.
+     */
+    fun isFirebaseJoinImported(): Boolean = storage.getBoolean(KEY_FIREBASE_JOIN_IMPORTED, false)
+    fun setFirebaseJoinImported(imported: Boolean) =
+        storage.putBoolean(KEY_FIREBASE_JOIN_IMPORTED, imported)
 
     fun getFirebaseAuthEmail(): String = storage.getString(KEY_FIREBASE_AUTH_EMAIL, "") ?: ""
     fun setFirebaseAuthEmail(email: String) = storage.putString(KEY_FIREBASE_AUTH_EMAIL, email)
@@ -531,6 +541,7 @@ class SettingsManager(private val storage: AppStorage) {
 
     /** Apply a QR/clipboard join payload without exposing values in the UI. */
     fun applyFirebaseJoinPayload(payload: com.eventmanager.app.data.remote.FirebaseJoinPayload) {
+        setFirebaseJoinImported(true)
         addFirebaseConfiguredOrgFromJoin(payload.orgId.trim())
         setFirebaseProjectId(payload.projectId.trim())
         setFirebaseApplicationId(payload.applicationId.trim())
@@ -565,6 +576,7 @@ class SettingsManager(private val storage: AppStorage) {
             apiKey = getFirebaseApiKey().trim(),
             webClientId = getFirebaseWebClientId().trim(),
             webClientSecret = getFirebaseWebClientSecret().trim(),
+            bootstrapCode = getFirebaseBootstrapCode().trim(),
         )
         return payload.takeIf { it.isComplete() }
     }
@@ -776,6 +788,7 @@ class SettingsManager(private val storage: AppStorage) {
             }
         }
         touchIfUnset(InstitutionSettingsKeys.PROFILE_PHOTOS_ENABLED, isProfilePhotosEnabled())
+        touchIfUnset(InstitutionSettingsKeys.ANNOUNCEMENTS_NON_ADMIN_SEND_ENABLED, isAnnouncementsNonAdminSendEnabled())
         touchIfUnset(InstitutionSettingsKeys.SHEETS_MIRROR_ENABLED, isSheetsMirrorEnabled())
         touchIfUnset(
             InstitutionSettingsKeys.SHEETS_MIRROR_SPREADSHEET_ID,
@@ -825,6 +838,8 @@ class SettingsManager(private val storage: AppStorage) {
             InstitutionSettingsKeys.ALLOWED_EMAIL_DOMAINS ->
                 com.eventmanager.app.data.remote.FirebaseEmailDomainPolicy.serialize(getAllowedEmailDomains())
             InstitutionSettingsKeys.PROFILE_PHOTOS_ENABLED -> isProfilePhotosEnabled().toString()
+            InstitutionSettingsKeys.ANNOUNCEMENTS_NON_ADMIN_SEND_ENABLED ->
+                isAnnouncementsNonAdminSendEnabled().toString()
             InstitutionSettingsKeys.SHEETS_MIRROR_ENABLED -> isSheetsMirrorEnabled().toString()
             InstitutionSettingsKeys.SHEETS_MIRROR_SPREADSHEET_ID -> getSheetsMirrorSpreadsheetId()
             InstitutionSettingsKeys.SHEETS_MIRROR_INTERVAL_MINUTES ->
@@ -935,6 +950,11 @@ class SettingsManager(private val storage: AppStorage) {
             }
             InstitutionSettingsKeys.PROFILE_PHOTOS_ENABLED ->
                 storage.putBoolean(KEY_PROFILE_PHOTOS_ENABLED, value.trim().equals("true", ignoreCase = true))
+            InstitutionSettingsKeys.ANNOUNCEMENTS_NON_ADMIN_SEND_ENABLED ->
+                storage.putBoolean(
+                    KEY_ANNOUNCEMENTS_NON_ADMIN_SEND_ENABLED,
+                    value.trim().equals("true", ignoreCase = true),
+                )
             InstitutionSettingsKeys.SHEETS_MIRROR_ENABLED ->
                 storage.putBoolean(KEY_SHEETS_MIRROR_ENABLED, value.trim().equals("true", ignoreCase = true))
             InstitutionSettingsKeys.SHEETS_MIRROR_SPREADSHEET_ID ->
@@ -1225,7 +1245,7 @@ class SettingsManager(private val storage: AppStorage) {
     
     // Date Format Configuration
     fun getDateFormat(): String {
-        return storage.getString(KEY_DATE_FORMAT, "MM/dd/yyyy") ?: "MM/dd/yyyy" // Default to MM/dd/yyyy
+        return storage.getString(KEY_DATE_FORMAT, "dd/MM/yyyy") ?: "dd/MM/yyyy" // Swiss / European default
     }
 
     fun saveDateFormat(dateFormat: String) {
@@ -1315,7 +1335,7 @@ class SettingsManager(private val storage: AppStorage) {
     
     // People Counter Visibility Configuration
     fun isPeopleCounterVisible(): Boolean {
-        return storage.getBoolean(KEY_PEOPLE_COUNTER_VISIBLE, false) // Hidden by default
+        return storage.getBoolean(KEY_PEOPLE_COUNTER_VISIBLE, true) // Visible by default (billeterie)
     }
     
     fun setPeopleCounterVisible(visible: Boolean) {
@@ -1435,6 +1455,7 @@ class SettingsManager(private val storage: AppStorage) {
 
     fun setAnnouncementsNonAdminSendEnabled(enabled: Boolean) {
         storage.putBoolean(KEY_ANNOUNCEMENTS_NON_ADMIN_SEND_ENABLED, enabled)
+        touchInstitutionSettingLastModified(InstitutionSettingsKeys.ANNOUNCEMENTS_NON_ADMIN_SEND_ENABLED)
     }
 
     fun isCategoryAnnouncementsExpanded(): Boolean {

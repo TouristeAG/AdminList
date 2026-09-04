@@ -23,6 +23,10 @@ object InstitutionGoogleWebOAuth {
     fun loopbackRedirectUri(port: Int): String =
         "http://localhost:$port$LOOPBACK_CALLBACK_PATH"
 
+    /** One URI per line — paste into Google Cloud “Authorized redirect URIs”. */
+    fun loopbackRedirectUrisClipboardText(): String =
+        LOOPBACK_REDIRECT_URIS.joinToString("\n")
+
     val OAUTH_SCOPES: List<String> = listOf(
         "openid",
         "email",

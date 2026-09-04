@@ -584,7 +584,7 @@
     <string name="ticket_check_coming_soon">यह सुविधा जल्द ही आने वाली है</string>
     <string name="ticket_check_description">अतिथि सूची तक त्वरित पहुंच और दरवाजे पर स्कैनर।</string>
     <string name="billeterie_stat_permanent_guests">स्थायी अतिथि</string>
-    <string name="billeterie_stat_temporary_guests_today">अस्थायी मेहमान (आज)</string>
+    <string name="billeterie_stat_temporary_guests_today">अस्थायी मेहमान</string>
     <string name="billeterie_stat_volunteers_on_list">सूची में स्वयंसेवक</string>
     <string name="billeterie_stat_total_without_invites">सूची में (+1 को छोड़कर)</string>
     <string name="billeterie_button_guest_list">अतिथि सूची</string>

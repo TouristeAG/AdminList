@@ -9,12 +9,17 @@ import com.eventmanager.app.data.security.createSecureCredentialStore
 import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.platform.createDatabase
 import com.eventmanager.app.platform.createPlatformContext
+import com.eventmanager.app.data.utils.AppTimeZone
+import com.eventmanager.app.utils.PoiAndroidInit
 import java.util.concurrent.Executors
 
 class EventManagerApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        AppTimeZone.installAsJvmDefault()
+        // Must run before any XSSFWorkbook use (StAX provider missing on Android otherwise).
+        PoiAndroidInit.ensureStaxFactories()
         val platformContext = createPlatformContext(applicationContext)
         SecureCredentialStoreHolder.init(createSecureCredentialStore(platformContext))
         runCatching {

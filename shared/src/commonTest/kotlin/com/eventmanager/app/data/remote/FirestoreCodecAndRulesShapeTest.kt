@@ -121,23 +121,67 @@ class FirestoreCodecAndRulesShapeTest {
         ).find(rules)?.groupValues?.get(1)
             ?: error("members match block missing")
         assertTrue(
-            membersBlock.contains("allow read: if isMember(orgId)"),
-            "members must require org membership to read",
+            membersBlock.contains("allow list: if isMember(orgId)"),
+            "listing members must require org membership",
+        )
+        assertTrue(
+            membersBlock.contains("request.auth.uid == uid || isMember(orgId)"),
+            "reading your own member doc must be allowed so the client can tell absent from denied",
         )
         assertFalse(
             membersBlock.contains("allow read: if isSignedIn()"),
             "members must not be readable by any signed-in user",
         )
         assertTrue(membersBlock.contains("request.resource.data.role == 'admin'"))
-        assertTrue(
+        assertFalse(
             membersBlock.contains("!exists(memberPath(orgId))"),
-            "members bootstrap must allow self-admin when member doc is missing",
+            "self-admin create must be gated on the org config, not on a missing member doc, " +
+                "otherwise anyone knowing an orgId can become its admin",
+        )
+        assertTrue(
+            membersBlock.contains("!exists(configPath(orgId))"),
+            "first-admin create is only for organizations that have no config yet",
+        )
+        assertTrue(
+            membersBlock.contains("request.resource.data.role == resource.data.role"),
+            "an existing member must be able to refresh its own doc (idempotent re-join)",
+        )
+        assertTrue(
+            membersBlock.contains(
+                ".hasOnly(['email', 'updatedAt', 'json', 'bootstrapCode'])",
+            ),
+            "the member self-update path must be restricted to non-privileged fields",
         )
         assertTrue(membersBlock.contains("isOrgAdmin(orgId)"))
 
         assertTrue(
+            rules.contains("NOCTULIST_RULES_VERSION = $NOCTULIST_FIRESTORE_RULES_VERSION"),
+            "the rules file revision must match NOCTULIST_FIRESTORE_RULES_VERSION",
+        )
+        assertTrue(
+            rules.contains("allowedEmailDomains is map"),
+            "a malformed allowedEmailDomains value must not turn into a blanket denial",
+        )
+
+        assertTrue(
             rules.contains("document[0] != 'transfers'"),
             "catch-all must exclude transfers writes",
+        )
+        assertTrue(
+            rules.contains("document[0] != 'institutionSettings'"),
+            "catch-all must exclude institutionSettings writes (admin-only collection)",
+        )
+        val institutionSettingsBlock = Regex(
+            """match /orgs/\{orgId\}/institutionSettings/\{key\} \{([\s\S]*?)\n    \}""",
+        ).find(rules)?.groupValues?.get(1)
+            ?: error("institutionSettings match block missing")
+        assertTrue(
+            institutionSettingsBlock.contains("allow write: if isOrgAdmin(orgId)"),
+            "institutionSettings writes must require Firebase org admin",
+        )
+        assertFalse(
+            institutionSettingsBlock.contains("allow write: if isMember(orgId)"),
+            "institutionSettings must not be writable by every member",
         )
         assertTrue(rules.contains("allow update, delete: if false;"))
     }

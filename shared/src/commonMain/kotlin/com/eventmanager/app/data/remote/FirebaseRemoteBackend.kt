@@ -42,6 +42,14 @@ class FirebaseRemoteBackend(
 
     private var listenerJob: CoroutineJob? = null
 
+    /** Listeners are up and the last snapshot was confirmed by the Firestore server. */
+    fun isLiveListenerSyncActive(): Boolean {
+        if (!listenersActive) return false
+        if (configuredOrgIdsForSync().isEmpty()) return false
+        if (!firestoreGateway.isAvailable()) return false
+        return firestoreGateway.isServerReachable()
+    }
+
     private val posBootstrapCollections = listOf("salesItems", "transfers")
 
     override val backendType: BackendType = BackendType.FIREBASE
@@ -112,15 +120,23 @@ class FirebaseRemoteBackend(
                 firestoreGateway.startOrgListeners(orgIds) { change ->
                     applyRemoteChange(change)
                 }
-                if (FirestoreRealtimeCapability.alsoRunPullFallback()) {
-                    val fallbackInterval = FirestoreRealtimeCapability.pullFallbackIntervalMs() ?: 30_000L
-                    kotlinx.coroutines.delay(fallbackInterval)
-                    while (isActive) {
-                        withContext(Dispatchers.IO) {
-                            flushQueue()
-                            pullAll()
-                        }
-                        kotlinx.coroutines.delay(fallbackInterval)
+                val degradedFallbackMs = FirestoreRealtimeCapability.pullFallbackIntervalMs() ?: 30_000L
+                while (isActive) {
+                    val intervalMs = when {
+                        isLiveListenerSyncActive() ->
+                            settingsManager.getSyncInterval().coerceAtLeast(1) * 60_000L
+                        FirestoreRealtimeCapability.alsoRunPullFallback() -> degradedFallbackMs
+                        else -> null
+                    }
+                    if (intervalMs == null) {
+                        kotlinx.coroutines.delay(5_000L)
+                        continue
+                    }
+                    kotlinx.coroutines.delay(intervalMs)
+                    if (!isActive) break
+                    withContext(Dispatchers.IO) {
+                        flushQueue()
+                        pullAll()
                     }
                 }
             } else {
@@ -195,7 +211,9 @@ class FirebaseRemoteBackend(
 
     override suspend fun performPageChangeSync(from: String, to: String): SyncResult {
         flushQueue()
-        return if (FirestoreRealtimeCapability.preferSnapshotListeners()) {
+        return if (isLiveListenerSyncActive()) {
+            SyncResult.Success("Firebase live listeners")
+        } else if (FirestoreRealtimeCapability.preferSnapshotListeners()) {
             SyncResult.Success("Firebase listeners active")
         } else {
             pullAll()
@@ -358,6 +376,13 @@ class FirebaseRemoteBackend(
     override suspend fun afterInstitutionSettingsChanged() {
         val orgId = resolveWriteOrgId()
         if (orgId.isBlank()) return
+        if (!FirebaseOrgAdminAccess.currentUserIsOrgAdmin(platformContext, settingsManager)) {
+            println(
+                "Skipping institutionSettings push: signed-in user is not Firebase org admin " +
+                    "(org=$orgId)",
+            )
+            return
+        }
         val rows = settingsManager.getInstitutionSettingRowsPendingRemotePush()
         if (rows.isEmpty()) return
         rows.forEach { row ->
@@ -411,6 +436,8 @@ class FirebaseRemoteBackend(
     }
 
     override suspend fun sendVenueAnnouncement(venueIds: List<Long>, title: String, message: String) {
+        val sentAt = System.currentTimeMillis()
+        val deviceId = settingsManager.getOrCreatePersistentDeviceId()
         val venues = repository.getAllVenues().first()
         venues.filter { it.id in venueIds }.forEach { venue ->
             upsert(
@@ -419,8 +446,9 @@ class FirebaseRemoteBackend(
                 firestoreGateway.venueToMap(venue).toMutableMap().apply {
                     put("announcementTitle", title)
                     put("announcementMessage", message)
-                    put("announcementSentAt", System.currentTimeMillis())
-                    put("announcementSenderDeviceId", settingsManager.getOrCreatePersistentDeviceId())
+                    put("announcementSentAt", sentAt)
+                    put("announcementSenderDeviceId", deviceId)
+                    put("lastModified", sentAt)
                 },
                 venue.firebaseOrgId,
             )
@@ -594,28 +622,33 @@ class FirebaseRemoteBackend(
         firestoreGateway.flushPendingWrites()
     }
 
-    /** Replicate multi-org list to every org the user can access. */
+    /** Replicate multi-org list to every org where the user is Firebase org admin. */
     suspend fun replicateConfiguredOrgsToAllOrgs() {
         if (!firestoreGateway.isAvailable()) return
         val orgs = settingsManager.getFirebaseConfiguredOrgs()
         if (orgs.isEmpty()) return
-        val uid = FirebaseAuthBridge.currentUserId()?.trim().orEmpty() ?: return
+        val uid = FirebaseAuthBridge.currentUserId()?.trim().orEmpty()
+        if (uid.isBlank()) return
 
-        val accessible = mutableListOf<com.eventmanager.app.data.remote.FirebaseConfiguredOrg>()
+        val adminOrgs = mutableListOf<com.eventmanager.app.data.remote.FirebaseConfiguredOrg>()
         for (entry in orgs) {
             val id = entry.orgId.trim()
             if (!FirebaseOrgBootstrap.isValidOrgId(id)) continue
-            if (FirebaseOrgBootstrap.isMember(firestoreGateway, id, uid)) {
-                accessible += entry
+            val role = firestoreGateway.readMemberRoleFromServer(id, uid)
+            if (com.eventmanager.app.data.security.firebaseRoleIsOrgAdmin(role)) {
+                adminOrgs += entry
             }
         }
-        if (accessible.isEmpty()) return
+        if (adminOrgs.isEmpty()) {
+            println("Skipping FIREBASE_CONFIGURED_ORGS replicate: not org admin on any configured org")
+            return
+        }
 
         val payload = mapOf(
             "value" to FirebaseConfiguredOrgCodec.encode(orgs),
             "lastModified" to System.currentTimeMillis(),
         )
-        accessible.forEach { entry ->
+        adminOrgs.forEach { entry ->
             runCatching {
                 firestoreGateway.upsertDocument(
                     entry.orgId.trim(),

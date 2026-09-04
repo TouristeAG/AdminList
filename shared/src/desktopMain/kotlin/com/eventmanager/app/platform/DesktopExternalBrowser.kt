@@ -8,6 +8,9 @@ import java.net.URI
  *
  * Packaged desktop apps (jpackage DMG / MSI / EXE / Deb / AppImage) often fail silently with
  * [Desktop.browse] while `./gradlew :desktopApp:run` works — prefer the OS launcher on all OSes.
+ *
+ * On Windows, never pass an OAuth URL through unquoted `cmd /c start`: cmd treats `&` as a
+ * command separator and truncates the query string (Google then reports missing `response_type`).
  */
 internal fun openExternalBrowser(url: String) {
     val trimmed = url.trim()
@@ -37,7 +40,19 @@ private fun tryOsLauncher(url: String): Boolean {
     val os = System.getProperty("os.name").orEmpty().lowercase()
     val commands: List<Array<String>> = when {
         "mac" in os || "darwin" in os -> listOf(arrayOf("open", url))
-        "win" in os -> listOf(arrayOf("cmd", "/c", "start", "", url))
+        "win" in os -> listOf(
+            // Preserves & in OAuth query strings (unlike unquoted cmd start).
+            arrayOf("rundll32", "url.dll,FileProtocolHandler", url),
+            // Empty window title + quoted URL so cmd does not split on &.
+            arrayOf("cmd", "/c", "start", "\"\"", quoteForWindowsCmd(url)),
+            arrayOf(
+                "powershell",
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                "Start-Process -LiteralPath ${quoteForPowerShell(url)}",
+            ),
+        )
         else -> listOf(
             arrayOf("xdg-open", url),
             arrayOf("gio", "open", url),
@@ -49,6 +64,13 @@ private fun tryOsLauncher(url: String): Boolean {
     }
     return false
 }
+
+/** Wrap so cmd.exe treats the whole URL as one argument (keeps `&response_type=…`). */
+private fun quoteForWindowsCmd(url: String): String =
+    "\"" + url.replace("\"", "\\\"") + "\""
+
+private fun quoteForPowerShell(url: String): String =
+    "'" + url.replace("'", "''") + "'"
 
 private fun runDetached(command: Array<String>): Boolean =
     runCatching {

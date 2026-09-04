@@ -219,6 +219,8 @@ fun BackendFollowScreen(
                                 } else {
                                     null
                                 },
+                                configImported = joinedViaQr ||
+                                    settingsManager.isFirebaseJoinImported(),
                             )
                         } else {
                             FirebaseConfigReceivedBanner(orgId = activeOrgId())
@@ -345,14 +347,20 @@ fun BackendFollowScreen(
                                         platformContext,
                                         settingsManager,
                                     )
-                                    com.eventmanager.app.data.remote.FirebaseMemberSignIn.afterGoogleSignIn(
-                                        gateway = gateway,
-                                        settings = settingsManager,
-                                        uid = uid,
-                                        email = auth.currentUserEmail() ?: authEmail,
-                                        isOrgBootstrap = false,
-                                        joinWithBootstrapCode = true,
-                                    )
+                                    runCatching {
+                                        com.eventmanager.app.data.remote.FirebaseMemberSignIn.afterGoogleSignIn(
+                                            gateway = gateway,
+                                            settings = settingsManager,
+                                            uid = uid,
+                                            email = auth.currentUserEmail() ?: authEmail,
+                                            isOrgBootstrap = false,
+                                            joinWithBootstrapCode = true,
+                                        )
+                                    }.onFailure { e ->
+                                        busy = false
+                                        status = e.message
+                                        return@launch
+                                    }
                                 }
                             } else {
                                 settingsManager.saveSpreadsheetId(spreadsheetId.trim())

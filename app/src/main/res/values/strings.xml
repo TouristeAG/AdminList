@@ -584,7 +584,7 @@
     <string name="ticket_check_coming_soon">This feature is coming soon</string>
     <string name="ticket_check_description">Quick access to the guest list and scanner at the door.</string>
     <string name="billeterie_stat_permanent_guests">Permanent guests</string>
-    <string name="billeterie_stat_temporary_guests_today">Temporary guests (today)</string>
+    <string name="billeterie_stat_temporary_guests_today">Temporary guests</string>
     <string name="billeterie_stat_volunteers_on_list">Volunteers on list</string>
     <string name="billeterie_stat_total_without_invites">On list (excl. +1s)</string>
     <string name="billeterie_button_guest_list">Guest list</string>
@@ -1097,6 +1097,7 @@
     <string name="settings_category_sync">Sync &amp; Data</string>
     <string name="settings_category_appearance">Appearance &amp; Display</string>
     <string name="settings_category_localization">Localization</string>
+    <string name="institution_settings_firebase_admin_only">Synced institution settings (currency, emails, credit buffer, photos, mirror) can only be changed by a Firebase org admin.</string>
     <string name="settings_category_animations">Animations &amp; Effects</string>
     <string name="settings_category_developer">Developer &amp; Debug</string>
     <string name="settings_category_maintenance">Maintenance</string>

@@ -565,7 +565,7 @@
     <string name="ticket_check_coming_soon">此功能即将推出</string>
     <string name="ticket_check_description">在入口快速打开宾客名单和扫描。</string>
     <string name="billeterie_stat_permanent_guests">常驻宾客</string>
-    <string name="billeterie_stat_temporary_guests_today">临时宾客（今日）</string>
+    <string name="billeterie_stat_temporary_guests_today">临时宾客</string>
     <string name="billeterie_stat_volunteers_on_list">名单上的志愿者</string>
     <string name="billeterie_stat_total_without_invites">名单人数（不含+1）</string>
     <string name="billeterie_button_guest_list">宾客名单</string>
@@ -1338,7 +1338,7 @@
     <string name="firebase_web_client_id_label">Web 客户端 ID</string>
     <string name="firebase_web_client_id_hint">机构的 OAuth 2.0 Web 客户端 ID（Firebase Google 登录）。不是开发者 Gmail 桌面 OAuth JSON。</string>
     <string name="firebase_web_client_secret_label">Web 客户端密钥</string>
-    <string name="firebase_web_client_secret_hint">机构 Web 客户端密钥（桌面 + Android）。已授权重定向 URI（非 JavaScript 来源）：桌面 — http://localhost:8889/Callback（以及 :8888、:8765、:9090）。Android — com.eventmanager.app:/firebaseoauth2callback（无需 SHA-1）。</string>
+    <string name="firebase_web_client_secret_hint">机构 Web 客户端密钥（桌面 + Android）。已授权重定向 URI（非 JavaScript 来源）：http://localhost:8889/Callback（以及 :8888、:8765、:9090）。桌面与 Android 共用同一列表。</string>
     <string name="firebase_step_signin_title">3. Google 登录</string>
     <string name="firebase_step_signin_body">授权此设备。首个管理员账号将成为组织管理员。</string>
     <string name="firebase_sign_in">使用 Google 登录</string>
@@ -1355,27 +1355,27 @@
     <string name="firebase_config_paste_hint">粘贴 Firebase 控制台的 Web SDK 配置（apiKey、appId、projectId）。仅管理员需要。</string>
     <string name="firebase_config_paste_apply">应用粘贴的配置</string>
     <string name="firebase_join_qr_title">邀请其他设备（二维码）</string>
-    <string name="firebase_join_qr_body">仅与团队分享此二维码（含 Google 登录凭据）。其他设备在设置 → 加入 中扫描即可，无需再输入。</string>
+    <string name="firebase_join_qr_body">仅与团队分享此二维码。包含项目配置、Google 登录凭据和邀请码 — 扫描一次即可。</string>
     <string name="firebase_join_error_oauth_missing">此邀请码缺少 Google 登录凭据。请向管理员索取新二维码（设置 → Firebase 同步）。</string>
     <string name="firebase_join_qr_need_config">请先填写组织 ID 和项目选项以生成加入二维码。</string>
     <string name="firebase_join_copy_code">复制配置码</string>
     <string name="firebase_join_code_copied">配置码已复制</string>
     <string name="firebase_join_scan_title">加入此组织</string>
-    <string name="firebase_join_scan_body">扫描管理员二维码，或在下方输入两个代码。它们不是同一个码。</string>
+    <string name="firebase_join_scan_body">扫描管理员二维码（推荐），或粘贴配置码。完整代码已含邀请码，无需第二个码。</string>
     <string name="firebase_join_scan">扫描二维码</string>
     <string name="firebase_join_paste_label">配置码</string>
     <string name="firebase_join_paste_code">应用代码</string>
-    <string name="firebase_join_received">已收到配置 — 如需要请输入邀请码，然后登录。</string>
+    <string name="firebase_join_received">已收到配置 — 使用 Google 登录以完成加入。</string>
     <string name="firebase_join_wizard_option">加入现有组织</string>
-    <string name="firebase_join_wizard_option_body">扫描二维码，或输入配置码和邀请码。</string>
+    <string name="firebase_join_wizard_option_body">扫描管理员二维码或粘贴配置码（含邀请码）。</string>
     <string name="firebase_join_config_code_label">配置码</string>
-    <string name="firebase_join_config_code_hint">以 noctulist-fb 开头的长码 — 与二维码内容相同。</string>
-    <string name="firebase_join_invite_code_label">邀请码</string>
-    <string name="firebase_join_invite_code_hint">管理员提供的 8 位短码。不在二维码中。</string>
+    <string name="firebase_join_config_code_hint">以 noctulist-fb 开头的长码 — 与二维码内容相同（含邀请码）。</string>
+    <string name="firebase_join_invite_code_label">邀请码（可选）</string>
+    <string name="firebase_join_invite_code_hint">仅当旧版二维码未包含时需要。完整代码已包含。</string>
     <string name="firebase_join_invite_copy">复制邀请码</string>
     <string name="firebase_join_invite_copied">邀请码已复制</string>
-    <string name="firebase_join_invite_admin_body">请单独告知此短码 — 它不在二维码中。</string>
-    <string name="firebase_join_or_enter_codes">或手动输入两个代码</string>
+    <string name="firebase_join_invite_admin_body">也已包含在上方二维码与配置码中。此处显示便于核对或单独分享。</string>
+    <string name="firebase_join_or_enter_codes">或粘贴配置码</string>
     <string name="firebase_create_new_option">设置新 Firebase（管理员）</string>
     <string name="firebase_project_configured_hidden">Firebase 项目已配置（详情已隐藏）</string>
     <string name="firebase_project_secrets_restricted">仅当您既是本地管理员又是 Firebase 组织管理员时，才能查看项目密钥。请使用具有 Firebase 管理员角色的 Google 账号登录。</string>
@@ -1444,6 +1444,8 @@
     <string name="firebase_tutorial_copy_rules">复制 firestore.rules 到剪贴板</string>
     <string name="firebase_tutorial_copy_rules_done">已复制 — 粘贴到 Firestore → Rules，然后发布</string>
     <string name="firebase_tutorial_copy_rules_error">无法加载规则 — 请打开项目中的 firebase/firestore.rules</string>
+    <string name="firebase_tutorial_copy_redirect_uris">复制 localhost 重定向 URI</string>
+    <string name="firebase_tutorial_copy_redirect_uris_done">已复制 — 将每个 URI 粘贴到 Authorized redirect URIs，然后保存</string>
     <string name="firebase_tutorial_storage_optional_title">可选：个人资料照片（Firebase Storage）</string>
     <string name="firebase_tutorial_storage_optional_body">跳过此步以留在免费 Spark 方案。启用 Storage 可能需要付费 Blaze 方案。\n\n如需个人资料照片：\n1. Firebase Console → Build → Storage → Get started（同一项目）。\n2. Storage → Rules（网址须包含 /storage/rules — 不是 Firestore）。\n3. 粘贴 NoctuList 的 Storage 规则（下方按钮）→ Publish。\n4. 在 NoctuList 设置 → Firebase 中打开「启用个人资料照片」（机构内所有设备都会开启）。\n\n可以稍后完成。没有 Storage，应用仍可完整使用。</string>
     <string name="firebase_tutorial_copy_storage_rules">复制 storage.rules 到剪贴板</string>
@@ -1495,20 +1497,8 @@ C) Web client secret（桌面端必需）
 可选来源（无路径）：http://localhost:8889 等。
 → 保存，等待约一分钟，然后重试登录。
 
-Android 设备 → 第 6 步。仅桌面 → 第 7 步。</string>
-    <string name="firebase_tutorial_fb_step6_title">6. Android（可选）</string>
-    <string name="firebase_tutorial_fb_step6_body">若仅桌面可跳过。
-1. Firebase 控制台 → 项目设置 → 添加应用 → Android。
-2. 包名须完全一致：com.eventmanager.app
-3. 添加调试 SHA-1（Google 登录所需）：
-   macOS/Linux：
-   keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android
-   Windows：
-   keytool -list -v -keystore %USERPROFILE%\\.android\\debug.keystore -alias androiddebugkey -storepass android -keypass android
-4. 可选：将 google-services.json 下载到 app/google-services.json。
-5. 设备上仍使用第 5 步的 Web client ID（Android 登录需要）。密钥仅用于桌面。
+继续第 6 步。</string>
 
-若登录失败：包名 + SHA-1、Web client ID、Google 提供商已启用，然后退出 / 重新登录。</string>
     <string name="firebase_tutorial_cloud_step1_title">1. 打开 Cloud 项目</string>
     <string name="firebase_tutorial_cloud_step1_body">1. 打开 https://console.cloud.google.com
 2. 顶部栏 → 项目选择器 → 选择机构项目（若已用 Sheets 则选同一项目）。
@@ -1554,20 +1544,15 @@ D) Application ID（appId）
 • 若无：添加应用 → Web 一次，昵称「NoctuList」，跳过 Hosting；从配置片段复制 appId。
 • 或将完整 Firebase Web 配置粘贴到 NoctuList。
 
-Android → 第 6 步。仅桌面 → 第 7 步。</string>
-    <string name="firebase_tutorial_cloud_step6_title">6. Android 登录（无需 SHA-1）</string>
-    <string name="firebase_tutorial_cloud_step6_body">Android 使用与桌面相同的 Web OAuth 客户端 — 无需 Android OAuth 客户端或 SHA-1 指纹。
-1. Cloud 控制台 → Credentials → 您的 Web application 客户端（第 4 步）。
-2. 在 Authorized redirect URIs 中精确添加：com.eventmanager.app:/firebaseoauth2callback
-3. 在手机/平板 NoctuList 中：粘贴 Web client ID + secret（第 5 步），然后点击使用 Google 登录（会打开浏览器）。
-4. 可选：Firebase → 添加 Android 应用 / google-services.json 对登录不是必需的。</string>
-    <string name="firebase_tutorial_step7_title">7. 填写 NoctuList，然后迁移 / 连接</string>
+继续第 6 步。</string>
+
+    <string name="firebase_tutorial_step7_title">6. 填写 NoctuList，然后迁移 / 连接</string>
     <string name="firebase_tutorial_step7_body">在管理员 Firebase 同步或迁移对话框中：
 • 组织 ID — 简短共享名称（例如：noctulist-club）。每台设备相同。
 • Project ID、Application ID、API key、Web client ID，桌面端还需 Web client secret。
 • 或粘贴 Web 配置 + 填写 Web client ID/secret，然后为其他设备使用加入二维码。
 使用 Google 登录（首位管理员成为组织管理员）。仅在登录成功后再开始从 Sheets 迁移。其他设备通过二维码 / follow 加入 — 不应重新输入密钥。</string>
-    <string name="firebase_tutorial_step8_title">8. 设置完成后</string>
+    <string name="firebase_tutorial_step8_title">7. 设置完成后</string>
     <string name="firebase_tutorial_step8_body">Firestore 中应看到 orgs/{yourOrgId}/…（guests、members、metadata 等）。在验证收银、门禁和第二台设备前请保留 Sheets 备份。计费：测试期间保持免费 Spark / 免费层；仅超出配额时升级。</string>
     <string name="migration_wizard_to_firebase_title">切换到 Firebase</string>
     <string name="migration_wizard_to_sheets_title">切换到 Google Sheets</string>

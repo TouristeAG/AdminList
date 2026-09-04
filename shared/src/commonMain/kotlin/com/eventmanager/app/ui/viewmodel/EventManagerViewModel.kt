@@ -74,6 +74,9 @@ import com.eventmanager.app.data.security.displayName
 import com.eventmanager.app.data.security.firebaseRoleIsOrgAdmin
 import com.eventmanager.app.data.security.guestEligibleForLocalAdminRights
 import com.eventmanager.app.data.security.institutionHasLocalAdminInOrg
+import com.eventmanager.app.data.security.isSuspiciousMissingAdminAfterSync
+import com.eventmanager.app.data.security.memberRosterCount
+import com.eventmanager.app.data.security.shouldOfferFirstAdminSetupAfterSync
 import com.eventmanager.app.data.security.isAdminFlag
 import com.eventmanager.app.data.security.isFirebaseStrictMultiOrg
 import com.eventmanager.app.data.security.profileBelongsToAdminOrg
@@ -90,6 +93,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.yield
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -109,6 +113,9 @@ class EventManagerViewModel(
     private val pendingRemoteWriteDao: com.eventmanager.app.data.dao.PendingRemoteWriteDao? = null,
 ) : ViewModel() {
     private val benefitConsumeMutex = Mutex()
+    private companion object {
+        const val VM_LOG_TAG = "EventManagerVM"
+    }
     
     // Deletion tracker for handling deletions properly
     private val deletionTracker = platformContext?.let { DeletionTracker(platformContext) }
@@ -791,14 +798,30 @@ class EventManagerViewModel(
     private val _profilePhotosUploadEnabled = MutableStateFlow(isProfilePhotoUploadEnabled())
     val profilePhotosUploadEnabled: StateFlow<Boolean> = _profilePhotosUploadEnabled.asStateFlow()
 
+    private val _announcementsBilleterieSendEnabled = MutableStateFlow(
+        settingsManagerCached?.isAnnouncementsNonAdminSendEnabled() ?: false,
+    )
+    val announcementsBilleterieSendEnabled: StateFlow<Boolean> = _announcementsBilleterieSendEnabled.asStateFlow()
+
     fun setProfilePhotosEnabled(enabled: Boolean) {
         settingsManagerCached?.setProfilePhotosEnabled(enabled)
         publishProfilePhotosUploadEnabled()
         backupInstitutionSettingsToSheets()
     }
 
+    fun setAnnouncementsBilleterieSendEnabled(enabled: Boolean) {
+        settingsManagerCached?.setAnnouncementsNonAdminSendEnabled(enabled)
+        publishAnnouncementsBilleterieSendEnabled()
+        backupInstitutionSettingsToSheets()
+    }
+
     private fun publishProfilePhotosUploadEnabled() {
         _profilePhotosUploadEnabled.value = isProfilePhotoUploadEnabled()
+    }
+
+    private fun publishAnnouncementsBilleterieSendEnabled() {
+        _announcementsBilleterieSendEnabled.value =
+            settingsManagerCached?.isAnnouncementsNonAdminSendEnabled() ?: false
     }
 
     // Background sync job
@@ -919,6 +942,13 @@ class EventManagerViewModel(
             ?: FirebaseSyncStatus.offline()
     }
 
+    /**
+     * When Firestore listeners are LIVE, automatic tab/page pulls are redundant.
+     * Manual sync (pill, settings) still runs.
+     */
+    private fun skipAutomaticFirebasePull(): Boolean =
+        syncCoordinator?.isFirebaseLiveListenerSyncActive() == true
+
     private fun startBackgroundSync() {
         platformContext?.let { ctx ->
             val settingsManager = SettingsManager(ctx)
@@ -934,6 +964,9 @@ class EventManagerViewModel(
                             is com.eventmanager.app.data.remote.FirebaseOrgRepairResult.Recovered -> {
                                 repository.clearAllData()
                                 syncCoordinator?.performStartupSync()
+                            }
+                            is com.eventmanager.app.data.remote.FirebaseOrgRepairResult.Blocked -> {
+                                showSyncErrorIfNotSuppressed(repair.message)
                             }
                             else -> Unit
                         }
@@ -1021,61 +1054,80 @@ class EventManagerViewModel(
     // Track last update time to debounce volunteer activity updates
     private var lastVolunteerActivityUpdate = 0L
     private val volunteerActivityUpdateDebounceMs = 500L
-    
+
+    /** Hot-path logs only when debug mode is on — avoids string work in release. */
+    private inline fun vmDebug(message: () -> String) {
+        if (settingsManagerCached?.getDebugMode() == true) {
+            AppLogger.d(VM_LOG_TAG, message())
+        }
+    }
+
     private fun loadData() {
         viewModelScope.launch {
             while (isActive) {
                 try {
                     repository.getAllGuests().collect { guestList ->
-                    // Validate and fix any guests with invalid NanoIDs
-                    val validatedGuests = mutableListOf<Guest>()
-                    val guestsToFix = mutableListOf<Guest>()
+                        // Full sync can emit dozens of Room updates; skip UI churn until refreshAllData.
+                        if (_isSyncing.value) return@collect
+                        val validatedGuests = mutableListOf<Guest>()
+                        val guestsToFix = mutableListOf<Guest>()
 
-                    for (guest in guestList) {
-                        if (NanoIdGenerator.needsRegeneration(guest.nanoId)) {
-                            val newId = NanoIdGenerator.ensureValidNanoId(guest.nanoId, guest.name)
-                            println("⚠️ ViewModel: Fixed invalid NanoID for guest '${guest.name}': '${guest.nanoId}' → '$newId'")
-                            val fixedGuest = guest.copy(nanoId = newId)
-                            validatedGuests.add(fixedGuest)
-                            guestsToFix.add(fixedGuest)
-                        } else {
-                            validatedGuests.add(guest)
-                        }
-                    }
-
-                    if (guestsToFix.isNotEmpty()) {
-                        launch {
-                            try {
-                                guestsToFix.forEach { fixedGuest ->
-                                    repository.updateGuest(fixedGuest)
-                                }
-                                println("✅ Updated ${guestsToFix.size} guest(s) with fixed NanoIDs in local database")
-                                when {
-                                    settingsManagerCached?.getBackendType() == BackendType.FIREBASE -> {
-                                        guestsToFix.forEach { syncCoordinator?.afterGuestSaved(it) }
+                        withContext(Dispatchers.Default) {
+                            for (guest in guestList) {
+                                if (NanoIdGenerator.needsRegeneration(guest.nanoId)) {
+                                    val newId = NanoIdGenerator.ensureValidNanoId(guest.nanoId, guest.name)
+                                    vmDebug {
+                                        "Fixed invalid NanoID for guest '${guest.name}': '${guest.nanoId}' → '$newId'"
                                     }
-                                    isGoogleSheetsConfigured() -> {
-                                        try {
-                                            twoWaySyncService?.backupGuestsToSheets()
-                                            println("✅ Synced all guests (including ${guestsToFix.size} with fixed NanoIDs) to Google Sheets")
-                                        } catch (e: Exception) {
-                                            println("⚠️ Failed to sync fixed guest NanoIDs to Google Sheets: ${e.message}")
-                                        }
-                                    }
+                                    val fixedGuest = guest.copy(nanoId = newId)
+                                    validatedGuests.add(fixedGuest)
+                                    guestsToFix.add(fixedGuest)
+                                } else {
+                                    validatedGuests.add(guest)
                                 }
-                            } catch (e: Exception) {
-                                println("Failed to update guests with fixed NanoIDs: ${e.message}")
                             }
                         }
-                    }
 
-                    _guests.value = removeDuplicateGuests(validatedGuests)
-                }
+                        if (guestsToFix.isNotEmpty()) {
+                            launch {
+                                try {
+                                    guestsToFix.forEach { fixedGuest ->
+                                        repository.updateGuest(fixedGuest)
+                                    }
+                                    vmDebug { "Updated ${guestsToFix.size} guest(s) with fixed NanoIDs" }
+                                    when {
+                                        settingsManagerCached?.getBackendType() == BackendType.FIREBASE -> {
+                                            guestsToFix.forEach { syncCoordinator?.afterGuestSaved(it) }
+                                        }
+                                        isGoogleSheetsConfigured() -> {
+                                            try {
+                                                twoWaySyncService?.backupGuestsToSheets()
+                                                vmDebug {
+                                                    "Synced guests including ${guestsToFix.size} fixed NanoIDs to Sheets"
+                                                }
+                                            } catch (e: Exception) {
+                                                vmDebug { "Failed to sync fixed guest NanoIDs: ${e.message}" }
+                                            }
+                                        }
+                                    }
+                                } catch (e: Exception) {
+                                    vmDebug { "Failed to update guests with fixed NanoIDs: ${e.message}" }
+                                }
+                            }
+                        }
+
+                        val nextGuests = withContext(Dispatchers.Default) {
+                            removeDuplicateGuests(validatedGuests)
+                        }
+                        if (_guests.value != nextGuests) {
+                            _guests.value = nextGuests
+                        }
+                    }
                     break
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    println("Failed to load guests: ${e.message}")
+                    vmDebug { "Failed to load guests: ${e.message}" }
                     delay(1_000)
                 }
             }
@@ -1083,33 +1135,33 @@ class EventManagerViewModel(
         viewModelScope.launch {
             try {
                 repository.getAllVolunteers().collect { volunteers ->
-                    // Validate and fix any volunteers with invalid NanoIDs
+                    if (_isSyncing.value) return@collect
                     val validatedVolunteers = mutableListOf<Volunteer>()
                     val volunteersToFix = mutableListOf<Volunteer>()
-                    
-                    for (volunteer in volunteers) {
-                        if (NanoIdGenerator.needsRegeneration(volunteer.id)) {
-                            val newId = NanoIdGenerator.ensureValidNanoId(volunteer.id, volunteer.name)
-                            println("⚠️ ViewModel: Fixed invalid NanoID for volunteer '${volunteer.name}': '${volunteer.id}' → '$newId'")
-                            val fixedVolunteer = volunteer.copy(id = newId)
-                            validatedVolunteers.add(fixedVolunteer)
-                            volunteersToFix.add(fixedVolunteer)
-                        } else {
-                            validatedVolunteers.add(volunteer)
+
+                    withContext(Dispatchers.Default) {
+                        for (volunteer in volunteers) {
+                            if (NanoIdGenerator.needsRegeneration(volunteer.id)) {
+                                val newId = NanoIdGenerator.ensureValidNanoId(volunteer.id, volunteer.name)
+                                vmDebug {
+                                    "Fixed invalid NanoID for volunteer '${volunteer.name}': '${volunteer.id}' → '$newId'"
+                                }
+                                val fixedVolunteer = volunteer.copy(id = newId)
+                                validatedVolunteers.add(fixedVolunteer)
+                                volunteersToFix.add(fixedVolunteer)
+                            } else {
+                                validatedVolunteers.add(volunteer)
+                            }
                         }
                     }
-                    
-                    // Update volunteers with fixed IDs in the database and sync to Google Sheets
+
                     if (volunteersToFix.isNotEmpty()) {
                         launch {
                             try {
-                                // Update all fixed volunteers in the database first
-                                // Note: Repository will validate again, but since we already fixed the IDs,
-                                // the validation will just pass through quickly (defense-in-depth pattern)
                                 volunteersToFix.forEach { fixedVolunteer ->
                                     repository.updateVolunteer(fixedVolunteer)
                                 }
-                                println("✅ Updated ${volunteersToFix.size} volunteer(s) with fixed NanoIDs in local database")
+                                vmDebug { "Updated ${volunteersToFix.size} volunteer(s) with fixed NanoIDs" }
                                 when {
                                     settingsManagerCached?.getBackendType() == BackendType.FIREBASE -> {
                                         volunteersToFix.forEach { syncCoordinator?.afterVolunteerSaved(it) }
@@ -1117,80 +1169,108 @@ class EventManagerViewModel(
                                     isGoogleSheetsConfigured() -> {
                                         try {
                                             twoWaySyncService?.backupVolunteersToSheets()
-                                            println("✅ Synced all volunteers (including ${volunteersToFix.size} with fixed NanoIDs) to Google Sheets")
+                                            vmDebug {
+                                                "Synced volunteers including ${volunteersToFix.size} fixed NanoIDs to Sheets"
+                                            }
                                         } catch (e: Exception) {
-                                            println("⚠️ Failed to sync fixed NanoIDs to Google Sheets: ${e.message}")
+                                            vmDebug { "Failed to sync fixed volunteer NanoIDs: ${e.message}" }
                                         }
                                     }
                                 }
                             } catch (e: Exception) {
-                                println("Failed to update volunteers with fixed IDs: ${e.message}")
+                                vmDebug { "Failed to update volunteers with fixed IDs: ${e.message}" }
                             }
                         }
                     }
-                    
-                    val updatedVolunteers = removeDuplicateVolunteers(validatedVolunteers)
-                    println("🔄 loadData() - Repository changed! Updating volunteers UI: ${updatedVolunteers.size} volunteers")
-                    _volunteers.value = updatedVolunteers
-                    println("🔄 loadData() - StateFlow updated! UI should show: ${_volunteers.value.size} volunteers")
-                    // Debounce volunteer activity update to avoid multiple rapid calls
-                    debouncedUpdateVolunteerActivity()
+
+                    val updatedVolunteers = withContext(Dispatchers.Default) {
+                        removeDuplicateVolunteers(validatedVolunteers)
+                    }
+                    if (_volunteers.value != updatedVolunteers) {
+                        vmDebug { "loadData volunteers UI: ${updatedVolunteers.size}" }
+                        _volunteers.value = updatedVolunteers
+                        debouncedUpdateVolunteerActivity()
+                    }
                 }
             } catch (e: Exception) {
-                println("Failed to load volunteers: ${e.message}")
+                vmDebug { "Failed to load volunteers: ${e.message}" }
             }
         }
         viewModelScope.launch {
             try {
                 repository.getAllJobs().collect { jobs ->
-                    _jobs.value = removeDuplicateJobs(jobs)
-                    // Debounce volunteer activity update to avoid multiple rapid calls
-                    debouncedUpdateVolunteerActivity()
+                    if (_isSyncing.value) return@collect
+                    val nextJobs = withContext(Dispatchers.Default) { removeDuplicateJobs(jobs) }
+                    if (_jobs.value != nextJobs) {
+                        _jobs.value = nextJobs
+                        debouncedUpdateVolunteerActivity()
+                    }
                 }
             } catch (e: Exception) {
-                println("Failed to load jobs: ${e.message}")
+                vmDebug { "Failed to load jobs: ${e.message}" }
             }
         }
         viewModelScope.launch {
             try {
-                repository.getAllJobTypeConfigs().collect { 
-                    _jobTypeConfigs.value = removeDuplicateJobTypes(it)
+                repository.getAllJobTypeConfigs().collect { configs ->
+                    if (_isSyncing.value) return@collect
+                    val next = withContext(Dispatchers.Default) { removeDuplicateJobTypes(configs) }
+                    if (_jobTypeConfigs.value != next) {
+                        _jobTypeConfigs.value = next
+                    }
                 }
             } catch (e: Exception) {
-                println("Failed to load job type configs: ${e.message}")
+                vmDebug { "Failed to load job type configs: ${e.message}" }
             }
         }
         viewModelScope.launch {
             try {
-                repository.getAllVenues().collect { 
-                    _venues.value = removeDuplicateVenues(it)
+                repository.getAllVenues().collect { venues ->
+                    if (_isSyncing.value) return@collect
+                    val next = withContext(Dispatchers.Default) { removeDuplicateVenues(venues) }
+                    if (_venues.value != next) {
+                        _venues.value = next
+                        checkForNewAnnouncements(next)
+                    }
                 }
             } catch (e: Exception) {
-                println("Failed to load venues: ${e.message}")
+                vmDebug { "Failed to load venues: ${e.message}" }
             }
         }
         viewModelScope.launch {
             try {
-                repository.getAllSalesSheetItems().collect {
-                    _salesSheetItems.value = filterForVisibleOrg(it) { item -> item.firebaseOrgId }
+                repository.getAllSalesSheetItems().collect { items ->
+                    if (_isSyncing.value) return@collect
+                    val next = withContext(Dispatchers.Default) {
+                        filterForVisibleOrg(items) { item -> item.firebaseOrgId }
+                    }
+                    if (_salesSheetItems.value != next) {
+                        _salesSheetItems.value = next
+                    }
                 }
             } catch (e: Exception) {
-                println("Failed to load sales sheet items: ${e.message}")
+                vmDebug { "Failed to load sales sheet items: ${e.message}" }
             }
         }
         viewModelScope.launch {
             while (isActive) {
                 try {
                     repository.getAllAccountTransfers().collect { transfers ->
-                        val visible = filterForVisibleOrg(transfers) { it.firebaseOrgId }
-                        _accountTransfers.value = visible
-                        _accountBalances.value = AccountBalanceService.computeAllBalances(visible)
+                        if (_isSyncing.value) return@collect
+                        val (visible, balances) = withContext(Dispatchers.Default) {
+                            val scoped = filterForVisibleOrg(transfers) { it.firebaseOrgId }
+                            scoped to AccountBalanceService.computeAllBalances(scoped)
+                        }
+                        if (_accountTransfers.value != visible) {
+                            _accountTransfers.value = visible
+                            _accountBalances.value = balances
+                        }
                     }
                     break
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    println("Failed to load account transfers: ${e.message}")
+                    vmDebug { "Failed to load account transfers: ${e.message}" }
                     delay(1_000)
                 }
             }
@@ -1663,15 +1743,151 @@ class EventManagerViewModel(
         return guests.any { it.isAdmin } || volunteers.any { it.isAdmin }
     }
 
+    data class AdminSetupGateResult(
+        val syncSucceeded: Boolean,
+        val hasLocalAdmin: Boolean,
+        val memberCount: Int,
+        val shouldOfferFirstAdminSetup: Boolean,
+    )
+
+    private data class MemberRosterSnapshot(
+        val guests: List<Guest>,
+        val volunteers: List<Volunteer>,
+    ) {
+        val memberCount: Int get() = memberRosterCount(guests, volunteers)
+    }
+
+    private suspend fun readMemberRosterSnapshotFromDb(): MemberRosterSnapshot =
+        withContext(Dispatchers.IO) {
+            MemberRosterSnapshot(
+                repository.getAllGuests().first(),
+                repository.getAllVolunteers().first(),
+            )
+        }
+
+    /** Waits for Room to settle after sync before reading guests/volunteers for security gates. */
+    private suspend fun readStableMemberRosterSnapshot(
+        refreshUiBeforeRead: Boolean = true,
+    ): MemberRosterSnapshot {
+        if (refreshUiBeforeRead) {
+            refreshAllData(dbSettleDelayMs = 200)
+        } else {
+            // Sync already refreshed UI — only wait for Room to settle, avoid another Main thrash.
+            delay(200)
+        }
+        var previous = withContext(Dispatchers.IO) { readMemberRosterSnapshotFromDb() }
+        repeat(4) {
+            delay(250)
+            val next = withContext(Dispatchers.IO) { readMemberRosterSnapshotFromDb() }
+            val adminStable = institutionHasLocalAdminForActiveOrg(previous.guests, previous.volunteers) ==
+                institutionHasLocalAdminForActiveOrg(next.guests, next.volunteers)
+            if (next.memberCount == previous.memberCount && adminStable) {
+                return next
+            }
+            previous = next
+        }
+        return withContext(Dispatchers.IO) { readMemberRosterSnapshotFromDb() }
+    }
+
+    suspend fun institutionHasLocalAdminFromDb(): Boolean {
+        val snapshot = readMemberRosterSnapshotFromDb()
+        return institutionHasLocalAdminForActiveOrg(snapshot.guests, snapshot.volunteers)
+    }
+
+    /** Local DB only — used when startup sync is intentionally skipped (e.g. right after wizard). */
+    suspend fun evaluateLocalAdminSetupNeed(): Boolean {
+        val snapshot = readStableMemberRosterSnapshot()
+        val hasAdmin = institutionHasLocalAdminForActiveOrg(snapshot.guests, snapshot.volunteers)
+        return shouldOfferFirstAdminSetupAfterSync(
+            syncSucceeded = true,
+            hasLocalAdmin = hasAdmin,
+            memberCount = snapshot.memberCount,
+        )
+    }
+
+    /**
+     * Full sync then stable DB read. Use before offering first-admin setup at app launch.
+     */
+    suspend fun evaluateAdminSetupGate(): AdminSetupGateResult {
+        val syncResult = performFullSyncAwait(suppressSyncErrorDialog = true)
+        if (!syncResult.isSuccess) {
+            return AdminSetupGateResult(
+                syncSucceeded = false,
+                hasLocalAdmin = false,
+                memberCount = 0,
+                shouldOfferFirstAdminSetup = false,
+            )
+        }
+        // performFullSyncAwait already refreshed UI StateFlows — don't do it again on Main.
+        val snapshot = readStableMemberRosterSnapshot(refreshUiBeforeRead = false)
+        val hasAdmin = institutionHasLocalAdminForActiveOrg(snapshot.guests, snapshot.volunteers)
+        return AdminSetupGateResult(
+            syncSucceeded = true,
+            hasLocalAdmin = hasAdmin,
+            memberCount = snapshot.memberCount,
+            shouldOfferFirstAdminSetup = shouldOfferFirstAdminSetupAfterSync(
+                syncSucceeded = true,
+                hasLocalAdmin = hasAdmin,
+                memberCount = snapshot.memberCount,
+            ),
+        )
+    }
+
+    /**
+     * Preloads POS / Billetterie / Admin data while the startup splash is visible so the first
+     * workspace open does not pay sync + SQLite cold-read costs on the UI thread.
+     */
+    suspend fun warmupWorkspacesAfterGate() {
+        withContext(Dispatchers.IO) {
+            try {
+                if (!posSessionBootstrapDone) {
+                    posSessionBootstrapDone = true
+                    syncCoordinator?.bootstrapPosSessionSync()
+                }
+                repository.getAllGuestsOnce()
+                repository.getAllVolunteersOnce()
+                repository.getAllAccountTransfersOnce()
+                repository.getAllSalesSheetItems().first()
+                repository.getAllVenues().first()
+                repository.getAllJobs().first()
+            } catch (e: Exception) {
+                AppLogger.w("EventManagerViewModel", "Workspace warmup partial failure: ${e.message}")
+            }
+        }
+        yield()
+    }
+
     /**
      * Creates a guest with isAdmin = true, persists it, and syncs to Sheets.
      * Calls [onResult] with (success, errorMessage?).
      */
-    fun createAdminGuest(guest: Guest, onResult: (Boolean, Guest?, String?) -> Unit) {
+    fun createAdminGuest(
+        guest: Guest,
+        forceRecovery: Boolean = false,
+        onResult: (Boolean, Guest?, String?) -> Unit,
+    ) {
         viewModelScope.launch {
             try {
                 if (rejectIfCrudSoftLocked("creating admin")) {
                     onResult(false, null, "Institution backend migration pending")
+                    return@launch
+                }
+                val snapshot = readMemberRosterSnapshotFromDb()
+                if (institutionHasLocalAdminForActiveOrg(snapshot.guests, snapshot.volunteers)) {
+                    onResult(false, null, "An administrator already exists on this device")
+                    return@launch
+                }
+                if (!forceRecovery && isSuspiciousMissingAdminAfterSync(
+                        syncSucceeded = true,
+                        hasLocalAdmin = false,
+                        memberCount = snapshot.memberCount,
+                    )
+                ) {
+                    onResult(
+                        false,
+                        null,
+                        "Member list is not fully synced yet. Retry sync before creating an administrator.",
+                    )
                     return@launch
                 }
                 val adminGuest = tagGuestWithActiveOrg(guest.copy(isAdmin = true))
@@ -1693,11 +1909,33 @@ class EventManagerViewModel(
      * Creates a volunteer with isAdmin = true, persists it, and syncs to Sheets.
      * Calls [onResult] with (success, savedVolunteer?, errorMessage?).
      */
-    fun createAdminVolunteer(volunteer: Volunteer, onResult: (Boolean, Volunteer?, String?) -> Unit) {
+    fun createAdminVolunteer(
+        volunteer: Volunteer,
+        forceRecovery: Boolean = false,
+        onResult: (Boolean, Volunteer?, String?) -> Unit,
+    ) {
         viewModelScope.launch {
             try {
                 if (rejectIfCrudSoftLocked("creating admin")) {
                     onResult(false, null, "Institution backend migration pending")
+                    return@launch
+                }
+                val snapshot = readMemberRosterSnapshotFromDb()
+                if (institutionHasLocalAdminForActiveOrg(snapshot.guests, snapshot.volunteers)) {
+                    onResult(false, null, "An administrator already exists on this device")
+                    return@launch
+                }
+                if (!forceRecovery && isSuspiciousMissingAdminAfterSync(
+                        syncSucceeded = true,
+                        hasLocalAdmin = false,
+                        memberCount = snapshot.memberCount,
+                    )
+                ) {
+                    onResult(
+                        false,
+                        null,
+                        "Member list is not fully synced yet. Retry sync before creating an administrator.",
+                    )
                     return@launch
                 }
                 val adminVolunteer = tagVolunteerWithActiveOrg(volunteer.copy(isAdmin = true))
@@ -2646,7 +2884,9 @@ class EventManagerViewModel(
     fun syncGuestsOnly() {
         viewModelScope.launch {
             if (settingsManagerCached?.getBackendType() == BackendType.FIREBASE) {
-                syncCoordinator?.performManualSync()
+                if (!skipAutomaticFirebasePull()) {
+                    syncCoordinator?.performManualSync()
+                }
                 return@launch
             }
             _isSyncing.value = true
@@ -2719,7 +2959,9 @@ class EventManagerViewModel(
     fun syncVolunteersOnly() {
         viewModelScope.launch {
             if (settingsManagerCached?.getBackendType() == BackendType.FIREBASE) {
-                syncCoordinator?.performManualSync()
+                if (!skipAutomaticFirebasePull()) {
+                    syncCoordinator?.performManualSync()
+                }
                 return@launch
             }
             _isSyncing.value = true
@@ -2793,7 +3035,9 @@ class EventManagerViewModel(
     fun syncJobsOnly() {
         viewModelScope.launch {
             if (settingsManagerCached?.getBackendType() == BackendType.FIREBASE) {
-                syncCoordinator?.performManualSync()
+                if (!skipAutomaticFirebasePull()) {
+                    syncCoordinator?.performManualSync()
+                }
                 return@launch
             }
             _isSyncing.value = true
@@ -4035,6 +4279,14 @@ class EventManagerViewModel(
         }
     }
 
+    /** Deferred workspace sync (e.g. after welcome) — skipped when Firebase listeners are LIVE. */
+    fun performAutomaticFullSyncIfNeeded() {
+        viewModelScope.launch {
+            if (skipAutomaticFirebasePull()) return@launch
+            performFullSyncAwait(suppressSyncErrorDialog = false)
+        }
+    }
+
     /**
      * Same as [performFullSync] but suspends until the sync job finishes. Use this for security
      * gates (first-admin precheck) where fire-and-forget would leave local Room empty while the UI
@@ -4055,15 +4307,16 @@ class EventManagerViewModel(
                 println("🔄 Sync successful, refreshing UI data...")
                 println("📊 Before refresh - Guests: ${_guests.value.size}, Volunteers: ${_volunteers.value.size}")
 
-                withContext(Dispatchers.Main) {
-                    refreshAllData()
-                    println("✅ UI data refreshed on Main dispatcher after sync")
-                    println("📊 After refresh - Guests: ${_guests.value.size}, Volunteers: ${_volunteers.value.size}")
-                }
+                // refreshAllData already hops IO/Default/Main — don't pin the whole call on Main.
+                refreshAllData()
+                println("✅ UI data refreshed after sync")
+                println("📊 After refresh - Guests: ${_guests.value.size}, Volunteers: ${_volunteers.value.size}")
 
-                recalcAndUploadVolunteerGuestList()
-                if (settingsManagerCached?.getBackendType() != BackendType.FIREBASE) {
-                    refreshTemporaryGuestsFromSheets()
+                withContext(Dispatchers.IO) {
+                    recalcAndUploadVolunteerGuestList()
+                    if (settingsManagerCached?.getBackendType() != BackendType.FIREBASE) {
+                        refreshTemporaryGuestsFromSheets()
+                    }
                 }
                 updateSyncTime()
 
@@ -4109,51 +4362,43 @@ class EventManagerViewModel(
 
     /**
      * Ensures sheet structure + data are ready before the admin NFC/QR gate.
-     * Local roster is enough to open the login immediately; a full refresh/recalc
-     * must not freeze the first frame after tapping Admin.
+     * Never marks the gate ready from jobs/venues alone — guests/volunteers must be settled in Room.
      */
     fun prepareForAdminAuthentication() {
-        val localReady = hasLocalDataForVisibleOrg()
-        val fresh = hasFreshRemotePullForAdminGate()
-        if (localReady || fresh) {
-            _syncError.value = null
-            _adminGateSyncSucceeded.value = true
-            if (fresh || _isSyncing.value) return
-            viewModelScope.launch {
-                try {
-                    val result = withContext(Dispatchers.IO) {
-                        syncCoordinator?.prepareForAdminGate()
-                            ?: syncManager?.repairSheetStructureThenFullDownload()
-                    }
-                    if (result?.isSuccess == true) {
-                        updateSyncTime()
-                        withContext(Dispatchers.IO) {
-                            recalcAndUploadVolunteerGuestList()
-                            if (settingsManagerCached?.getBackendType() != BackendType.FIREBASE) {
-                                refreshTemporaryGuestsFromSheets()
-                            }
-                        }
-                    }
-                } catch (e: Exception) {
-                    AppLogger.e("EventManagerViewModel", "Background admin-gate sync failed", e)
-                }
-            }
-            return
-        }
-
         viewModelScope.launch {
             _adminGateSyncSucceeded.value = null
             _syncError.value = null
             try {
+                if (institutionHasLocalAdminFromDb()) {
+                    withContext(Dispatchers.Main) { refreshAllData() }
+                    _adminGateSyncSucceeded.value = true
+                    return@launch
+                }
+
                 if (_isSyncing.value) {
                     AppLogger.i(
                         "EventManagerViewModel",
-                        "Admin gate waiting for in-flight sync instead of starting another"
+                        "Admin gate waiting for in-flight sync instead of starting another",
                     )
                     isSyncing.first { !it }
-                    if (hasLocalDataForVisibleOrg() || hasFreshRemotePullForAdminGate()) {
+                    if (institutionHasLocalAdminFromDb()) {
+                        withContext(Dispatchers.Main) { refreshAllData() }
                         _adminGateSyncSucceeded.value = true
                         AppLogger.i("EventManagerViewModel", "Admin gate preparation reused in-flight sync")
+                        return@launch
+                    }
+                }
+
+                if (hasFreshRemotePullForAdminGate()) {
+                    val snapshot = readStableMemberRosterSnapshot()
+                    val hasAdmin = institutionHasLocalAdminForActiveOrg(snapshot.guests, snapshot.volunteers)
+                    if (hasAdmin) {
+                        withContext(Dispatchers.Main) { refreshAllData() }
+                        _adminGateSyncSucceeded.value = true
+                        return@launch
+                    }
+                    if (snapshot.memberCount == 0) {
+                        _adminGateSyncSucceeded.value = true
                         return@launch
                     }
                 }
@@ -4161,13 +4406,14 @@ class EventManagerViewModel(
                 _isSyncing.value = true
                 AppLogger.i(
                     "EventManagerViewModel",
-                    "Preparing remote sync for admin authentication gate"
+                    "Preparing remote sync for admin authentication gate",
                 )
                 val result = withContext(Dispatchers.IO) {
                     syncCoordinator?.prepareForAdminGate()
                         ?: syncManager?.repairSheetStructureThenFullDownload()
                 }
                 if (result?.isSuccess == true) {
+                    readStableMemberRosterSnapshot()
                     println("🔄 Admin gate sync successful, refreshing UI data...")
                     withContext(Dispatchers.Main) {
                         refreshAllData()
@@ -4361,6 +4607,7 @@ class EventManagerViewModel(
      */
     fun performPageChangeSync(currentPage: String, newPage: String) {
         viewModelScope.launch {
+            if (skipAutomaticFirebasePull()) return@launch
             _isSyncing.value = true
             _syncError.value = null
             
@@ -4758,7 +5005,7 @@ class EventManagerViewModel(
 
     private suspend fun refreshAllData(dbSettleDelayMs: Long = 100) {
         try {
-            println("🔄 Starting refreshAllData...")
+            vmDebug { "Starting refreshAllData..." }
             
             // Room Flow emissions can lag after batch writes; org switch only changes the filter.
             if (dbSettleDelayMs > 0) {
@@ -4767,7 +5014,7 @@ class EventManagerViewModel(
             
             // Get data from repository on IO dispatcher
             val (guests, volunteers, jobs, jobTypeConfigs, venues, salesSheetItems, transfers) = withContext(Dispatchers.IO) {
-                println("📊 Reading fresh data from database...")
+                vmDebug { "Reading fresh data from database..." }
                 val guestsData = repository.getAllGuests().first()
                 val volunteersData = repository.getAllVolunteers().first()
                 val jobsData = repository.getAllJobs().first()
@@ -4776,43 +5023,75 @@ class EventManagerViewModel(
                 val salesSheetItemsData = repository.getAllSalesSheetItems().first()
                 val transfersData = repository.getAllAccountTransfersOnce()
                 
-                println("📊 Database read complete: ${guestsData.size} guests, ${volunteersData.size} volunteers, ${jobsData.size} jobs, ${jobTypeConfigsData.size} job types, ${venuesData.size} venues, ${salesSheetItemsData.size} sales items, ${transfersData.size} transfers")
+                vmDebug {
+                    "Database read complete: ${guestsData.size} guests, ${volunteersData.size} volunteers, " +
+                        "${jobsData.size} jobs, ${jobTypeConfigsData.size} job types, ${venuesData.size} venues, " +
+                        "${salesSheetItemsData.size} sales items, ${transfersData.size} transfers"
+                }
                 
                 Sept(guestsData, volunteersData, jobsData, jobTypeConfigsData, venuesData, salesSheetItemsData, transfersData)
             }
+
+            // Dedupe / org filter / balances off Main (same algorithms, less UI jank)
+            data class PreparedLists(
+                val guests: List<Guest>,
+                val volunteers: List<Volunteer>,
+                val jobs: List<Job>,
+                val jobTypes: List<JobTypeConfig>,
+                val venues: List<VenueEntity>,
+                val sales: List<SalesSheetItem>,
+                val transfers: List<AccountTransfer>,
+                val balances: Map<AccountHolderKey, Double>,
+            )
+            val prepared = withContext(Dispatchers.Default) {
+                val nextTransfers = filterForVisibleOrg(transfers) { it.firebaseOrgId }
+                PreparedLists(
+                    guests = removeDuplicateGuests(guests),
+                    volunteers = removeDuplicateVolunteers(volunteers),
+                    jobs = removeDuplicateJobs(jobs),
+                    jobTypes = removeDuplicateJobTypes(jobTypeConfigs),
+                    venues = removeDuplicateVenues(venues),
+                    sales = filterForVisibleOrg(salesSheetItems) { it.firebaseOrgId }.sortedBy { it.name },
+                    transfers = nextTransfers,
+                    balances = AccountBalanceService.computeAllBalances(nextTransfers),
+                )
+            }
             
-            // Update StateFlows on Main dispatcher to ensure Compose recomposition
+            // Update StateFlows on Main dispatcher to ensure Compose recomposition.
+            // Yield between large list writes so the welcome/topo frame can breathe.
             withContext(Dispatchers.Main) {
-                println("🔄 Updating StateFlows on Main dispatcher...")
                 val oldGuestCount = _guests.value.size
                 val oldVolunteerCount = _volunteers.value.size
 
-                val nextGuests = removeDuplicateGuests(guests)
-                val nextVolunteers = removeDuplicateVolunteers(volunteers)
-                val nextJobs = removeDuplicateJobs(jobs)
-                val nextJobTypes = removeDuplicateJobTypes(jobTypeConfigs)
-                val nextVenues = removeDuplicateVenues(venues)
-                val nextSales = filterForVisibleOrg(salesSheetItems) { it.firebaseOrgId }.sortedBy { it.name }
-                val nextTransfers = filterForVisibleOrg(transfers) { it.firebaseOrgId }
-
-                if (_guests.value != nextGuests) _guests.value = nextGuests
-                if (_volunteers.value != nextVolunteers) _volunteers.value = nextVolunteers
-                if (_jobs.value != nextJobs) _jobs.value = nextJobs
-                if (_jobTypeConfigs.value != nextJobTypes) _jobTypeConfigs.value = nextJobTypes
-                if (_venues.value != nextVenues) _venues.value = nextVenues
-                if (_salesSheetItems.value != nextSales) _salesSheetItems.value = nextSales
-                if (_accountTransfers.value != nextTransfers) {
-                    _accountTransfers.value = nextTransfers
-                    _accountBalances.value = AccountBalanceService.computeAllBalances(nextTransfers)
+                if (_guests.value != prepared.guests) _guests.value = prepared.guests
+                yield()
+                if (_volunteers.value != prepared.volunteers) _volunteers.value = prepared.volunteers
+                yield()
+                if (_jobs.value != prepared.jobs) _jobs.value = prepared.jobs
+                yield()
+                if (_jobTypeConfigs.value != prepared.jobTypes) _jobTypeConfigs.value = prepared.jobTypes
+                if (_venues.value != prepared.venues) _venues.value = prepared.venues
+                yield()
+                if (_salesSheetItems.value != prepared.sales) _salesSheetItems.value = prepared.sales
+                if (_accountTransfers.value != prepared.transfers) {
+                    _accountTransfers.value = prepared.transfers
+                    _accountBalances.value = prepared.balances
                 }
                 publishProfilePhotosUploadEnabled()
+                publishAnnouncementsBilleterieSendEnabled()
 
-                println("✅ StateFlows updated - Guests: $oldGuestCount → ${_guests.value.size}, Volunteers: $oldVolunteerCount → ${_volunteers.value.size}, Jobs: ${_jobs.value.size}, Job Types: ${_jobTypeConfigs.value.size}, Venues: ${_venues.value.size}, Sales Items: ${_salesSheetItems.value.size}")
+                vmDebug {
+                    "StateFlows updated - Guests: $oldGuestCount → ${_guests.value.size}, " +
+                        "Volunteers: $oldVolunteerCount → ${_volunteers.value.size}, Jobs: ${_jobs.value.size}, " +
+                        "Job Types: ${_jobTypeConfigs.value.size}, Venues: ${_venues.value.size}, " +
+                        "Sales Items: ${_salesSheetItems.value.size}"
+                }
             }
             reconcilePeopleCounterAfterVenuesChangedInternal()
+            checkForNewAnnouncements(prepared.venues)
         } catch (e: Exception) {
-            println("❌ Failed to refresh data: ${e.message}")
-            e.printStackTrace()
+            vmDebug { "Failed to refresh data: ${e.message}" }
+            AppLogger.e(VM_LOG_TAG, "Failed to refresh data", e)
         }
     }
     
@@ -4857,8 +5136,12 @@ class EventManagerViewModel(
 
                 // Switch back to main thread only for state update
                 withContext(Dispatchers.Main) {
-                    _volunteers.value = updatedVolunteers
-                    println("Updated volunteer activity for ${updatedVolunteers.size} volunteers based on ${currentJobs.size} jobs")
+                    if (_volunteers.value != updatedVolunteers) {
+                        _volunteers.value = updatedVolunteers
+                    }
+                    vmDebug {
+                        "Updated volunteer activity for ${updatedVolunteers.size} volunteers based on ${currentJobs.size} jobs"
+                    }
                 }
             }
             // If no jobs are loaded yet, activity will be calculated when jobs are available
@@ -4960,13 +5243,26 @@ class EventManagerViewModel(
      */
     private fun removeDuplicateGuests(guests: List<Guest>): List<Guest> {
         val scoped = filterForVisibleOrg(guests) { it.firebaseOrgId }
+        if (scoped.isEmpty()) return scoped
         fun dedupeKey(g: Guest): String {
             return if (NanoIdGenerator.isValidNanoId(g.nanoId)) g.nanoId else "row:${g.id}"
         }
-        val byKey = scoped.groupBy { dedupeKey(it) }
-        val uniqueByIdentity = byKey.values.map { group ->
-            // Keep the newest entry for each identity to avoid reverting recent changes.
-            group.maxByOrNull { it.lastModified } ?: group.first()
+        // Fast path: no identity collisions → skip groupBy allocation
+        val seen = HashSet<String>(scoped.size)
+        var hasDuplicates = false
+        for (g in scoped) {
+            if (!seen.add(dedupeKey(g))) {
+                hasDuplicates = true
+                break
+            }
+        }
+        val uniqueByIdentity = if (!hasDuplicates) {
+            scoped
+        } else {
+            scoped.groupBy { dedupeKey(it) }.values.map { group ->
+                // Keep the newest entry for each identity to avoid reverting recent changes.
+                group.maxByOrNull { it.lastModified } ?: group.first()
+            }
         }
         return VolunteerBenefitGuestMerge.collapseDuplicates(uniqueByIdentity)
     }
@@ -4979,12 +5275,17 @@ class EventManagerViewModel(
      */
     private fun removeDuplicateVolunteers(volunteers: List<Volunteer>): List<Volunteer> {
         val scoped = filterForVisibleOrg(volunteers) { it.firebaseOrgId }
+        if (scoped.size <= 1) return scoped
         // Group by NanoID first to handle same-ID duplicates
         val byNanoId = scoped.groupBy { "${it.firebaseOrgId}:${it.id}" }
         
         // For each NanoID group, keep only the oldest (lowest lastModified)
-        val uniqueByNanoId = byNanoId.values.map { group ->
-            group.minByOrNull { it.lastModified } ?: group.first()
+        val uniqueByNanoId = if (byNanoId.size == scoped.size) {
+            scoped
+        } else {
+            byNanoId.values.map { group ->
+                group.minByOrNull { it.lastModified } ?: group.first()
+            }
         }
         
         // Now check for content duplicates (different NanoID but same info)
@@ -4992,6 +5293,7 @@ class EventManagerViewModel(
         fun contentKey(v: Volunteer) = "${v.firebaseOrgId}_${v.name}_${v.lastNameAbbreviation}_${v.email}_${v.phoneNumber}_${v.dateOfBirth}_${v.gender}_${v.currentRank}_${v.isActive}_${v.nfcCardUid}_${v.profilePhotoUrl}"
         
         val byContent = uniqueByNanoId.groupBy { contentKey(it) }
+        if (byContent.size == uniqueByNanoId.size) return uniqueByNanoId
         
         // For each content group, keep only the oldest (lowest lastModified)
         return byContent.values.map { group ->
@@ -5035,18 +5337,24 @@ class EventManagerViewModel(
      */
     private fun removeDuplicateJobTypes(jobTypes: List<JobTypeConfig>): List<JobTypeConfig> {
         val scoped = filterForVisibleOrg(jobTypes) { it.firebaseOrgId }
+        if (scoped.size <= 1) return scoped
         // Group by ID first to handle same-ID duplicates
         val byId = scoped.groupBy { it.id }
         
         // For each ID group, keep only the oldest (lowest lastModified)
-        val uniqueById = byId.values.map { group ->
-            group.minByOrNull { it.lastModified } ?: group.first()
+        val uniqueById = if (byId.size == scoped.size) {
+            scoped
+        } else {
+            byId.values.map { group ->
+                group.minByOrNull { it.lastModified } ?: group.first()
+            }
         }
         
         // Now check for content duplicates (different ID but same info)
         fun contentKey(j: JobTypeConfig) = "${j.firebaseOrgId}_${j.name}_${j.isActive}_${j.isShiftJob}_${j.isOrionJob}_${j.requiresShiftTime}_${j.description}"
         
         val byContent = uniqueById.groupBy { contentKey(it) }
+        if (byContent.size == uniqueById.size) return uniqueById
         
         // For each content group, keep only the oldest (lowest lastModified)
         return byContent.values.map { group ->
@@ -5583,7 +5891,9 @@ class EventManagerViewModel(
     fun syncVolunteersWithTargetedUpdates() {
         viewModelScope.launch {
             if (settingsManagerCached?.getBackendType() == BackendType.FIREBASE) {
-                syncCoordinator?.performManualSync()
+                if (!skipAutomaticFirebasePull()) {
+                    syncCoordinator?.performManualSync()
+                }
                 return@launch
             }
             _isSyncing.value = true
@@ -5705,7 +6015,9 @@ class EventManagerViewModel(
     fun syncGuestsWithTargetedUpdates() {
         viewModelScope.launch {
             if (settingsManagerCached?.getBackendType() == BackendType.FIREBASE) {
-                syncCoordinator?.performManualSync()
+                if (!skipAutomaticFirebasePull()) {
+                    syncCoordinator?.performManualSync()
+                }
                 return@launch
             }
             _isSyncing.value = true
@@ -5875,7 +6187,9 @@ class EventManagerViewModel(
     fun syncJobsWithTargetedUpdates() {
         viewModelScope.launch {
             if (settingsManagerCached?.getBackendType() == BackendType.FIREBASE) {
-                syncCoordinator?.performManualSync()
+                if (!skipAutomaticFirebasePull()) {
+                    syncCoordinator?.performManualSync()
+                }
                 return@launch
             }
             _isSyncing.value = true
@@ -7090,7 +7404,11 @@ class EventManagerViewModel(
         }
 
         if (newAnnouncements.isNotEmpty()) {
-            _pendingAnnouncements.value = newAnnouncements
+            val existing = _pendingAnnouncements.value
+            val merged = (existing + newAnnouncements.filter { incoming ->
+                existing.none { it.venueKey == incoming.venueKey && it.sentAt == incoming.sentAt }
+            }).sortedBy { it.sentAt }
+            _pendingAnnouncements.value = merged
         }
     }
 

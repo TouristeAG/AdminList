@@ -565,7 +565,7 @@
     <string name="ticket_check_coming_soon">此功能即將推出</string>
     <string name="ticket_check_description">在入口快速開啟賓客名單與掃描。</string>
     <string name="billeterie_stat_permanent_guests">常駐賓客</string>
-    <string name="billeterie_stat_temporary_guests_today">臨時賓客（今日）</string>
+    <string name="billeterie_stat_temporary_guests_today">臨時賓客</string>
     <string name="billeterie_stat_volunteers_on_list">名單上的志工</string>
     <string name="billeterie_stat_total_without_invites">名單人數（不含+1）</string>
     <string name="billeterie_button_guest_list">賓客名單</string>
@@ -1338,7 +1338,7 @@
     <string name="firebase_web_client_id_label">Web 用戶端 ID</string>
     <string name="firebase_web_client_id_hint">機構的 OAuth 2.0 Web 用戶端 ID（Firebase Google 登入）。不是開發者 Gmail 桌面 OAuth JSON。</string>
     <string name="firebase_web_client_secret_label">Web 用戶端密鑰</string>
-    <string name="firebase_web_client_secret_hint">機構 Web 用戶端密鑰（桌面 + Android）。已授權重新導向 URI（非 JavaScript 來源）：桌面 — http://localhost:8889/Callback（以及 :8888、:8765、:9090）。Android — com.eventmanager.app:/firebaseoauth2callback（無需 SHA-1）。</string>
+    <string name="firebase_web_client_secret_hint">機構 Web 用戶端密鑰（桌面 + Android）。已授權重新導向 URI（非 JavaScript 來源）：http://localhost:8889/Callback（以及 :8888、:8765、:9090）。桌面與 Android 共用同一列表。</string>
     <string name="firebase_step_signin_title">3. Google 登入</string>
     <string name="firebase_step_signin_body">授權此裝置。首個管理員帳號將成為組織管理員。</string>
     <string name="firebase_sign_in">使用 Google 登入</string>
@@ -1355,27 +1355,27 @@
     <string name="firebase_config_paste_hint">貼上 Firebase 控制台的 Web SDK 設定（apiKey、appId、projectId）。僅管理員需要。</string>
     <string name="firebase_config_paste_apply">套用貼上的設定</string>
     <string name="firebase_join_qr_title">邀請其他裝置（QR 碼）</string>
-    <string name="firebase_join_qr_body">僅與團隊分享此 QR 碼（含 Google 登入憑證）。其他裝置在設定 → 加入 中掃描即可，無需再輸入。</string>
+    <string name="firebase_join_qr_body">僅與團隊分享此 QR 碼。包含專案設定、Google 登入憑證與邀請碼 — 掃描一次即可。</string>
     <string name="firebase_join_error_oauth_missing">此邀請碼缺少 Google 登入憑證。請向管理員索取新 QR 碼（設定 → Firebase 同步）。</string>
     <string name="firebase_join_qr_need_config">請先填寫組織 ID 和專案選項以產生加入 QR 碼。</string>
     <string name="firebase_join_copy_code">複製設定碼</string>
     <string name="firebase_join_code_copied">設定碼已複製</string>
     <string name="firebase_join_scan_title">加入此組織</string>
-    <string name="firebase_join_scan_body">掃描管理員 QR 碼，或在下方輸入兩個代碼。它們不是同一個碼。</string>
+    <string name="firebase_join_scan_body">掃描管理員 QR（建議），或貼上設定碼。完整代碼已含邀請碼，無需第二個碼。</string>
     <string name="firebase_join_scan">掃描 QR 碼</string>
     <string name="firebase_join_paste_label">設定碼</string>
     <string name="firebase_join_paste_code">套用代碼</string>
-    <string name="firebase_join_received">已收到設定 — 如需要請輸入邀請碼，然後登入。</string>
+    <string name="firebase_join_received">已收到設定 — 使用 Google 登入以完成加入。</string>
     <string name="firebase_join_wizard_option">加入現有組織</string>
-    <string name="firebase_join_wizard_option_body">掃描 QR 碼，或輸入設定碼和邀請碼。</string>
+    <string name="firebase_join_wizard_option_body">掃描管理員 QR 或貼上設定碼（含邀請碼）。</string>
     <string name="firebase_join_config_code_label">設定碼</string>
-    <string name="firebase_join_config_code_hint">以 noctulist-fb 開頭的長碼 — 與 QR 碼內容相同。</string>
-    <string name="firebase_join_invite_code_label">邀請碼</string>
-    <string name="firebase_join_invite_code_hint">管理員提供的 8 位短碼。不在 QR 碼中。</string>
+    <string name="firebase_join_config_code_hint">以 noctulist-fb 開頭的長碼 — 與 QR 內容相同（含邀請碼）。</string>
+    <string name="firebase_join_invite_code_label">邀請碼（選填）</string>
+    <string name="firebase_join_invite_code_hint">僅舊版 QR 未包含時需要。完整代碼已包含。</string>
     <string name="firebase_join_invite_copy">複製邀請碼</string>
     <string name="firebase_join_invite_copied">邀請碼已複製</string>
-    <string name="firebase_join_invite_admin_body">請單獨告知此短碼 — 它不在 QR 碼中。</string>
-    <string name="firebase_join_or_enter_codes">或手動輸入兩個代碼</string>
+    <string name="firebase_join_invite_admin_body">也已包含在上方 QR 與設定碼中。此處顯示便於核對或單獨分享。</string>
+    <string name="firebase_join_or_enter_codes">或貼上設定碼</string>
     <string name="firebase_create_new_option">設定新 Firebase（管理員）</string>
     <string name="firebase_project_configured_hidden">Firebase 專案已設定（詳情已隱藏）</string>
     <string name="firebase_project_secrets_restricted">僅當您既是本機管理員又是 Firebase 組織管理員時，才能檢視專案密鑰。請使用具有 Firebase 管理員角色的 Google 帳號登入。</string>
@@ -1444,6 +1444,8 @@
     <string name="firebase_tutorial_copy_rules">複製 firestore.rules 到剪貼簿</string>
     <string name="firebase_tutorial_copy_rules_done">已複製 — 貼到 Firestore → Rules，然後發佈</string>
     <string name="firebase_tutorial_copy_rules_error">無法載入規則 — 請開啟專案中的 firebase/firestore.rules</string>
+    <string name="firebase_tutorial_copy_redirect_uris">複製 localhost 重新導向 URI</string>
+    <string name="firebase_tutorial_copy_redirect_uris_done">已複製 — 將每個 URI 貼到 Authorized redirect URIs，然後儲存</string>
     <string name="firebase_tutorial_storage_optional_title">選用：個人資料照片（Firebase Storage）</string>
     <string name="firebase_tutorial_storage_optional_body">略過此步以留在免費 Spark 方案。啟用 Storage 可能需要付費 Blaze 方案。\n\n若要個人資料照片：\n1. Firebase Console → Build → Storage → Get started（同一專案）。\n2. Storage → Rules（網址須包含 /storage/rules — 不是 Firestore）。\n3. 貼上 NoctuList 的 Storage 規則（下方按鈕）→ Publish。\n4. 在 NoctuList 設定 → Firebase 中開啟「啟用個人資料照片」（機構內所有裝置都會開啟）。\n\n可以稍後完成。沒有 Storage，應用程式仍可完整使用。</string>
     <string name="firebase_tutorial_copy_storage_rules">複製 storage.rules 到剪貼簿</string>
@@ -1495,20 +1497,8 @@ C) Web client secret（桌面端必需）
 選用來源（無路徑）：http://localhost:8889 等。
 → 儲存，等待約一分鐘，然後重試登入。
 
-Android 裝置 → 第 6 步。僅桌面 → 第 7 步。</string>
-    <string name="firebase_tutorial_fb_step6_title">6. Android（選用）</string>
-    <string name="firebase_tutorial_fb_step6_body">若僅桌面可略過。
-1. Firebase 控制台 → 專案設定 → 新增應用程式 → Android。
-2. 套件名稱須完全一致：com.eventmanager.app
-3. 新增偵錯 SHA-1（Google 登入所需）：
-   macOS/Linux：
-   keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android
-   Windows：
-   keytool -list -v -keystore %USERPROFILE%\\.android\\debug.keystore -alias androiddebugkey -storepass android -keypass android
-4. 選用：將 google-services.json 下載到 app/google-services.json。
-5. 裝置上仍使用第 5 步的 Web client ID（Android 登入需要）。密鑰僅用於桌面。
+繼續第 6 步。</string>
 
-若登入失敗：套件名稱 + SHA-1、Web client ID、Google 提供者已啟用，然後登出 / 重新登入。</string>
     <string name="firebase_tutorial_cloud_step1_title">1. 開啟 Cloud 專案</string>
     <string name="firebase_tutorial_cloud_step1_body">1. 開啟 https://console.cloud.google.com
 2. 頂部列 → 專案選擇器 → 選擇機構專案（若已用 Sheets 則選同一專案）。
@@ -1554,20 +1544,15 @@ D) Application ID（appId）
 • 若無：新增應用程式 → Web 一次，暱稱「NoctuList」，略過 Hosting；從設定片段複製 appId。
 • 或將完整 Firebase Web 設定貼到 NoctuList。
 
-Android → 第 6 步。僅桌面 → 第 7 步。</string>
-    <string name="firebase_tutorial_cloud_step6_title">6. Android 登入（無需 SHA-1）</string>
-    <string name="firebase_tutorial_cloud_step6_body">Android 使用與桌面相同的 Web OAuth 用戶端 — 無需 Android OAuth 用戶端或 SHA-1 指紋。
-1. Cloud 控制台 → Credentials → 您的 Web application 用戶端（第 4 步）。
-2. 在 Authorized redirect URIs 中精確新增：com.eventmanager.app:/firebaseoauth2callback
-3. 在手機/平板 NoctuList 中：貼上 Web client ID + secret（第 5 步），然後點擊使用 Google 登入（會開啟瀏覽器）。
-4. 選用：Firebase → 新增 Android 應用程式 / google-services.json 對登入不是必需的。</string>
-    <string name="firebase_tutorial_step7_title">7. 填寫 NoctuList，然後遷移 / 連線</string>
+繼續第 6 步。</string>
+
+    <string name="firebase_tutorial_step7_title">6. 填寫 NoctuList，然後遷移 / 連線</string>
     <string name="firebase_tutorial_step7_body">在管理員 Firebase 同步或遷移對話框中：
 • 組織 ID — 簡短共用名稱（例如：noctulist-club）。每台裝置相同。
 • Project ID、Application ID、API key、Web client ID，桌面端還需 Web client secret。
 • 或貼上 Web 設定 + 填寫 Web client ID/secret，然後為其他裝置使用加入 QR 碼。
 使用 Google 登入（首位管理員成為組織管理員）。僅在登入成功後再開始從 Sheets 遷移。其他裝置透過 QR 碼 / follow 加入 — 不應重新輸入密鑰。</string>
-    <string name="firebase_tutorial_step8_title">8. 設定完成後</string>
+    <string name="firebase_tutorial_step8_title">7. 設定完成後</string>
     <string name="firebase_tutorial_step8_body">Firestore 中應看到 orgs/{yourOrgId}/…（guests、members、metadata 等）。在驗證收銀、門禁和第二台裝置前請保留 Sheets 備份。計費：測試期間保持免費 Spark / 免費層；僅超出配額時升級。</string>
     <string name="migration_wizard_to_firebase_title">切換到 Firebase</string>
     <string name="migration_wizard_to_sheets_title">切換到 Google Sheets</string>

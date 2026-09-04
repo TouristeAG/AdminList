@@ -584,7 +584,7 @@
     <string name="ticket_check_coming_soon">Hoc pluma venit mox</string>
     <string name="ticket_check_description">Velox accessum ad album hospitum et in-elit scanner\'introitus.</string>
     <string name="billeterie_stat_permanent_guests">Hospess permanents</string>
-    <string name="billeterie_stat_temporary_guests_today">Hospess temporaires (audiesd\'hui)</string>
+    <string name="billeterie_stat_temporary_guests_today">Hospess temporaires</string>
     <string name="billeterie_stat_volunteers_on_list">Voluntarii in index</string>
     <string name="billeterie_stat_total_without_invites">Sur index (sans +1)</string>
     <string name="billeterie_button_guest_list">Index hospitum</string>

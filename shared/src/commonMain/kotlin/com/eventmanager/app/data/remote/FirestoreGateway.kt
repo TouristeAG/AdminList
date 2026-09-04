@@ -32,6 +32,26 @@ internal data class FirestoreMemberRecord(
 )
 
 /**
+ * Server-confirmed membership state for `orgs/{orgId}/members/{uid}`.
+ *
+ * [Absent] and [Denied] must never be collapsed together: bootstrapping an org admin on top of a
+ * [Denied] probe rewrites an existing member doc as `role: admin`, which the rules refuse and
+ * which would otherwise wipe the org invitation code.
+ */
+sealed class MembershipProbe {
+    data class Member(val role: String) : MembershipProbe()
+
+    /** The server confirmed the member document does not exist. */
+    data object Absent : MembershipProbe()
+
+    /** The server refused the read (rules not published, email domain not allowed, ...). */
+    data object Denied : MembershipProbe()
+
+    /** Offline, timed out, or Firestore not configured — membership is unknown, do not write. */
+    data object Unavailable : MembershipProbe()
+}
+
+/**
  * Abstraction over GitLive Firestore so Desktop spike / missing config can no-op safely.
  */
 interface FirestoreGateway {
@@ -56,6 +76,17 @@ interface FirestoreGateway {
     suspend fun readMemberRoleFromServer(orgId: String, uid: String): String? = readMemberRole(orgId, uid)
     /** Confirms membership against the Firestore server (avoids optimistic offline cache). */
     suspend fun isOrgAccessibleOnServer(orgId: String, uid: String): Boolean
+
+    /**
+     * Server-confirmed membership, distinguishing "no member doc" from "read refused" and from
+     * "cannot reach the server". Callers decide between bootstrap, join, and doing nothing.
+     */
+    suspend fun probeMembership(orgId: String, uid: String): MembershipProbe {
+        if (!isAvailable()) return MembershipProbe.Unavailable
+        val role = readMemberRoleFromServer(orgId, uid)?.takeIf { it.isNotBlank() }
+            ?: return MembershipProbe.Unavailable
+        return MembershipProbe.Member(role)
+    }
     suspend fun listMembers(orgId: String): List<FirebaseTeamMemberListing> = emptyList()
     suspend fun writeBackendAnnouncement(orgId: String, announcement: InstitutionBackendAnnouncement)
     suspend fun runPeopleCounterTransaction(
