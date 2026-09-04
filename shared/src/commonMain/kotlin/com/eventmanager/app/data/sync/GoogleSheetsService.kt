@@ -101,7 +101,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
         private const val SHEET_LAST_COL_JOBS = 8 // I (v2 shifts sheet)
         private const val SHEET_LAST_COL_JOB_TYPES = 10 // K
         private const val SHEET_LAST_COL_VENUES = 10 // K
-        private const val SHEET_LAST_COL_SALES_ITEMS = 8 // I
+        private const val SHEET_LAST_COL_SALES_ITEMS = 9 // J
         private const val SHEET_LAST_COL_TRANSFERS = 18 // S
         private const val SHEET_LAST_COL_SETTINGS = 2 // C (Key, Value, Last Modified)
 
@@ -2646,6 +2646,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
                             item.categories,
                             item.emoji,
                             item.availableVenues,
+                            if (item.isDeposit) "Yes" else "No",
                         )
                     }
 
@@ -2662,6 +2663,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
                                     "Categories",
                                     "Emoji",
                                     "Available Venues",
+                                    "Deposit",
                                 )
                             ) + values
                         )
@@ -2709,7 +2711,7 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
                 operation = {
                     val response = sheetsService?.spreadsheets()?.values()?.get(
                         settingsManager.getSpreadsheetId(),
-                        "${settingsManager.getSalesItemsSheet()}!A2:I"
+                        "${settingsManager.getSalesItemsSheet()}!A2:J"
                     )?.execute()
 
                     if (response == null) {
@@ -2740,12 +2742,15 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
                                     discountRaw.toIntOrNull()?.let { it > 0 } == true -> true
                                     else -> false
                                 }
+                                val depositRaw = row.getOrNull(9)?.toString().orEmpty().trim()
                                 SalesSheetItem(
                                     id = 0,
                                     sheetsId = rowNumber.toString(),
                                     name = row[0].toString(),
                                     price = row.getOrNull(1)?.toString()?.toDoubleOrNull() ?: 0.0,
                                     hasDiscount = hasDiscount,
+                                    isDeposit = depositRaw.equals("yes", ignoreCase = true) ||
+                                        depositRaw.toIntOrNull()?.let { it > 0 } == true,
                                     requiredRank = requiredRank,
                                     isActive = row.getOrNull(4)?.toString()?.equals("Inactive", ignoreCase = true) != true,
                                     lastModified = parseLastModified(row.getOrNull(5)?.toString().orEmpty()),
@@ -3601,8 +3606,9 @@ class GoogleSheetsService(private val platformContext: PlatformContext) {
     }
 
     /**
-     * Repositions the ms↔date helper on Sales (columns L–M) and Transfers (V–W) after schema
-     * column changes (e.g. Available Venues, Venue). Clears stale panels in the sidecar zone first.
+     * Repositions the ms↔date helper on Sales (columns M–N) and Transfers (V–W) after schema
+     * column changes (e.g. Available Venues, Deposit, Venue). Clears stale panels in the sidecar
+     * zone first, so the helper that older builds left one column to the left is cleaned up.
      */
     suspend fun repairSalesAndTransfersEpochPanels(): Boolean = withContext(Dispatchers.IO) {
         try {

@@ -615,6 +615,7 @@ class GitLiveFirestoreGateway(
         "availableVenues" to item.availableVenues,
         "isActive" to item.isActive,
         "hasDiscount" to item.hasDiscount,
+        "isDeposit" to item.isDeposit,
         "requiredRank" to item.requiredRank?.name,
         "lastModified" to item.lastModified,
     )

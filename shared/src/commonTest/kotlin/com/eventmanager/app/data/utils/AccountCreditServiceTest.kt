@@ -62,4 +62,52 @@ class AccountCreditServiceTest {
         val payment = computePosPayment(listOf(line(14.0)), accountBalance = 0.0, barDiscountPercent = 50)
         assertEquals(-7.0, computePosLedgerAmount(payment), 1e-9)
     }
+
+    private fun depositReturn(price: Double, qty: Int = 1) = PosCartLine(
+        itemId = -2L,
+        name = "Retour Verre",
+        unitPrice = -price,
+        quantity = qty,
+        barDiscountEligible = false,
+    )
+
+    @Test
+    fun computePosPayment_loneDepositReturn_creditsTheAccount() {
+        val payment = computePosPayment(listOf(depositReturn(2.0)), accountBalance = 0.0, barDiscountPercent = 0)
+
+        assertEquals(-2.0, payment.creditPaid, 1e-9)
+        assertEquals(0.0, payment.cashOrCardDue, 1e-9)
+        assertEquals(2.0, computePosLedgerAmount(payment), 1e-9)
+    }
+
+    @Test
+    fun computePosPayment_depositReturn_repaysAnOverdraft() {
+        val payment = computePosPayment(listOf(depositReturn(2.0)), accountBalance = -5.0, barDiscountPercent = 0)
+
+        assertEquals(2.0, computePosLedgerAmount(payment), 1e-9)
+    }
+
+    @Test
+    fun computePosPayment_returnFundsThePurchaseEvenWhenItIsListedLast() {
+        val cart = listOf(
+            PosCartLine(itemId = 2L, name = "Verre", unitPrice = 2.0, quantity = 1),
+            depositReturn(2.0),
+        )
+        val payment = computePosPayment(cart, accountBalance = 0.0, barDiscountPercent = 0)
+
+        assertEquals(0.0, payment.creditPaid, 1e-9)
+        assertEquals(0.0, payment.cashOrCardDue, 1e-9)
+        assertEquals(0.0, computePosLedgerAmount(payment), 1e-9)
+    }
+
+    @Test
+    fun computePosPayment_returnCoversPartOfAPurchaseBeforeCash() {
+        val cart = listOf(
+            PosCartLine(itemId = 3L, name = "Bière", unitPrice = 5.0, quantity = 1),
+            depositReturn(2.0),
+        )
+        val payment = computePosPayment(cart, accountBalance = 0.0, barDiscountPercent = 0)
+
+        assertEquals(3.0, payment.cashOrCardDue, 1e-9)
+    }
 }

@@ -456,6 +456,7 @@ object FirestoreChangeApplier {
             availableVenues = stringOf(data["availableVenues"]) ?: existing?.availableVenues.orEmpty(),
             isActive = boolOf(data["isActive"]) ?: existing?.isActive ?: true,
             hasDiscount = boolOf(data["hasDiscount"]) ?: existing?.hasDiscount ?: false,
+            isDeposit = boolOf(data["isDeposit"]) ?: existing?.isDeposit ?: false,
             requiredRank = enumOrNull<VolunteerRank>(stringOf(data["requiredRank"])) ?: existing?.requiredRank,
             lastModified = remoteLm,
             firebaseOrgId = orgId,

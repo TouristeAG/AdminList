@@ -360,6 +360,15 @@
     <string name="sales_subcategory_remove_title">Remove this sub-category?</string>
     <string name="sales_subcategory_remove_message">“%1$s” will be removed from every product in this category.</string>
     <string name="pos_subcategory_all">All</string>
+    <string name="sales_deposit_label">Deposit product</string>
+    <string name="sales_deposit_hint">The POS also shows a “Return …” tile that pays the price back. It is only allowed against a purchase made on the same account in the last 24 hours.</string>
+    <string name="sales_deposit_badge">Deposit</string>
+    <string name="pos_deposit_return_name">Return %1$s</string>
+    <string name="pos_deposit_return_name_caps">RETURN %1$s</string>
+    <string name="pos_deposit_return_blocked_none">“%1$s” refused: this account did not buy this item in the last 24 hours.</string>
+    <string name="pos_deposit_return_blocked_limit">“%1$s” refused: only %2$d can be given back — that is how many this account bought in the last 24 hours.</string>
+    <string name="pos_sale_refused">Sale refused</string>
+    <string name="pos_sale_refused_back_to_cart">Back to the cart</string>
     <string name="sales_emoji_label">Emoji</string>
     <string name="sales_category_merch">Merch</string>
     <string name="sales_category_entry">Entry</string>

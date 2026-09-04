@@ -10,6 +10,8 @@ import com.eventmanager.app.data.models.Volunteer
 import com.eventmanager.app.data.repository.EventManagerRepository
 import com.eventmanager.app.resources.Res
 import com.eventmanager.app.resources.account_reversal_description
+import com.eventmanager.app.resources.pos_deposit_return_blocked_limit
+import com.eventmanager.app.resources.pos_deposit_return_blocked_none
 import com.eventmanager.app.resources.pos_pay_cash_card
 import com.eventmanager.app.resources.pos_sale_complete_message
 import com.eventmanager.app.data.utils.NanoIdGenerator
@@ -33,7 +35,14 @@ data class PosPaymentBreakdown(
     val effectiveTotal: Double get() = creditPaid + cashOrCardDue
 }
 
-/** Credits are charged at full price; bar discount applies only to the cash/card portion of eligible lines. */
+/**
+ * Credits are charged at full price; bar discount applies only to the cash/card portion of
+ * eligible lines.
+ *
+ * Deposit returns carry a negative price and settle purely against credit — a negative
+ * [PosPaymentBreakdown.creditPaid] is money going back onto the account. They are applied before
+ * the charges so a "buy a glass, give one back" basket nets to zero instead of asking for cash.
+ */
 fun computePosPayment(
     cart: List<PosCartLine>,
     accountBalance: Double,
@@ -49,7 +58,7 @@ fun computePosPayment(
     var creditPaid = 0.0
     val unpaidSegments = mutableListOf<Pair<Double, Boolean>>()
 
-    for (line in cart) {
+    for (line in cart.sortedBy { if (it.unitPrice < 0.0) 0 else 1 }) {
         val lineTotal = line.unitPrice * line.quantity
         val fromCredit = minOf(creditRemaining, lineTotal)
         creditRemaining -= fromCredit
@@ -121,6 +130,14 @@ data class PosSaleResult(
     val wentNegativeViaBuffer: Boolean = false,
     val transfer: AccountTransfer? = null,
 )
+
+/** Wording shared by the POS pre-check and the authoritative check in [AccountCreditService]. */
+suspend fun depositRefusalMessage(refusal: DepositReturnPolicy.Refusal): String =
+    if (refusal.allowed <= 0) {
+        getString(Res.string.pos_deposit_return_blocked_none, refusal.returnName)
+    } else {
+        getString(Res.string.pos_deposit_return_blocked_limit, refusal.returnName, refusal.allowed)
+    }
 
 class AccountCreditService(
     private val repository: EventManagerRepository,
@@ -284,6 +301,20 @@ class AccountCreditService(
             holderId,
             holderTransfers,
         )
+
+        // Authoritative deposit check: the POS blocks these at add-to-cart time, but the cart it
+        // sends is a snapshot and another till may have consumed the same purchase meanwhile.
+        DepositReturnPolicy.firstRefusal(cart, holderTransfers, System.currentTimeMillis())?.let { refusal ->
+            return PosSaleResult(
+                success = false,
+                totalAmount = 0.0,
+                creditPaid = 0.0,
+                cashOrCardDue = 0.0,
+                remainingBalance = balance,
+                message = depositRefusalMessage(refusal),
+            )
+        }
+
         val payment = computePosPayment(cart, balance, barDiscountPercent, purchaseCreditBuffer)
         val creditPaid = payment.creditPaid
         val cashDue = payment.cashOrCardDue
@@ -292,7 +323,8 @@ class AccountCreditService(
         }
         val ledgerAmount = computePosLedgerAmount(payment)
 
-        if (creditPaid > 0 || cashDue > 0) {
+        // A pure deposit return has a negative creditPaid and no cash — it still needs a ledger row.
+        if (creditPaid != 0.0 || cashDue > 0) {
             val itemsSummary = cart.joinToString("; ") { "${it.quantity}x ${it.name}" }
             val posJson = cart.joinToString("|") { "${it.itemId ?: 0}:${it.name}:${it.unitPrice}:${it.quantity}" }
             val transfer = AccountTransfer(

@@ -172,6 +172,19 @@ private fun SalesSheetItemRow(
                         Text(item.emoji, style = MaterialTheme.typography.titleMedium)
                     }
                     Text(item.name, fontWeight = FontWeight.SemiBold)
+                    if (item.isDeposit) {
+                        Surface(
+                            shape = MaterialTheme.shapes.small,
+                            color = MaterialTheme.colorScheme.tertiaryContainer,
+                        ) {
+                            Text(
+                                stringResource(Res.string.sales_deposit_badge),
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer,
+                            )
+                        }
+                    }
                 }
                 val categoryLabels = SalesCategory.parseList(item.categories).map { category ->
                     when (category) {
@@ -341,6 +354,7 @@ private fun SalesSheetItemEditorDialog(
     var name by remember { mutableStateOf(initial?.name.orEmpty()) }
     var priceText by remember { mutableStateOf(initial?.price?.toString().orEmpty()) }
     var hasDiscount by remember { mutableStateOf(initial?.hasDiscount ?: false) }
+    var isDeposit by remember { mutableStateOf(initial?.isDeposit ?: false) }
     var rank by remember { mutableStateOf(initial?.requiredRank) }
     var emoji by remember { mutableStateOf(initial?.emoji.orEmpty()) }
     var subcategory by remember { mutableStateOf(initial?.subcategory.orEmpty()) }
@@ -473,6 +487,17 @@ private fun SalesSheetItemEditorDialog(
                     Text(stringResource(Res.string.sales_discount_label), modifier = Modifier.weight(1f))
                     Switch(checked = hasDiscount, onCheckedChange = { hasDiscount = it })
                 }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(stringResource(Res.string.sales_deposit_label))
+                        Text(
+                            stringResource(Res.string.sales_deposit_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(checked = isDeposit, onCheckedChange = { isDeposit = it })
+                }
                 var rankExpanded by remember { mutableStateOf(false) }
                 ExposedDropdownMenuBox(expanded = rankExpanded, onExpandedChange = { rankExpanded = it }) {
                     OutlinedTextField(
@@ -501,7 +526,7 @@ private fun SalesSheetItemEditorDialog(
                     Spacer(Modifier.width(8.dp))
                     Button(
                         onClick = {
-                            val price = priceText.toDoubleOrNull() ?: return@Button
+                            val price = priceText.toDoubleOrNull()?.takeIf { it >= 0.0 } ?: return@Button
                             val venuesToSave = selectedVenues.ifEmpty { setOf(PosVenueScope.GLOBAL) }
                             onSave(
                                 SalesSheetItem(
@@ -510,6 +535,7 @@ private fun SalesSheetItemEditorDialog(
                                     name = name.trim(),
                                     price = price,
                                     hasDiscount = hasDiscount,
+                                    isDeposit = isDeposit,
                                     requiredRank = rank,
                                     categories = SalesCategory.formatList(selectedCategories),
                                     subcategory = if (subcategoriesEnabled) {
@@ -524,7 +550,9 @@ private fun SalesSheetItemEditorDialog(
                                 )
                             )
                         },
-                        enabled = name.isNotBlank() && priceText.toDoubleOrNull() != null
+                        // Negative prices are reserved for deposit returns, which the POS derives
+                        // itself — letting one be typed here would hand out credit unchecked.
+                        enabled = name.isNotBlank() && (priceText.toDoubleOrNull() ?: -1.0) >= 0.0
                     ) {
                         Text(stringResource(if (initial == null) Res.string.add else Res.string.sales_update_item))
                     }

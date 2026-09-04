@@ -68,9 +68,11 @@ import com.eventmanager.app.data.models.*
 import com.eventmanager.app.data.remote.BackendType
 import com.eventmanager.app.data.remote.MultiOrgMerge
 import com.eventmanager.app.data.sync.SettingsManager
+import com.eventmanager.app.data.utils.DepositReturnPolicy
 import com.eventmanager.app.data.utils.PosCartLine
 import com.eventmanager.app.data.utils.PosPaymentBreakdown
 import com.eventmanager.app.data.utils.computePosPayment
+import com.eventmanager.app.data.utils.depositRefusalMessage
 import com.eventmanager.app.data.utils.formatMoney
 import com.eventmanager.app.platform.LocalPlatformContext
 import com.eventmanager.app.platform.NfcInputAvailability
@@ -208,6 +210,9 @@ internal fun resolvePosItemGridSpec(
 }
 
 private fun SalesSheetItem.isBarDiscountEligible(): Boolean {
+    // A deposit is money held, not drink sold: discounting the purchase but refunding the full
+    // price on return would make the pair asymmetric.
+    if (isDeposit || price < 0.0) return false
     val categories = SalesCategory.parseList(this.categories)
     return hasDiscount ||
         categories.contains(SalesCategory.BAR) ||
@@ -223,9 +228,11 @@ private fun resolvePaymentCartLines(
     val discountContext = barDiscountPercent > 0
     return cart.map { entry ->
         val line = entry.line
-        val fromCatalog = line.itemId?.let { id ->
-            salesItems.find { it.id == id }?.isBarDiscountEligible()
-        } ?: false
+        val catalogItem = line.itemId?.let { id -> salesItems.find { it.id == id } }
+        if (line.unitPrice < 0.0 || catalogItem?.isDeposit == true) {
+            return@map line.copy(barDiscountEligible = false)
+        }
+        val fromCatalog = catalogItem?.isBarDiscountEligible() ?: false
         val manualEligible = line.itemId == null && discountContext
         val barFilterEligible = discountContext && selectedCategory == SalesCategory.BAR
         line.copy(
@@ -252,8 +259,10 @@ private fun addLineToCart(cart: List<PosCartEntry>, line: PosCartLine): List<Pos
     return cart + PosCartEntry(line)
 }
 
+/** Transient red banner under the customer card: unreadable badge, or a refused cart action. */
 private sealed interface PosScanFeedback {
     data object Unknown : PosScanFeedback
+    data class Refused(val message: String) : PosScanFeedback
 }
 
 private data class PosPendingProfileSwitch(
@@ -306,6 +315,8 @@ fun PosScreen(
     var isProcessing by remember { mutableStateOf(false) }
     var readerStatus by remember { mutableStateOf<String?>(null) }
     var scanFeedback by remember { mutableStateOf<PosScanFeedback?>(null) }
+    /** Bumped on every feedback banner so an identical message replays its entry animation. */
+    var feedbackNonce by remember { mutableIntStateOf(0) }
     var scanFlashNonce by remember { mutableIntStateOf(0) }
     var pendingProfileSwitch by remember { mutableStateOf<PosPendingProfileSwitch?>(null) }
     var pendingCashConfirmation by remember { mutableStateOf(false) }
@@ -380,11 +391,38 @@ fun PosScreen(
             selectedSubcategory = null
         }
     }
-    val visibleItems = remember(filteredItems, selectedSubcategory) {
-        filteredItems.filter { it.matchesSubcategory(selectedSubcategory) }
+    // Raw templates rather than stringResource(res, arg): the substitution happens once per
+    // deposit product, and a composable call inside that loop would be unstable.
+    val depositReturnNameFormat = stringResource(Res.string.pos_deposit_return_name)
+    val depositReturnNameCapsFormat = stringResource(Res.string.pos_deposit_return_name_caps)
+    val visibleItems = remember(
+        filteredItems,
+        selectedSubcategory,
+        depositReturnNameFormat,
+        depositReturnNameCapsFormat,
+    ) {
+        PosDeposit.expandForPos(
+            filteredItems.filter { it.matchesSubcategory(selectedSubcategory) },
+        ) { item ->
+            PosDeposit.returnNameFor(item, depositReturnNameFormat, depositReturnNameCapsFormat)
+        }
     }
 
     val accountBalances by viewModel.accountBalances.collectAsState()
+    val allTransfers by viewModel.accountTransfers.collectAsState()
+    val customerTransfers = remember(allTransfers, customerVolunteer, customerGuest) {
+        val holderId = customerVolunteer?.id ?: customerGuest?.nanoId
+        val holderType = if (customerVolunteer != null) {
+            AccountHolderType.VOLUNTEER
+        } else {
+            AccountHolderType.GUEST
+        }
+        if (holderId == null) {
+            emptyList()
+        } else {
+            allTransfers.filter { it.holderType == holderType && it.holderId == holderId }
+        }
+    }
 
     val customerBalance = when {
         customerVolunteer != null -> viewModel.balanceForHolder(
@@ -452,6 +490,7 @@ fun PosScreen(
         customerGuest = guest
         customerOrgId = volunteer?.firebaseOrgId?.takeIf { it.isNotBlank() }
             ?: guest?.firebaseOrgId.orEmpty()
+        scanFeedback = null
         scanFlashNonce++
     }
 
@@ -499,13 +538,19 @@ fun PosScreen(
         }
         if (pendingProfileSwitch == null) {
             scanFeedback = PosScanFeedback.Unknown
+            feedbackNonce++
             scanFlashNonce++
         }
     }
 
-    LaunchedEffect(scanFeedback) {
-        if (scanFeedback != PosScanFeedback.Unknown) return@LaunchedEffect
-        delay(2_500)
+    fun refuse(message: String) {
+        scanFeedback = PosScanFeedback.Refused(message)
+        feedbackNonce++
+    }
+
+    LaunchedEffect(feedbackNonce) {
+        if (scanFeedback == null) return@LaunchedEffect
+        delay(4_000)
         scanFeedback = null
     }
 
@@ -535,7 +580,11 @@ fun PosScreen(
                 pendingCashConfirmation = false
                 cashConfirmSnapshot = null
                 isProcessing = false
-                showResult = PosResultState.Success(result)
+                showResult = if (result.success) {
+                    PosResultState.Success(result)
+                } else {
+                    PosResultState.Failure(result.message)
+                }
             } catch (e: kotlin.coroutines.cancellation.CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -547,6 +596,15 @@ fun PosScreen(
 
     fun validateSale() {
         if (!canValidate) return
+        val refusal = DepositReturnPolicy.firstRefusal(
+            paymentCartLines,
+            customerTransfers,
+            System.currentTimeMillis(),
+        )
+        if (refusal != null) {
+            scope.launch { refuse(depositRefusalMessage(refusal)) }
+            return
+        }
         if (paymentPreview.cashOrCardDue > 0) {
             cashConfirmSnapshot = paymentPreview
             cashConfirmBarDiscount = paymentBarDiscount
@@ -556,9 +614,8 @@ fun PosScreen(
         executeSale()
     }
 
-    fun addItemToCart(item: SalesSheetItem) {
-        if (customerVolunteer == null && customerGuest == null) return
-        val resolved = if (isAllOrgsMode && customerOrgId.isNotBlank()) {
+    fun resolveForCustomerOrg(item: SalesSheetItem): SalesSheetItem =
+        if (isAllOrgsMode && customerOrgId.isNotBlank()) {
             mergedPosProducts
                 .firstOrNull { it.displayItem.name == item.name && it.displayItem.price == item.price }
                 ?.let { MultiOrgMerge.resolvePosProductForOrg(it, customerOrgId) }
@@ -566,6 +623,41 @@ fun PosScreen(
         } else {
             item
         }
+
+    /**
+     * Deposit returns are synthetic tiles, so re-derive them from the customer's own org row and
+     * refuse anything the account has not backed with a purchase in the last 24 hours.
+     */
+    fun addDepositReturnToCart(returnTile: SalesSheetItem) {
+        val product = salesItems.find { it.id == PosDeposit.productIdForReturn(returnTile.id) } ?: return
+        val resolved = PosDeposit.returnItemFor(resolveForCustomerOrg(product), returnTile.name)
+        val productId = PosDeposit.productIdForReturn(resolved.id)
+        val alreadyInCart = cart.filter { it.line.itemId == resolved.id }.sumOf { it.line.quantity }
+        val returnable = DepositReturnPolicy
+            .returnableCounts(customerTransfers, System.currentTimeMillis())[productId] ?: 0
+        if (alreadyInCart >= returnable) {
+            val refusal = DepositReturnPolicy.Refusal(
+                productItemId = productId,
+                returnName = resolved.name,
+                requested = alreadyInCart + 1,
+                allowed = returnable,
+            )
+            scope.launch { refuse(depositRefusalMessage(refusal)) }
+            return
+        }
+        cart = addLineToCart(
+            cart,
+            PosCartLine(resolved.id, resolved.name, resolved.price, 1, resolved.emoji),
+        )
+    }
+
+    fun addItemToCart(item: SalesSheetItem) {
+        if (customerVolunteer == null && customerGuest == null) return
+        if (PosDeposit.isReturnId(item.id)) {
+            addDepositReturnToCart(item)
+            return
+        }
+        val resolved = resolveForCustomerOrg(item)
         cart = addLineToCart(
             cart,
             PosCartLine(resolved.id, resolved.name, resolved.price, 1, resolved.emoji, barDiscountEligible = resolved.isBarDiscountEligible())
@@ -612,6 +704,7 @@ fun PosScreen(
     }
 
     if (showResult != null) {
+        val refused = showResult is PosResultState.Failure
         PosResultOverlay(
             state = showResult!!,
             currencyCode = currencyCode,
@@ -619,11 +712,14 @@ fun PosScreen(
             focusRequester = focusRequester,
             onDismiss = {
                 showResult = null
-                cart = emptyList()
-                customerVolunteer = null
-                customerGuest = null
-                scanFeedback = null
-                pendingProfileSwitch = null
+                // A refused sale wrote nothing, so hand the till back its cart and customer.
+                if (!refused) {
+                    cart = emptyList()
+                    customerVolunteer = null
+                    customerGuest = null
+                    scanFeedback = null
+                    pendingProfileSwitch = null
+                }
             }
         )
         return
@@ -659,6 +755,7 @@ fun PosScreen(
                 nfcAvailability = nfcAvailability,
                 scanFeedback = scanFeedback,
                 scanFlashNonce = scanFlashNonce,
+                feedbackNonce = feedbackNonce,
                 nfcScanningActive = nfcScanningActive,
                 customerBarDiscount = paymentBarDiscount,
                 onClearCustomer = { clearCustomer() },
@@ -883,6 +980,8 @@ private fun String.normalizeNfc() = trim().replace(" ", "").replace(":", "").upp
 
 private sealed class PosResultState {
     data class Success(val result: com.eventmanager.app.data.utils.PosSaleResult) : PosResultState()
+    /** Sale rejected before anything was written — the cart is kept so it can be corrected. */
+    data class Failure(val message: String) : PosResultState()
 }
 
 @Composable
@@ -893,8 +992,8 @@ private fun PosResultOverlay(
     focusRequester: FocusRequester,
     onDismiss: () -> Unit
 ) {
-    val result = (state as PosResultState.Success).result
-    val accent = Color(0xFF43A047)
+    val result = (state as? PosResultState.Success)?.result
+    val accent = if (result != null) Color(0xFF43A047) else MaterialTheme.colorScheme.error
 
     val keyModifier = if (isDesktop) {
         Modifier
@@ -940,7 +1039,7 @@ private fun PosResultOverlay(
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
-                            Icons.Default.Check,
+                            if (result != null) Icons.Default.Check else Icons.Default.Block,
                             contentDescription = null,
                             modifier = Modifier.size(40.dp),
                             tint = accent
@@ -948,14 +1047,26 @@ private fun PosResultOverlay(
                     }
                 }
                 Text(
-                    stringResource(Res.string.pos_sale_success),
+                    if (result != null) {
+                        stringResource(Res.string.pos_sale_success)
+                    } else {
+                        stringResource(Res.string.pos_sale_refused)
+                    },
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold,
                     textAlign = TextAlign.Center
                 )
+                if (state is PosResultState.Failure) {
+                    Text(
+                        state.message,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                    )
+                }
                 // Cash was already confirmed in PosCashPaymentDialog — don't re-prompt "Pay …".
-                // Only show remaining account credit after a successful debit.
-                if (result.creditPaid > 0) {
+                // Only show the account's credit after a successful debit or deposit refund.
+                if (result != null && result.creditPaid != 0.0) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             stringResource(Res.string.pos_remaining_credit_label),
@@ -987,7 +1098,7 @@ private fun PosResultOverlay(
                             )
                         }
                     }
-                } else if (result.cashOrCardDue > 0) {
+                } else if (result != null && result.cashOrCardDue > 0) {
                     Text(
                         stringResource(
                             Res.string.pos_report_preview_cash,
@@ -1005,28 +1116,36 @@ private fun PosResultOverlay(
                     modifier = Modifier.fillMaxWidth(),
                     shape = PosTileShape,
                 ) {
-                    Icon(
-                        Icons.Default.Nfc,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                    )
-                    Spacer(Modifier.width(8.dp))
+                    if (result != null) {
+                        Icon(
+                            Icons.Default.Nfc,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                    }
                     Text(
-                        stringResource(Res.string.pos_sale_next),
+                        if (result != null) {
+                            stringResource(Res.string.pos_sale_next)
+                        } else {
+                            stringResource(Res.string.pos_sale_refused_back_to_cart)
+                        },
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                     )
                 }
-                Text(
-                    if (isDesktop) {
-                        stringResource(Res.string.pos_sale_next_shortcut)
-                    } else {
-                        stringResource(Res.string.pos_sale_next_hint)
-                    },
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                )
+                if (result != null) {
+                    Text(
+                        if (isDesktop) {
+                            stringResource(Res.string.pos_sale_next_shortcut)
+                        } else {
+                            stringResource(Res.string.pos_sale_next_hint)
+                        },
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                    )
+                }
             }
         }
     }
@@ -1202,13 +1321,14 @@ private fun PosHeaderSection(
     nfcAvailability: NfcInputAvailability,
     scanFeedback: PosScanFeedback?,
     scanFlashNonce: Int,
+    feedbackNonce: Int,
     nfcScanningActive: Boolean,
     customerBarDiscount: Int,
     onClearCustomer: () -> Unit,
     onOpenQr: () -> Unit,
 ) {
     val hasCustomer = customerVolunteer != null || customerGuest != null
-    val isErrorScan = scanFeedback is PosScanFeedback.Unknown
+    val isErrorScan = scanFeedback != null
     val nfcReady = nfcAvailability == NfcInputAvailability.ExternalReader ||
         nfcAvailability == NfcInputAvailability.BuiltIn
 
@@ -1335,8 +1455,14 @@ private fun PosHeaderSection(
                         }
                     }
 
-                    if (scanFeedback is PosScanFeedback.Unknown) {
-                        PosScanFeedbackRow(scanFlashNonce = scanFlashNonce)
+                    if (scanFeedback != null) {
+                        PosScanFeedbackRow(
+                            message = when (scanFeedback) {
+                                PosScanFeedback.Unknown -> stringResource(Res.string.pos_unknown_card)
+                                is PosScanFeedback.Refused -> scanFeedback.message
+                            },
+                            nonce = feedbackNonce,
+                        )
                     }
                 }
             }
@@ -1767,15 +1893,14 @@ private fun PosCustomerWaitingContent(
 }
 
 @Composable
-private fun PosScanFeedbackRow(scanFlashNonce: Int) {
-    val text = stringResource(Res.string.pos_unknown_card)
+private fun PosScanFeedbackRow(message: String, nonce: Int) {
     val color = Color(0xFFE53935)
     val icon = Icons.Default.Warning
 
     val slideOffset = remember { Animatable(-12f) }
     val rowAlpha = remember { Animatable(0f) }
 
-    LaunchedEffect(scanFlashNonce) {
+    LaunchedEffect(nonce) {
         slideOffset.snapTo(-12f)
         rowAlpha.snapTo(0f)
         coroutineScope {
@@ -1802,7 +1927,7 @@ private fun PosScanFeedbackRow(scanFlashNonce: Int) {
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
-            Text(text, style = MaterialTheme.typography.bodyMedium, color = color, fontWeight = FontWeight.SemiBold)
+            Text(message, style = MaterialTheme.typography.bodyMedium, color = color, fontWeight = FontWeight.SemiBold)
         }
     }
 }
@@ -2478,10 +2603,16 @@ private fun PosItemPriceBadge(
     currencyCode: String,
     modifier: Modifier = Modifier,
 ) {
+    // Deposit returns pay out instead of charging, so they get their own colour.
+    val isRefund = price < 0.0
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(8.dp),
-        color = MaterialTheme.colorScheme.primaryContainer,
+        color = if (isRefund) {
+            MaterialTheme.colorScheme.tertiaryContainer
+        } else {
+            MaterialTheme.colorScheme.primaryContainer
+        },
         shadowElevation = 2.dp,
     ) {
         Text(
@@ -2489,7 +2620,11 @@ private fun PosItemPriceBadge(
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
+            color = if (isRefund) {
+                MaterialTheme.colorScheme.onTertiaryContainer
+            } else {
+                MaterialTheme.colorScheme.onPrimaryContainer
+            },
             maxLines = 1,
         )
     }

@@ -1,5 +1,6 @@
 package com.eventmanager.app.data.reports
 
+import com.eventmanager.app.data.models.PosDeposit
 import com.eventmanager.app.data.models.SalesCategory
 import com.eventmanager.app.data.models.SalesSheetItem
 
@@ -35,6 +36,8 @@ object PosItemParser {
             val qty = parts[3].toIntOrNull() ?: 0
             if (qty <= 0) return@mapNotNull null
             val category = itemCategoryById[itemId]
+                // Deposit returns are booked under a negated product id; report them with the product.
+                ?: itemId.takeIf { it < 0L }?.let { itemCategoryById[PosDeposit.productIdForReturn(it)] }
                 ?: itemCategoryByName[name.lowercase()]
                 ?: SalesCategory.OTHER
             PosReportLineItem(

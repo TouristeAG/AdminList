@@ -1,7 +1,7 @@
 {
   "latestVersionCode": 27,
   "latestVersionName": "2.1.0",
-  "minSupportedVersionCode": "26",
+  "minSupportedVersionCode": "27",
   "changelogShort": "Bug fixes and UI polish: wider billetterie layout, smoother transitions, Firebase join/setup improvements, announcements & people counter, performance tweaks.",
   "downloadUrl": "https://github.com/TouristeAG/NoctuList/releases/download/2.1.0/app-release-2.1.0.apk",
   "desktopDownloadUrlDmgArm64": "https://github.com/TouristeAG/NoctuList/releases/download/2.1.0/NoctuList-2.1.0-arm64.dmg",

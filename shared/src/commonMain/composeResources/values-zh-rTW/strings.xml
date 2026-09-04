@@ -2112,6 +2112,15 @@ D) Application ID（appId）
     <string name="sales_subcategory_remove_title">刪除此子分類？</string>
     <string name="sales_subcategory_remove_message">「%1$s」將從該分類下的所有商品中移除。</string>
     <string name="pos_subcategory_all">全部</string>
+    <string name="sales_deposit_label">押金商品</string>
+    <string name="sales_deposit_hint">POS 會額外顯示「退回…」按鈕以退還押金。僅當同一帳戶在過去 24 小時內購買過該商品時才允許。</string>
+    <string name="sales_deposit_badge">押金</string>
+    <string name="pos_deposit_return_name">退回%1$s</string>
+    <string name="pos_deposit_return_name_caps">退回%1$s</string>
+    <string name="pos_deposit_return_blocked_none">「%1$s」已拒絕：該帳戶在過去 24 小時內未購買此商品。</string>
+    <string name="pos_deposit_return_blocked_limit">「%1$s」已拒絕：最多只能退回 %2$d 件，即該帳戶在過去 24 小時內購買的數量。</string>
+    <string name="pos_sale_refused">銷售已拒絕</string>
+    <string name="pos_sale_refused_back_to_cart">返回購物車</string>
     <string name="sales_category_bar">吧台</string>
     <string name="sales_category_entry">入場</string>
     <string name="sales_category_merch">周邊</string>

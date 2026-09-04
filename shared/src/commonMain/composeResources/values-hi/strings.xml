@@ -354,6 +354,15 @@
     <string name="sales_subcategory_remove_title">यह उप-श्रेणी हटाएँ?</string>
     <string name="sales_subcategory_remove_message">“%1$s” इस श्रेणी के सभी उत्पादों से हटा दी जाएगी।</string>
     <string name="pos_subcategory_all">सभी</string>
+    <string name="sales_deposit_label">जमा राशि वाला उत्पाद</string>
+    <string name="sales_deposit_hint">पीओएस एक “… वापसी” टाइल भी दिखाता है जो कीमत लौटाती है। यह तभी मान्य है जब उसी खाते ने पिछले 24 घंटों में वह वस्तु खरीदी हो।</string>
+    <string name="sales_deposit_badge">जमा राशि</string>
+    <string name="pos_deposit_return_name">%1$s वापसी</string>
+    <string name="pos_deposit_return_name_caps">%1$s वापसी</string>
+    <string name="pos_deposit_return_blocked_none">“%1$s” अस्वीकृत: इस खाते ने पिछले 24 घंटों में यह वस्तु नहीं खरीदी।</string>
+    <string name="pos_deposit_return_blocked_limit">“%1$s” अस्वीकृत: केवल %2$d ही लौटाए जा सकते हैं — इस खाते ने पिछले 24 घंटों में इतने ही खरीदे थे।</string>
+    <string name="pos_sale_refused">बिक्री अस्वीकृत</string>
+    <string name="pos_sale_refused_back_to_cart">कार्ट पर लौटें</string>
     <string name="sales_emoji_label">इमोजी</string>
     <string name="sales_category_merch">माल</string>
     <string name="sales_category_entry">प्रवेश</string>

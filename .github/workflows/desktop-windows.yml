@@ -1,8 +1,8 @@
 name: Desktop Windows release
 
 on:
-  release:
-    types: [published]
+  # NOTE: Automatic release builds are handled by release.yml (triggered on tag push).
+  # Use this workflow only for standalone manual builds (e.g. to test packaging).
   workflow_dispatch:
 
 permissions:

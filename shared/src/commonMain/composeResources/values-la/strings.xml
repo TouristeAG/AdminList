@@ -354,6 +354,15 @@
     <string name="sales_subcategory_remove_title">Hanc subcategoriam delere?</string>
     <string name="sales_subcategory_remove_message">“%1$s” ex omnibus mercibus huius categoriae tolletur.</string>
     <string name="pos_subcategory_all">Omnia</string>
+    <string name="sales_deposit_label">Merx pignorata</string>
+    <string name="sales_deposit_hint">POS insuper tesseram « Redditio … » monstrat quae pretium reddit. Permittitur tantum si eadem ratio mercem intra 24 horas emit.</string>
+    <string name="sales_deposit_badge">Pignus</string>
+    <string name="pos_deposit_return_name">Redditio %1$s</string>
+    <string name="pos_deposit_return_name_caps">REDDITIO %1$s</string>
+    <string name="pos_deposit_return_blocked_none">« %1$s » recusatum: haec ratio hanc mercem intra 24 horas non emit.</string>
+    <string name="pos_deposit_return_blocked_limit">« %1$s » recusatum: tantum %2$d reddi possunt, quot haec ratio intra 24 horas emit.</string>
+    <string name="pos_sale_refused">Venditio recusata</string>
+    <string name="pos_sale_refused_back_to_cart">Ad sportulam redire</string>
     <string name="sales_emoji_label">Emoji</string>
     <string name="sales_category_merch">Merch</string>
     <string name="sales_category_entry">Introitus</string>

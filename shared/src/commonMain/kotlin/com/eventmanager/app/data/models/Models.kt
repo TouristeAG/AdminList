@@ -311,6 +311,8 @@ data class SalesSheetItem(
     val name: String,
     val price: Double,
     val hasDiscount: Boolean = false,
+    /** Deposit ("consigne"): the POS pairs this product with a return tile that refunds [price]. */
+    val isDeposit: Boolean = false,
     val requiredRank: VolunteerRank? = null,
     val categories: String = "", // Comma-separated SalesCategory names
     /** Admin-defined refinement of [categories]; Firebase-only, never synced to Google Sheets. */

@@ -356,6 +356,7 @@ class DifferentialSyncService(
         old.name != new.name ||
             old.price != new.price ||
             old.hasDiscount != new.hasDiscount ||
+            old.isDeposit != new.isDeposit ||
             old.requiredRank != new.requiredRank ||
             old.isActive != new.isActive ||
             old.categories != new.categories ||

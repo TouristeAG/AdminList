@@ -1,0 +1,128 @@
+name: Desktop macOS release
+
+# Builds two native DMGs in parallel:
+#   • macos-13 runner (Intel x86_64)  → NoctuList-<ver>-x86_64.dmg
+#   • macos-14 runner (Apple Silicon arm64) → NoctuList-<ver>-arm64.dmg
+#
+# Why two separate runners? jpackage bundles the host JVM — there is no
+# cross-compilation path. An Intel JDK produces an Intel DMG; an arm64 JDK
+# produces an arm64 DMG. Both are native and require no Rosetta on their
+# target platform.
+#
+# Triggers:
+#   • Automatically on every GitHub Release publication
+#   • Manually via Actions → "Run workflow" (produces downloadable artifacts)
+
+on:
+  # NOTE: Automatic release builds are handled by release.yml (triggered on tag push).
+  # Use this workflow only for standalone manual builds (e.g. to test packaging).
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-macos-dmg:
+    strategy:
+      fail-fast: false        # build both arches even if one fails
+      matrix:
+        include:
+          - runner: macos-13  # GitHub-hosted Intel (x86_64) runner
+            arch: x86_64
+          - runner: macos-14  # GitHub-hosted Apple Silicon (arm64 / M1) runner
+            arch: arm64
+
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      # ── Source ─────────────────────────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── JDK ────────────────────────────────────────────────────────────────
+      # architecture is intentionally omitted: setup-java auto-selects the
+      # native arch for the runner (x64 on macos-13, aarch64 on macos-14).
+      # Temurin is required — Homebrew JDK ships without jpackage.
+      - name: Set up Temurin JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+
+      - name: Verify JVM is native ${{ matrix.arch }}
+        run: |
+          ARCH=$(java -XshowSettings:all -version 2>&1 | grep "os.arch" | awk '{print $NF}')
+          echo "JVM os.arch = $ARCH"
+          # Fail fast when the JVM arch doesn't match the expected target.
+          # aarch64 == arm64; x86_64 == x86_64
+          if [[ "${{ matrix.arch }}" == "arm64" && "$ARCH" != "aarch64" ]]; then
+            echo "ERROR: expected aarch64 JVM on Apple Silicon runner, got $ARCH"
+            exit 1
+          fi
+          if [[ "${{ matrix.arch }}" == "x86_64" && "$ARCH" != "x86_64" ]]; then
+            echo "ERROR: expected x86_64 JVM on Intel runner, got $ARCH"
+            exit 1
+          fi
+
+      # ── Gradle ─────────────────────────────────────────────────────────────
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # ── Version ────────────────────────────────────────────────────────────
+      - name: Read version from version.json
+        id: version
+        run: |
+          VERSION=$(python3 -c "import json; print(json.load(open('version.json'))['latestVersionName'])")
+          echo "name=$VERSION" >> "$GITHUB_OUTPUT"
+
+      # ── Native dylib ───────────────────────────────────────────────────────
+      # Recompile LocalAuthenticationEngine.dylib as a universal binary
+      # (x86_64 + arm64) so Touch ID works on both architectures regardless
+      # of which DMG the user downloads. Both runners can build universal
+      # binaries with a plain clang invocation.
+      - name: Rebuild LocalAuthenticationEngine.dylib (universal x86_64 + arm64)
+        run: |
+          clang \
+            -arch x86_64 \
+            -arch arm64 \
+            -dynamiclib \
+            -framework Foundation \
+            -framework LocalAuthentication \
+            -o shared/src/desktopMain/resources/LocalAuthenticationEngine.dylib \
+            shared/nativeengines/macos/LocalAuthenticationEngine.m
+          echo "Dylib architecture:"
+          lipo -info shared/src/desktopMain/resources/LocalAuthenticationEngine.dylib
+
+      # ── Build ──────────────────────────────────────────────────────────────
+      - name: Build macOS DMG (${{ matrix.arch }})
+        run: ./gradlew :desktopApp:packageReleaseDmg --no-daemon
+
+      # ── Rename ─────────────────────────────────────────────────────────────
+      # Gradle names the file "NoctuList-<version>.dmg". We add the arch
+      # suffix so both DMGs can coexist as release assets.
+      - name: Rename DMG with architecture suffix
+        id: dmg
+        run: |
+          VERSION="${{ steps.version.outputs.name }}"
+          ARCH="${{ matrix.arch }}"
+          SRC=$(ls desktopApp/build/compose/packaged/main-release/dmg/*.dmg | head -1)
+          DEST="NoctuList-${VERSION}-${ARCH}.dmg"
+          cp "$SRC" "$DEST"
+          echo "path=$DEST" >> "$GITHUB_OUTPUT"
+          SIZE=$(du -sh "$DEST" | cut -f1)
+          echo "Produced: $DEST ($SIZE)"
+
+      # ── Upload ─────────────────────────────────────────────────────────────
+      - name: Upload as workflow artifact
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: noctulist-macos-${{ matrix.arch }}
+          path: ${{ steps.dmg.outputs.path }}
+          retention-days: 14
+
+      - name: Upload to GitHub Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.dmg.outputs.path }}

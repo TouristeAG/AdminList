@@ -2112,6 +2112,15 @@ Emparejar no basta: sin la herramienta Management, el enlace suele conectarse y 
     <string name="sales_subcategory_remove_title">¿Eliminar esta subcategoría?</string>
     <string name="sales_subcategory_remove_message">«%1$s» se quitará de todos los productos de esta categoría.</string>
     <string name="pos_subcategory_all">Todo</string>
+    <string name="sales_deposit_label">Producto con depósito</string>
+    <string name="sales_deposit_hint">El TPV muestra además una casilla «Devolución …» que reembolsa el precio. Solo se permite si la misma cuenta compró el artículo en las últimas 24 h.</string>
+    <string name="sales_deposit_badge">Depósito</string>
+    <string name="pos_deposit_return_name">Devolución %1$s</string>
+    <string name="pos_deposit_return_name_caps">DEVOLUCIÓN %1$s</string>
+    <string name="pos_deposit_return_blocked_none">«%1$s» rechazado: esta cuenta no compró este artículo en las últimas 24 h.</string>
+    <string name="pos_deposit_return_blocked_limit">«%1$s» rechazado: solo se pueden devolver %2$d, los que esta cuenta compró en las últimas 24 h.</string>
+    <string name="pos_sale_refused">Venta rechazada</string>
+    <string name="pos_sale_refused_back_to_cart">Volver al carrito</string>
     <string name="sales_category_bar">Bar</string>
     <string name="sales_category_entry">Entrada</string>
     <string name="sales_category_merch">Merch</string>

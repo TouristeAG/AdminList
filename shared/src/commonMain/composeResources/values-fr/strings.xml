@@ -115,6 +115,15 @@
     <string name="sales_subcategory_remove_title">Supprimer cette sous-catégorie ?</string>
     <string name="sales_subcategory_remove_message">« %1$s » sera retirée de tous les articles de cette catégorie.</string>
     <string name="pos_subcategory_all">Tout</string>
+    <string name="sales_deposit_label">Produit consigné</string>
+    <string name="sales_deposit_hint">Le POS affiche en plus une tuile « Retour … » qui rembourse le prix. Elle n’est autorisée que si le même compte a acheté l’article dans les dernières 24 h.</string>
+    <string name="sales_deposit_badge">Consigne</string>
+    <string name="pos_deposit_return_name">Retour %1$s</string>
+    <string name="pos_deposit_return_name_caps">RETOUR %1$s</string>
+    <string name="pos_deposit_return_blocked_none">« %1$s » refusé : aucun achat de cet article sur ce compte dans les dernières 24 h.</string>
+    <string name="pos_deposit_return_blocked_limit">« %1$s » refusé : seulement %2$d retour(s) possible(s), soit le nombre acheté sur ce compte dans les dernières 24 h.</string>
+    <string name="pos_sale_refused">Vente refusée</string>
+    <string name="pos_sale_refused_back_to_cart">Revenir au panier</string>
     <string name="sales_emoji_label">Emoji</string>
     <string name="sales_category_merch">Merch</string>
     <string name="sales_category_entry">Entrée</string>

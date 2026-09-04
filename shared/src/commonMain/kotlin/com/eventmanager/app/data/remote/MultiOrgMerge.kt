@@ -56,6 +56,7 @@ object MultiOrgMerge {
         item.name.trim().lowercase(),
         item.price.toString(),
         item.hasDiscount.toString(),
+        item.isDeposit.toString(),
         item.requiredRank?.name.orEmpty(),
         item.categories.trim().lowercase(),
         item.subcategory.trim().lowercase(),

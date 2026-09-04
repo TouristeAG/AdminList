@@ -1,83 +1,147 @@
-# Release 2.1.0 — GitHub publishing checklist
+# Release checklist — NoctuList
 
-Use this when tagging and publishing **NoctuList 2.1.0** on GitHub.
-
-## 1. Verify version files (already set for 2.1.0)
-
-| File | Field | Value |
-|------|--------|--------|
-| [`version.json`](version.json) | `latestVersionCode` | `27` |
-| [`version.json`](version.json) | `latestVersionName` | `2.1.0` |
-| [`version.json`](version.json) | `minSupportedVersionCode` | `26` (forces update below 2.0.0) |
-| Gradle / Android | reads `version.json` | `app/build.gradle`, `shared/build.gradle.kts`, `desktopApp/build.gradle.kts` |
-| UI strings | `app_version` | `NoctuList 2.1.0` (all locales) |
-
-## 2. Build artifacts
+## TL;DR — release in 3 commands
 
 ```bash
-# Android release APK
-./gradlew :app:assembleRelease
-# → app/build/outputs/apk/release/app-release.apk
-# Rename for release: app-release-2.1.0.apk
+# 1. Bump version.json, commit, push
+git add version.json && git commit -m "chore: bump to X.Y.Z"
+git push origin main
 
-# Desktop macOS — MUST build on EACH architecture separately
-# Compose Desktop bundles the host JVM; there is no cross-compilation.
-#
-#   On an Apple Silicon (M-series) Mac → NoctuList-2.1.0-arm64.dmg
-#   On an Intel Mac                    → NoctuList-2.1.0-x86_64.dmg
-#
-# Required JDK: Temurin 17 (NOT Homebrew) — https://adoptium.net/
-#   arm64: download "macOS aarch64" build
-#   x86_64: download "macOS x64" build
-#
-./scripts/package-desktop.sh
-# → desktopApp/build/compose/packaged/…/NoctuList-2.1.0-arm64.dmg  (on Apple Silicon)
-# → desktopApp/build/compose/packaged/…/NoctuList-2.1.0-x86_64.dmg (on Intel)
+# 2. Create & push the version tag
+git tag X.Y.Z
+git push origin X.Y.Z
 
-# Windows + Linux: use GitHub Actions (see .github/workflows/desktop-*.yml)
-#   gh workflow run desktop-linux.yml
-#   gh workflow run desktop-windows.yml
+# 3. That's it. GitHub Actions does the rest ↓
 ```
 
-Expected GitHub asset names (must match `version.json` URLs):
+Pushing the tag automatically triggers **`.github/workflows/release.yml`**, which:
+- Builds 7 artifacts **in parallel** (Android APK, 2× macOS DMG, Windows MSI + EXE, Linux DEB + AppImage)
+- Creates the **GitHub Release** with the correct tag and release notes
+- Attaches every artifact to the release
 
-- `app-release-2.1.0.apk`
-- `NoctuList-2.1.0-arm64.dmg`   ← Apple Silicon (M1/M2/M3/M4)
-- `NoctuList-2.1.0-x86_64.dmg`  ← Intel Mac
-- `NoctuList-2.1.0.msi`
-- `NoctuList-2.1.0.exe`
-- `NoctuList-2.1.0.deb`
-- `NoctuList-2.1.0.AppImage`
+No manual uploads. No manual release creation.
 
-> **Why two DMGs?** Compose Desktop bundles the JVM of the build host.
-> An x86_64 DMG launched on Apple Silicon requires Rosetta 2 to be installed,
-> may be blocked by Gatekeeper if the app is unsigned, and runs with a performance
-> penalty. Ship a native arm64 DMG so Apple Silicon users get a first-class experience.
+---
 
-## 3. Git tag & GitHub Release
+## Detailed checklist
 
-1. Commit all 2.1.0 version bumps and feature work.
-2. Create an annotated tag: `git tag -a 2.1.0 -m "NoctuList 2.1.0"`
-3. Push: `git push origin main && git push origin 2.1.0`
-4. Open **Releases → Draft a new release**, choose tag **2.1.0**.
-5. Title: **NoctuList 2.1.0**
-6. Paste the release body from [`.github/release-notes/2.1.0.md`](release-notes/2.1.0.md).
-7. Upload all platform binaries listed above.
-8. Publish release (triggers Linux desktop workflow if configured).
+### 1. Prepare the version bump
 
-## 4. Update manifest for in-app updates
+| File | Field | Example |
+|------|--------|---------|
+| [`version.json`](../version.json) | `latestVersionCode` | `28` |
+| [`version.json`](../version.json) | `latestVersionName` | `2.2.0` |
+| [`version.json`](../version.json) | `minSupportedVersionCode` | minimum version that can auto-update |
+| [`version.json`](../version.json) | `changelogShort` | one-line summary (used if no release notes file) |
+| [`version.json`](../version.json) | download URLs | update all 7 URLs to the new version |
 
-Apps fetch the update manifest from:
+Version numbers in `version.json` are automatically read by:
+- `app/build.gradle` → Android `versionCode` / `versionName`
+- `shared/build.gradle.kts` → shared module version
+- `desktopApp/build.gradle.kts` → desktop package version
 
-`https://raw.githubusercontent.com/TouristeAG/AdminList/main/version.json`
+### 2. Write release notes (optional but recommended)
 
-After publishing binaries, copy the root [`version.json`](version.json) to that **AdminList** repo (or your canonical manifest branch) so existing installs see the 2.1.0 update prompt.
+Create `.github/release-notes/X.Y.Z.md` with the release body.
+If this file is missing, the workflow falls back to `changelogShort` in `version.json`.
 
-## 5. Smoke test
+See [release-notes/2.1.0.md](release-notes/2.1.0.md) for an example.
+
+### 3. Tag & push
+
+```bash
+git tag X.Y.Z          # lightweight tag is fine; annotated also works
+git push origin X.Y.Z  # this triggers the release workflow
+```
+
+You can also trigger the workflow manually from **Actions → Release — all platforms → Run workflow**.
+
+### 4. Monitor the build
+
+Go to **Actions → Release — all platforms** to watch progress.
+
+| Job | Runner | Duration |
+|-----|--------|----------|
+| Android APK | `ubuntu-latest` | ~8 min |
+| macOS DMG (x86_64) | `macos-13` (Intel) | ~15 min |
+| macOS DMG (arm64) | `macos-14` (Apple Silicon) | ~15 min |
+| Windows MSI + EXE | `windows-latest` | ~12 min |
+| Linux DEB + AppImage | `ubuntu-latest` | ~10 min |
+| **Publish release** | `ubuntu-latest` | ~1 min |
+
+All build jobs run in **parallel**. The release is only published once every
+single artifact has been produced successfully.
+
+### 5. Expected release assets
+
+These names must match the download URLs in `version.json`:
+
+| File | Platform |
+|------|----------|
+| `app-release-X.Y.Z.apk` | Android |
+| `NoctuList-X.Y.Z-arm64.dmg` | macOS Apple Silicon (M1/M2/M3/M4) |
+| `NoctuList-X.Y.Z-x86_64.dmg` | macOS Intel |
+| `NoctuList-X.Y.Z.msi` | Windows (installer) |
+| `NoctuList-X.Y.Z.exe` | Windows (standalone setup) |
+| `NoctuList-X.Y.Z.deb` | Linux Debian/Ubuntu |
+| `NoctuList-X.Y.Z.AppImage` | Linux (universal) |
+
+> **Why two macOS DMGs?**  
+> Compose Desktop bundles the JVM of the build host — there is no cross-compilation
+> path. An Intel DMG runs on Apple Silicon only via Rosetta 2 (performance penalty,
+> may be Gatekeeper-blocked). Ship a native `arm64` DMG for a first-class experience
+> on M-series Macs.
+
+### 6. Update the in-app update manifest
+
+Apps poll the update manifest from:
+
+```
+https://raw.githubusercontent.com/TouristeAG/AdminList/main/version.json
+```
+
+After the release is published, copy `version.json` from this repo to the
+**AdminList** repo (or your canonical manifest branch) so existing installs
+see the new update prompt.
+
+---
+
+## Individual platform builds (manual / debugging)
+
+The three platform-specific workflows are kept for standalone test builds.
+They no longer trigger on GitHub Release publication (the release.yml handles that).
+
+```bash
+# macOS only (manual test build — produces downloadable artifact, no release)
+gh workflow run desktop-macos.yml
+
+# Windows only
+gh workflow run desktop-windows.yml
+
+# Linux only
+gh workflow run desktop-linux.yml
+```
+
+## Local builds
+
+```bash
+# macOS (requires Temurin JDK 17 — NOT Homebrew JDK)
+./scripts/package-desktop.sh
+# → desktopApp/build/compose/packaged/…/NoctuList-X.Y.Z-arm64.dmg   (Apple Silicon)
+# → desktopApp/build/compose/packaged/…/NoctuList-X.Y.Z-x86_64.dmg  (Intel)
+
+# Android
+./gradlew :app:assembleRelease
+# → app/build/outputs/apk/release/app-release.apk
+```
+
+---
+
+## Smoke test checklist
 
 - [ ] Fresh install: Firebase create-org + join flow
 - [ ] Sheets-only institution still syncs
 - [ ] Wide billetterie / people counter on a large tablet or desktop
 - [ ] Announcements create / acknowledge
 - [ ] Manual account credit (+/−) on guest and volunteer
-- [ ] In-app update dialog shows 2.1.0 changelog on a 2.0.0 device
+- [ ] In-app update dialog shows new version changelog on previous version device
