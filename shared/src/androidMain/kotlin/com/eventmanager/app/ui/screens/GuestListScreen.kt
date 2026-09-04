@@ -33,7 +33,9 @@ import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.ui.components.SearchBarWithFilter
 import com.eventmanager.app.ui.components.VolunteerBenefitsPanel
 import com.eventmanager.app.ui.components.GuestDetailPanel
+import com.eventmanager.app.ui.components.GuestBarDiscountField
 import com.eventmanager.app.ui.components.ProfilePhotoFormPicker
+import com.eventmanager.app.ui.components.rememberGuestBarDiscountEnabled
 import com.eventmanager.app.ui.components.rememberProfilePhotosUploadEnabled
 import com.eventmanager.app.ui.components.fullScreenDialogProperties
 import com.eventmanager.app.ui.utils.*
@@ -741,14 +743,16 @@ actual fun GuestListScreen(
             venues = venues,
             onDismiss = { showAddDialog = false },
             profilePhotosEnabled = rememberProfilePhotosUploadEnabled(viewModel),
-            onConfirmPermanent = { name, email, phoneNumber, invitations, venueName, notes, photoBytes ->
+            barDiscountEnabled = rememberGuestBarDiscountEnabled(viewModel),
+            onConfirmPermanent = { name, email, phoneNumber, invitations, venueName, notes, barDiscountPercent, photoBytes ->
                 val newGuest = Guest(
                     name = name,
                     email = email,
                     phoneNumber = phoneNumber,
                     invitations = invitations,
                     venueName = venueName,
-                    notes = notes
+                    notes = notes,
+                    barDiscountPercent = barDiscountPercent
                 )
                 onAddGuest(newGuest, photoBytes)
                 showAddDialog = false
@@ -900,6 +904,7 @@ actual fun GuestListScreen(
             guest = showEditGuestDialog!!,
             venues = venues,
             profilePhotosEnabled = rememberProfilePhotosUploadEnabled(viewModel),
+            barDiscountEnabled = rememberGuestBarDiscountEnabled(viewModel),
             viewModel = viewModel,
             onDismiss = { showEditGuestDialog = null },
             onConfirm = { updatedGuest ->
@@ -1850,9 +1855,10 @@ private fun cursorAfterIsoDateFormat(formattedText: String, incoming: TextFieldV
 fun AddGuestDialog(
     venues: List<VenueEntity>,
     onDismiss: () -> Unit,
-    onConfirmPermanent: (String, String, String, Int, String, String, ByteArray?) -> Unit,
+    onConfirmPermanent: (String, String, String, Int, String, String, Int, ByteArray?) -> Unit,
     onConfirmTemporary: (ManualTemporaryGuestBatch) -> Unit,
     profilePhotosEnabled: Boolean = false,
+    barDiscountEnabled: Boolean = false,
 ) {
     val context = LocalContext.current
     var selectedTab by remember { mutableStateOf(0) }
@@ -1863,6 +1869,7 @@ fun AddGuestDialog(
     var invitations by remember { mutableStateOf("0") }
     var selectedVenueName by remember { mutableStateOf<String?>(null) }
     var notes by remember { mutableStateOf("") }
+    var barDiscount by remember { mutableStateOf("0") }
     var showVenueDropdown by remember { mutableStateOf(false) }
     var pendingPhotoBytes by remember { mutableStateOf<ByteArray?>(null) }
 
@@ -2043,6 +2050,12 @@ fun AddGuestDialog(
                                 modifier = Modifier.fillMaxWidth(),
                                 maxLines = 3
                             )
+                            if (barDiscountEnabled) {
+                                GuestBarDiscountField(
+                                    value = barDiscount,
+                                    onValueChange = { barDiscount = it },
+                                )
+                            }
                             ProfilePhotoFormPicker(
                                 enabled = profilePhotosEnabled,
                                 currentUrl = "",
@@ -2159,6 +2172,7 @@ fun AddGuestDialog(
                                         invitationCount,
                                         selectedVenueName ?: defaultVenue,
                                         notes,
+                                        if (barDiscountEnabled) barDiscount.toIntOrNull() ?: 0 else 0,
                                         pendingPhotoBytes
                                     )
                                 } else {
@@ -2197,6 +2211,7 @@ fun EditGuestDialog(
     onDismiss: () -> Unit,
     onConfirm: (Guest) -> Unit,
     profilePhotosEnabled: Boolean = false,
+    barDiscountEnabled: Boolean = false,
     viewModel: EventManagerViewModel? = null,
 ) {
     val context = LocalContext.current
@@ -2207,6 +2222,7 @@ fun EditGuestDialog(
     var invitations by remember { mutableStateOf(guest.invitations.toString()) }
     var selectedVenueName by remember { mutableStateOf<String?>(guest.venueName) }
     var notes by remember { mutableStateOf(guest.notes) }
+    var barDiscount by remember { mutableStateOf(guest.barDiscountPercent.toString()) }
     var temporaryArtistName by remember { mutableStateOf(guest.temporaryArtistName) }
     var temporaryContactPhone by remember { mutableStateOf(guest.temporaryContactPhone) }
     var temporaryEventDateTf by remember {
@@ -2404,6 +2420,12 @@ fun EditGuestDialog(
                             modifier = Modifier.fillMaxWidth(),
                             maxLines = 3
                         )
+                        if (!isTemporaryGuest && barDiscountEnabled) {
+                            GuestBarDiscountField(
+                                value = barDiscount,
+                                onValueChange = { barDiscount = it },
+                            )
+                        }
                         if (!isTemporaryGuest) {
                             ProfilePhotoFormPicker(
                                 enabled = profilePhotosEnabled,
@@ -2455,7 +2477,12 @@ fun EditGuestDialog(
                                         lastNameAbbreviation = "", // Permanent guests don't have abbreviations
                                         invitations = invitationCount,
                                         venueName = selectedVenueName ?: defaultVenue,
-                                        notes = notes
+                                        notes = notes,
+                                        barDiscountPercent = if (barDiscountEnabled) {
+                                            barDiscount.toIntOrNull() ?: 0
+                                        } else {
+                                            guest.barDiscountPercent
+                                        }
                                     )
                                 }
                                 onConfirm(updatedGuest)

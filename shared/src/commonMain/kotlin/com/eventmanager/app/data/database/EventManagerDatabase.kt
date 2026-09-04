@@ -50,7 +50,7 @@ private fun SQLiteConnection.query(sql: String): MigrationCursor =
         AccountTransfer::class,
         PendingRemoteWrite::class,
     ],
-    version = 42,
+    version = 44,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -1467,6 +1467,38 @@ abstract class EventManagerDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_42_43 = object : Migration(42, 43) {
+            override fun migrate(connection: SQLiteConnection) {
+                try {
+                    println("Starting migration 42→43: permanent guest bar discount percent")
+                    connection.execSQL(
+                        "ALTER TABLE guests ADD COLUMN barDiscountPercent INTEGER NOT NULL DEFAULT 0",
+                    )
+                    println("Migration 42→43 completed successfully")
+                } catch (e: Exception) {
+                    println("Migration 42→43 failed: ${e.message}")
+                    e.printStackTrace()
+                    throw e
+                }
+            }
+        }
+
+        private val MIGRATION_43_44 = object : Migration(43, 44) {
+            override fun migrate(connection: SQLiteConnection) {
+                try {
+                    println("Starting migration 43→44: POS product sub-category")
+                    connection.execSQL(
+                        "ALTER TABLE sales_sheet_items ADD COLUMN subcategory TEXT NOT NULL DEFAULT ''",
+                    )
+                    println("Migration 43→44 completed successfully")
+                } catch (e: Exception) {
+                    println("Migration 43→44 failed: ${e.message}")
+                    e.printStackTrace()
+                    throw e
+                }
+            }
+        }
+
         val ALL_MIGRATIONS: Array<Migration> = arrayOf(
             MIGRATION_1_2,
             MIGRATION_2_3,
@@ -1508,7 +1540,9 @@ abstract class EventManagerDatabase : RoomDatabase() {
             MIGRATION_38_39,
             MIGRATION_39_40,
             MIGRATION_40_41,
-            MIGRATION_41_42
+            MIGRATION_41_42,
+            MIGRATION_42_43,
+            MIGRATION_43_44
         )
     }
 }

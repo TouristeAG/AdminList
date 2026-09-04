@@ -41,6 +41,7 @@ import com.eventmanager.app.ui.components.ColorThemePicker
 import com.eventmanager.app.ui.components.DesktopAdminNavLayoutPicker
 import com.eventmanager.app.ui.components.ThemeModePicker
 import com.eventmanager.app.ui.components.toBiometricAdminProfileLink
+import com.eventmanager.app.platform.DesktopAppEraser
 import com.eventmanager.app.platform.LocalPlatformContext
 import com.eventmanager.app.platform.createAppStorage
 import com.eventmanager.app.platform.createBiometricAuth
@@ -189,6 +190,8 @@ actual fun SettingsScreen(
     var showActiveVolunteersDialog by remember { mutableStateOf(false) }
     var showFactoryResetDialog by remember { mutableStateOf(false) }
     var factoryResetInProgress by remember { mutableStateOf(false) }
+    var showUninstallDataDialog by remember { mutableStateOf(false) }
+    var uninstallDataInProgress by remember { mutableStateOf(false) }
     val cacheClearedMsg = stringResource(Res.string.app_cache_cleared)
 
     val navItems = buildList {
@@ -791,6 +794,10 @@ actual fun SettingsScreen(
                 }
                 FactoryResetSettingsSection(
                     onResetClick = { showFactoryResetDialog = true },
+                )
+                Spacer(Modifier.height(8.dp))
+                UninstallDataSection(
+                    onUninstallClick = { showUninstallDataDialog = true },
                 )
             }
 
@@ -1461,6 +1468,10 @@ actual fun SettingsScreen(
                 FactoryResetSettingsSection(
                     onResetClick = { showFactoryResetDialog = true },
                 )
+                Spacer(Modifier.height(8.dp))
+                UninstallDataSection(
+                    onUninstallClick = { showUninstallDataDialog = true },
+                )
             }
         }
             }
@@ -1550,6 +1561,54 @@ actual fun SettingsScreen(
                 OutlinedButton(
                     onClick = { showFactoryResetDialog = false },
                     enabled = !factoryResetInProgress,
+                ) {
+                    Text(stringResource(Res.string.cancel))
+                }
+            },
+        )
+    }
+
+    if (showUninstallDataDialog) {
+        AlertDialog(
+            onDismissRequest = { if (!uninstallDataInProgress) showUninstallDataDialog = false },
+            icon = {
+                Icon(
+                    Icons.Default.DeleteForever,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                )
+            },
+            title = { Text(stringResource(Res.string.uninstall_data_confirm_title)) },
+            text = { Text(stringResource(Res.string.uninstall_data_confirm_message)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (uninstallDataInProgress) return@Button
+                        uninstallDataInProgress = true
+                        scope.launch { DesktopAppEraser.eraseAllAndExit() }
+                    },
+                    enabled = !uninstallDataInProgress,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                    ),
+                ) {
+                    if (uninstallDataInProgress) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onError,
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(Res.string.uninstall_data_in_progress))
+                    } else {
+                        Text(stringResource(Res.string.uninstall_data_confirm_button))
+                    }
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showUninstallDataDialog = false },
+                    enabled = !uninstallDataInProgress,
                 ) {
                     Text(stringResource(Res.string.cancel))
                 }
@@ -3378,6 +3437,34 @@ private fun DesktopNfcExpandSection(
                 content = content,
             )
         }
+    }
+}
+
+@Composable
+private fun UninstallDataSection(
+    onUninstallClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        OutlinedButton(
+            onClick = onUninstallClick,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = enabled,
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = MaterialTheme.colorScheme.error,
+            ),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
+        ) {
+            Icon(Icons.Default.DeleteForever, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text(stringResource(Res.string.uninstall_data_title))
+        }
+        Text(
+            text = stringResource(Res.string.uninstall_data_description),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

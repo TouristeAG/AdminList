@@ -115,6 +115,12 @@
     <string name="factory_reset_confirm_message">This permanently deletes local guests, volunteers, jobs, POS data, sync settings, and uploaded keys on this device. Google Sheets data is not deleted. You will need to configure the app again.</string>
     <string name="factory_reset_confirm_button">Erase everything</string>
     <string name="factory_reset_in_progress">Resetting…</string>
+    <string name="uninstall_data_title">Remove all app data</string>
+    <string name="uninstall_data_description">Permanently deletes all files, settings, tokens, and credentials, then quits the app. Run this before uninstalling NoctuList.</string>
+    <string name="uninstall_data_confirm_title">Remove all app data?</string>
+    <string name="uninstall_data_confirm_message">This permanently deletes every file NoctuList has written on this device — database, settings, authentication tokens, and credentials — then quits the app. The application itself is not uninstalled. This cannot be undone.</string>
+    <string name="uninstall_data_confirm_button">Delete everything &amp; quit</string>
+    <string name="uninstall_data_in_progress">Removing data…</string>
     <string name="check_for_updates">Check for updates</string>
     <string name="update_available_title">Update available: %1$s</string>
     <string name="update_required_message">A newer version of this app is required to continue. Please update to the latest version.</string>
@@ -346,6 +352,14 @@
     <string name="sales_rank_none_required">No rank needed</string>
     <string name="sales_item_summary_line">CHF %1$.2f • Discount: %2$s • Min rank: %3$s</string>
     <string name="sales_categories_label">Categories</string>
+    <string name="sales_subcategory_label">Sub-category</string>
+    <string name="sales_subcategory_hint">Refine a category, for example Alcohol or Deposits inside Bar.</string>
+    <string name="sales_subcategory_none">None</string>
+    <string name="sales_subcategory_add">New sub-category</string>
+    <string name="sales_subcategory_name_label">Sub-category name</string>
+    <string name="sales_subcategory_remove_title">Remove this sub-category?</string>
+    <string name="sales_subcategory_remove_message">“%1$s” will be removed from every product in this category.</string>
+    <string name="pos_subcategory_all">All</string>
     <string name="sales_emoji_label">Emoji</string>
     <string name="sales_category_merch">Merch</string>
     <string name="sales_category_entry">Entry</string>
@@ -479,7 +493,7 @@
     
     <!-- App Information -->
     <string name="app_info_title">App Information</string>
-    <string name="app_version">NoctuList 2.0.0</string>
+    <string name="app_version">NoctuList 2.1.0</string>
     <string name="app_designed_for">Designed for Collectif Nocturne venues</string>
     <!-- Single full sentence to avoid spacing issues across locales -->
     <string name="app_developed_full">Developed for the Collectif Nocturne by Leonardo Mondada</string>
@@ -1438,8 +1452,12 @@
     <string name="setup_firebase_auth_hint">Sign in before the first sync.</string>
     <string name="firebase_org_id_label">Organization ID</string>
     <string name="firebase_org_id_hint">Shared name for your institution (example: noctulist-club). Same ID on every device.</string>
+    <string name="firebase_org_id_invalid">4 to 64 characters, letters, digits, - and _ only. No spaces or accents: write "collectif-nocturne", not "Collectif Nocturne".</string>
     <string name="firebase_configured_orgs_title">Organizations</string>
     <string name="firebase_configured_orgs_body">Add every Firebase org ID hosted on this project. Each org has its own database under orgs/{orgId}.</string>
+    <string name="firebase_configured_org_migration_title">Destination organization</string>
+    <string name="firebase_configured_org_migration_body">Sheets data is migrated into this single organization. You can add more orgs later in Admin → Firebase sync.</string>
+    <string name="firebase_org_id_migration_hint">Only one org for this migration (example: collectif-nocturne). Add more organizations afterwards in Admin.</string>
     <string name="firebase_configured_org_add">Add organization</string>
     <string name="firebase_configured_org_remove_cd">Remove organization</string>
     <string name="firebase_configured_org_color_cd">Organization color</string>
@@ -1481,6 +1499,8 @@
     <string name="firebase_checklist_org">Organization ID filled</string>
     <string name="firebase_checklist_project">Project ID, Application ID and API key filled</string>
     <string name="firebase_checklist_auth">Google account signed in</string>
+    <string name="firebase_checklist_oauth">Google Sign-In credentials received</string>
+    <string name="firebase_checklist_invite">Invitation code received</string>
     <string name="firebase_advanced_project">Show project details</string>
     <string name="firebase_hide_project">Hide project details</string>
     <string name="firebase_reveal_secrets">Show project secrets</string>
@@ -1492,6 +1512,7 @@
     <string name="firebase_join_qr_body">Share this QR only with your team. It includes project config, Google Sign-In credentials, and the invitation code — one scan is enough.</string>
     <string name="firebase_join_error_oauth_missing">This join code is missing Google Sign-In credentials. Ask your admin for a new QR from their device (Settings → Firebase sync).</string>
     <string name="firebase_join_error_invite_missing">This join code is missing the invitation code. Ask your admin for a new full QR, or enter the 8-character invitation code below.</string>
+    <string name="firebase_join_error_invalid">This is not a NoctuList join code. Scan the join QR from an administrator device (Settings → Firebase sync).</string>
     <string name="firebase_join_qr_need_config">Fill org ID, project options, and OAuth credentials first to generate a join QR.</string>
     <string name="firebase_join_copy_code">Copy configuration code</string>
     <string name="firebase_join_code_copied">Configuration code copied</string>
@@ -1641,6 +1662,7 @@ Optional origins (no path): http://localhost:8889 etc.
     <string name="migration_wizard_step_run_body">Keep this screen open until it finishes. Other devices will show a reconnect prompt.</string>
     <string name="migration_wizard_start">Start migration</string>
     <string name="migration_wizard_cancel">Cancel</string>
+    <string name="migration_wizard_done">Migration finished — close</string>
     <string name="migration_wizard_cancel_inflight">Stop migration</string>
     <string name="migration_wizard_cancel_inflight_hint">Cancel requested — stops before the backend switch if still possible.</string>
     <string name="migration_spreadsheet_id_label">Spreadsheet ID</string>
@@ -1656,6 +1678,9 @@ Optional origins (no path): http://localhost:8889 etc.
     <string name="follow_connect">Connect to new database</string>
     <string name="follow_need_sign_in">Sign in with Google first, then tap Connect.</string>
     <string name="follow_later">Later</string>
+    <string name="follow_factory_reset">Reset this device</string>
+    <string name="follow_factory_reset_body">Erases all data and settings on this device and restarts the setup wizard. Use this only if you cannot connect to the new database. Data already sent to the institution database is not affected.</string>
+    <string name="follow_factory_reset_confirm">Erase and restart setup</string>
     <string name="backend_mismatch_title">Database migration detected</string>
     <string name="backend_mismatch_billeterie_message">An institution migration was performed. An administrator must open Admin on this device to reconfigure sync.</string>
     <string name="backend_mismatch_welcome_title">Institution database changed</string>

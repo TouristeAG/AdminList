@@ -177,6 +177,7 @@ object FirestoreChangeApplier {
             firebaseOrgId = FirestoreApplyPolicy.orgIdToPersist(existing?.firebaseOrgId.orEmpty(), orgId),
             profilePhotoPath = photos.path,
             profilePhotoUrl = photos.url,
+            barDiscountPercent = (intOf(decrypted["barDiscountPercent"]) ?: 0).coerceIn(0, 100),
         )
         if (existing == null) {
             try {
@@ -450,6 +451,7 @@ object FirestoreChangeApplier {
             name = docId,
             price = doubleOf(data["price"]) ?: existing?.price ?: 0.0,
             categories = stringOf(data["categories"]) ?: existing?.categories.orEmpty(),
+            subcategory = stringOf(data["subcategory"]) ?: existing?.subcategory.orEmpty(),
             emoji = stringOf(data["emoji"]) ?: existing?.emoji.orEmpty(),
             availableVenues = stringOf(data["availableVenues"]) ?: existing?.availableVenues.orEmpty(),
             isActive = boolOf(data["isActive"]) ?: existing?.isActive ?: true,

@@ -4,6 +4,8 @@ import com.eventmanager.app.data.security.SecureCredentialKeys
 import com.eventmanager.app.data.security.SecureCredentialStoreHolder
 import com.eventmanager.app.data.security.crypto.DefaultOrgCryptoService
 import com.eventmanager.app.data.security.crypto.OrgCryptoRegistry
+import com.eventmanager.app.data.models.PosSubcategory
+import com.eventmanager.app.data.models.PosSubcategoryCatalog
 import com.eventmanager.app.data.utils.AppIconStyles
 import com.eventmanager.app.data.utils.NanoIdGenerator
 import com.eventmanager.app.platform.AppBuildInfo
@@ -190,6 +192,7 @@ class SettingsManager(private val storage: AppStorage) {
         private const val KEY_FIREBASE_GCM_SENDER_ID = "firebase_gcm_sender_id"
         private const val KEY_FIREBASE_STORAGE_BUCKET = "firebase_storage_bucket"
         private const val KEY_PROFILE_PHOTOS_ENABLED = "profile_photos_enabled"
+        private const val KEY_POS_SUBCATEGORIES = "pos_subcategories"
         private const val KEY_FIREBASE_WEB_CLIENT_ID = "firebase_web_client_id"
         private const val KEY_FIREBASE_WEB_CLIENT_SECRET = "firebase_web_client_secret"
         private const val KEY_ALLOWED_EMAIL_DOMAINS = "allowed_email_domains"
@@ -313,6 +316,15 @@ class SettingsManager(private val storage: AppStorage) {
     fun setProfilePhotosEnabled(enabled: Boolean) {
         storage.putBoolean(KEY_PROFILE_PHOTOS_ENABLED, enabled)
         touchInstitutionSettingLastModified(InstitutionSettingsKeys.PROFILE_PHOTOS_ENABLED)
+    }
+
+    /** Admin-defined POS sub-categories, serialized by [PosSubcategoryCatalog]. */
+    fun getPosSubcategories(): List<PosSubcategory> =
+        PosSubcategoryCatalog.decode(storage.getString(KEY_POS_SUBCATEGORIES, "") ?: "")
+
+    fun savePosSubcategories(subcategories: List<PosSubcategory>) {
+        storage.putString(KEY_POS_SUBCATEGORIES, PosSubcategoryCatalog.encode(subcategories))
+        touchInstitutionSettingLastModified(InstitutionSettingsKeys.POS_SUBCATEGORIES)
     }
 
     /** OAuth Web client ID used to request Google ID tokens for Firebase Auth (Android). */
@@ -840,6 +852,8 @@ class SettingsManager(private val storage: AppStorage) {
             InstitutionSettingsKeys.PROFILE_PHOTOS_ENABLED -> isProfilePhotosEnabled().toString()
             InstitutionSettingsKeys.ANNOUNCEMENTS_NON_ADMIN_SEND_ENABLED ->
                 isAnnouncementsNonAdminSendEnabled().toString()
+            InstitutionSettingsKeys.POS_SUBCATEGORIES ->
+                storage.getString(KEY_POS_SUBCATEGORIES, "") ?: ""
             InstitutionSettingsKeys.SHEETS_MIRROR_ENABLED -> isSheetsMirrorEnabled().toString()
             InstitutionSettingsKeys.SHEETS_MIRROR_SPREADSHEET_ID -> getSheetsMirrorSpreadsheetId()
             InstitutionSettingsKeys.SHEETS_MIRROR_INTERVAL_MINUTES ->
@@ -954,6 +968,12 @@ class SettingsManager(private val storage: AppStorage) {
                 storage.putBoolean(
                     KEY_ANNOUNCEMENTS_NON_ADMIN_SEND_ENABLED,
                     value.trim().equals("true", ignoreCase = true),
+                )
+            // Re-encode so a malformed remote payload cannot poison the local catalogue.
+            InstitutionSettingsKeys.POS_SUBCATEGORIES ->
+                storage.putString(
+                    KEY_POS_SUBCATEGORIES,
+                    PosSubcategoryCatalog.encode(PosSubcategoryCatalog.decode(value)),
                 )
             InstitutionSettingsKeys.SHEETS_MIRROR_ENABLED ->
                 storage.putBoolean(KEY_SHEETS_MIRROR_ENABLED, value.trim().equals("true", ignoreCase = true))

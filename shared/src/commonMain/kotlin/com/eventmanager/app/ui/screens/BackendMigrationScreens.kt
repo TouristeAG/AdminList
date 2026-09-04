@@ -10,6 +10,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -38,7 +39,13 @@ import com.eventmanager.app.data.sync.SyncResult
 import com.eventmanager.app.platform.PlatformContext
 import com.eventmanager.app.resources.Res
 import com.eventmanager.app.resources.backend_mismatch_title
+import com.eventmanager.app.resources.firebase_join_error_invalid
+import com.eventmanager.app.resources.firebase_join_error_invite_missing
+import com.eventmanager.app.resources.firebase_join_error_oauth_missing
 import com.eventmanager.app.resources.follow_connect
+import com.eventmanager.app.resources.follow_factory_reset
+import com.eventmanager.app.resources.follow_factory_reset_body
+import com.eventmanager.app.resources.follow_factory_reset_confirm
 import com.eventmanager.app.resources.follow_intro
 import com.eventmanager.app.resources.follow_later
 import com.eventmanager.app.resources.follow_migrated_by
@@ -55,6 +62,7 @@ import com.eventmanager.app.resources.migration_spreadsheet_id_label
 import com.eventmanager.app.resources.migration_wizard_cancel
 import com.eventmanager.app.resources.migration_wizard_cancel_inflight
 import com.eventmanager.app.resources.migration_wizard_cancel_inflight_hint
+import com.eventmanager.app.resources.migration_wizard_done
 import com.eventmanager.app.resources.migration_wizard_intro
 import com.eventmanager.app.resources.migration_wizard_start
 import com.eventmanager.app.resources.migration_wizard_step_config
@@ -64,8 +72,9 @@ import com.eventmanager.app.resources.migration_wizard_step_run
 import com.eventmanager.app.resources.migration_wizard_step_run_body
 import com.eventmanager.app.resources.migration_wizard_to_firebase_title
 import com.eventmanager.app.resources.migration_wizard_to_sheets_title
-import com.eventmanager.app.data.remote.FirebaseJoinCodec
-import com.eventmanager.app.ui.components.FirebaseConfigReceivedBanner
+import com.eventmanager.app.data.remote.FirebaseJoinImport
+import com.eventmanager.app.data.remote.FirebaseJoinImportProblem
+import com.eventmanager.app.data.remote.FirebaseJoinImportResult
 import com.eventmanager.app.ui.components.FirebaseConnectionFields
 import com.eventmanager.app.ui.components.FirebaseJoinImportSection
 import com.eventmanager.app.ui.components.FirebaseSetupTutorialDialog
@@ -88,6 +97,7 @@ fun BackendFollowScreen(
     platformContext: PlatformContext?,
     onFollow: suspend (orgId: String?, spreadsheetId: String?) -> SyncResult,
     onCancelUnavailable: () -> Unit = {},
+    onFactoryReset: (() -> Unit)? = null,
     onRequestFirebaseSignIn: ((com.eventmanager.app.data.remote.FirebaseAuthResult) -> Unit) -> Unit = { onResult ->
         onResult(com.eventmanager.app.data.remote.FirebaseAuthResult.Error("Firebase Sign-In is not available"))
     },
@@ -120,10 +130,24 @@ fun BackendFollowScreen(
     var busy by remember { mutableStateOf(false) }
     var showJoinScan by remember { mutableStateOf(false) }
     var joinedViaQr by remember { mutableStateOf(false) }
+    var joinError by remember { mutableStateOf<String?>(null) }
+    var showResetConfirm by remember { mutableStateOf(false) }
     var sheetsUploadStatus by remember { mutableStateOf<String?>(null) }
     var serviceAccountReady by remember { mutableStateOf(settingsManager.isConfigured()) }
     val scope = rememberCoroutineScope()
     val needSignInMsg = stringResource(Res.string.follow_need_sign_in)
+    val joinOAuthMissingMsg = stringResource(Res.string.firebase_join_error_oauth_missing)
+    val joinInviteMissingMsg = stringResource(Res.string.firebase_join_error_invite_missing)
+    val joinInvalidMsg = stringResource(Res.string.firebase_join_error_invalid)
+
+    fun reloadFirebaseFromSettings() {
+        configuredOrgs = settingsManager.getFirebaseConfiguredOrgs()
+        projectId = settingsManager.getFirebaseProjectId()
+        applicationId = settingsManager.getFirebaseApplicationId()
+        apiKey = settingsManager.getFirebaseApiKey()
+        webClientId = settingsManager.getFirebaseWebClientId()
+        webClientSecret = settingsManager.getFirebaseWebClientSecret()
+    }
 
     LaunchedEffect(announcement) {
         if (announcement.backendType == BackendType.FIREBASE) {
@@ -202,29 +226,29 @@ fun BackendFollowScreen(
             GuidedStepCard(title = stringResource(Res.string.follow_step_credentials)) {
                 when (announcement.backendType) {
                     BackendType.FIREBASE -> {
-                        if (!hideSecrets) {
-                            FirebaseJoinImportSection(
-                                settingsManager = settingsManager,
-                                onJoined = { joinedOrg ->
-                                    configuredOrgs = settingsManager.getFirebaseConfiguredOrgs()
-                                    projectId = settingsManager.getFirebaseProjectId()
-                                    applicationId = settingsManager.getFirebaseApplicationId()
-                                    apiKey = settingsManager.getFirebaseApiKey()
-                                    webClientId = settingsManager.getFirebaseWebClientId()
-                                    webClientSecret = settingsManager.getFirebaseWebClientSecret()
-                                    joinedViaQr = true
-                                },
-                                onRequestScan = if (platformContext != null) {
-                                    { showJoinScan = true }
-                                } else {
-                                    null
-                                },
-                                configImported = joinedViaQr ||
-                                    settingsManager.isFirebaseJoinImported(),
-                            )
-                        } else {
-                            FirebaseConfigReceivedBanner(orgId = activeOrgId())
-                        }
+                        // Same shape as "join an organization" in the setup wizard: scan the QR,
+                        // or type the codes. This used to be hidden as soon as the announcement
+                        // carried project options, leaving a wall of credential fields as the
+                        // only visible path.
+                        FirebaseJoinImportSection(
+                            settingsManager = settingsManager,
+                            onJoined = {
+                                reloadFirebaseFromSettings()
+                                joinedViaQr = true
+                            },
+                            onRequestScan = if (platformContext != null) {
+                                { showJoinScan = true }
+                            } else {
+                                null
+                            },
+                            joinError = joinError,
+                            onJoinInputChanged = {
+                                joinError = null
+                                reloadFirebaseFromSettings()
+                            },
+                            configImported = joinedViaQr ||
+                                settingsManager.isFirebaseJoinImported(),
+                        )
                         FirebaseConnectionFields(
                             configuredOrgs = configuredOrgs,
                             onConfiguredOrgsChange = { configuredOrgs = it },
@@ -384,8 +408,44 @@ fun BackendFollowScreen(
                 TextButton(onClick = onCancelUnavailable) {
                     Text(stringResource(Res.string.follow_later))
                 }
+                // Last resort. A migration that failed after announcing used to leave this
+                // dialog up with no way out and no way through.
+                if (onFactoryReset != null) {
+                    TextButton(onClick = { showResetConfirm = true }) {
+                        Text(
+                            stringResource(Res.string.follow_factory_reset),
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                }
             }
         }
+    }
+
+    if (showResetConfirm && onFactoryReset != null) {
+        AlertDialog(
+            onDismissRequest = { showResetConfirm = false },
+            title = { Text(stringResource(Res.string.follow_factory_reset)) },
+            text = { Text(stringResource(Res.string.follow_factory_reset_body)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showResetConfirm = false
+                        onFactoryReset()
+                    },
+                ) {
+                    Text(
+                        stringResource(Res.string.follow_factory_reset_confirm),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetConfirm = false }) {
+                    Text(stringResource(Res.string.migration_wizard_cancel))
+                }
+            },
+        )
     }
 
     if (showJoinScan && platformContext != null) {
@@ -393,18 +453,23 @@ fun BackendFollowScreen(
             platformContext = platformContext,
             onDismiss = { showJoinScan = false },
             onPayload = { raw ->
-                FirebaseJoinCodec.decode(raw).onSuccess { payload ->
-                    settingsManager.applyFirebaseJoinPayload(payload)
-                    configuredOrgs = settingsManager.getFirebaseConfiguredOrgs()
-                    projectId = settingsManager.getFirebaseProjectId()
-                    applicationId = settingsManager.getFirebaseApplicationId()
-                    apiKey = settingsManager.getFirebaseApiKey()
-                    webClientId = settingsManager.getFirebaseWebClientId()
-                    webClientSecret = settingsManager.getFirebaseWebClientSecret()
-                    joinedViaQr = true
-                    status = null
-                }.onFailure { e ->
-                    status = e.message
+                when (val result = FirebaseJoinImport.apply(settingsManager, raw)) {
+                    is FirebaseJoinImportResult.Undecodable -> {
+                        joinError = result.message ?: joinInvalidMsg
+                    }
+                    is FirebaseJoinImportResult.Incomplete -> {
+                        joinError = when (result.problem) {
+                            FirebaseJoinImportProblem.OAUTH_SECRET_MISSING -> joinOAuthMissingMsg
+                            FirebaseJoinImportProblem.INVITATION_MISSING -> joinInviteMissingMsg
+                        }
+                        reloadFirebaseFromSettings()
+                    }
+                    is FirebaseJoinImportResult.Complete -> {
+                        joinError = null
+                        status = null
+                        reloadFirebaseFromSettings()
+                        joinedViaQr = true
+                    }
                 }
                 showJoinScan = false
             },
@@ -425,21 +490,23 @@ fun BackendMigrationWizardScreen(
         onResult(com.eventmanager.app.data.remote.FirebaseAuthResult.Error("Firebase Sign-In is not available"))
     },
 ) {
-    var configuredOrgs by remember {
-        mutableStateOf(
-            settingsManager.getFirebaseConfiguredOrgs().ifEmpty {
-                listOf(
-                    com.eventmanager.app.data.remote.FirebaseConfiguredOrg(
-                        orgId = settingsManager.getFirebaseOrgId(),
-                        colorArgb = com.eventmanager.app.data.remote.FirebaseConfiguredOrgCodec.defaultColorForIndex(0),
-                    ),
-                )
-            },
-        )
+    // Migration always targets exactly one org — multi-org lists confuse which destination
+    // receives the Sheets data. Extra orgs are added later in Admin → Firebase sync.
+    fun migrationTargetOrgs(): List<com.eventmanager.app.data.remote.FirebaseConfiguredOrg> {
+        val activeId = settingsManager.getFirebaseOrgId().trim()
+        val existing = settingsManager.getFirebaseConfiguredOrgs()
+        val primary = existing.firstOrNull { it.orgId.trim() == activeId && activeId.isNotBlank() }
+            ?: existing.firstOrNull { it.orgId.isNotBlank() }
+            ?: com.eventmanager.app.data.remote.FirebaseConfiguredOrg(
+                orgId = activeId,
+                colorArgb = com.eventmanager.app.data.remote.FirebaseConfiguredOrgCodec.defaultColorForIndex(0),
+            )
+        return listOf(primary)
     }
-    fun activeOrgId(): String = settingsManager.getFirebaseOrgId().ifBlank {
-        configuredOrgs.firstOrNull { it.orgId.isNotBlank() }?.orgId.orEmpty()
-    }
+    var configuredOrgs by remember { mutableStateOf(migrationTargetOrgs()) }
+    fun activeOrgId(): String = configuredOrgs.firstOrNull { it.orgId.isNotBlank() }?.orgId?.trim()
+        .orEmpty()
+        .ifBlank { settingsManager.getFirebaseOrgId().trim() }
     var spreadsheetId by remember { mutableStateOf(settingsManager.getSpreadsheetId()) }
     var projectId by remember { mutableStateOf(settingsManager.getFirebaseProjectId()) }
     var applicationId by remember { mutableStateOf(settingsManager.getFirebaseApplicationId()) }
@@ -449,6 +516,7 @@ fun BackendMigrationWizardScreen(
     var authEmail by remember { mutableStateOf(settingsManager.getFirebaseAuthEmail().ifBlank { null }) }
     var status by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
+    var succeeded by remember { mutableStateOf(false) }
     var sheetsUploadStatus by remember { mutableStateOf<String?>(null) }
     var serviceAccountReady by remember { mutableStateOf(settingsManager.isConfigured()) }
     val scope = rememberCoroutineScope()
@@ -538,7 +606,8 @@ fun BackendMigrationWizardScreen(
                     MigrationDirection.SHEETS_TO_FIREBASE -> {
                         FirebaseConnectionFields(
                             configuredOrgs = configuredOrgs,
-                            onConfiguredOrgsChange = { configuredOrgs = it },
+                            onConfiguredOrgsChange = { configuredOrgs = it.take(1) },
+                            allowMultipleOrgs = false,
                             projectId = projectId,
                             onProjectIdChange = { projectId = it },
                             applicationId = applicationId,
@@ -551,7 +620,7 @@ fun BackendMigrationWizardScreen(
                             onWebClientSecretChange = { webClientSecret = it },
                             authEmail = authEmail,
                             onSignIn = {
-                                settingsManager.setFirebaseConfiguredOrgs(configuredOrgs)
+                                settingsManager.setFirebaseConfiguredOrgs(configuredOrgs.take(1))
                                 settingsManager.setFirebaseProjectId(projectId.trim())
                                 settingsManager.setFirebaseApplicationId(applicationId.trim())
                                 settingsManager.setFirebaseApiKey(apiKey.trim())
@@ -594,14 +663,36 @@ fun BackendMigrationWizardScreen(
                 body = stringResource(Res.string.migration_wizard_step_run_body),
             ) {
                 if (busy) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                status?.let { Text(it) }
+                status?.let {
+                    Text(
+                        it,
+                        color = if (succeeded) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.error
+                        },
+                    )
+                }
+
+                // A finished migration must not leave "Start migration" and "Cancel" as the only
+                // controls: dismissing through Cancel reads like a rollback and left admins
+                // unsure whether the switch had happened.
+                if (succeeded) {
+                    Button(
+                        onClick = onDismiss,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(Res.string.migration_wizard_done))
+                    }
+                    return@GuidedStepCard
+                }
 
                 Button(
                     onClick = {
                         busy = true
                         scope.launch {
                             if (direction == MigrationDirection.SHEETS_TO_FIREBASE) {
-                                settingsManager.setFirebaseConfiguredOrgs(configuredOrgs)
+                                settingsManager.setFirebaseConfiguredOrgs(configuredOrgs.take(1))
                                 settingsManager.setFirebaseProjectId(projectId.trim())
                                 settingsManager.setFirebaseApplicationId(applicationId.trim())
                                 settingsManager.setFirebaseApiKey(apiKey.trim())
@@ -639,6 +730,7 @@ fun BackendMigrationWizardScreen(
                                 MigrationDirection.FIREBASE_TO_SHEETS -> onMigrateToSheets(spreadsheetId.trim())
                             }
                             busy = false
+                            succeeded = result is SyncResult.Success
                             status = when (result) {
                                 is SyncResult.Success -> result.message
                                 is SyncResult.Error -> result.message

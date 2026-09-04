@@ -62,4 +62,8 @@ actual class PlatformFileManager actual constructor(private val context: Platfor
         suggestedName: String,
         mimeType: String,
     ): Boolean = false
+
+    // Android Firebase SDK manages its own auth token storage internally; we have no
+    // additional files to erase beyond what signOut() and clearAllData() handle.
+    actual fun getAuthRelatedFilesToErase(): List<File> = emptyList()
 }

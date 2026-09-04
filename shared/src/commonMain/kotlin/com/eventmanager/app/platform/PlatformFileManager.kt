@@ -24,4 +24,15 @@ expect class PlatformFileManager(context: PlatformContext) {
     fun saveWalletPassCertificate(bytes: ByteArray): Boolean
     suspend fun pickWalletPassCertificateFile(): ByteArray?
     suspend fun saveFileToUserLocation(sourceFile: File, suggestedName: String, mimeType: String): Boolean
+
+    /**
+     * Returns auth-related files and directories that should be deleted on factory reset.
+     * These include OAuth token stores, Firebase auth token files, Gmail token directories,
+     * and the encrypted credential store — files that survive [FirebaseAuthBridge.signOut]
+     * and would auto-restore the previous session on the next launch.
+     *
+     * Android: returns an empty list (the platform Firebase SDK manages its own storage).
+     * Desktop: returns the specific files/dirs under the app data directory.
+     */
+    fun getAuthRelatedFilesToErase(): List<File>
 }

@@ -2,6 +2,7 @@ package com.eventmanager.app.ui.components
 
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -14,6 +15,7 @@ import com.eventmanager.app.data.remote.InstitutionBackendAnnouncement
 import com.eventmanager.app.data.remote.MigrationDirection
 import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.platform.PlatformContext
+import com.eventmanager.app.platform.PlatformFileManager
 import com.eventmanager.app.resources.Res
 import com.eventmanager.app.resources.backend_mismatch_soft_lock
 import com.eventmanager.app.ui.screens.BackendFollowScreen
@@ -41,8 +43,14 @@ fun BackendMigrationUiHost(
     val emptyAnnouncement = remember { MutableStateFlow<InstitutionBackendAnnouncement?>(null) }
     val pendingFollow by (viewModel.pendingBackendFollow ?: emptyAnnouncement).collectAsState()
     val softLocked by (viewModel.crudSoftLocked ?: remember { MutableStateFlow(false) }).collectAsState()
+    val fileManager = remember(platformContext) { platformContext?.let { PlatformFileManager(it) } }
 
-    pendingFollow?.let { announcement ->
+    // "Later" has to silence the soft-lock banner too, otherwise deferring the follow dialog
+    // only swaps it for another modal that has no controls at all. Reset on a new migration.
+    var deferred by remember { mutableStateOf(false) }
+    LaunchedEffect(pendingFollow?.migrationId) { deferred = false }
+
+    pendingFollow?.takeIf { !deferred }?.let { announcement ->
         Dialog(
             onDismissRequest = {},
             properties = DialogProperties(
@@ -58,12 +66,18 @@ fun BackendMigrationUiHost(
                 onFollow = { orgId, spreadsheetId ->
                     viewModel.followPendingBackendMigration(announcement, orgId, spreadsheetId)
                 },
+                onCancelUnavailable = { deferred = true },
+                onFactoryReset = fileManager?.let {
+                    {
+                        viewModel.factoryReset(settingsManager, it) { deferred = true }
+                    }
+                },
                 onRequestFirebaseSignIn = onRequestFirebaseSignIn,
             )
         }
     }
 
-    if (softLocked && pendingFollow == null) {
+    if (softLocked && pendingFollow == null && !deferred) {
         Dialog(
             onDismissRequest = {},
             properties = DialogProperties(

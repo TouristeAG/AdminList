@@ -32,9 +32,11 @@ import com.eventmanager.app.data.sync.settingsManagerFor
 import com.eventmanager.app.platform.LocalPlatformContext
 import com.eventmanager.app.resources.Res
 import com.eventmanager.app.resources.*
+import com.eventmanager.app.ui.components.GuestBarDiscountField
 import com.eventmanager.app.ui.components.GuestDetailPanel
 import com.eventmanager.app.ui.components.GuestVenueDropdownField
 import com.eventmanager.app.ui.components.ProfilePhotoFormPicker
+import com.eventmanager.app.ui.components.rememberGuestBarDiscountEnabled
 import com.eventmanager.app.ui.components.rememberProfilePhotosUploadEnabled
 import com.eventmanager.app.ui.components.SearchBarWithFilter
 import com.eventmanager.app.ui.components.VolunteerBenefitsPanel
@@ -329,6 +331,7 @@ actual fun GuestListScreen(
         DesktopAddGuestDialog(
             venues = venues,
             profilePhotosEnabled = rememberProfilePhotosUploadEnabled(viewModel),
+            barDiscountEnabled = rememberGuestBarDiscountEnabled(viewModel),
             onDismiss = { showAddDialog = false },
             onConfirmPermanent = { guest, photo ->
                 onAddGuest(guest, photo)
@@ -346,6 +349,7 @@ actual fun GuestListScreen(
             guest = guest,
             venues = venues,
             profilePhotosEnabled = rememberProfilePhotosUploadEnabled(viewModel),
+            barDiscountEnabled = rememberGuestBarDiscountEnabled(viewModel),
             viewModel = viewModel,
             onDismiss = { showEditDialog = null },
             onConfirm = { updated ->
@@ -759,6 +763,7 @@ private fun DesktopTimelineGuestRow(
 private fun DesktopAddGuestDialog(
     venues: List<VenueEntity>,
     profilePhotosEnabled: Boolean = false,
+    barDiscountEnabled: Boolean = false,
     onDismiss: () -> Unit,
     onConfirmPermanent: (Guest, ByteArray?) -> Unit,
     onConfirmTemporary: (ManualTemporaryGuestBatch) -> Unit
@@ -772,6 +777,7 @@ private fun DesktopAddGuestDialog(
     var invitations by remember { mutableStateOf("1") }
     var selectedVenueName by remember { mutableStateOf<String?>(null) }
     var notes by remember { mutableStateOf("") }
+    var barDiscount by remember { mutableStateOf("0") }
     var pendingPhotoBytes by remember { mutableStateOf<ByteArray?>(null) }
 
     var temporaryArtist by remember { mutableStateOf("") }
@@ -831,6 +837,9 @@ private fun DesktopAddGuestDialog(
                             modifier = Modifier.fillMaxWidth(),
                         )
                         OutlinedTextField(notes, { notes = it }, label = { Text(stringResource(Res.string.notes)) }, modifier = Modifier.fillMaxWidth())
+                        if (barDiscountEnabled) {
+                            GuestBarDiscountField(barDiscount, { barDiscount = it })
+                        }
                         ProfilePhotoFormPicker(
                             enabled = profilePhotosEnabled,
                             currentUrl = "",
@@ -914,7 +923,8 @@ private fun DesktopAddGuestDialog(
                                         phoneNumber = phone.trim(),
                                         invitations = invitations.toIntOrNull() ?: 0,
                                         venueName = selectedVenueName ?: defaultVenue,
-                                        notes = notes.trim()
+                                        notes = notes.trim(),
+                                        barDiscountPercent = if (barDiscountEnabled) barDiscount.toIntOrNull() ?: 0 else 0
                                     ),
                                     pendingPhotoBytes,
                                 )
@@ -944,6 +954,7 @@ private fun DesktopEditGuestDialog(
     guest: Guest,
     venues: List<VenueEntity>,
     profilePhotosEnabled: Boolean = false,
+    barDiscountEnabled: Boolean = false,
     viewModel: EventManagerViewModel? = null,
     onDismiss: () -> Unit,
     onConfirm: (Guest) -> Unit
@@ -954,6 +965,7 @@ private fun DesktopEditGuestDialog(
     var invitations by remember(guest) { mutableStateOf(guest.invitations.toString()) }
     var selectedVenueName by remember(guest) { mutableStateOf(guest.venueName) }
     var notes by remember(guest) { mutableStateOf(guest.notes) }
+    var barDiscount by remember(guest) { mutableStateOf(guest.barDiscountPercent.toString()) }
     var pendingPhotoBytes by remember { mutableStateOf<ByteArray?>(null) }
 
     AlertDialog(
@@ -972,6 +984,9 @@ private fun DesktopEditGuestDialog(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(notes, { notes = it }, label = { Text(stringResource(Res.string.notes)) }, modifier = Modifier.fillMaxWidth())
+                if (!guest.isTemporaryGuest && barDiscountEnabled) {
+                    GuestBarDiscountField(barDiscount, { barDiscount = it })
+                }
                 if (!guest.isTemporaryGuest) {
                     ProfilePhotoFormPicker(
                         enabled = profilePhotosEnabled,
@@ -996,6 +1011,11 @@ private fun DesktopEditGuestDialog(
                         invitations = invitations.toIntOrNull() ?: guest.invitations,
                         venueName = selectedVenueName.trim(),
                         notes = notes.trim(),
+                        barDiscountPercent = if (barDiscountEnabled) {
+                            barDiscount.toIntOrNull() ?: 0
+                        } else {
+                            guest.barDiscountPercent
+                        },
                         lastModified = System.currentTimeMillis()
                     )
                     onConfirm(updated)

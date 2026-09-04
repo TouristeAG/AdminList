@@ -9,6 +9,9 @@ import kotlinx.coroutines.withContext
 /**
  * Clears local DB tables, preference storage, and credential/cache files so the app
  * returns to a first-launch (setup wizard) state. Does not uninstall the binary.
+ *
+ * This is the *in-app* factory reset (app keeps running afterwards). For a full
+ * pre-uninstall wipe that also exits the process, see `DesktopAppEraser` (desktop only).
  */
 object FactoryReset {
     suspend fun perform(
@@ -21,10 +24,21 @@ object FactoryReset {
             // this the app restarts signed in to an org it no longer has any settings for.
             runCatching { FirebaseAuthBridge.signOut() }
             runCatching { repository.clearAllData() }
+
+            // Known credential / config files
             runCatching { fileManager.getServiceAccountFile()?.delete() }
             runCatching { fileManager.getGmailOAuthClientFile()?.delete() }
             runCatching { fileManager.clearEmailLogoFile() }
             runCatching { fileManager.getWalletPassCertificateFile()?.delete() }
+
+            // Auth token files & directories that the Firebase / Gmail OAuth stores write.
+            // These survive sign-out unless explicitly deleted, so a factory-reset user
+            // would find themselves auto-signed-back-in on next launch without this step.
+            fileManager.getAuthRelatedFilesToErase().forEach { f ->
+                runCatching { if (f.isDirectory) f.deleteRecursively() else f.delete() }
+            }
+
+            // Transient / generated data directories
             runCatching {
                 fileManager.getUpdatesDirectory().listFiles()?.forEach { child ->
                     if (child.isDirectory) child.deleteRecursively() else child.delete()
@@ -40,6 +54,7 @@ object FactoryReset {
                     if (child.isDirectory) child.deleteRecursively() else child.delete()
                 }
             }
+
             settingsManager.clearAllSettings()
         }
     }

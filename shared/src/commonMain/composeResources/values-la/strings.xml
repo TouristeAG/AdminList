@@ -346,6 +346,14 @@
     <string name="sales_rank_none_required">Nullus ordo requiratur</string>
     <string name="sales_item_summary_line">CHF %1$.2f • Reductio: %2$s • Rank min. : %3$s</string>
     <string name="sales_categories_label">Categoriae</string>
+    <string name="sales_subcategory_label">Subcategoria</string>
+    <string name="sales_subcategory_hint">Categoriam distingue, exempli gratia Vinum aut Pignora intra Bar.</string>
+    <string name="sales_subcategory_none">Nulla</string>
+    <string name="sales_subcategory_add">Nova subcategoria</string>
+    <string name="sales_subcategory_name_label">Nomen subcategoriae</string>
+    <string name="sales_subcategory_remove_title">Hanc subcategoriam delere?</string>
+    <string name="sales_subcategory_remove_message">“%1$s” ex omnibus mercibus huius categoriae tolletur.</string>
+    <string name="pos_subcategory_all">Omnia</string>
     <string name="sales_emoji_label">Emoji</string>
     <string name="sales_category_merch">Merch</string>
     <string name="sales_category_entry">Introitus</string>
@@ -479,7 +487,7 @@
     
     <!-- App Information -->
     <string name="app_info_title">Informations inapplication</string>
-    <string name="app_version">NoctuList 2.0.0</string>
+    <string name="app_version">NoctuList 2.1.0</string>
     <string name="app_designed_for">Nocturne Collective locis disposito</string>
     <!-- Single full sentence to avoid spacing issues across locales -->
     <string name="app_developed_full">Developed for Nocturne Collective by Leonardo Mondada</string>

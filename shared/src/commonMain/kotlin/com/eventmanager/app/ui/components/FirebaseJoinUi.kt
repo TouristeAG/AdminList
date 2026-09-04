@@ -26,6 +26,9 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.eventmanager.app.data.remote.FirebaseJoinCodec
+import com.eventmanager.app.data.remote.FirebaseJoinImport
+import com.eventmanager.app.data.remote.FirebaseJoinImportProblem
+import com.eventmanager.app.data.remote.FirebaseJoinImportResult
 import com.eventmanager.app.data.remote.FirebaseJoinPayload
 import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.data.security.firebaseOAuthCredentialsReady
@@ -539,6 +542,7 @@ fun FirebaseJoinImportSection(
     onJoined: (orgId: String) -> Unit,
     onRequestScan: (() -> Unit)? = null,
     joinError: String? = null,
+    onJoinInputChanged: () -> Unit = {},
     configImported: Boolean = settingsManager.isFirebaseJoinImported(),
 ) {
     var pasteCode by remember { mutableStateOf("") }
@@ -552,38 +556,33 @@ fun FirebaseJoinImportSection(
     val incompleteOAuthMsg = stringResource(Res.string.firebase_join_error_oauth_missing)
     val incompleteInviteMsg = stringResource(Res.string.firebase_join_error_invite_missing)
 
+    // An imported-but-incomplete config must not collapse into the "received" banner: the fields
+    // that fix it are in the manual block, and the invitation code is typed there.
+    LaunchedEffect(error) {
+        if (error != null) showManualEntry = true
+    }
+
     fun applyRaw(raw: String) {
-        FirebaseJoinCodec.decode(raw).fold(
-            onSuccess = { payload ->
-                settingsManager.applyFirebaseJoinPayload(payload)
-                // Prefer invitation from the QR/config code; only fall back to the manual field.
-                val invite = payload.bootstrapCode.trim().ifBlank { manualInviteCode.trim() }
-                if (invite.isNotBlank()) {
-                    settingsManager.setFirebaseBootstrapCode(invite)
+        when (val result = FirebaseJoinImport.apply(settingsManager, raw, manualInviteCode)) {
+            is FirebaseJoinImportResult.Undecodable ->
+                localError = result.message ?: "Invalid join code"
+
+            is FirebaseJoinImportResult.Incomplete ->
+                localError = when (result.problem) {
+                    FirebaseJoinImportProblem.OAUTH_SECRET_MISSING -> incompleteOAuthMsg
+                    FirebaseJoinImportProblem.INVITATION_MISSING -> incompleteInviteMsg
                 }
-                if (!firebaseOAuthCredentialsReady(
-                        settingsManager.getFirebaseWebClientId(),
-                        settingsManager.getFirebaseWebClientSecret(),
-                    )
-                ) {
-                    localError = incompleteOAuthMsg
-                    return@fold
-                }
-                if (settingsManager.getFirebaseBootstrapCode().isBlank()) {
-                    localError = incompleteInviteMsg
-                    return@fold
-                }
+
+            is FirebaseJoinImportResult.Complete -> {
                 localError = null
+                onJoinInputChanged()
                 pasteCode = ""
                 manualInviteCode = ""
                 imported = true
                 showManualEntry = false
-                onJoined(payload.orgId)
-            },
-            onFailure = { e ->
-                localError = e.message ?: "Invalid join code"
-            },
-        )
+                onJoined(result.orgId)
+            }
+        }
     }
 
     GuidedStepCard(
@@ -616,6 +615,7 @@ fun FirebaseJoinImportSection(
             onValueChange = {
                 pasteCode = it
                 localError = null
+                onJoinInputChanged()
             },
             label = { Text(stringResource(Res.string.firebase_join_config_code_label)) },
             supportingText = {
@@ -630,6 +630,9 @@ fun FirebaseJoinImportSection(
                 manualInviteCode = it
                 settingsManager.setFirebaseBootstrapCode(it)
                 localError = null
+                // The host gates its own "continue" on the stored invitation code, which is not
+                // observable state — it has to be told the code just changed.
+                onJoinInputChanged()
             },
             label = { Text(stringResource(Res.string.firebase_join_invite_code_label)) },
             supportingText = {

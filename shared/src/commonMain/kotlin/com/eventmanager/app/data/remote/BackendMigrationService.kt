@@ -8,6 +8,7 @@ import com.eventmanager.app.data.sync.TwoWaySyncService
 import com.eventmanager.app.data.utils.NanoIdGenerator
 import com.eventmanager.app.platform.PlatformContext
 import com.eventmanager.app.platform.PlatformFileManager
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -94,6 +95,10 @@ class BackendMigrationService(
     /**
      * Ensures the signed-in Firebase user is an org admin in Firestore before bulk push.
      * Without `members/{uid}`, security rules deny all transfer reads/writes (PERMISSION_DENIED).
+     *
+     * Membership is probed first: bootstrapping writes `role: 'admin'`, which the rules only
+     * accept while `metadata/config` is absent. Re-bootstrapping an org that already exists is
+     * refused, and it would also rotate the invitation code every team device already holds.
      */
     private suspend fun ensureFirestoreMigrationMember(orgId: String): SyncResult {
         if (!FirebaseAuthBridge.isSignedIn()) {
@@ -109,6 +114,24 @@ class BackendMigrationService(
         if (!gateway.isAvailable()) {
             return SyncResult.Error("Firestore not available — check Firebase project configuration")
         }
+        val probe = gateway.probeMembership(orgId, uid)
+        if (probe is MembershipProbe.Unavailable) {
+            return SyncResult.Error(
+                "Cannot reach Firestore to check membership in \"$orgId\" — check the network " +
+                    "and retry. Migrating on an unknown remote state would overwrite it.",
+            )
+        }
+        if (probe is MembershipProbe.Member) {
+            return if (MemberRole.fromStorage(probe.role) == MemberRole.ADMIN) {
+                SyncResult.Success("Firestore admin member ready")
+            } else {
+                SyncResult.Error(
+                    "This account joined \"$orgId\" as \"${probe.role}\". Only a Firebase org " +
+                        "admin can migrate — ask an admin to promote it in Admin → Firebase team, " +
+                        "or run the migration from an admin device.",
+                )
+            }
+        }
         return try {
             val code = MemberRoleAdmin.bootstrapOrgAdmin(
                 gateway = gateway,
@@ -119,10 +142,16 @@ class BackendMigrationService(
             )
             settingsManager.setFirebaseBootstrapCode(code)
             SyncResult.Success("Firestore admin member ready")
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            SyncResult.Error(
-                e.message ?: "Failed to bootstrap Firestore admin member — publish updated firestore.rules and retry",
-            )
+            if (isFirestorePermissionDenied(e)) {
+                SyncResult.Error(firebaseMigrationAdminDenialMessage(orgId, probe))
+            } else {
+                SyncResult.Error(
+                    e.message ?: "Failed to bootstrap Firestore admin member — publish updated firestore.rules and retry",
+                )
+            }
         }
     }
 
@@ -169,6 +198,7 @@ class BackendMigrationService(
         val previousBackend = settingsManager.getBackendType()
         val migrationId = NanoIdGenerator.generateGuestId()
         val migratedAt = System.currentTimeMillis()
+        var announced = false
         return try {
             _progress.value = MigrationProgress("preflight", "Validating Firebase org", 0.05f)
             if (orgId.isBlank()) return SyncResult.Error("Firebase org ID required")
@@ -252,7 +282,7 @@ class BackendMigrationService(
 
             abortIfCancelled()?.let { return it }
 
-            _progress.value = MigrationProgress("announce", "Dual announce backend_type", 0.75f, entityCounts = afterCounts.asMap())
+            _progress.value = MigrationProgress("announce", "Announcing backend_type", 0.75f, entityCounts = afterCounts.asMap())
             val announcement = InstitutionBackendAnnouncement(
                 backendType = BackendType.FIREBASE,
                 migrationId = migrationId,
@@ -264,18 +294,36 @@ class BackendMigrationService(
                 firebaseApplicationId = settingsManager.getFirebaseApplicationId().takeIf { it.isNotBlank() },
                 firebaseWebClientId = settingsManager.getFirebaseWebClientId().takeIf { it.isNotBlank() },
             )
-            sheetsBackend.announceInstitutionBackendMigration(announcement)
+            // Target backend first, then switch locally, and only then tell the old backend.
+            // Announcing on Sheets before Firestore is what created permanently stuck devices:
+            // a refused Firestore write rolled the local backend back to Sheets while the Sheets
+            // announcement already said "Firebase", so the backend guard demanded a follow that
+            // could never succeed.
             firebaseBackend.announceInstitutionBackendMigration(announcement)
 
             _progress.value = MigrationProgress("switch", "Switching local backend", 0.9f, entityCounts = afterCounts.asMap())
             settingsManager.setBackendType(BackendType.FIREBASE)
             settingsManager.setFollowedBackendMigrationId(migrationId)
             settingsManager.applyLocalInstitutionBackendAnnouncement(announcement)
+            announced = true
+
+            val peerNotice = runCatching {
+                sheetsBackend.announceInstitutionBackendMigration(announcement)
+            }.exceptionOrNull()
 
             _progress.value = MigrationProgress("done", "Migration complete", 1f, isDone = true, entityCounts = afterCounts.asMap())
-            SyncResult.Success("Migrated to Firebase org $orgId")
+            if (peerNotice != null) {
+                // This device is migrated; peers still on Sheets just were not told yet.
+                SyncResult.Success(
+                    "Migrated to Firebase org $orgId. Could not write the notice on Google " +
+                        "Sheets (${peerNotice.message}) — other devices must join with the QR code.",
+                )
+            } else {
+                SyncResult.Success("Migrated to Firebase org $orgId")
+            }
         } catch (e: Exception) {
-            settingsManager.setBackendType(previousBackend)
+            // Reverting after the announcement would contradict what the remotes already say.
+            if (!announced) settingsManager.setBackendType(previousBackend)
             _progress.value = MigrationProgress("error", error = e.message, isDone = true)
             SyncResult.Error(e.message ?: "Migration failed")
         }
@@ -289,6 +337,7 @@ class BackendMigrationService(
         val previousBackend = settingsManager.getBackendType()
         val migrationId = NanoIdGenerator.generateGuestId()
         val migratedAt = System.currentTimeMillis()
+        var announced = false
         return try {
             _progress.value = MigrationProgress("preflight", "Validating spreadsheet", 0.05f)
             if (spreadsheetId.isBlank()) return SyncResult.Error("Spreadsheet ID required")
@@ -312,7 +361,7 @@ class BackendMigrationService(
             }
 
             val afterCounts = snapshotCounts()
-            _progress.value = MigrationProgress("announce", "Dual announce backend_type", 0.75f, entityCounts = afterCounts.asMap())
+            _progress.value = MigrationProgress("announce", "Announcing backend_type", 0.75f, entityCounts = afterCounts.asMap())
             val announcement = InstitutionBackendAnnouncement(
                 backendType = BackendType.SHEETS,
                 migrationId = migrationId,
@@ -321,18 +370,31 @@ class BackendMigrationService(
                 firebaseOrgId = settingsManager.getFirebaseOrgId().takeIf { it.isNotBlank() },
                 sheetsSpreadsheetIdHint = spreadsheetId,
             )
-            firebaseBackend.announceInstitutionBackendMigration(announcement)
+            // Target backend first, then switch locally, then notify the old one (see the
+            // Sheets → Firebase path for why the reverse order strands devices).
             sheetsBackend.announceInstitutionBackendMigration(announcement)
 
             _progress.value = MigrationProgress("switch", "Switching local backend", 0.9f, entityCounts = afterCounts.asMap())
             settingsManager.setBackendType(BackendType.SHEETS)
             settingsManager.setFollowedBackendMigrationId(migrationId)
             settingsManager.applyLocalInstitutionBackendAnnouncement(announcement)
+            announced = true
+
+            val peerNotice = runCatching {
+                firebaseBackend.announceInstitutionBackendMigration(announcement)
+            }.exceptionOrNull()
 
             _progress.value = MigrationProgress("done", "Migration complete", 1f, isDone = true, entityCounts = afterCounts.asMap())
-            SyncResult.Success("Migrated to Google Sheets $spreadsheetId")
+            if (peerNotice != null) {
+                SyncResult.Success(
+                    "Migrated to Google Sheets $spreadsheetId. Could not write the notice on " +
+                        "Firestore (${peerNotice.message}) — other devices must be switched manually.",
+                )
+            } else {
+                SyncResult.Success("Migrated to Google Sheets $spreadsheetId")
+            }
         } catch (e: Exception) {
-            settingsManager.setBackendType(previousBackend)
+            if (!announced) settingsManager.setBackendType(previousBackend)
             _progress.value = MigrationProgress("error", error = e.message, isDone = true)
             SyncResult.Error(e.message ?: "Migration failed")
         }

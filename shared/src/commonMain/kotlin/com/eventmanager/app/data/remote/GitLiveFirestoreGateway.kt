@@ -533,6 +533,7 @@ class GitLiveFirestoreGateway(
                 },
             )
             put("isAdmin", guest.isAdmin)
+            put("barDiscountPercent", guest.barDiscountPercent)
             putProfilePhotoFields(guest.profilePhotoPath, guest.profilePhotoUrl)
         },
         guest.firebaseOrgId,
@@ -609,6 +610,7 @@ class GitLiveFirestoreGateway(
         "name" to item.name,
         "price" to item.price,
         "categories" to item.categories,
+        "subcategory" to item.subcategory,
         "emoji" to item.emoji,
         "availableVenues" to item.availableVenues,
         "isActive" to item.isActive,

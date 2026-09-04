@@ -104,6 +104,28 @@ actual class PlatformFileManager actual constructor(private val context: Platfor
         }
     }
 
+    actual fun getAuthRelatedFilesToErase(): List<File> {
+        val base = context.appDataDir
+        return listOf(
+            // Firebase Google OAuth token store (FileDataStoreFactory)
+            File(base, "firebase_auth_tokens"),
+            // GitLive / Firebase Platform KV store (id_token, refresh_token JSON)
+            File(base, "firebase_platform_kv"),
+            // Plain-text Firebase auth account cache
+            File(base, "firebase_auth_account.properties"),
+            // Cached Firebase id_token written by DesktopFirebaseAuthService
+            File(base, "firebase_auth_id_token.txt"),
+            // Gmail OAuth token store (FileDataStoreFactory)
+            File(base, "gmail_tokens"),
+            // Gmail account properties cache
+            File(base, "gmail_account.properties"),
+            // AES-256-GCM encrypted credential store (Firebase API key, secrets, etc.)
+            File(base, "secure_credentials.enc"),
+            // Debug log files (separate from the regular logs/ directory)
+            File(base, "debug_logs"),
+        )
+    }
+
     actual suspend fun saveFileToUserLocation(
         sourceFile: File,
         suggestedName: String,

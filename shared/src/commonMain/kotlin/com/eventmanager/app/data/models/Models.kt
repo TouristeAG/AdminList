@@ -45,7 +45,20 @@ data class Guest(
     val profilePhotoPath: String = "",
     /** Firebase Storage download URL; empty when unused. Never synced to Google Sheets. */
     val profilePhotoUrl: String = "",
+    /** Bar discount granted to a permanent guest, in percent. Firebase-only; never synced to Google Sheets. */
+    val barDiscountPercent: Int = 0,
 )
+
+/**
+ * Bar discount a permanent guest is entitled to. The field only exists on the Firebase backend,
+ * so [firebaseBackend] must be false on Sheets to keep guests at full price there.
+ */
+fun Guest.activeBarDiscountPercent(firebaseBackend: Boolean): Int =
+    if (firebaseBackend && !isVolunteerBenefit && !isTemporaryGuest) {
+        barDiscountPercent.coerceIn(0, 100)
+    } else {
+        0
+    }
 
 /**
  * Manual add of temporary guests from the guest list: one Google Sheet row per [guestNames]
@@ -300,6 +313,8 @@ data class SalesSheetItem(
     val hasDiscount: Boolean = false,
     val requiredRank: VolunteerRank? = null,
     val categories: String = "", // Comma-separated SalesCategory names
+    /** Admin-defined refinement of [categories]; Firebase-only, never synced to Google Sheets. */
+    val subcategory: String = "",
     val emoji: String = "",
     val availableVenues: String = "",
     val isActive: Boolean = true,

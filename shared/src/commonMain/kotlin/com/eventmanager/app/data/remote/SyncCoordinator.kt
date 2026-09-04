@@ -166,6 +166,18 @@ class SyncCoordinator(
         settingsManager.getBackendType() == BackendType.FIREBASE &&
             (firebaseBackend?.isLiveListenerSyncActive() == true)
 
+    /**
+     * On Sheets, `true` — that backend has no cache-vs-server ambiguity, real network failures
+     * already surface as [SyncResult.Error]. On Firebase, `true` only once this session actually
+     * got a server-confirmed Firestore response; a device that never reached the server (offline,
+     * misconfigured, still warming up) must not be trusted to say the remote org is empty. See
+     * [FirebaseRemoteBackend.hasServerConfirmedReachability].
+     */
+    fun isRemoteEmptinessTrustworthy(): Boolean = when (settingsManager.getBackendType()) {
+        BackendType.SHEETS -> true
+        BackendType.FIREBASE -> firebaseBackend?.hasServerConfirmedReachability() == true
+    }
+
     suspend fun flushFirebasePendingWritesForOrg(orgId: String) {
         firebaseBackend?.flushPendingWritesForOrg(orgId)
     }

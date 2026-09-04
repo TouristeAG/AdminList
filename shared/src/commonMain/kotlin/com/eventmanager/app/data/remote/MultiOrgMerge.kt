@@ -58,6 +58,7 @@ object MultiOrgMerge {
         item.hasDiscount.toString(),
         item.requiredRank?.name.orEmpty(),
         item.categories.trim().lowercase(),
+        item.subcategory.trim().lowercase(),
         item.emoji,
         item.availableVenues.trim().lowercase(),
         item.isActive.toString(),

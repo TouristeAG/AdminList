@@ -79,6 +79,8 @@ fun FirebaseConnectionFields(
     signInFeedback: String? = null,
     hideProjectSecrets: Boolean = false,
     orgIdReadOnly: Boolean = false,
+    /** When false (Sheets → Firebase migration), only one org ID can be entered. */
+    allowMultipleOrgs: Boolean = true,
 ) {
     val projectReady = projectId.isNotBlank() && applicationId.isNotBlank() && apiKey.isNotBlank()
     val orgReady = firebaseConfiguredOrgsReady(configuredOrgs)
@@ -98,6 +100,7 @@ fun FirebaseConnectionFields(
             configuredOrgs = configuredOrgs,
             onConfiguredOrgsChange = { if (!orgIdReadOnly) onConfiguredOrgsChange(it) },
             readOnly = orgIdReadOnly,
+            allowMultipleOrgs = allowMultipleOrgs,
             onOrgIdCommitted = onOrgIdCommitted,
         )
 

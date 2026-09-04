@@ -166,6 +166,9 @@ actual fun GuestDetailPanel(
                             isPhone = isPhone,
                             onClose = onClose,
                             easterEggEnabled = leonardoEasterEggEnabled,
+                            barDiscountPercent = guest.activeBarDiscountPercent(
+                                rememberGuestBarDiscountEnabled(viewModel)
+                            ),
                             readOnly = readOnly,
                             canManagePhoto = !readOnly && (rememberProfilePhotosUploadEnabled(viewModel)) && !guest.isTemporaryGuest,
                             canExportPhoto = !readOnly,
@@ -1052,6 +1055,7 @@ private fun GuestInformationSection(
     isPhone: Boolean,
     onClose: () -> Unit,
     easterEggEnabled: Boolean,
+    barDiscountPercent: Int = 0,
     readOnly: Boolean = false,
     canManagePhoto: Boolean = false,
     canExportPhoto: Boolean = false,
@@ -1195,6 +1199,15 @@ private fun GuestInformationSection(
                                 context.getString(R.string.notes),
                                 guest.notes,
                                 Icons.AutoMirrored.Filled.Notes
+                            )
+                        )
+                    }
+                    if (barDiscountPercent > 0) {
+                        add(
+                            Triple(
+                                context.getString(R.string.bar_discount_percent_label),
+                                barDiscountPercent.toString(),
+                                Icons.Default.LocalBar
                             )
                         )
                     }

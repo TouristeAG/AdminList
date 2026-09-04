@@ -38,11 +38,15 @@ import com.eventmanager.app.resources.Res
 import com.eventmanager.app.resources.firebase_configured_org_add
 import com.eventmanager.app.resources.firebase_configured_org_color_cd
 import com.eventmanager.app.resources.firebase_configured_org_duplicate
+import com.eventmanager.app.resources.firebase_configured_org_migration_body
+import com.eventmanager.app.resources.firebase_configured_org_migration_title
 import com.eventmanager.app.resources.firebase_configured_org_remove_cd
 import com.eventmanager.app.resources.firebase_configured_orgs_body
 import com.eventmanager.app.resources.firebase_configured_orgs_title
 import com.eventmanager.app.resources.firebase_org_id_hint
+import com.eventmanager.app.resources.firebase_org_id_invalid
 import com.eventmanager.app.resources.firebase_org_id_label
+import com.eventmanager.app.resources.firebase_org_id_migration_hint
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -52,44 +56,65 @@ fun FirebaseConfiguredOrgsSection(
     modifier: Modifier = Modifier,
     readOnly: Boolean = false,
     showGuidedCard: Boolean = true,
+    /**
+     * Sheets → Firebase migration must target exactly one org. Extra orgs are added later in Admin.
+     * When false, only the first entry is shown and "Add organization" is hidden.
+     */
+    allowMultipleOrgs: Boolean = true,
     onOrgIdCommitted: (String) -> Unit = {},
 ) {
     var duplicateWarning by remember { mutableStateOf(false) }
+    val displayedOrgs = if (allowMultipleOrgs) configuredOrgs else configuredOrgs.take(1).ifEmpty {
+        listOf(
+            FirebaseConfiguredOrg(
+                orgId = "",
+                colorArgb = FirebaseConfiguredOrgCodec.defaultColorForIndex(0),
+            ),
+        )
+    }
+
+    fun publish(updated: List<FirebaseConfiguredOrg>) {
+        onConfiguredOrgsChange(if (allowMultipleOrgs) updated else updated.take(1))
+    }
 
     fun updateOrg(index: Int, orgId: String) {
         duplicateWarning = false
-        val updated = configuredOrgs.toMutableList()
+        val updated = displayedOrgs.toMutableList()
         if (index in updated.indices) {
             updated[index] = updated[index].copy(orgId = orgId)
-            onConfiguredOrgsChange(updated)
+            publish(updated)
         }
     }
 
     fun updateColor(index: Int, colorArgb: Long) {
-        val updated = configuredOrgs.toMutableList()
+        val updated = displayedOrgs.toMutableList()
         if (index in updated.indices) {
             updated[index] = updated[index].copy(colorArgb = colorArgb)
-            onConfiguredOrgsChange(updated)
+            publish(updated)
         }
     }
 
     fun removeOrg(index: Int) {
-        if (configuredOrgs.size <= 1) return
-        onConfiguredOrgsChange(configuredOrgs.filterIndexed { i, _ -> i != index })
+        if (!allowMultipleOrgs || displayedOrgs.size <= 1) return
+        publish(displayedOrgs.filterIndexed { i, _ -> i != index })
     }
 
     fun addOrg() {
-        val usedColors = configuredOrgs.map { it.colorArgb }
+        if (!allowMultipleOrgs) return
+        val usedColors = displayedOrgs.map { it.colorArgb }
         val color = FirebaseConfiguredOrgCodec.nextAvailableColor(usedColors)
-        onConfiguredOrgsChange(configuredOrgs + FirebaseConfiguredOrg(orgId = "", colorArgb = color))
+        publish(displayedOrgs + FirebaseConfiguredOrg(orgId = "", colorArgb = color))
     }
 
     val content: @Composable () -> Unit = {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            configuredOrgs.forEachIndexed { index, entry ->
-                val trimmedIds = configuredOrgs.map { it.orgId.trim() }
-                val isDuplicate = entry.orgId.trim().isNotBlank() &&
+            displayedOrgs.forEachIndexed { index, entry ->
+                val trimmedIds = displayedOrgs.map { it.orgId.trim() }
+                val isDuplicate = allowMultipleOrgs &&
+                    entry.orgId.trim().isNotBlank() &&
                     trimmedIds.count { it == entry.orgId.trim() } > 1
+                val isMalformed = entry.orgId.trim().isNotBlank() &&
+                    !FirebaseOrgBootstrap.isValidOrgId(entry.orgId)
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -100,12 +125,26 @@ fun FirebaseConfiguredOrgsSection(
                             value = entry.orgId,
                             onValueChange = {
                                 duplicateWarning = false
-                                updateOrg(index, it)
+                                // Spaces and accents cannot appear in a Firestore path segment.
+                                updateOrg(index, FirebaseOrgBootstrap.sanitizeOrgId(it))
                             },
                             label = { Text(stringResource(Res.string.firebase_org_id_label)) },
                             supportingText = {
-                                if (index == 0) {
-                                    Text(stringResource(Res.string.firebase_org_id_hint))
+                                if (isMalformed) {
+                                    Text(
+                                        stringResource(Res.string.firebase_org_id_invalid),
+                                        color = MaterialTheme.colorScheme.error,
+                                    )
+                                } else if (index == 0) {
+                                    Text(
+                                        stringResource(
+                                            if (allowMultipleOrgs) {
+                                                Res.string.firebase_org_id_hint
+                                            } else {
+                                                Res.string.firebase_org_id_migration_hint
+                                            },
+                                        ),
+                                    )
                                 }
                             },
                             modifier = Modifier
@@ -121,9 +160,9 @@ fun FirebaseConfiguredOrgsSection(
                             singleLine = true,
                             readOnly = readOnly,
                             enabled = !readOnly,
-                            isError = isDuplicate,
+                            isError = isDuplicate || isMalformed,
                         )
-                        if (!readOnly && configuredOrgs.size > 1) {
+                        if (allowMultipleOrgs && !readOnly && displayedOrgs.size > 1) {
                             IconButton(onClick = { removeOrg(index) }) {
                                 Icon(
                                     Icons.Default.Delete,
@@ -147,7 +186,7 @@ fun FirebaseConfiguredOrgsSection(
                     }
                 }
             }
-            if (!readOnly) {
+            if (allowMultipleOrgs && !readOnly) {
                 OutlinedButton(
                     onClick = { addOrg() },
                     modifier = Modifier.fillMaxWidth(),
@@ -161,8 +200,20 @@ fun FirebaseConfiguredOrgsSection(
 
     if (showGuidedCard) {
         GuidedStepCard(
-            title = stringResource(Res.string.firebase_configured_orgs_title),
-            body = stringResource(Res.string.firebase_configured_orgs_body),
+            title = stringResource(
+                if (allowMultipleOrgs) {
+                    Res.string.firebase_configured_orgs_title
+                } else {
+                    Res.string.firebase_configured_org_migration_title
+                },
+            ),
+            body = stringResource(
+                if (allowMultipleOrgs) {
+                    Res.string.firebase_configured_orgs_body
+                } else {
+                    Res.string.firebase_configured_org_migration_body
+                },
+            ),
             modifier = modifier,
         ) {
             content()
@@ -215,5 +266,10 @@ private fun OrgColorSwatchRow(
     }
 }
 
+/**
+ * A merely non-blank org ID is not enough: `ensureOrgBootstrappedIfNeeded` rejects anything
+ * [FirebaseOrgBootstrap.isValidOrgId] refuses, so gating on non-blank only moves the failure to
+ * the middle of a migration or a join.
+ */
 fun firebaseConfiguredOrgsReady(orgs: List<FirebaseConfiguredOrg>): Boolean =
-    orgs.any { it.orgId.isNotBlank() }
+    orgs.any { FirebaseOrgBootstrap.isValidOrgId(it.orgId) }

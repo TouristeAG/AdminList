@@ -5,6 +5,7 @@ import com.eventmanager.app.resources.Res
 import com.eventmanager.app.resources.*
 import org.jetbrains.compose.resources.stringResource
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -22,6 +23,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.eventmanager.app.data.models.PosSubcategory
+import com.eventmanager.app.data.models.PosSubcategoryCatalog
 import com.eventmanager.app.data.models.PosVenueScope
 import com.eventmanager.app.data.models.SalesCategory
 import com.eventmanager.app.data.models.SalesSheetItem
@@ -33,6 +36,8 @@ import com.eventmanager.app.ui.components.phoneFractionDialogProperties
 import com.eventmanager.app.ui.components.DialogFractionSizer
 import com.eventmanager.app.ui.components.FractionalDialogProfile
 import com.eventmanager.app.ui.utils.*
+import com.eventmanager.app.ui.viewmodel.EventManagerViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,9 +48,13 @@ fun SalesSheetItemManagementScreen(
     onUpdateItem: (SalesSheetItem) -> Unit,
     onDeleteItem: (SalesSheetItem) -> Unit,
     onUpdateItemStatus: (Long, Boolean) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    viewModel: EventManagerViewModel? = null,
 ) {
     val platformContext = LocalPlatformContext.current
+    val subcategoriesEnabled = viewModel?.isPosSubcategoriesEnabled() == true
+    val subcategoryCatalog by (viewModel?.posSubcategories ?: remember { MutableStateFlow(emptyList()) })
+        .collectAsState()
     var searchText by remember { mutableStateOf("") }
     var showAddDialog by remember { mutableStateOf(false) }
     var editItem by remember { mutableStateOf<SalesSheetItem?>(null) }
@@ -113,6 +122,10 @@ fun SalesSheetItemManagementScreen(
             title = stringResource(Res.string.add_sales_item),
             initial = null,
             venues = venues,
+            subcategoriesEnabled = subcategoriesEnabled,
+            subcategoryCatalog = subcategoryCatalog,
+            onAddSubcategory = { category, name -> viewModel?.addPosSubcategory(category, name) },
+            onRemoveSubcategory = { category, name -> viewModel?.removePosSubcategory(category, name) },
             onDismiss = { showAddDialog = false },
             onSave = { item ->
                 onAddItem(item)
@@ -125,6 +138,10 @@ fun SalesSheetItemManagementScreen(
             title = stringResource(Res.string.edit_sales_item),
             initial = item,
             venues = venues,
+            subcategoriesEnabled = subcategoriesEnabled,
+            subcategoryCatalog = subcategoryCatalog,
+            onAddSubcategory = { category, name -> viewModel?.addPosSubcategory(category, name) },
+            onRemoveSubcategory = { category, name -> viewModel?.removePosSubcategory(category, name) },
             onDismiss = { editItem = null },
             onSave = { updated ->
                 onUpdateItem(updated.copy(id = item.id, sheetsId = item.sheetsId))
@@ -164,11 +181,16 @@ private fun SalesSheetItemRow(
                         SalesCategory.OTHER -> stringResource(Res.string.sales_category_other)
                     }
                 }
+                val summaryLine = stringResource(Res.string.sales_item_summary_line, item.price,
+                    if (item.hasDiscount) stringResource(Res.string.yes) else stringResource(Res.string.no),
+                    item.requiredRank?.name ?: stringResource(Res.string.sales_rank_none_required)
+                )
                 Text(
-                    text = stringResource(Res.string.sales_item_summary_line, item.price,
-                        if (item.hasDiscount) stringResource(Res.string.yes) else stringResource(Res.string.no),
-                        item.requiredRank?.name ?: stringResource(Res.string.sales_rank_none_required)
-                    ) + if (categoryLabels.isNotEmpty()) " • ${categoryLabels.joinToString(", ")}" else "",
+                    text = buildString {
+                        append(summaryLine)
+                        if (categoryLabels.isNotEmpty()) append(" • ${categoryLabels.joinToString(", ")}")
+                        if (item.subcategory.isNotBlank()) append(" › ${item.subcategory}")
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -184,11 +206,134 @@ private fun SalesSheetItemRow(
     }
 }
 
+/**
+ * Sub-category picker for the selected general categories, with inline create/delete.
+ * Deleting is org-wide, so it goes through a confirmation.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SalesSubcategoryEditor(
+    categories: Set<SalesCategory>,
+    catalog: List<PosSubcategory>,
+    selected: String,
+    categoryLabel: @Composable (SalesCategory) -> String,
+    onSelect: (String) -> Unit,
+    onAdd: (SalesCategory, String) -> Unit,
+    onRemove: (SalesCategory, String) -> Unit,
+) {
+    var addingFor by remember { mutableStateOf<SalesCategory?>(null) }
+    var pendingRemoval by remember { mutableStateOf<PosSubcategory?>(null) }
+    val orderedCategories = remember(categories) { SalesCategory.entries.filter { categories.contains(it) } }
+
+    Text(stringResource(Res.string.sales_subcategory_label), style = MaterialTheme.typography.titleSmall)
+    Text(
+        stringResource(Res.string.sales_subcategory_hint),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    orderedCategories.forEach { category ->
+        val entries = PosSubcategoryCatalog.forCategory(catalog, category)
+        if (orderedCategories.size > 1) {
+            Text(
+                categoryLabel(category),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            FilterChip(
+                selected = selected.isBlank(),
+                onClick = { onSelect("") },
+                label = { Text(stringResource(Res.string.sales_subcategory_none)) },
+            )
+            entries.forEach { entry ->
+                FilterChip(
+                    selected = selected.equals(entry.name, ignoreCase = true),
+                    onClick = { onSelect(entry.name) },
+                    label = { Text(entry.name) },
+                    trailingIcon = {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = stringResource(Res.string.delete),
+                            modifier = Modifier
+                                .size(16.dp)
+                                .clickable { pendingRemoval = entry },
+                        )
+                    },
+                )
+            }
+            AssistChip(
+                onClick = { addingFor = category },
+                leadingIcon = { Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp)) },
+                label = { Text(stringResource(Res.string.sales_subcategory_add)) },
+            )
+        }
+    }
+
+    addingFor?.let { category ->
+        var draft by remember(category) { mutableStateOf("") }
+        val normalized = PosSubcategoryCatalog.normalizeName(draft)
+        val duplicate = PosSubcategoryCatalog.contains(catalog, category, normalized)
+        AlertDialog(
+            onDismissRequest = { addingFor = null },
+            title = { Text(stringResource(Res.string.sales_subcategory_add)) },
+            text = {
+                OutlinedTextField(
+                    value = draft,
+                    onValueChange = { draft = it.take(PosSubcategoryCatalog.MAX_NAME_LENGTH) },
+                    label = { Text(stringResource(Res.string.sales_subcategory_name_label)) },
+                    singleLine = true,
+                    isError = duplicate,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onAdd(category, normalized)
+                        onSelect(normalized)
+                        addingFor = null
+                    },
+                    enabled = normalized.isNotEmpty() && !duplicate,
+                ) { Text(stringResource(Res.string.add)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { addingFor = null }) { Text(stringResource(Res.string.cancel)) }
+            },
+        )
+    }
+
+    pendingRemoval?.let { entry ->
+        AlertDialog(
+            onDismissRequest = { pendingRemoval = null },
+            title = { Text(stringResource(Res.string.sales_subcategory_remove_title)) },
+            text = { Text(stringResource(Res.string.sales_subcategory_remove_message, entry.name)) },
+            confirmButton = {
+                Button(onClick = {
+                    onRemove(entry.category, entry.name)
+                    pendingRemoval = null
+                }) { Text(stringResource(Res.string.delete)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingRemoval = null }) { Text(stringResource(Res.string.cancel)) }
+            },
+        )
+    }
+}
+
 @Composable
 private fun SalesSheetItemEditorDialog(
     title: String,
     initial: SalesSheetItem?,
     venues: List<VenueEntity>,
+    subcategoriesEnabled: Boolean = false,
+    subcategoryCatalog: List<PosSubcategory> = emptyList(),
+    onAddSubcategory: (SalesCategory, String) -> Unit = { _, _ -> },
+    onRemoveSubcategory: (SalesCategory, String) -> Unit = { _, _ -> },
     onDismiss: () -> Unit,
     onSave: (SalesSheetItem) -> Unit
 ) {
@@ -198,6 +343,7 @@ private fun SalesSheetItemEditorDialog(
     var hasDiscount by remember { mutableStateOf(initial?.hasDiscount ?: false) }
     var rank by remember { mutableStateOf(initial?.requiredRank) }
     var emoji by remember { mutableStateOf(initial?.emoji.orEmpty()) }
+    var subcategory by remember { mutableStateOf(initial?.subcategory.orEmpty()) }
     var selectedCategories by remember {
         mutableStateOf(SalesCategory.parseList(initial?.categories.orEmpty()))
     }
@@ -271,6 +417,20 @@ private fun SalesSheetItemEditorDialog(
                             label = { Text(categoryLabel(category)) }
                         )
                     }
+                }
+                if (subcategoriesEnabled && selectedCategories.isNotEmpty()) {
+                    SalesSubcategoryEditor(
+                        categories = selectedCategories,
+                        catalog = subcategoryCatalog,
+                        selected = subcategory,
+                        categoryLabel = { categoryLabel(it) },
+                        onSelect = { subcategory = it },
+                        onAdd = onAddSubcategory,
+                        onRemove = { category, name ->
+                            if (subcategory.equals(name, ignoreCase = true)) subcategory = ""
+                            onRemoveSubcategory(category, name)
+                        },
+                    )
                 }
                 Text(stringResource(Res.string.sales_item_venues_label), style = MaterialTheme.typography.titleSmall)
                 Text(
@@ -352,6 +512,11 @@ private fun SalesSheetItemEditorDialog(
                                     hasDiscount = hasDiscount,
                                     requiredRank = rank,
                                     categories = SalesCategory.formatList(selectedCategories),
+                                    subcategory = if (subcategoriesEnabled) {
+                                        PosSubcategoryCatalog.normalizeName(subcategory)
+                                    } else {
+                                        initial?.subcategory.orEmpty()
+                                    },
                                     emoji = emoji.trim(),
                                     availableVenues = PosVenueScope.formatVenueList(venuesToSave),
                                     isActive = initial?.isActive ?: true,

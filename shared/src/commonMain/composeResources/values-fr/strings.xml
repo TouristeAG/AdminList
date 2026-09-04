@@ -107,6 +107,14 @@
     <string name="show_fewer_transfers">Montrer moins de transferts</string>
     <string name="adjust_account_button">Ajuster le compte</string>
     <string name="sales_categories_label">Catégories</string>
+    <string name="sales_subcategory_label">Sous-catégorie</string>
+    <string name="sales_subcategory_hint">Affine une catégorie, par exemple Alcool ou Consignes dans Bar.</string>
+    <string name="sales_subcategory_none">Aucune</string>
+    <string name="sales_subcategory_add">Nouvelle sous-catégorie</string>
+    <string name="sales_subcategory_name_label">Nom de la sous-catégorie</string>
+    <string name="sales_subcategory_remove_title">Supprimer cette sous-catégorie ?</string>
+    <string name="sales_subcategory_remove_message">« %1$s » sera retirée de tous les articles de cette catégorie.</string>
+    <string name="pos_subcategory_all">Tout</string>
     <string name="sales_emoji_label">Emoji</string>
     <string name="sales_category_merch">Merch</string>
     <string name="sales_category_entry">Entrée</string>
@@ -882,7 +890,7 @@
     
     <!-- App Information -->
     <string name="app_info_title">Informations sur l'application</string>
-    <string name="app_version">NoctuList 2.0.0</string>
+    <string name="app_version">NoctuList 2.1.0</string>
     <string name="app_designed_for">Conçu pour les lieux du Collectif Nocturne</string>
     <string name="app_developed_full">Développé pour le Collectif Nocturne par Leonardo Mondada</string>
     <string name="last_sync">Dernière mise à jour : %1$s</string>
@@ -1534,8 +1542,12 @@
     <string name="setup_firebase_auth_hint">Connectez-vous avant la première synchronisation.</string>
     <string name="firebase_org_id_label">ID d’organisation</string>
     <string name="firebase_org_id_hint">Nom partagé de votre institution (ex. : noctulist-club). Même ID sur chaque appareil.</string>
+    <string name="firebase_org_id_invalid">4 à 64 caractères, lettres, chiffres, - et _ uniquement. Ni espaces ni accents : écrivez « collectif-nocturne », pas « Collectif Nocturne ».</string>
     <string name="firebase_configured_orgs_title">Organisations</string>
     <string name="firebase_configured_orgs_body">Ajoutez chaque ID d'organisation Firebase hébergé sur ce projet. Chaque org a sa propre base sous orgs/{orgId}.</string>
+    <string name="firebase_configured_org_migration_title">Organisation de destination</string>
+    <string name="firebase_configured_org_migration_body">Les données Sheets sont migrées vers cette seule organisation. Vous pourrez en ajouter d’autres ensuite dans Admin → Sync Firebase.</string>
+    <string name="firebase_org_id_migration_hint">Une seule org pour cette migration (ex. : collectif-nocturne). Ajoutez d’autres organisations ensuite dans Admin.</string>
     <string name="firebase_configured_org_add">Ajouter une organisation</string>
     <string name="firebase_configured_org_remove_cd">Retirer l'organisation</string>
     <string name="firebase_configured_org_color_cd">Couleur de l'organisation</string>
@@ -1577,6 +1589,8 @@
     <string name="firebase_checklist_org">ID d’organisation renseigné</string>
     <string name="firebase_checklist_project">Project ID, Application ID et clé API renseignés</string>
     <string name="firebase_checklist_auth">Compte Google connecté</string>
+    <string name="firebase_checklist_oauth">Identifiants Google Sign-In reçus</string>
+    <string name="firebase_checklist_invite">Code d’invitation reçu</string>
     <string name="firebase_advanced_project">Afficher les détails du projet</string>
     <string name="firebase_hide_project">Masquer les détails du projet</string>
     <string name="firebase_reveal_secrets">Afficher les secrets projet</string>
@@ -1588,6 +1602,7 @@
     <string name="firebase_join_qr_body">Partagez ce QR uniquement avec votre équipe. Il contient la config projet, les identifiants Google Sign-In et le code d'invitation — un seul scan suffit.</string>
     <string name="firebase_join_error_oauth_missing">Ce code d'invitation n'inclut pas les identifiants Google Sign-In. Demandez un nouveau QR à votre admin (Paramètres → Sync Firebase).</string>
     <string name="firebase_join_error_invite_missing">Ce code n'inclut pas le code d'invitation. Demandez un QR complet à votre admin, ou saisissez le code d'invitation à 8 caractères ci-dessous.</string>
+    <string name="firebase_join_error_invalid">Ceci n'est pas un code de jonction NoctuList. Scannez le QR de jonction depuis un appareil administrateur (Réglages → Synchronisation Firebase).</string>
     <string name="firebase_join_qr_need_config">Renseignez l'ID d'organisation, les options projet et les identifiants OAuth pour générer le QR.</string>
     <string name="firebase_join_copy_code">Copier le code de configuration</string>
     <string name="firebase_join_code_copied">Code de configuration copié</string>
@@ -1736,6 +1751,7 @@ Origines optionnelles (sans chemin) : http://localhost:8889 etc.
     <string name="migration_wizard_step_run_body">Gardez cet écran ouvert jusqu’à la fin. Les autres appareils verront une invite de reconnexion.</string>
     <string name="migration_wizard_start">Démarrer la migration</string>
     <string name="migration_wizard_cancel">Annuler</string>
+    <string name="migration_wizard_done">Migration terminée — fermer</string>
     <string name="migration_wizard_cancel_inflight">Arrêter la migration</string>
     <string name="migration_wizard_cancel_inflight_hint">Annulation demandée — arrêt avant le basculement si encore possible.</string>
     <string name="migration_spreadsheet_id_label">ID du spreadsheet</string>
@@ -1751,6 +1767,9 @@ Origines optionnelles (sans chemin) : http://localhost:8889 etc.
     <string name="follow_connect">Se connecter à la nouvelle base</string>
     <string name="follow_need_sign_in">Connectez-vous d’abord avec Google, puis appuyez sur Connecter.</string>
     <string name="follow_later">Plus tard</string>
+    <string name="follow_factory_reset">Réinitialiser cet appareil</string>
+    <string name="follow_factory_reset_body">Efface toutes les données et tous les réglages de cet appareil, puis relance l’assistant de configuration. À n’utiliser que si vous ne parvenez pas à vous connecter à la nouvelle base. Les données déjà envoyées à la base de l’institution ne sont pas touchées.</string>
+    <string name="follow_factory_reset_confirm">Effacer et relancer la configuration</string>
     <string name="backend_mismatch_title">Migration de base détectée</string>
     <string name="backend_mismatch_billeterie_message">Une migration a été effectuée. Un administrateur doit ouvrir Admin sur cet appareil pour reconfigurer la sync.</string>
     <string name="backend_mismatch_welcome_title">Base de l’institution modifiée</string>

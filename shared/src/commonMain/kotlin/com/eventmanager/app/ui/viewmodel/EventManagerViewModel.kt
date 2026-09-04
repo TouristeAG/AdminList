@@ -824,6 +824,55 @@ class EventManagerViewModel(
             settingsManagerCached?.isAnnouncementsNonAdminSendEnabled() ?: false
     }
 
+    private val _posSubcategories = MutableStateFlow(
+        if (getActiveBackendType() == BackendType.FIREBASE) {
+            settingsManagerCached?.getPosSubcategories().orEmpty()
+        } else {
+            emptyList()
+        },
+    )
+
+    /** Empty on the Sheets backend — POS sub-categories are a Firebase-only feature. */
+    val posSubcategories: StateFlow<List<PosSubcategory>> = _posSubcategories.asStateFlow()
+
+    fun isPosSubcategoriesEnabled(): Boolean = getActiveBackendType() == BackendType.FIREBASE
+
+    private fun publishPosSubcategories() {
+        _posSubcategories.value = if (isPosSubcategoriesEnabled()) {
+            settingsManagerCached?.getPosSubcategories().orEmpty()
+        } else {
+            emptyList()
+        }
+    }
+
+    fun addPosSubcategory(category: SalesCategory, name: String) {
+        val settings = settingsManagerCached ?: return
+        if (!isPosSubcategoriesEnabled()) return
+        val updated = PosSubcategoryCatalog.add(settings.getPosSubcategories(), category, name)
+        if (updated == settings.getPosSubcategories()) return
+        settings.savePosSubcategories(updated)
+        publishPosSubcategories()
+        backupInstitutionSettingsToSheets()
+    }
+
+    /** Also clears the sub-category from every product that referenced it, so nothing is orphaned. */
+    fun removePosSubcategory(category: SalesCategory, name: String) {
+        val settings = settingsManagerCached ?: return
+        if (!isPosSubcategoriesEnabled()) return
+        settings.savePosSubcategories(
+            PosSubcategoryCatalog.remove(settings.getPosSubcategories(), category, name),
+        )
+        publishPosSubcategories()
+        backupInstitutionSettingsToSheets()
+        viewModelScope.launch {
+            val stale = _salesSheetItems.value.filter { item ->
+                SalesCategory.parseList(item.categories).contains(category) &&
+                    item.subcategory.trim().equals(name.trim(), ignoreCase = true)
+            }
+            stale.forEach { updateSalesSheetItem(it.copy(subcategory = "")) }
+        }
+    }
+
     // Background sync job
     private var backgroundSyncJob: kotlinx.coroutines.Job? = null
     private var sheetsMirrorJob: kotlinx.coroutines.Job? = null
@@ -1807,10 +1856,21 @@ class EventManagerViewModel(
 
     /**
      * Full sync then stable DB read. Use before offering first-admin setup at app launch.
+     *
+     * SECURITY: [SyncCoordinator.isRemoteEmptinessTrustworthy] must gate this too, not just
+     * `syncResult.isSuccess`. `FirebaseRemoteBackend.pullAll` reports success even when the
+     * Firestore SDK never initialized ("local Room remains source of truth") so routine sync
+     * callers don't treat a misconfigured/offline device as a hard error. If we trusted that
+     * here, a device that is simply offline at boot — with an empty or stale local Room table —
+     * would look exactly like a brand-new, genuinely empty organization. Anyone standing at that
+     * device would then be offered the passwordless first-admin wizard and could grant themselves,
+     * or any guest/volunteer, permanent admin rights that later sync out for real once the device
+     * reconnects.
      */
     suspend fun evaluateAdminSetupGate(): AdminSetupGateResult {
         val syncResult = performFullSyncAwait(suppressSyncErrorDialog = true)
-        if (!syncResult.isSuccess) {
+        val remoteEmptinessTrustworthy = syncCoordinator?.isRemoteEmptinessTrustworthy() != false
+        if (!syncResult.isSuccess || !remoteEmptinessTrustworthy) {
             return AdminSetupGateResult(
                 syncSucceeded = false,
                 hasLocalAdmin = false,
@@ -5079,6 +5139,7 @@ class EventManagerViewModel(
                 }
                 publishProfilePhotosUploadEnabled()
                 publishAnnouncementsBilleterieSendEnabled()
+                publishPosSubcategories()
 
                 vmDebug {
                     "StateFlows updated - Guests: $oldGuestCount → ${_guests.value.size}, " +

@@ -51,7 +51,28 @@ fun firebaseMemberWriteDenialMessage(
 }
 
 /**
+ * Why the Sheets → Firebase migration could not claim org admin.
+ *
+ * Unlike a join, the migration always writes `role: 'admin'`, which the rules only accept while
+ * `metadata/config` does not exist yet. So a refusal on an [MembershipProbe.Absent] probe means
+ * the org was already set up by another account, not that an invitation code is missing.
+ */
+fun firebaseMigrationAdminDenialMessage(orgId: String, probe: MembershipProbe): String =
+    when (probe) {
+        is MembershipProbe.Denied ->
+            "Organization \"$orgId\" refused to read your membership. Publish firestore.rules " +
+                "(version $NOCTULIST_FIRESTORE_RULES_VERSION) in Firebase Console → Firestore → " +
+                "Rules — publishing needs Owner, Editor or Firebase Rules Admin on the Google " +
+                "Cloud project — and check that your Google account domain is in the " +
+                "organization's allowed email domains."
+        else ->
+            "Organization \"$orgId\" already exists in Firestore and was set up by another " +
+                "account, so this one cannot claim admin. Migrate from the account that created " +
+                "it, or ask that account to promote you in Admin → Firebase team first."
+    }
+
+/**
  * Rules revision this build expects to be published. Must match `NOCTULIST_RULES_VERSION` in
  * [firebase/firestore.rules] — a mismatch is the most common cause of PERMISSION_DENIED.
  */
-const val NOCTULIST_FIRESTORE_RULES_VERSION: Int = 4
+const val NOCTULIST_FIRESTORE_RULES_VERSION: Int = 5

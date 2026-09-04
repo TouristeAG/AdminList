@@ -2,6 +2,7 @@ package com.eventmanager.app.ui.screens
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -15,7 +16,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.*
@@ -62,6 +65,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.eventmanager.app.data.models.*
+import com.eventmanager.app.data.remote.BackendType
 import com.eventmanager.app.data.remote.MultiOrgMerge
 import com.eventmanager.app.data.sync.SettingsManager
 import com.eventmanager.app.data.utils.PosCartLine
@@ -90,7 +94,7 @@ data class PosCartEntry(
     val key: String = "${line.itemId ?: "m"}:${line.name}:${System.nanoTime()}"
 )
 
-private data class PosItemGridSpec(
+internal data class PosItemGridSpec(
     val columns: Int,
     val tileHeight: Dp,
     val largeTiles: Boolean,
@@ -99,17 +103,43 @@ private data class PosItemGridSpec(
 
 private val PosGridGap = 8.dp
 private val PosGridContentPadding = 4.dp
-private val PosMinCellWidth = 120.dp
-private val PosMinCellHeightFloor = 88.dp
-private val PosMinCellHeightCap = 160.dp
-private val PosLargeTileHeightThreshold = 130.dp
+private val PosMinCellHeightFloor = 104.dp
+private val PosMaxCellHeight = 210.dp
+private val PosCellAspectRatio = 0.9f
+private val PosLargeTileMinHeight = 150.dp
+private val PosLargeTileMinWidth = 156.dp
 
 /**
- * Picks column count + tile height to maximize cell area within the viewport.
- * Stretches tiles to fill height while they stay at/above a width-derived floor;
- * once that floor can no longer fit all cells, locks tile size and enables scroll.
+ * Comfortable tile width for the device class the grid is being laid out on. A phone pane can
+ * only afford small tiles, a desktop or tablet pane fits many more products per row.
  */
-private fun resolvePosItemGridSpec(
+private fun posTargetCellWidth(availableWidth: Dp): Dp = when {
+    availableWidth < 380.dp -> 132.dp
+    availableWidth < 620.dp -> 138.dp
+    availableWidth < 900.dp -> 146.dp
+    availableWidth < 1300.dp -> 158.dp
+    else -> 172.dp
+}
+
+/** Hard ceiling per device class so a very wide pane does not end up with unreadable slivers. */
+private fun posMaxColumns(availableWidth: Dp): Int = when {
+    availableWidth < 380.dp -> 2
+    availableWidth < 620.dp -> 4
+    availableWidth < 900.dp -> 5
+    availableWidth < 1300.dp -> 7
+    else -> 9
+}
+
+/**
+ * Picks column count + tile height for the product grid.
+ *
+ * Columns come from the available width alone, so a long catalogue always fills the pane
+ * horizontally instead of collapsing into a single tall column. Height then either stretches
+ * to fill the viewport (when every product fits) or falls back to a width-derived tile height
+ * and scrolls. When the grid fits with room to spare, fewer columns are preferred if that
+ * lets the tiles grow into the leftover vertical space rather than leaving it empty.
+ */
+internal fun resolvePosItemGridSpec(
     availableWidth: Dp,
     availableHeight: Dp,
     cellCount: Int,
@@ -120,59 +150,59 @@ private fun resolvePosItemGridSpec(
     val usableWidth = (availableWidth - contentPadding * 2).coerceAtLeast(1.dp)
     val usableHeight = (availableHeight - contentPadding * 2).coerceAtLeast(1.dp)
 
-    val maxColsByWidth = maxOf(1, (usableWidth / PosMinCellWidth).toInt())
-    val maxCols = maxColsByWidth.coerceIn(1, 4)
+    val targetWidth = posTargetCellWidth(availableWidth)
+    val densestColumns = ((usableWidth + gap) / (targetWidth + gap))
+        .toInt()
+        .coerceIn(1, posMaxColumns(availableWidth))
+        .coerceAtMost(count)
 
     data class Candidate(
         val columns: Int,
+        val cellWidth: Dp,
         val tileHeight: Dp,
         val scrollEnabled: Boolean,
-        val area: Float,
+        val unusedHeight: Dp,
     )
 
-    var bestFit: Candidate? = null
-    var bestScroll: Candidate? = null
-
-    for (cols in 1..maxCols) {
-        val rows = (count + cols - 1) / cols
-        val hGaps = if (cols > 1) gap * (cols - 1) else 0.dp
-        val vGaps = if (rows > 1) gap * (rows - 1) else 0.dp
-        val cellW = (usableWidth - hGaps) / cols
-        val minCellH = (cellW * 0.85f).coerceIn(PosMinCellHeightFloor, PosMinCellHeightCap)
-        val minNeededHeight = minCellH * rows + vGaps
-
-        if (minNeededHeight <= usableHeight) {
-            val tileH = (usableHeight - vGaps) / rows
-            val candidate = Candidate(
-                columns = cols,
-                tileHeight = tileH,
-                scrollEnabled = false,
-                area = cellW.value * tileH.value,
-            )
-            if (bestFit == null || candidate.area > bestFit.area) {
-                bestFit = candidate
-            }
+    fun candidateFor(columns: Int): Candidate {
+        val rows = (count + columns - 1) / columns
+        val hGaps = gap * (columns - 1)
+        val vGaps = gap * (rows - 1)
+        val cellWidth = (usableWidth - hGaps) / columns
+        val naturalHeight = (cellWidth * PosCellAspectRatio)
+            .coerceIn(PosMinCellHeightFloor, PosMaxCellHeight)
+        val fits = naturalHeight * rows + vGaps <= usableHeight
+        val tileHeight = if (fits) {
+            ((usableHeight - vGaps) / rows).coerceIn(naturalHeight, PosMaxCellHeight)
         } else {
-            val candidate = Candidate(
-                columns = cols,
-                tileHeight = minCellH,
-                scrollEnabled = true,
-                area = cellW.value * minCellH.value,
-            )
-            if (bestScroll == null || candidate.area > bestScroll.area) {
-                bestScroll = candidate
-            }
+            naturalHeight
         }
+        return Candidate(
+            columns = columns,
+            cellWidth = cellWidth,
+            tileHeight = tileHeight,
+            scrollEnabled = !fits,
+            unusedHeight = (usableHeight - (tileHeight * rows + vGaps)).coerceAtLeast(0.dp),
+        )
     }
 
-    val chosen = bestFit
-        ?: bestScroll
-        ?: Candidate(1, PosMinCellHeightFloor, scrollEnabled = true, area = 0f)
+    val densest = candidateFor(densestColumns)
+    // Only reshuffle columns when everything already fits: narrowing a scrolling grid would
+    // undo the density we just gained.
+    val chosen = if (densest.scrollEnabled) {
+        densest
+    } else {
+        (densestColumns downTo 1)
+            .map(::candidateFor)
+            .filter { !it.scrollEnabled }
+            .minWithOrNull(compareBy({ it.unusedHeight.value }, { -it.columns }))
+            ?: densest
+    }
 
     return PosItemGridSpec(
         columns = chosen.columns,
         tileHeight = chosen.tileHeight,
-        largeTiles = chosen.tileHeight >= PosLargeTileHeightThreshold,
+        largeTiles = chosen.tileHeight >= PosLargeTileMinHeight && chosen.cellWidth >= PosLargeTileMinWidth,
         scrollEnabled = chosen.scrollEnabled,
     )
 }
@@ -187,18 +217,17 @@ private fun SalesSheetItem.isBarDiscountEligible(): Boolean {
 private fun resolvePaymentCartLines(
     cart: List<PosCartEntry>,
     salesItems: List<SalesSheetItem>,
-    volunteerBarDiscount: Int,
-    isVolunteer: Boolean,
+    barDiscountPercent: Int,
     selectedCategory: SalesCategory?,
 ): List<PosCartLine> {
-    val volunteerBarContext = isVolunteer && volunteerBarDiscount > 0
+    val discountContext = barDiscountPercent > 0
     return cart.map { entry ->
         val line = entry.line
         val fromCatalog = line.itemId?.let { id ->
             salesItems.find { it.id == id }?.isBarDiscountEligible()
         } ?: false
-        val manualEligible = line.itemId == null && volunteerBarContext
-        val barFilterEligible = volunteerBarContext && selectedCategory == SalesCategory.BAR
+        val manualEligible = line.itemId == null && discountContext
+        val barFilterEligible = discountContext && selectedCategory == SalesCategory.BAR
         line.copy(
             barDiscountEligible = line.barDiscountEligible ||
                 fromCatalog ||
@@ -337,6 +366,24 @@ fun PosScreen(
         settingsManager.setPosSelectedCategoryName(selectedCategory?.name)
     }
 
+    val subcategoryCatalog by viewModel.posSubcategories.collectAsState()
+    var selectedSubcategory by remember { mutableStateOf<String?>(null) }
+    // Only sub-categories that actually hold a product in the current category + venue scope,
+    // so the bar disappears entirely when the org has not set any up.
+    val subcategoryOptions = remember(subcategoryCatalog, filteredItems, selectedCategory) {
+        selectedCategory?.let { category ->
+            PosSubcategoryCatalog.visibleFor(subcategoryCatalog, category, filteredItems)
+        }.orEmpty()
+    }
+    LaunchedEffect(selectedCategory, subcategoryOptions) {
+        if (subcategoryOptions.none { it.name.equals(selectedSubcategory, ignoreCase = true) }) {
+            selectedSubcategory = null
+        }
+    }
+    val visibleItems = remember(filteredItems, selectedSubcategory) {
+        filteredItems.filter { it.matchesSubcategory(selectedSubcategory) }
+    }
+
     val accountBalances by viewModel.accountBalances.collectAsState()
 
     val customerBalance = when {
@@ -364,12 +411,21 @@ fun PosScreen(
             ).benefits.barDiscount
         }
     }
-    val paymentBarDiscount = if (customerVolunteer != null) volunteerActiveBarDiscount else 0
+    val isFirebaseBackend = viewModel.getActiveBackendType() == BackendType.FIREBASE
+    val paymentBarDiscount = if (customerVolunteer != null) {
+        volunteerActiveBarDiscount
+    } else {
+        // The selected guest is a snapshot; read the discount off the live row so an admin edit
+        // mid-session is honoured, exactly like the recomputed volunteer benefit above.
+        customerGuest
+            ?.let { selected -> permanentGuests.find { it.nanoId == selected.nanoId } ?: selected }
+            ?.activeBarDiscountPercent(isFirebaseBackend)
+            ?: 0
+    }
     val paymentCartLines = resolvePaymentCartLines(
         cart = cart,
         salesItems = salesItems,
-        volunteerBarDiscount = paymentBarDiscount,
-        isVolunteer = customerVolunteer != null,
+        barDiscountPercent = paymentBarDiscount,
         selectedCategory = selectedCategory,
     )
     val cartShowsBarDiscount = paymentBarDiscount > 0 && paymentCartLines.any { it.barDiscountEligible }
@@ -518,7 +574,7 @@ fun PosScreen(
 
     fun addManualAmount(amount: Double) {
         if (customerVolunteer == null && customerGuest == null) return
-        val manualEligible = customerVolunteer != null && paymentBarDiscount > 0
+        val manualEligible = paymentBarDiscount > 0
         cart = cart + PosCartEntry(
             PosCartLine(null, manualDefaultLabel, amount, 1, barDiscountEligible = manualEligible)
         )
@@ -604,8 +660,7 @@ fun PosScreen(
                 scanFeedback = scanFeedback,
                 scanFlashNonce = scanFlashNonce,
                 nfcScanningActive = nfcScanningActive,
-                barDiscount = paymentBarDiscount,
-                volunteerActiveBarDiscount = volunteerActiveBarDiscount,
+                customerBarDiscount = paymentBarDiscount,
                 onClearCustomer = { clearCustomer() },
                 onOpenQr = { showQr = true },
             )
@@ -627,8 +682,11 @@ fun PosScreen(
                             onSelect = { selectedCategory = it },
                             viewModel = viewModel,
                         )
-                        PosItemsGrid(
-                            items = filteredItems,
+                        PosItemsPane(
+                            items = visibleItems,
+                            subcategories = subcategoryOptions,
+                            selectedSubcategory = selectedSubcategory,
+                            onSelectSubcategory = { selectedSubcategory = it },
                             currencyCode = currencyCode,
                             hasCustomer = hasCustomer,
                             solidBackground = posAnimatedBackground,
@@ -660,15 +718,18 @@ fun PosScreen(
                         onSelect = { selectedCategory = it },
                         viewModel = viewModel,
                     )
-                    PosItemsGrid(
-                        items = filteredItems,
+                    PosItemsPane(
+                        items = visibleItems,
+                        subcategories = subcategoryOptions,
+                        selectedSubcategory = selectedSubcategory,
+                        onSelectSubcategory = { selectedSubcategory = it },
                         currencyCode = currencyCode,
                         hasCustomer = hasCustomer,
                         solidBackground = posAnimatedBackground,
-                            onItemClick = { if (!isProcessing) addItemToCart(it) },
-                            onManualClick = { if (!isProcessing) showManualAmount = true },
-                            modifier = Modifier.weight(2f),
-                        )
+                        onItemClick = { if (!isProcessing) addItemToCart(it) },
+                        onManualClick = { if (!isProcessing) showManualAmount = true },
+                        modifier = Modifier.weight(2f),
+                    )
                     PosCartPanel(
                         cart = cart,
                         currencyCode = currencyCode,
@@ -1142,8 +1203,7 @@ private fun PosHeaderSection(
     scanFeedback: PosScanFeedback?,
     scanFlashNonce: Int,
     nfcScanningActive: Boolean,
-    barDiscount: Int,
-    volunteerActiveBarDiscount: Int,
+    customerBarDiscount: Int,
     onClearCustomer: () -> Unit,
     onOpenQr: () -> Unit,
 ) {
@@ -1259,7 +1319,7 @@ private fun PosHeaderSection(
                                 customerOrgId = customerOrgId,
                                 balance = balance,
                                 currencyCode = currencyCode,
-                                volunteerActiveBarDiscount = volunteerActiveBarDiscount,
+                                customerBarDiscount = customerBarDiscount,
                                 avatarScale = avatarScale.value,
                                 nfcScanningActive = nfcScanningActive,
                                 nfcPulseScale = pulseScale,
@@ -1553,7 +1613,7 @@ private fun PosCustomerProfileContent(
     customerOrgId: String,
     balance: Double,
     currencyCode: String,
-    volunteerActiveBarDiscount: Int,
+    customerBarDiscount: Int,
     avatarScale: Float,
     nfcScanningActive: Boolean,
     nfcPulseScale: Float,
@@ -1584,8 +1644,8 @@ private fun PosCustomerProfileContent(
                         balance = balance,
                         currencyCode = currencyCode,
                     )
-                    if (customerVolunteer != null && volunteerActiveBarDiscount > 0) {
-                        PosBarDiscountBenefitBadge(discountPercent = volunteerActiveBarDiscount)
+                    if (customerBarDiscount > 0) {
+                        PosBarDiscountBenefitBadge(discountPercent = customerBarDiscount)
                     }
                 }
                 PosCustomerProfileActions(
@@ -1628,8 +1688,8 @@ private fun PosCustomerProfileContent(
                         balance = balance,
                         currencyCode = currencyCode,
                     )
-                    if (customerVolunteer != null && volunteerActiveBarDiscount > 0) {
-                        PosBarDiscountBenefitBadge(discountPercent = volunteerActiveBarDiscount)
+                    if (customerBarDiscount > 0) {
+                        PosBarDiscountBenefitBadge(discountPercent = customerBarDiscount)
                     }
                 }
             }
@@ -2107,6 +2167,128 @@ private fun PosCategoryFilterItem(
                 }
             }
         }
+    }
+}
+
+/**
+ * Product grid, with the sub-category filter bar stacked above it when the active general
+ * category has any. Sits to the right of the vertical category rail so both filter levels
+ * read as one control surface.
+ */
+@Composable
+private fun PosItemsPane(
+    items: List<SalesSheetItem>,
+    subcategories: List<PosSubcategory>,
+    selectedSubcategory: String?,
+    onSelectSubcategory: (String?) -> Unit,
+    currencyCode: String,
+    hasCustomer: Boolean,
+    solidBackground: Boolean,
+    onItemClick: (SalesSheetItem) -> Unit,
+    onManualClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (subcategories.isNotEmpty()) {
+            PosSubcategoryFilterBar(
+                subcategories = subcategories,
+                selected = selectedSubcategory,
+                onSelect = onSelectSubcategory,
+            )
+        }
+        PosItemsGrid(
+            items = items,
+            currencyCode = currencyCode,
+            hasCustomer = hasCustomer,
+            solidBackground = solidBackground,
+            onItemClick = onItemClick,
+            onManualClick = onManualClick,
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+@Composable
+private fun PosSubcategoryFilterBar(
+    subcategories: List<PosSubcategory>,
+    selected: String?,
+    onSelect: (String?) -> Unit,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = PosTileShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = 1.dp,
+    ) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 6.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            PosSubcategoryChip(
+                label = stringResource(Res.string.pos_subcategory_all),
+                selected = selected == null,
+                onClick = { onSelect(null) },
+            )
+            subcategories.forEach { subcategory ->
+                PosSubcategoryChip(
+                    label = subcategory.name,
+                    selected = selected.equals(subcategory.name, ignoreCase = true),
+                    onClick = { onSelect(subcategory.name) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PosSubcategoryChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val background by animateColorAsState(
+        if (selected) {
+            MaterialTheme.colorScheme.primaryContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.6f)
+        },
+        animationSpec = tween(180),
+        label = "posSubcategoryChipBg",
+    )
+    val contentColor by animateColorAsState(
+        if (selected) {
+            MaterialTheme.colorScheme.onPrimaryContainer
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        },
+        animationSpec = tween(180),
+        label = "posSubcategoryChipFg",
+    )
+    Surface(
+        shape = RoundedCornerShape(10.dp),
+        color = background,
+        contentColor = contentColor,
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            if (selected) {
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
+            } else {
+                MaterialTheme.colorScheme.outline.copy(alpha = 0.22f)
+            },
+        ),
+        modifier = Modifier.clickable(onClick = onClick),
+    ) {
+        Text(
+            label,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            maxLines = 1,
+        )
     }
 }
 

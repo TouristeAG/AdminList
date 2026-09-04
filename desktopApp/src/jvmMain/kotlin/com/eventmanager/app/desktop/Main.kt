@@ -16,11 +16,49 @@ import com.eventmanager.app.ui.AppRoot
 import com.eventmanager.app.ui.desktop.DesktopNavigationHooks
 import com.eventmanager.app.ui.desktop.DesktopWindowAppearance
 import com.eventmanager.app.ui.platform.bootstrapAppLocale
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
 
 private val isMacOs: Boolean =
     System.getProperty("os.name").orEmpty().contains("mac", ignoreCase = true)
 
+/**
+ * Installs a JVM-wide uncaught-exception handler that writes a crash report to
+ * ~/Library/Logs/NoctuList/crash-<timestamp>.log (macOS) or %APPDATA%\NoctuList\logs\ (Windows).
+ * This is the first line of defense for diagnosing launch failures on new platforms / arch.
+ */
+private fun installCrashLogger() {
+    val logDir: File = when {
+        isMacOs -> File(System.getProperty("user.home"), "Library/Logs/NoctuList")
+        System.getProperty("os.name").orEmpty().contains("win", ignoreCase = true) ->
+            File(System.getenv("APPDATA") ?: System.getProperty("user.home"), "NoctuList/logs")
+        else -> File(System.getProperty("user.home"), ".noctulist/logs")
+    }
+    logDir.mkdirs()
+
+    Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+        val timestamp = SimpleDateFormat("yyyyMMdd-HHmmss").format(Date())
+        val logFile = File(logDir, "crash-$timestamp.log")
+        try {
+            logFile.bufferedWriter().use { w ->
+                w.appendLine("NoctuList crash report — $timestamp")
+                w.appendLine("OS: ${System.getProperty("os.name")} ${System.getProperty("os.version")} (${System.getProperty("os.arch")})")
+                w.appendLine("JVM: ${System.getProperty("java.vm.name")} ${System.getProperty("java.version")} (${System.getProperty("java.vendor")})")
+                w.appendLine("Thread: ${thread.name}")
+                w.appendLine()
+                w.appendLine(throwable.stackTraceToString())
+            }
+            System.err.println("NoctuList crashed. Report written to: ${logFile.absolutePath}")
+        } catch (_: Exception) {
+            // If we can't write the log, at least print to stderr.
+            throwable.printStackTrace()
+        }
+    }
+}
+
 fun main() {
+    installCrashLogger()
     AppTimeZone.installAsJvmDefault()
     DesktopWindowAppearance.initBeforeUiToolkit()
     DesktopWebcamSupport.ensureInitialized()

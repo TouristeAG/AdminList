@@ -42,6 +42,30 @@ object FirebaseOrgBootstrap {
 
     fun isValidOrgId(orgId: String): Boolean = orgIdPattern.matches(orgId.trim())
 
+    private fun isOrgIdAlphanumeric(c: Char): Boolean =
+        c in 'A'..'Z' || c in 'a'..'z' || c in '0'..'9'
+
+    private const val ACCENTED = "àáâãäåÀÁÂÃÄÅèéêëÈÉÊËìíîïÌÍÎÏòóôõöÒÓÔÕÖùúûüÙÚÛÜçÇñÑÿŸ"
+    private const val UNACCENTED = "aaaaaaAAAAAAeeeeEEEEiiiiIIIIoooooOOOOOuuuuUUUUcCnNyY"
+
+    /**
+     * Coerces typed input into a legal org ID: accents are folded to ASCII, whitespace runs become
+     * `-`, characters a Firestore path segment cannot carry are dropped, and leading separators
+     * are trimmed.
+     *
+     * Input fields must apply this as the user types. An org name like "Collectif Nocturne" is
+     * otherwise stored verbatim, fails [isValidOrgId] forever, and blocks the setup wizard with
+     * no visible reason. Folding rather than dropping accents matters too — deleting them outright
+     * would turn "Société" into "Socit".
+     */
+    fun sanitizeOrgId(raw: String): String =
+        raw.map { c -> ACCENTED.indexOf(c).let { if (it >= 0) UNACCENTED[it] else c } }
+            .joinToString("")
+            .replace(Regex("\\s+"), "-")
+            .filter { isOrgIdAlphanumeric(it) || it == '-' || it == '_' }
+            .dropWhile { !isOrgIdAlphanumeric(it) }
+            .take(64)
+
     suspend fun isMember(gateway: FirestoreGateway, orgId: String, uid: String): Boolean =
         gateway.readMemberRole(orgId.trim(), uid.trim()) != null
 
@@ -90,6 +114,18 @@ object FirebaseOrgBootstrap {
         if (probe is MembershipProbe.Unavailable) {
             // Offline or timed out. Writing here would guess at the remote state.
             println("Firebase org $trimmed: membership unknown (offline) — skipping bootstrap")
+            return
+        }
+        if (probe is MembershipProbe.Denied) {
+            // The server refused our read of members/{uid}. The rule allows every signed-in
+            // user to read their own member doc, so Denied almost always means a transient
+            // auth-token propagation delay on a brand-new device.
+            //
+            // NEVER attempt joinOrgAsMember here: that call writes role=MEMBER, and if
+            // Firestore evaluates isOrgAdmin() as still-true for this user (because the
+            // existing doc has role=admin), the merge-write is allowed — permanently
+            // demoting the admin. Treating Denied like Unavailable is the safe default.
+            println("Firebase org $trimmed: membership probe denied — skipping bootstrap to avoid accidental self-demotion")
             return
         }
 

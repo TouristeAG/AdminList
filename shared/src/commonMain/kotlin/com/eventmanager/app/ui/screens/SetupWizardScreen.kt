@@ -45,6 +45,8 @@ import com.eventmanager.app.ui.components.FirebaseConfigReceivedBanner
 import com.eventmanager.app.ui.components.FirebaseJoinImportSection
 import com.eventmanager.app.ui.components.FirebaseSetupTutorialDialog
 import com.eventmanager.app.ui.components.FirebaseSignInStep
+import com.eventmanager.app.ui.components.GuidedChecklistItem
+import com.eventmanager.app.ui.components.GuidedStepCard
 import com.eventmanager.app.ui.components.ThemeModePicker
 import com.eventmanager.app.ui.platform.ServiceAccountKeyUploadButton
 import com.eventmanager.app.ui.platform.SetupLayoutScalePage
@@ -259,6 +261,10 @@ fun SetupWizardScreen(
     var firebaseWebClientId by remember { mutableStateOf(settingsManager.getFirebaseWebClientId()) }
     var firebaseWebClientSecret by remember { mutableStateOf(settingsManager.getFirebaseWebClientSecret()) }
     var firebaseJoinImported by remember { mutableStateOf(settingsManager.isFirebaseJoinImported()) }
+    // Mirrored as state: the "continue" gate below reads it, and a plain settings read never
+    // recomposes when a scan or a manually typed invitation code stores a new one.
+    var firebaseBootstrapCode by remember { mutableStateOf(settingsManager.getFirebaseBootstrapCode()) }
+    var joinError by remember { mutableStateOf<String?>(null) }
     var authEmail by remember {
         mutableStateOf(firebaseAuthEmail ?: settingsManager.getFirebaseAuthEmail().ifBlank { null })
     }
@@ -274,6 +280,10 @@ fun SetupWizardScreen(
     var firstSyncDone by remember { mutableStateOf(false) }
     var showFirebaseTutorial by remember { mutableStateOf(false) }
     var showJoinScan by remember { mutableStateOf(false) }
+    // Resolved here: the scanner callback is not a composable scope.
+    val joinOAuthMissingMessage = stringResource(Res.string.firebase_join_error_oauth_missing)
+    val joinInviteMissingMessage = stringResource(Res.string.firebase_join_error_invite_missing)
+    val invalidJoinCodeMessage = stringResource(Res.string.firebase_join_error_invalid)
 
     fun persistFirebaseFields() {
         settingsManager.setFirebaseConfiguredOrgs(firebaseConfiguredOrgs)
@@ -292,6 +302,7 @@ fun SetupWizardScreen(
         firebaseWebClientId = settingsManager.getFirebaseWebClientId()
         firebaseWebClientSecret = settingsManager.getFirebaseWebClientSecret()
         firebaseJoinImported = settingsManager.isFirebaseJoinImported()
+        firebaseBootstrapCode = settingsManager.getFirebaseBootstrapCode()
     }
 
     fun firebaseProjectReady(): Boolean =
@@ -513,7 +524,7 @@ fun SetupWizardScreen(
                                     SetupStep.JOIN_ORG -> firebaseProjectReady() &&
                                         firebaseOrgReady() &&
                                         firebaseOAuthReady() &&
-                                        settingsManager.getFirebaseBootstrapCode().isNotBlank()
+                                        firebaseBootstrapCode.isNotBlank()
                                     SetupStep.FIREBASE_ORG -> firebaseOrgReady()
                                     SetupStep.FIREBASE_PROJECT -> firebaseProjectReady() && firebaseOAuthReady()
                                     SetupStep.FIREBASE_SIGN_IN -> firebaseAuthReady()
@@ -640,9 +651,17 @@ fun SetupWizardScreen(
                                             firebaseConfiguredOrgs.firstOrNull { it.orgId.isNotBlank() }?.orgId.orEmpty()
                                         },
                                         projectReady = firebaseProjectReady(),
+                                        orgReady = firebaseOrgReady(),
+                                        oauthReady = firebaseOAuthReady(),
+                                        inviteReady = firebaseBootstrapCode.isNotBlank(),
                                         configImported = firebaseJoinImported,
+                                        joinError = joinError,
                                         onRequestScan = { showJoinScan = true },
                                         onJoined = { reloadFirebaseFromSettings() },
+                                        onJoinInputChanged = {
+                                            joinError = null
+                                            reloadFirebaseFromSettings()
+                                        },
                                     )
                                     SetupStep.SHEETS_CLOUD -> SheetsCloudPage(platformContext)
                                     SetupStep.SHEETS_KEY -> SheetsKeyPage(
@@ -746,10 +765,28 @@ fun SetupWizardScreen(
             platformContext = platformContext,
             onDismiss = { showJoinScan = false },
             onPayload = { raw ->
-                com.eventmanager.app.data.remote.FirebaseJoinCodec.decode(raw).onSuccess { payload ->
-                    settingsManager.applyFirebaseJoinPayload(payload)
-                    reloadFirebaseFromSettings()
+                // Same validation as the paste path: a legacy QR without the OAuth secret or the
+                // invitation still imports project options, and the wizard would otherwise show
+                // "configuration received" next to a permanently disabled Continue button.
+                joinError = when (
+                    val result = com.eventmanager.app.data.remote.FirebaseJoinImport
+                        .apply(settingsManager, raw)
+                ) {
+                    is com.eventmanager.app.data.remote.FirebaseJoinImportResult.Undecodable ->
+                        result.message ?: invalidJoinCodeMessage
+
+                    is com.eventmanager.app.data.remote.FirebaseJoinImportResult.Incomplete ->
+                        when (result.problem) {
+                            com.eventmanager.app.data.remote.FirebaseJoinImportProblem
+                                .OAUTH_SECRET_MISSING -> joinOAuthMissingMessage
+
+                            com.eventmanager.app.data.remote.FirebaseJoinImportProblem
+                                .INVITATION_MISSING -> joinInviteMissingMessage
+                        }
+
+                    is com.eventmanager.app.data.remote.FirebaseJoinImportResult.Complete -> null
                 }
+                reloadFirebaseFromSettings()
                 showJoinScan = false
             },
         )
@@ -1001,20 +1038,35 @@ private fun JoinOrgPage(
     settingsManager: SettingsManager,
     orgId: String,
     projectReady: Boolean,
+    orgReady: Boolean,
+    oauthReady: Boolean,
+    inviteReady: Boolean,
     configImported: Boolean,
+    joinError: String?,
     onRequestScan: () -> Unit,
     onJoined: () -> Unit,
+    onJoinInputChanged: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
         FirebaseJoinImportSection(
             settingsManager = settingsManager,
             onJoined = { onJoined() },
             onRequestScan = onRequestScan,
+            joinError = joinError,
+            onJoinInputChanged = onJoinInputChanged,
             configImported = configImported,
         )
         // The import section already confirms an imported config; avoid a second banner.
         if (projectReady && !configImported) {
             FirebaseConfigReceivedBanner(orgId = orgId)
+        }
+        // These four are exactly what the Continue button waits for. A join code can import a
+        // partial configuration, so the page has to say which piece is still missing.
+        GuidedStepCard(title = stringResource(Res.string.firebase_checklist_title)) {
+            GuidedChecklistItem(stringResource(Res.string.firebase_checklist_org), orgReady)
+            GuidedChecklistItem(stringResource(Res.string.firebase_checklist_project), projectReady)
+            GuidedChecklistItem(stringResource(Res.string.firebase_checklist_oauth), oauthReady)
+            GuidedChecklistItem(stringResource(Res.string.firebase_checklist_invite), inviteReady)
         }
     }
 }

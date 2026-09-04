@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 import com.eventmanager.app.data.models.AccountTransfer
 import com.eventmanager.app.data.models.Guest
 import com.eventmanager.app.data.models.VenueEntity
+import com.eventmanager.app.data.models.activeBarDiscountPercent
 import com.eventmanager.app.data.remote.hasStoredProfilePhoto
 import com.eventmanager.app.data.remote.resolvedProfilePhotoPath
 import com.eventmanager.app.data.sync.settingsManagerFor
@@ -156,6 +157,15 @@ actual fun GuestDetailPanel(
                     if (guest.email.isNotBlank()) DesktopInfoRow(stringResource(Res.string.guest_email), guest.email)
                     if (guest.phoneNumber.isNotBlank()) DesktopInfoRow(stringResource(Res.string.guest_phone_number), guest.phoneNumber)
                     if (guest.notes.isNotBlank()) DesktopInfoRow(stringResource(Res.string.notes), guest.notes)
+                    val barDiscountPercent = guest.activeBarDiscountPercent(
+                        rememberGuestBarDiscountEnabled(viewModel)
+                    )
+                    if (barDiscountPercent > 0) {
+                        DesktopInfoRow(
+                            stringResource(Res.string.bar_discount_percent_label),
+                            barDiscountPercent.toString(),
+                        )
+                    }
                 }
             }
 

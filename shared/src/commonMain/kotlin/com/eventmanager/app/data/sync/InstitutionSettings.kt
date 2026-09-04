@@ -44,6 +44,9 @@ object InstitutionSettingsKeys {
     /** Allow billeterie/ticket-check interfaces to send venue announcements (synced across org devices). */
     const val ANNOUNCEMENTS_NON_ADMIN_SEND_ENABLED = "announcements_non_admin_send_enabled"
 
+    /** JSON list of [{category, name}] — admin-defined POS sub-categories (Firebase backend only). */
+    const val POS_SUBCATEGORIES = "pos_subcategories"
+
     /** Optional one-way Sheets mirror while Firebase is the live backend (synced across admin devices). */
     const val SHEETS_MIRROR_ENABLED = "sheets_mirror_enabled"
     const val SHEETS_MIRROR_SPREADSHEET_ID = "sheets_mirror_spreadsheet_id"
@@ -107,6 +110,7 @@ object InstitutionSettingsKeys {
         FIREBASE_CONFIGURED_ORGS,
         PROFILE_PHOTOS_ENABLED,
         ANNOUNCEMENTS_NON_ADMIN_SEND_ENABLED,
+        POS_SUBCATEGORIES,
     ) + BACKEND_KEYS + SHEETS_MIRROR_KEYS
 }
 

@@ -184,6 +184,13 @@ rules change (or first setup):
 3. Confirm the in-app tutorial clipboard still matches the repo file
    (`shared/.../composeResources/files/firestore.rules`).
 
+**Google Workspace projects:** publishing needs `firebaserules.releases.create` — Owner, Editor,
+or *Firebase Rules Admin* on the Google Cloud project. When the Workspace organization owns the
+project and the person doing the setup only has a limited role, **Publish** is unavailable, the
+database keeps the production-mode default (`allow read, write: if false`), and every NoctuList
+write fails with `PERMISSION_DENIED`. Have the organization grant that role before the first
+migration — the app never deploys rules on its own.
+
 Hardened expectations (post–GDPR audit remediations):
 
 - Only **org members** can read `members` (not every signed-in Google user who knows `orgId`).

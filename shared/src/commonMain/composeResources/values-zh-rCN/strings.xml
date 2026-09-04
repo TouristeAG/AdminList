@@ -388,7 +388,7 @@
     
     <!-- App Information -->
     <string name="app_info_title">应用程序信息</string>
-    <string name="app_version">NoctuList 2.0.0</string>
+    <string name="app_version">NoctuList 2.1.0</string>
     <string name="app_designed_for">专为 Collectif Nocturne 场地设计</string>
     <string name="app_developed_full">为 Collectif Nocturne 开发，开发者：Leonardo Mondada</string>
     <string name="last_sync">上次更新：%1$s</string>
@@ -2104,6 +2104,14 @@ D) Application ID（appId）
     <string name="pos_welcome_button">内部 POS</string>
     <string name="recent_transfers_label">最近转账</string>
     <string name="sales_categories_label">分类</string>
+    <string name="sales_subcategory_label">子分类</string>
+    <string name="sales_subcategory_hint">细分某个分类，例如吧台下的酒精饮品或押金。</string>
+    <string name="sales_subcategory_none">无</string>
+    <string name="sales_subcategory_add">新建子分类</string>
+    <string name="sales_subcategory_name_label">子分类名称</string>
+    <string name="sales_subcategory_remove_title">删除此子分类？</string>
+    <string name="sales_subcategory_remove_message">“%1$s”将从该分类下的所有商品中移除。</string>
+    <string name="pos_subcategory_all">全部</string>
     <string name="sales_category_bar">吧台</string>
     <string name="sales_category_entry">入场</string>
     <string name="sales_category_merch">周边</string>

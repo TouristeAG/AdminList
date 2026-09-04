@@ -388,7 +388,7 @@
     
     <!-- App Information -->
     <string name="app_info_title">Información de la aplicación</string>
-    <string name="app_version">NoctuList 2.0.0</string>
+    <string name="app_version">NoctuList 2.1.0</string>
     <string name="app_designed_for">Diseñado para lugares del Collectif Nocturne</string>
     <string name="app_developed_full">Desarrollado para el Collectif Nocturne por Leonardo Mondada</string>
     <string name="last_sync">Última actualización: %1$s</string>
@@ -2104,6 +2104,14 @@ Emparejar no basta: sin la herramienta Management, el enlace suele conectarse y 
     <string name="pos_welcome_button">POS interno</string>
     <string name="recent_transfers_label">Transferencias recientes</string>
     <string name="sales_categories_label">Categorías</string>
+    <string name="sales_subcategory_label">Subcategoría</string>
+    <string name="sales_subcategory_hint">Refina una categoría, por ejemplo Alcohol o Depósitos dentro de Bar.</string>
+    <string name="sales_subcategory_none">Ninguna</string>
+    <string name="sales_subcategory_add">Nueva subcategoría</string>
+    <string name="sales_subcategory_name_label">Nombre de la subcategoría</string>
+    <string name="sales_subcategory_remove_title">¿Eliminar esta subcategoría?</string>
+    <string name="sales_subcategory_remove_message">«%1$s» se quitará de todos los productos de esta categoría.</string>
+    <string name="pos_subcategory_all">Todo</string>
     <string name="sales_category_bar">Bar</string>
     <string name="sales_category_entry">Entrada</string>
     <string name="sales_category_merch">Merch</string>

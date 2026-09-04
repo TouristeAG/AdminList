@@ -1335,6 +1335,7 @@ private fun DesktopSalesSheetManagement(viewModel: EventManagerViewModel, onBack
         onUpdateItem = { scope.launch { viewModel.updateSalesSheetItem(it) } },
         onDeleteItem = { scope.launch { viewModel.deleteSalesSheetItem(it) } },
         onUpdateItemStatus = { id, active -> viewModel.updateSalesSheetItemStatus(id, active) },
-        onBack = onBack
+        onBack = onBack,
+        viewModel = viewModel
     )
 }

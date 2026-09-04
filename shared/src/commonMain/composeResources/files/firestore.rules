@@ -1,5 +1,5 @@
 rules_version = '2';
-// NoctuList Firestore rules — NOCTULIST_RULES_VERSION = 4
+// NoctuList Firestore rules — NOCTULIST_RULES_VERSION = 6
 // Republish this exact file in Firebase Console → Firestore → Rules after every app update,
 // otherwise members that already exist cannot re-join their organization.
 service cloud.firestore {
@@ -75,10 +75,24 @@ service cloud.firestore {
         : '';
     }
 
+    function purchaseBufferPath(orgId) {
+      return /databases/$(database)/documents/orgs/$(orgId)/institutionSettings/purchase_credit_buffer;
+    }
+
+    // A brand-new org has no purchase_credit_buffer document yet, and get() on a missing document
+    // returns null — reading .data off it is an evaluation error that denies every accounts write.
+    function purchaseBufferValue(orgId) {
+      return (exists(purchaseBufferPath(orgId))
+        && ('value' in get(purchaseBufferPath(orgId)).data))
+        ? get(purchaseBufferPath(orgId)).data.value
+        : 0.0;
+    }
+
+    // An unset or malformed buffer means "no overdraft", never a blanket denial.
     function purchaseBuffer(orgId) {
-      let doc = get(/databases/$(database)/documents/orgs/$(orgId)/institutionSettings/purchase_credit_buffer);
-      return doc.data.value is number ? doc.data.value :
-        (doc.data.value is string ? float(doc.data.value) : 0.0);
+      let value = purchaseBufferValue(orgId);
+      return value is number ? value :
+        (value is string && value.matches('^-?[0-9]+([.][0-9]+)?$') ? float(value) : 0.0);
     }
 
     function isAdminFieldUnchanged() {
@@ -117,10 +131,15 @@ service cloud.firestore {
         );
       allow update: if isValidMemberRole(request.resource.data.role)
         && (
-          isOrgAdmin(orgId)
-          // Idempotent re-join: an existing member may refresh its own doc (same role)
-          // after a factory reset or a re-install. Without this every re-join is denied,
-          // because set(merge: true) on an existing doc is an update, not a create.
+          // An org admin may change any *other* member's role (promote / demote / invite).
+          // Self-updates go through the idempotent path below, which enforces role-unchanged.
+          // This prevents a rogue join flow on a new device from silently demoting an admin:
+          // joinOrgAsMember writes role=member, and isOrgAdmin() would otherwise allow it
+          // because the member doc still says admin at write time.
+          (isOrgAdmin(orgId) && request.auth.uid != uid)
+          // Idempotent re-join: any member (including admins) may refresh their own doc as
+          // long as the role is unchanged. Required after a factory reset / re-install because
+          // set(merge: true) on an existing doc is an update, not a create.
           || (request.auth.uid == uid
             && emailDomainAllowed(orgId)
             && request.resource.data.role == resource.data.role

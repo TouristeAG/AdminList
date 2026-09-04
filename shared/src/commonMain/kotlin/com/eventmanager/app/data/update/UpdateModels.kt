@@ -10,6 +10,10 @@ data class UpdateManifest(
     val changelogShort: String? = null,
     val downloadUrl: String? = null,
     val desktopDownloadUrl: String? = null,
+    /** Arch-specific macOS DMGs (preferred when present). */
+    val desktopDownloadUrlDmgArm64: String? = null,
+    val desktopDownloadUrlDmgX86: String? = null,
+    /** Legacy / fallback DMG (used when the arch-specific ones are absent). */
     val desktopDownloadUrlDmg: String? = null,
     val desktopDownloadUrlMsi: String? = null,
     val desktopDownloadUrlExe: String? = null,
@@ -26,8 +30,13 @@ data class UpdateManifest(
 
     private fun resolveDesktopDownloadUrl(): String? {
         when (currentDesktopInstallerFormat()) {
-            DesktopInstallerFormat.Dmg ->
+            DesktopInstallerFormat.Dmg -> {
+                // Pick the arch-specific DMG first so Apple Silicon users get a native build.
+                val archUrl = if (isAppleSilicon()) desktopDownloadUrlDmgArm64 else desktopDownloadUrlDmgX86
+                archUrl?.takeIf { it.isNotBlank() }?.let { return it }
+                // Fall back to the legacy single-arch field for older manifests.
                 desktopDownloadUrlDmg?.takeIf { it.isNotBlank() }?.let { return it }
+            }
             DesktopInstallerFormat.Msi -> {
                 desktopDownloadUrlMsi?.takeIf { it.isNotBlank() }?.let { return it }
                 desktopDownloadUrlExe?.takeIf { it.isNotBlank() }?.let { return it }
@@ -45,6 +54,13 @@ data class UpdateManifest(
         return desktopDownloadUrl?.takeIf { it.isNotBlank() }
     }
 }
+
+/**
+ * Returns true when running on Apple Silicon (arm64 / aarch64).
+ * `os.arch` is "aarch64" on native ARM JVM; "x86_64" under Rosetta.
+ */
+private fun isAppleSilicon(): Boolean =
+    System.getProperty("os.arch").orEmpty().equals("aarch64", ignoreCase = true)
 
 sealed class UpdateCheckResult {
     data object NoUpdate : UpdateCheckResult()

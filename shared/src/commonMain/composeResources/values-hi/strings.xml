@@ -346,6 +346,14 @@
     <string name="sales_rank_none_required">किसी पद की आवश्यकता नहीं</string>
     <string name="sales_item_summary_line">CHF %1$.2f • छूट: %2$s • न्यूनतम रैंक: %3$s</string>
     <string name="sales_categories_label">श्रेणियाँ</string>
+    <string name="sales_subcategory_label">उप-श्रेणी</string>
+    <string name="sales_subcategory_hint">किसी श्रेणी को और बाँटें, जैसे बार के अंदर शराब या जमा राशि।</string>
+    <string name="sales_subcategory_none">कोई नहीं</string>
+    <string name="sales_subcategory_add">नई उप-श्रेणी</string>
+    <string name="sales_subcategory_name_label">उप-श्रेणी का नाम</string>
+    <string name="sales_subcategory_remove_title">यह उप-श्रेणी हटाएँ?</string>
+    <string name="sales_subcategory_remove_message">“%1$s” इस श्रेणी के सभी उत्पादों से हटा दी जाएगी।</string>
+    <string name="pos_subcategory_all">सभी</string>
     <string name="sales_emoji_label">इमोजी</string>
     <string name="sales_category_merch">माल</string>
     <string name="sales_category_entry">प्रवेश</string>
@@ -479,7 +487,7 @@
     
     <!-- App Information -->
     <string name="app_info_title">ऐप की जानकारी</string>
-    <string name="app_version">NoctuList 2.0.0</string>
+    <string name="app_version">NoctuList 2.1.0</string>
     <string name="app_designed_for">कलेक्टिफ़ नॉक्टर्न स्थानों के लिए डिज़ाइन किया गया</string>
     <!-- Single full sentence to avoid spacing issues across locales -->
     <string name="app_developed_full">लियोनार्डो मोंडाडा द्वारा कलेक्टिफ़ नॉक्टर्न के लिए विकसित किया गया</string>

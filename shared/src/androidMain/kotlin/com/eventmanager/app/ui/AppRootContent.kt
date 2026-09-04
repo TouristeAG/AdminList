@@ -3258,6 +3258,7 @@ fun SalesSheetItemManagementScreenWithViewModel(
                 }
             }
         },
-        onBack = _onBack
+        onBack = _onBack,
+        viewModel = viewModel
     )
 }

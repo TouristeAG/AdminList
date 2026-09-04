@@ -50,6 +50,20 @@ class FirebaseRemoteBackend(
         return firestoreGateway.isServerReachable()
     }
 
+    /**
+     * True only once this session has received at least one Firestore response the server itself
+     * confirmed — never a cache-only read, and never true while the SDK failed to initialize.
+     *
+     * [pullAll] returns [SyncResult.Success] even when the SDK never initialized ("local Room
+     * remains source of truth") so normal sync callers don't treat a misconfigured device as a
+     * hard error. Security gates cannot share that leniency: `evaluateAdminSetupGate` must not
+     * read an empty/stale local Room table as "the remote org has no admin" when we never actually
+     * asked the server. Doing so let anyone standing at an offline device open the passwordless
+     * first-admin wizard and grant themselves — or any guest — permanent admin rights.
+     */
+    fun hasServerConfirmedReachability(): Boolean =
+        firestoreGateway.isAvailable() && firestoreGateway.isServerReachable()
+
     private val posBootstrapCollections = listOf("salesItems", "transfers")
 
     override val backendType: BackendType = BackendType.FIREBASE
@@ -476,9 +490,13 @@ class FirebaseRemoteBackend(
                 .forEach { transfer ->
                     upsert("transfers", transfer.sourceReference, firestoreGateway.transferToMap(transfer))
                 }
-            seedAccountBalancesFromLocalLedger()
+            // institutionSettings must land before the balances: the accounts rule validates
+            // every balance against purchase_credit_buffer, and settings writes only go through
+            // the pending queue, so they would still be missing when the balances are written.
             settingsManager.markAllInstitutionSettingsPendingRemotePush()
             afterInstitutionSettingsChanged()
+            flushQueue()
+            seedAccountBalancesFromLocalLedger()
             flushQueue()
             SyncResult.Success("Pushed local entities to Firebase")
         } catch (e: Exception) {
