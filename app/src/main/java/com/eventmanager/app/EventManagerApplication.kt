@@ -19,7 +19,7 @@ class EventManagerApplication : Application() {
         super.onCreate()
         AppTimeZone.installAsJvmDefault()
         // Must run before any XSSFWorkbook use (StAX provider missing on Android otherwise).
-        PoiAndroidInit.en   sureStaxFactories()
+        PoiAndroidInit.ensureStaxFactories()
         val platformContext = createPlatformContext(applicationContext)
         SecureCredentialStoreHolder.init(createSecureCredentialStore(platformContext))
         runCatching {
